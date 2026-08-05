@@ -1,0 +1,36 @@
+/local*/
+/scripts/local*
+
+# Runtime data is local. Keep only its documentation in version control.
+/data/*
+!/data/README.md
+
+# Local configuration and tool caches.
+.env
+.env.*
+!.env.example
+*.local
+*.local.*
+/.cache/
+/.venv/
+
+# Python.
+__pycache__/
+*.py[cod]
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+/backend/.venv/
+/backend/coverage.json
+
+# Node / frontend.
+node_modules/
+/frontend/dist/
+/frontend/coverage/
+
+# Editors and operating systems.
+.idea/
+.vscode/
+.DS_Store
