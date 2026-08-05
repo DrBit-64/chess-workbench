@@ -1,0 +1,5 @@
+Alembic migration environment for ChessWorkbench.
+
+The first domain revision is intentionally created in Stage 2 together with the
+Position and course models. Stage 1 only establishes the reproducible migration
+environment.

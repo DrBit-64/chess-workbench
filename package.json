@@ -1,0 +1,16 @@
+{
+  "name": "chess-workbench",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@10.14.0",
+  "engines": {
+    "node": ">=22 <23",
+    "pnpm": ">=10 <11"
+  },
+  "scripts": {
+    "build": "pnpm --filter @chess-workbench/frontend build",
+    "lint": "pnpm --filter @chess-workbench/frontend lint",
+    "test": "pnpm --filter @chess-workbench/frontend test",
+    "typecheck": "pnpm --filter @chess-workbench/frontend typecheck"
+  }
+}
