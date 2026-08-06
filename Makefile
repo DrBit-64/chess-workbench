@@ -9,12 +9,16 @@ STAGE_2C_CONTENT_TEST := $(firstword $(wildcard \
 	backend/tests/test_content_api.py \
 	backend/tests/test_content_service.py))
 
+STAGE_2D_CONTENT_TEST := $(firstword $(wildcard \
+	backend/tests/test_course_mode.py \
+	backend/tests/test_note_source_link.py))
+
 .PHONY: check-pnpm bootstrap-backend bootstrap-frontend bootstrap lock dev-api dev-web \
 	backend-format backend-lint backend-typecheck backend-static backend-test \
 	backend-migration-check backend-check frontend-format frontend-lint \
 	frontend-typecheck frontend-test frontend-build frontend-check contracts \
 	check-contracts verify smoke acceptance acceptance-stage-2a \
-	acceptance-stage-2b acceptance-stage-2c acceptance-stage-2
+	acceptance-stage-2b acceptance-stage-2c acceptance-stage-2d acceptance-stage-2
 
 check-pnpm:
 	@if ! command -v pnpm >/dev/null 2>&1; then \
@@ -95,6 +99,7 @@ acceptance-stage-2a: bootstrap-backend backend-static
 	uv run --project backend --locked pytest -c backend/pyproject.toml -o addopts='' backend/tests/test_position_identity.py backend/tests/test_config.py --cov=chess_workbench.domain.position_identity --cov-branch --cov-report=term-missing --cov-fail-under=90
 	@test -s docs/decisions/0002-position-identity.md
 	@test -s docs/decisions/0003-mysql-async-driver.md
+	@test -s docs/decisions/0005-dual-course-mode.md
 
 acceptance-stage-2b: acceptance-stage-2a
 	uv run --project backend --locked pytest -c backend/pyproject.toml -o addopts='' backend/tests/test_database.py backend/tests/test_models.py backend/tests/test_graph_repository.py --cov=chess_workbench.store.models.graph --cov=chess_workbench.store.models.mixins --cov=chess_workbench.store.graph_repository --cov-branch --cov-report=term-missing --cov-fail-under=90
@@ -108,7 +113,14 @@ acceptance-stage-2c: acceptance-stage-2b
 	uv run --project backend --locked pytest -c backend/pyproject.toml -o addopts='' backend/tests/test_domain_schemas.py backend/tests/test_graph_api.py $(STAGE_2C_CONTENT_TEST) --cov=chess_workbench.schemas.domain --cov-branch --cov-report=term-missing --cov-fail-under=90
 	@test -s docs/decisions/0004-course-context-and-lifecycle.md
 
-acceptance-stage-2: acceptance-stage-2c bootstrap-frontend
+acceptance-stage-2d: acceptance-stage-2c
+	@test -n "$(STAGE_2D_CONTENT_TEST)" || { \
+		echo "错误：Stage 2D 缺少 Course.mode / source_note_id 验收测试。" >&2; \
+		exit 1; \
+	}
+	uv run --project backend --locked pytest -c backend/pyproject.toml -o addopts='' backend/tests/test_course_mode.py backend/tests/test_note_source_link.py $(STAGE_2D_CONTENT_TEST) --cov=chess_workbench.store.models.content --cov=chess_workbench.schemas.domain --cov-branch --cov-report=term-missing --cov-fail-under=90
+
+acceptance-stage-2: acceptance-stage-2d bootstrap-frontend
 	$(MAKE) verify
 	$(MAKE) smoke
 

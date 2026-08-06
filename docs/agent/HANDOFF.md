@@ -15,10 +15,14 @@ acc1195 feat(codex): stage 2 step 1
 
 ## Current objective
 
-**Stage 2 is complete.** Next: Stage 3 — PGN semantic round-trip and course backend.
+**Stage 2 is complete.** Next: Stage 2D — ADR 0005 code implementation:
+- Add `Course.mode` (`"traditional"` | `"opening_explorer"`) and `KnowledgeNote.source_note_id`
+- Migration 0003, schema updates, new tests
+- Stage 3 (PGN round-trip) starts after 2D passes.
 
-The `make acceptance-stage-2` gate exits 0 on clean checkout. See `PLANS.md` for the
-updated plan with Stage 3 scope and sub-units.
+The `make acceptance-stage-2` gate exits 0 on clean checkout. `make acceptance-stage-2d`
+is the new incremental gate — it depends on 2C and requires new test files
+(`test_course_mode.py`, `test_note_source_link.py`) with 90% coverage on content models.
 
 ## What was completed (Stage 2 closure by Deep Code)
 
@@ -63,8 +67,17 @@ make acceptance-stage-2        ✅ exit 0
 └── smoke                      ✅ direct API + Vite proxy healthy
 ```
 
-## Remaining work (Stage 3)
+## Remaining work (Stage 2D → 3)
 
+### Stage 2D — ADR 0005 code implementation
+1. Add `Course.mode` to model + schema + migration 0003
+2. Add `KnowledgeNote.source_note_id` to model + schema + migration 0003
+3. Add `test_course_mode.py`: create/update courses with both modes, enum validation
+4. Add `test_note_source_link.py`: source_note_id reference integrity, FK cascade protection
+5. Regenerate OpenAPI + TypeScript types
+6. Verify: `make acceptance-stage-2d` exits 0
+
+### Stage 3
 1. **3A**: Pure PGN parser — parse headers, variations, NAG, comments, SetUp/FEN into a semantic tree without touching the DB
 2. **3B**: Atomic PGN import — build occurrence trees from parsed PGN, merge position keys, idempotent re-import
 3. **3C**: PGN export — reconstruct PGN from course occurrence trees; semantic (not byte-identical) round-trip comparison
@@ -88,6 +101,11 @@ and the requirement that `import → export → import` produce a semantically e
 - MySQL async driver: `asyncmy 0.2.11` locked; SQLite default for MVP until Stage 3D
 - All timestamps UTC via `UTCDateTime` type decorator
 - All API schemas use `extra="forbid"`
+- **Dual course mode (ADR 0005)**: `Course.mode ∈ {traditional, opening_explorer}`
+  - `traditional`: organized by source (book/video → chapters), linear occurrence chains
+  - `opening_explorer`: organized by problem (opening → variations), graph with transposition
+  - `KnowledgeNote.source_note_id` links explorer notes to traditional originals
+  - AI import defaults to traditional; user publishes chapters to explorer
 
 ## Known risks
 

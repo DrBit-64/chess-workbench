@@ -53,6 +53,15 @@ Pydantic Schema 通过 Sanic Extensions 形成 OpenAPI。`scripts/contracts.py` 
 
 默认 SQLite URL 指向 `data/database/chess-workbench.db`。目录由数据库适配层按需创建，clean checkout 不依赖被忽略的数据文件。测试注入临时 SQLite URL，避免污染个人数据。
 
+## 双模课程
+
+ADR 0005 引入了两种课程模式：
+
+- **`traditional`**：按来源组织（一本书/视频系列 → 章节），Occurrence 构成线性链。用于整本棋书、中局专题、残局手册。
+- **`opening_explorer`**：按问题和决策点组织（开局主题 → 变例分支），Occurrence 构成图，支持转置合并和多分支。KnowledgeNote 通过 `source_note_id` 引用 traditional 模块中的原始内容。
+
+两种模式共用同一套表结构，通过 `Course.mode` 区分。AI 导入和手动导入默认进入 traditional 模式；用户选择章节发布到 opening_explorer。
+
 ## 尚未作出的决定
 
 PGN 导入如何把任意层 variation 映射为 occurrence、超出乐观锁字段的版本审计、后台任务租约与重试，以及正式 MySQL 发布拓扑仍未冻结。它们会在进入相应阶段前单独写 ADR，避免提前固化未经真实夹具验证的设计。

@@ -9,7 +9,14 @@ graph and back, with no semantic loss.
 ## Current phase
 
 **Stage 2 — completed (2026-08-06)** ✅  
-**Stage 3 — ready to start**
+**Stage 2D — ready to start** 🔄  
+**Stage 3 — planned**
+
+Stage 2D is the code-level implementation of ADR 0005 (dual course mode):
+- Add `Course.mode` field (String, `"traditional"` | `"opening_explorer"`, default `"traditional"`)
+- Add `KnowledgeNote.source_note_id` field (nullable UUID FK → knowledge_notes.id)
+- Migration 0003, updated Pydantic schemas, updated API contracts
+- Verification: `make acceptance-stage-2d`
 
 Stage 3 is organized as cumulative sub-units (see `docs/development-plan.md` §2):
 
@@ -64,6 +71,7 @@ make acceptance-stage-2  ✅ exit 0
 - `docs/decisions/0002` — Position identity (`standard:v1:` key)
 - `docs/decisions/0003` — MySQL async driver (`asyncmy 0.2.11`)
 - `docs/decisions/0004` — Course context, occurrence layer, source hierarchy, lifecycle
+- `docs/decisions/0005` — Dual course mode: traditional (按来源) + opening_explorer (按问题)
 
 ## Next steps (Stage 3)
 

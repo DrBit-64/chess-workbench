@@ -222,12 +222,41 @@ AI 输出必须经过：
 
 ### 4.1 学习 Learn
 
-用于浏览按主题组织的课程内容。
+Learn 分为两种课程组织模式（参见 ADR 0005）。
 
-示例：
+#### 传统课程（`mode="traditional"`）
+
+按书籍/视频系列 → 章节的原始结构组织。用于整本棋书、视频系列、中局专题、残局手册——任何按照作者叙事逻辑编排的内容。
 
 ```text
-开局
+我的资料库
+├── 《The Amateur's Mind》(Silman)
+│   ├── Part 1: 基础概念
+│   │   ├── Chapter 1: 不平衡
+│   │   └── Chapter 2: 局面
+│   └── Part 2: 实战
+│       ├── Chapter 3: 马优于象
+│       └── Chapter 4: 阻塞战术
+├── 《100 Endgames You Must Know》
+│   ├── Chapter 1: 基础将杀
+│   ├── Chapter 2: 兵残局
+│   └── ...
+└── GM Ivanov 的西西里防御视频系列
+    ├── 第 1 集：纳道尔夫变例概述
+    ├── 第 2 集：6.Bg5 主线
+    └── ...
+```
+
+- 每个章节内的 Occurrence 构成线性链。
+- KnowledgeNote 包含完整的 markdown 内容，通过 SourceSpan 引用原书页码或视频时间。
+- 章节嵌套用 Module.parent_id 树实现。
+
+#### 开局探索器（`mode="opening_explorer"`）
+
+按开局主题和决策点组织。用户从传统课程中选择开局相关章节发布到此模块。同一局面下列出不同来源的推荐着法。
+
+```text
+开局探索器
 ├── 斯堪的纳维亚防御
 │   ├── 2...Nf6
 │   │   ├── 早期 Nf3：何时用马回吃
@@ -247,7 +276,9 @@ AI 输出必须经过：
 └── 少子复杂残局
 ```
 
-课程按问题和决策点组织，不按“书 A 第三章”或“视频 B 第七集”组织。
+- Occurrence 构成图，支持转置合并和多分支。
+- KnowledgeNote 通过 `source_note_id` 引用传统课程中的原始 Note（不复制内容）。
+- 每个 KnowledgeNote 提供 [←] 上一步 / [→] 下一步 / 跳转到传统课程原文 三个导航按钮。
 
 ### 4.2 个人开局库 Repertoire
 
@@ -558,9 +589,11 @@ React Flow 可作为后期实现，不是 MVP 阻塞项。
 
 ### 6.1 导入阶段按来源分开
 
-每个来源独立保存，并具有独立抽取结果和审核状态。
+每个来源独立保存，并具有独立抽取结果和审核状态。AI 导入和手动导入默认进入传统课程（`mode="traditional"`），保留原书/视频的章节结构。
 
-### 6.2 正式知识按局面合并
+### 6.2 正式知识按局面合并（开局探索器）
+
+在开局探索器（`mode="opening_explorer"`）中：
 
 - 不同推荐并存；
 - 相同推荐合并来源；
@@ -569,9 +602,14 @@ React Flow 可作为后期实现，不是 MVP 阻塞项。
 - 转置指向相同 Position；
 - 用户手工决定个人开局选择。
 
-### 6.3 课程按问题组织
+开局探索器的所有 KnowledgeNote 通过 `source_note_id` 引用传统课程中的原始条目。内容只保存在传统课程中，开局探索器只保存引用和聚合关系。
 
-课程围绕决策点、计划和典型局面，而不是来源目录。
+### 6.3 两种课程模式
+
+- **传统课程**：按来源组织。一本书/视频系列的章节结构原样保存。KnowledgeNote 拥有完整内容并通过 SourceSpan 定位原书位置。适合中局专题、残局手册和线性例局。
+- **开局探索器**：按问题和决策点组织。用户从传统课程中选择开局相关章节发布到此。KnowledgeNote 是轻量引用卡片，聚合不同来源对同一局面的观点。
+
+详见 ADR 0005。
 
 ---
 
@@ -707,6 +745,8 @@ AI_PROVIDER=openai
 
 模型调用通过统一接口，输出使用 Pydantic Schema 校验。
 
+AI 导入的书籍/视频默认进入传统课程模式（`mode="traditional"`），保留原书/视频的章节结构。用户在审核后可将开局相关章节发布到开局探索器。
+
 ---
 
 ## 10. 核心领域模型
@@ -766,6 +806,7 @@ AI_PROVIDER=openai
 - `category`
 - `tags`
 - `status`
+- `mode`（`"traditional"` | `"opening_explorer"`）
 - `version`
 
 ### CourseModule
@@ -786,6 +827,7 @@ AI_PROVIDER=openai
 - `note_type`
 - `markdown`
 - `source_span_id`
+- `source_note_id`（可空；开局探索器引用传统课程中的原始 KnowledgeNote）
 - `review_status`
 - `version`
 
