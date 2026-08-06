@@ -10,6 +10,7 @@ from chess_workbench.schemas.domain import (
     KnowledgeNoteCreate,
     KnowledgeNoteUpdate,
     OccurrenceMoveCreate,
+    OccurrenceNoteTarget,
     SourceCreate,
     SourceFileCreate,
     SourceSpanCreate,
@@ -81,7 +82,9 @@ async def test_two_courses_share_graph_facts_but_keep_local_context(tmp_path: Pa
             assert child_a.inbound_move_edge_id == child_b.inbound_move_edge_id
             assert child_a.nag == 1
             assert child_b.nag == 2
+            assert isinstance(note_a.target, OccurrenceNoteTarget)
             assert note_a.target.occurrence_id == child_a.id
+            assert isinstance(note_b.target, OccurrenceNoteTarget)
             assert note_b.target.occurrence_id == child_b.id
 
             with pytest.raises(ServiceError) as illegal:
@@ -187,9 +190,7 @@ async def test_sources_citations_optimistic_lock_and_archive_are_service_owned(
             )
             assert source.archived_at is None
 
-            second_source = await service.create_source(
-                SourceCreate(kind="book", title="Other")
-            )
+            second_source = await service.create_source(SourceCreate(kind="book", title="Other"))
             second_version = await service.create_source_version(
                 SourceVersionCreate(source_id=second_source.id, label="Other edition")
             )

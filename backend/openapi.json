@@ -7,6 +7,2136 @@
   },
   "openapi": "3.0.3",
   "paths": {
+    "/api/course-modules": {
+      "post": {
+        "operationId": "createCourseModule",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "course_id": {
+                    "format": "uuid",
+                    "title": "Course Id",
+                    "type": "string"
+                  },
+                  "description": {
+                    "default": "",
+                    "maxLength": 10000,
+                    "title": "Description",
+                    "type": "string"
+                  },
+                  "parent_id": {
+                    "default": null,
+                    "format": "uuid",
+                    "nullable": true,
+                    "title": "Parent Id",
+                    "type": "string"
+                  },
+                  "sort_order": {
+                    "default": 0,
+                    "minimum": 0,
+                    "title": "Sort Order",
+                    "type": "integer"
+                  },
+                  "start_fen": {
+                    "default": null,
+                    "minLength": 1,
+                    "nullable": true,
+                    "title": "Start Fen",
+                    "type": "string"
+                  },
+                  "title": {
+                    "maxLength": 200,
+                    "minLength": 1,
+                    "title": "Title",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "course_id",
+                  "title"
+                ],
+                "title": "CourseModuleCreate",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "archived_at": {
+                      "default": null,
+                      "format": "date-time",
+                      "nullable": true,
+                      "title": "Archived At",
+                      "type": "string"
+                    },
+                    "course_id": {
+                      "format": "uuid",
+                      "title": "Course Id",
+                      "type": "string"
+                    },
+                    "created_at": {
+                      "format": "date-time",
+                      "title": "Created At",
+                      "type": "string"
+                    },
+                    "description": {
+                      "maxLength": 10000,
+                      "title": "Description",
+                      "type": "string"
+                    },
+                    "id": {
+                      "format": "uuid",
+                      "title": "Id",
+                      "type": "string"
+                    },
+                    "parent_id": {
+                      "default": null,
+                      "format": "uuid",
+                      "nullable": true,
+                      "title": "Parent Id",
+                      "type": "string"
+                    },
+                    "sort_order": {
+                      "minimum": 0,
+                      "title": "Sort Order",
+                      "type": "integer"
+                    },
+                    "start_occurrence_id": {
+                      "default": null,
+                      "format": "uuid",
+                      "nullable": true,
+                      "title": "Start Occurrence Id",
+                      "type": "string"
+                    },
+                    "title": {
+                      "maxLength": 200,
+                      "minLength": 1,
+                      "title": "Title",
+                      "type": "string"
+                    },
+                    "updated_at": {
+                      "format": "date-time",
+                      "title": "Updated At",
+                      "type": "string"
+                    },
+                    "version": {
+                      "minimum": 1,
+                      "title": "Version",
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "version",
+                    "created_at",
+                    "updated_at",
+                    "course_id",
+                    "title",
+                    "description",
+                    "sort_order"
+                  ],
+                  "title": "CourseModuleRead",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Module created"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Course or parent module not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Module context conflicts"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Request validation or FEN validation failed"
+          }
+        },
+        "summary": "Create a course module and optional root occurrence",
+        "tags": [
+          "courses"
+        ]
+      }
+    },
+    "/api/course-modules/{module_id}": {
+      "get": {
+        "operationId": "getCourseModule",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "include_archived",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "path",
+            "name": "module_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "archived_at": {
+                      "default": null,
+                      "format": "date-time",
+                      "nullable": true,
+                      "title": "Archived At",
+                      "type": "string"
+                    },
+                    "course_id": {
+                      "format": "uuid",
+                      "title": "Course Id",
+                      "type": "string"
+                    },
+                    "created_at": {
+                      "format": "date-time",
+                      "title": "Created At",
+                      "type": "string"
+                    },
+                    "description": {
+                      "maxLength": 10000,
+                      "title": "Description",
+                      "type": "string"
+                    },
+                    "id": {
+                      "format": "uuid",
+                      "title": "Id",
+                      "type": "string"
+                    },
+                    "parent_id": {
+                      "default": null,
+                      "format": "uuid",
+                      "nullable": true,
+                      "title": "Parent Id",
+                      "type": "string"
+                    },
+                    "sort_order": {
+                      "minimum": 0,
+                      "title": "Sort Order",
+                      "type": "integer"
+                    },
+                    "start_occurrence_id": {
+                      "default": null,
+                      "format": "uuid",
+                      "nullable": true,
+                      "title": "Start Occurrence Id",
+                      "type": "string"
+                    },
+                    "title": {
+                      "maxLength": 200,
+                      "minLength": 1,
+                      "title": "Title",
+                      "type": "string"
+                    },
+                    "updated_at": {
+                      "format": "date-time",
+                      "title": "Updated At",
+                      "type": "string"
+                    },
+                    "version": {
+                      "minimum": 1,
+                      "title": "Version",
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "version",
+                    "created_at",
+                    "updated_at",
+                    "course_id",
+                    "title",
+                    "description",
+                    "sort_order"
+                  ],
+                  "title": "CourseModuleRead",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Course module"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Module not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Module has ambiguous root context"
+          }
+        },
+        "summary": "Read a course module",
+        "tags": [
+          "courses"
+        ]
+      },
+      "patch": {
+        "operationId": "updateCourseModule",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "module_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "archived": {
+                    "default": null,
+                    "nullable": true,
+                    "title": "Archived",
+                    "type": "boolean"
+                  },
+                  "description": {
+                    "default": null,
+                    "maxLength": 10000,
+                    "nullable": true,
+                    "title": "Description",
+                    "type": "string"
+                  },
+                  "expected_version": {
+                    "minimum": 1,
+                    "title": "Expected Version",
+                    "type": "integer"
+                  },
+                  "parent_id": {
+                    "default": null,
+                    "format": "uuid",
+                    "nullable": true,
+                    "title": "Parent Id",
+                    "type": "string"
+                  },
+                  "sort_order": {
+                    "default": null,
+                    "minimum": 0,
+                    "nullable": true,
+                    "title": "Sort Order",
+                    "type": "integer"
+                  },
+                  "title": {
+                    "default": null,
+                    "maxLength": 200,
+                    "minLength": 1,
+                    "nullable": true,
+                    "title": "Title",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "expected_version"
+                ],
+                "title": "CourseModuleUpdate",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "archived_at": {
+                      "default": null,
+                      "format": "date-time",
+                      "nullable": true,
+                      "title": "Archived At",
+                      "type": "string"
+                    },
+                    "course_id": {
+                      "format": "uuid",
+                      "title": "Course Id",
+                      "type": "string"
+                    },
+                    "created_at": {
+                      "format": "date-time",
+                      "title": "Created At",
+                      "type": "string"
+                    },
+                    "description": {
+                      "maxLength": 10000,
+                      "title": "Description",
+                      "type": "string"
+                    },
+                    "id": {
+                      "format": "uuid",
+                      "title": "Id",
+                      "type": "string"
+                    },
+                    "parent_id": {
+                      "default": null,
+                      "format": "uuid",
+                      "nullable": true,
+                      "title": "Parent Id",
+                      "type": "string"
+                    },
+                    "sort_order": {
+                      "minimum": 0,
+                      "title": "Sort Order",
+                      "type": "integer"
+                    },
+                    "start_occurrence_id": {
+                      "default": null,
+                      "format": "uuid",
+                      "nullable": true,
+                      "title": "Start Occurrence Id",
+                      "type": "string"
+                    },
+                    "title": {
+                      "maxLength": 200,
+                      "minLength": 1,
+                      "title": "Title",
+                      "type": "string"
+                    },
+                    "updated_at": {
+                      "format": "date-time",
+                      "title": "Updated At",
+                      "type": "string"
+                    },
+                    "version": {
+                      "minimum": 1,
+                      "title": "Version",
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "version",
+                    "created_at",
+                    "updated_at",
+                    "course_id",
+                    "title",
+                    "description",
+                    "sort_order"
+                  ],
+                  "title": "CourseModuleRead",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Updated module"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Module or parent not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Stale version or invalid parent context"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Update, archive, or restore a module",
+        "tags": [
+          "courses"
+        ]
+      }
+    },
+    "/api/courses": {
+      "get": {
+        "operationId": "listCourses",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "include_archived",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "archived_at": {
+                        "default": null,
+                        "format": "date-time",
+                        "nullable": true,
+                        "title": "Archived At",
+                        "type": "string"
+                      },
+                      "category": {
+                        "default": null,
+                        "maxLength": 200,
+                        "minLength": 1,
+                        "nullable": true,
+                        "title": "Category",
+                        "type": "string"
+                      },
+                      "created_at": {
+                        "format": "date-time",
+                        "title": "Created At",
+                        "type": "string"
+                      },
+                      "description": {
+                        "maxLength": 10000,
+                        "title": "Description",
+                        "type": "string"
+                      },
+                      "id": {
+                        "format": "uuid",
+                        "title": "Id",
+                        "type": "string"
+                      },
+                      "status": {
+                        "enum": [
+                          "draft",
+                          "published"
+                        ],
+                        "title": "Status",
+                        "type": "string"
+                      },
+                      "tags": {
+                        "items": {
+                          "maxLength": 200,
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "title": "Tags",
+                        "type": "array"
+                      },
+                      "title": {
+                        "maxLength": 200,
+                        "minLength": 1,
+                        "title": "Title",
+                        "type": "string"
+                      },
+                      "updated_at": {
+                        "format": "date-time",
+                        "title": "Updated At",
+                        "type": "string"
+                      },
+                      "version": {
+                        "minimum": 1,
+                        "title": "Version",
+                        "type": "integer"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "version",
+                      "created_at",
+                      "updated_at",
+                      "title",
+                      "description",
+                      "tags",
+                      "status"
+                    ],
+                    "title": "CourseRead",
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Courses"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Query validation failed"
+          }
+        },
+        "summary": "List courses",
+        "tags": [
+          "courses"
+        ]
+      },
+      "post": {
+        "operationId": "createCourse",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "category": {
+                    "default": null,
+                    "maxLength": 200,
+                    "minLength": 1,
+                    "nullable": true,
+                    "title": "Category",
+                    "type": "string"
+                  },
+                  "description": {
+                    "default": "",
+                    "maxLength": 10000,
+                    "title": "Description",
+                    "type": "string"
+                  },
+                  "status": {
+                    "default": "draft",
+                    "enum": [
+                      "draft",
+                      "published"
+                    ],
+                    "title": "Status",
+                    "type": "string"
+                  },
+                  "tags": {
+                    "items": {
+                      "maxLength": 200,
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "maxItems": 50,
+                    "title": "Tags",
+                    "type": "array"
+                  },
+                  "title": {
+                    "maxLength": 200,
+                    "minLength": 1,
+                    "title": "Title",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "title"
+                ],
+                "title": "CourseCreate",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "archived_at": {
+                      "default": null,
+                      "format": "date-time",
+                      "nullable": true,
+                      "title": "Archived At",
+                      "type": "string"
+                    },
+                    "category": {
+                      "default": null,
+                      "maxLength": 200,
+                      "minLength": 1,
+                      "nullable": true,
+                      "title": "Category",
+                      "type": "string"
+                    },
+                    "created_at": {
+                      "format": "date-time",
+                      "title": "Created At",
+                      "type": "string"
+                    },
+                    "description": {
+                      "maxLength": 10000,
+                      "title": "Description",
+                      "type": "string"
+                    },
+                    "id": {
+                      "format": "uuid",
+                      "title": "Id",
+                      "type": "string"
+                    },
+                    "status": {
+                      "enum": [
+                        "draft",
+                        "published"
+                      ],
+                      "title": "Status",
+                      "type": "string"
+                    },
+                    "tags": {
+                      "items": {
+                        "maxLength": 200,
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "title": "Tags",
+                      "type": "array"
+                    },
+                    "title": {
+                      "maxLength": 200,
+                      "minLength": 1,
+                      "title": "Title",
+                      "type": "string"
+                    },
+                    "updated_at": {
+                      "format": "date-time",
+                      "title": "Updated At",
+                      "type": "string"
+                    },
+                    "version": {
+                      "minimum": 1,
+                      "title": "Version",
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "version",
+                    "created_at",
+                    "updated_at",
+                    "title",
+                    "description",
+                    "tags",
+                    "status"
+                  ],
+                  "title": "CourseRead",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Course created"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Create a course",
+        "tags": [
+          "courses"
+        ]
+      }
+    },
+    "/api/courses/{course_id}": {
+      "get": {
+        "operationId": "getCourse",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "include_archived",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "path",
+            "name": "course_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "archived_at": {
+                      "default": null,
+                      "format": "date-time",
+                      "nullable": true,
+                      "title": "Archived At",
+                      "type": "string"
+                    },
+                    "category": {
+                      "default": null,
+                      "maxLength": 200,
+                      "minLength": 1,
+                      "nullable": true,
+                      "title": "Category",
+                      "type": "string"
+                    },
+                    "created_at": {
+                      "format": "date-time",
+                      "title": "Created At",
+                      "type": "string"
+                    },
+                    "description": {
+                      "maxLength": 10000,
+                      "title": "Description",
+                      "type": "string"
+                    },
+                    "id": {
+                      "format": "uuid",
+                      "title": "Id",
+                      "type": "string"
+                    },
+                    "status": {
+                      "enum": [
+                        "draft",
+                        "published"
+                      ],
+                      "title": "Status",
+                      "type": "string"
+                    },
+                    "tags": {
+                      "items": {
+                        "maxLength": 200,
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "title": "Tags",
+                      "type": "array"
+                    },
+                    "title": {
+                      "maxLength": 200,
+                      "minLength": 1,
+                      "title": "Title",
+                      "type": "string"
+                    },
+                    "updated_at": {
+                      "format": "date-time",
+                      "title": "Updated At",
+                      "type": "string"
+                    },
+                    "version": {
+                      "minimum": 1,
+                      "title": "Version",
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "version",
+                    "created_at",
+                    "updated_at",
+                    "title",
+                    "description",
+                    "tags",
+                    "status"
+                  ],
+                  "title": "CourseRead",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Course"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Course not found"
+          }
+        },
+        "summary": "Read a course",
+        "tags": [
+          "courses"
+        ]
+      },
+      "patch": {
+        "operationId": "updateCourse",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "archived": {
+                    "default": null,
+                    "nullable": true,
+                    "title": "Archived",
+                    "type": "boolean"
+                  },
+                  "category": {
+                    "default": null,
+                    "maxLength": 200,
+                    "minLength": 1,
+                    "nullable": true,
+                    "title": "Category",
+                    "type": "string"
+                  },
+                  "description": {
+                    "default": null,
+                    "maxLength": 10000,
+                    "nullable": true,
+                    "title": "Description",
+                    "type": "string"
+                  },
+                  "expected_version": {
+                    "minimum": 1,
+                    "title": "Expected Version",
+                    "type": "integer"
+                  },
+                  "status": {
+                    "default": null,
+                    "enum": [
+                      "draft",
+                      "published"
+                    ],
+                    "nullable": true,
+                    "title": "Status",
+                    "type": "string"
+                  },
+                  "tags": {
+                    "default": null,
+                    "items": {
+                      "maxLength": 200,
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "maxItems": 50,
+                    "nullable": true,
+                    "title": "Tags",
+                    "type": "array"
+                  },
+                  "title": {
+                    "default": null,
+                    "maxLength": 200,
+                    "minLength": 1,
+                    "nullable": true,
+                    "title": "Title",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "expected_version"
+                ],
+                "title": "CourseUpdate",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "archived_at": {
+                      "default": null,
+                      "format": "date-time",
+                      "nullable": true,
+                      "title": "Archived At",
+                      "type": "string"
+                    },
+                    "category": {
+                      "default": null,
+                      "maxLength": 200,
+                      "minLength": 1,
+                      "nullable": true,
+                      "title": "Category",
+                      "type": "string"
+                    },
+                    "created_at": {
+                      "format": "date-time",
+                      "title": "Created At",
+                      "type": "string"
+                    },
+                    "description": {
+                      "maxLength": 10000,
+                      "title": "Description",
+                      "type": "string"
+                    },
+                    "id": {
+                      "format": "uuid",
+                      "title": "Id",
+                      "type": "string"
+                    },
+                    "status": {
+                      "enum": [
+                        "draft",
+                        "published"
+                      ],
+                      "title": "Status",
+                      "type": "string"
+                    },
+                    "tags": {
+                      "items": {
+                        "maxLength": 200,
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "title": "Tags",
+                      "type": "array"
+                    },
+                    "title": {
+                      "maxLength": 200,
+                      "minLength": 1,
+                      "title": "Title",
+                      "type": "string"
+                    },
+                    "updated_at": {
+                      "format": "date-time",
+                      "title": "Updated At",
+                      "type": "string"
+                    },
+                    "version": {
+                      "minimum": 1,
+                      "title": "Version",
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "version",
+                    "created_at",
+                    "updated_at",
+                    "title",
+                    "description",
+                    "tags",
+                    "status"
+                  ],
+                  "title": "CourseRead",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Updated course"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Course not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Version is stale"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Update, archive, or restore a course with optimistic locking",
+        "tags": [
+          "courses"
+        ]
+      }
+    },
+    "/api/courses/{course_id}/modules": {
+      "get": {
+        "operationId": "listCourseModules",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "include_archived",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "parent_id",
+            "required": false,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "course_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "archived_at": {
+                        "default": null,
+                        "format": "date-time",
+                        "nullable": true,
+                        "title": "Archived At",
+                        "type": "string"
+                      },
+                      "course_id": {
+                        "format": "uuid",
+                        "title": "Course Id",
+                        "type": "string"
+                      },
+                      "created_at": {
+                        "format": "date-time",
+                        "title": "Created At",
+                        "type": "string"
+                      },
+                      "description": {
+                        "maxLength": 10000,
+                        "title": "Description",
+                        "type": "string"
+                      },
+                      "id": {
+                        "format": "uuid",
+                        "title": "Id",
+                        "type": "string"
+                      },
+                      "parent_id": {
+                        "default": null,
+                        "format": "uuid",
+                        "nullable": true,
+                        "title": "Parent Id",
+                        "type": "string"
+                      },
+                      "sort_order": {
+                        "minimum": 0,
+                        "title": "Sort Order",
+                        "type": "integer"
+                      },
+                      "start_occurrence_id": {
+                        "default": null,
+                        "format": "uuid",
+                        "nullable": true,
+                        "title": "Start Occurrence Id",
+                        "type": "string"
+                      },
+                      "title": {
+                        "maxLength": 200,
+                        "minLength": 1,
+                        "title": "Title",
+                        "type": "string"
+                      },
+                      "updated_at": {
+                        "format": "date-time",
+                        "title": "Updated At",
+                        "type": "string"
+                      },
+                      "version": {
+                        "minimum": 1,
+                        "title": "Version",
+                        "type": "integer"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "version",
+                      "created_at",
+                      "updated_at",
+                      "course_id",
+                      "title",
+                      "description",
+                      "sort_order"
+                    ],
+                    "title": "CourseModuleRead",
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Course modules"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Course not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Query validation failed"
+          }
+        },
+        "summary": "List modules in one course",
+        "tags": [
+          "courses"
+        ]
+      }
+    },
+    "/api/courses/{course_id}/occurrences": {
+      "get": {
+        "operationId": "listCourseOccurrences",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "include_archived",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "roots_only",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "parent_id",
+            "required": false,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "module_id",
+            "required": false,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "course_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "archived_at": {
+                        "default": null,
+                        "format": "date-time",
+                        "nullable": true,
+                        "title": "Archived At",
+                        "type": "string"
+                      },
+                      "context": {
+                        "additionalProperties": {},
+                        "title": "Context",
+                        "type": "object"
+                      },
+                      "course_id": {
+                        "format": "uuid",
+                        "title": "Course Id",
+                        "type": "string"
+                      },
+                      "created_at": {
+                        "format": "date-time",
+                        "title": "Created At",
+                        "type": "string"
+                      },
+                      "full_fen": {
+                        "minLength": 1,
+                        "title": "Full Fen",
+                        "type": "string"
+                      },
+                      "id": {
+                        "format": "uuid",
+                        "title": "Id",
+                        "type": "string"
+                      },
+                      "inbound_move_edge_id": {
+                        "default": null,
+                        "format": "uuid",
+                        "nullable": true,
+                        "title": "Inbound Move Edge Id",
+                        "type": "string"
+                      },
+                      "module_id": {
+                        "default": null,
+                        "format": "uuid",
+                        "nullable": true,
+                        "title": "Module Id",
+                        "type": "string"
+                      },
+                      "nag": {
+                        "default": null,
+                        "maximum": 255,
+                        "minimum": 0,
+                        "nullable": true,
+                        "title": "Nag",
+                        "type": "integer"
+                      },
+                      "parent_id": {
+                        "default": null,
+                        "format": "uuid",
+                        "nullable": true,
+                        "title": "Parent Id",
+                        "type": "string"
+                      },
+                      "position_id": {
+                        "format": "uuid",
+                        "title": "Position Id",
+                        "type": "string"
+                      },
+                      "sort_order": {
+                        "minimum": 0,
+                        "title": "Sort Order",
+                        "type": "integer"
+                      },
+                      "updated_at": {
+                        "format": "date-time",
+                        "title": "Updated At",
+                        "type": "string"
+                      },
+                      "version": {
+                        "minimum": 1,
+                        "title": "Version",
+                        "type": "integer"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "version",
+                      "created_at",
+                      "updated_at",
+                      "course_id",
+                      "position_id",
+                      "full_fen",
+                      "sort_order",
+                      "context"
+                    ],
+                    "title": "OccurrenceRead",
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Course occurrences"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Course, module, or parent not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Query validation failed"
+          }
+        },
+        "summary": "List occurrences while preserving course and path context",
+        "tags": [
+          "course-occurrences"
+        ]
+      }
+    },
     "/api/health": {
       "get": {
         "operationId": "getHealth",
@@ -103,6 +2233,1608 @@
           "system"
         ]
       }
+    },
+    "/api/moves": {
+      "post": {
+        "operationId": "createMove",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "from_position_id": {
+                    "format": "uuid",
+                    "title": "From Position Id",
+                    "type": "string"
+                  },
+                  "uci": {
+                    "pattern": "^[a-h][1-8][a-h][1-8][qrbn]?$",
+                    "title": "Uci",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "from_position_id",
+                  "uci"
+                ],
+                "title": "MoveCreate",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "created_at": {
+                      "format": "date-time",
+                      "title": "Created At",
+                      "type": "string"
+                    },
+                    "from_position_id": {
+                      "format": "uuid",
+                      "title": "From Position Id",
+                      "type": "string"
+                    },
+                    "id": {
+                      "format": "uuid",
+                      "title": "Id",
+                      "type": "string"
+                    },
+                    "san": {
+                      "minLength": 1,
+                      "title": "San",
+                      "type": "string"
+                    },
+                    "to_position_id": {
+                      "format": "uuid",
+                      "title": "To Position Id",
+                      "type": "string"
+                    },
+                    "uci": {
+                      "pattern": "^[a-h][1-8][a-h][1-8][qrbn]?$",
+                      "title": "Uci",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "created_at",
+                    "from_position_id",
+                    "to_position_id",
+                    "uci",
+                    "san"
+                  ],
+                  "title": "MoveRead",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Existing move edge"
+          },
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "created_at": {
+                      "format": "date-time",
+                      "title": "Created At",
+                      "type": "string"
+                    },
+                    "from_position_id": {
+                      "format": "uuid",
+                      "title": "From Position Id",
+                      "type": "string"
+                    },
+                    "id": {
+                      "format": "uuid",
+                      "title": "Id",
+                      "type": "string"
+                    },
+                    "san": {
+                      "minLength": 1,
+                      "title": "San",
+                      "type": "string"
+                    },
+                    "to_position_id": {
+                      "format": "uuid",
+                      "title": "To Position Id",
+                      "type": "string"
+                    },
+                    "uci": {
+                      "pattern": "^[a-h][1-8][a-h][1-8][qrbn]?$",
+                      "title": "Uci",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "created_at",
+                    "from_position_id",
+                    "to_position_id",
+                    "uci",
+                    "san"
+                  ],
+                  "title": "MoveRead",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Move edge created"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Source position not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Move is invalid or illegal"
+          }
+        },
+        "summary": "Validate and resolve a global legal-move edge",
+        "tags": [
+          "position-graph"
+        ]
+      }
+    },
+    "/api/moves/{move_id}": {
+      "get": {
+        "operationId": "getMove",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "move_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "created_at": {
+                      "format": "date-time",
+                      "title": "Created At",
+                      "type": "string"
+                    },
+                    "from_position_id": {
+                      "format": "uuid",
+                      "title": "From Position Id",
+                      "type": "string"
+                    },
+                    "id": {
+                      "format": "uuid",
+                      "title": "Id",
+                      "type": "string"
+                    },
+                    "san": {
+                      "minLength": 1,
+                      "title": "San",
+                      "type": "string"
+                    },
+                    "to_position_id": {
+                      "format": "uuid",
+                      "title": "To Position Id",
+                      "type": "string"
+                    },
+                    "uci": {
+                      "pattern": "^[a-h][1-8][a-h][1-8][qrbn]?$",
+                      "title": "Uci",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "created_at",
+                    "from_position_id",
+                    "to_position_id",
+                    "uci",
+                    "san"
+                  ],
+                  "title": "MoveRead",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Move edge"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Move edge not found"
+          }
+        },
+        "summary": "Read one global move edge",
+        "tags": [
+          "position-graph"
+        ]
+      }
+    },
+    "/api/occurrences": {
+      "post": {
+        "operationId": "createCourseOccurrence",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "discriminator": {
+                  "propertyName": "kind"
+                },
+                "oneOf": [
+                  {
+                    "additionalProperties": false,
+                    "properties": {
+                      "context": {
+                        "additionalProperties": {},
+                        "title": "Context",
+                        "type": "object"
+                      },
+                      "course_id": {
+                        "format": "uuid",
+                        "title": "Course Id",
+                        "type": "string"
+                      },
+                      "fen": {
+                        "minLength": 1,
+                        "title": "Fen",
+                        "type": "string"
+                      },
+                      "kind": {
+                        "default": "root",
+                        "enum": [
+                          "root"
+                        ],
+                        "title": "Kind",
+                        "type": "string"
+                      },
+                      "module_id": {
+                        "default": null,
+                        "format": "uuid",
+                        "nullable": true,
+                        "title": "Module Id",
+                        "type": "string"
+                      },
+                      "nag": {
+                        "default": null,
+                        "maximum": 255,
+                        "minimum": 0,
+                        "nullable": true,
+                        "title": "Nag",
+                        "type": "integer"
+                      },
+                      "sort_order": {
+                        "default": 0,
+                        "minimum": 0,
+                        "title": "Sort Order",
+                        "type": "integer"
+                      }
+                    },
+                    "required": [
+                      "course_id",
+                      "fen"
+                    ],
+                    "title": "RootOccurrenceCreate",
+                    "type": "object"
+                  },
+                  {
+                    "additionalProperties": false,
+                    "properties": {
+                      "context": {
+                        "additionalProperties": {},
+                        "title": "Context",
+                        "type": "object"
+                      },
+                      "kind": {
+                        "default": "move",
+                        "enum": [
+                          "move"
+                        ],
+                        "title": "Kind",
+                        "type": "string"
+                      },
+                      "nag": {
+                        "default": null,
+                        "maximum": 255,
+                        "minimum": 0,
+                        "nullable": true,
+                        "title": "Nag",
+                        "type": "integer"
+                      },
+                      "parent_occurrence_id": {
+                        "format": "uuid",
+                        "title": "Parent Occurrence Id",
+                        "type": "string"
+                      },
+                      "sort_order": {
+                        "default": 0,
+                        "minimum": 0,
+                        "title": "Sort Order",
+                        "type": "integer"
+                      },
+                      "uci": {
+                        "pattern": "^[a-h][1-8][a-h][1-8][qrbn]?$",
+                        "title": "Uci",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "parent_occurrence_id",
+                      "uci"
+                    ],
+                    "title": "OccurrenceMoveCreate",
+                    "type": "object"
+                  }
+                ]
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "archived_at": {
+                      "default": null,
+                      "format": "date-time",
+                      "nullable": true,
+                      "title": "Archived At",
+                      "type": "string"
+                    },
+                    "context": {
+                      "additionalProperties": {},
+                      "title": "Context",
+                      "type": "object"
+                    },
+                    "course_id": {
+                      "format": "uuid",
+                      "title": "Course Id",
+                      "type": "string"
+                    },
+                    "created_at": {
+                      "format": "date-time",
+                      "title": "Created At",
+                      "type": "string"
+                    },
+                    "full_fen": {
+                      "minLength": 1,
+                      "title": "Full Fen",
+                      "type": "string"
+                    },
+                    "id": {
+                      "format": "uuid",
+                      "title": "Id",
+                      "type": "string"
+                    },
+                    "inbound_move_edge_id": {
+                      "default": null,
+                      "format": "uuid",
+                      "nullable": true,
+                      "title": "Inbound Move Edge Id",
+                      "type": "string"
+                    },
+                    "module_id": {
+                      "default": null,
+                      "format": "uuid",
+                      "nullable": true,
+                      "title": "Module Id",
+                      "type": "string"
+                    },
+                    "nag": {
+                      "default": null,
+                      "maximum": 255,
+                      "minimum": 0,
+                      "nullable": true,
+                      "title": "Nag",
+                      "type": "integer"
+                    },
+                    "parent_id": {
+                      "default": null,
+                      "format": "uuid",
+                      "nullable": true,
+                      "title": "Parent Id",
+                      "type": "string"
+                    },
+                    "position_id": {
+                      "format": "uuid",
+                      "title": "Position Id",
+                      "type": "string"
+                    },
+                    "sort_order": {
+                      "minimum": 0,
+                      "title": "Sort Order",
+                      "type": "integer"
+                    },
+                    "updated_at": {
+                      "format": "date-time",
+                      "title": "Updated At",
+                      "type": "string"
+                    },
+                    "version": {
+                      "minimum": 1,
+                      "title": "Version",
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "version",
+                    "created_at",
+                    "updated_at",
+                    "course_id",
+                    "position_id",
+                    "full_fen",
+                    "sort_order",
+                    "context"
+                  ],
+                  "title": "OccurrenceRead",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Occurrence created"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Course, module, or parent occurrence not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Occurrence context is ambiguous"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "FEN or move is invalid or illegal"
+          }
+        },
+        "summary": "Create a root occurrence or apply one legal move in path context",
+        "tags": [
+          "course-occurrences"
+        ]
+      }
+    },
+    "/api/occurrences/{occurrence_id}": {
+      "get": {
+        "operationId": "getCourseOccurrence",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "include_archived",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "path",
+            "name": "occurrence_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "archived_at": {
+                      "default": null,
+                      "format": "date-time",
+                      "nullable": true,
+                      "title": "Archived At",
+                      "type": "string"
+                    },
+                    "context": {
+                      "additionalProperties": {},
+                      "title": "Context",
+                      "type": "object"
+                    },
+                    "course_id": {
+                      "format": "uuid",
+                      "title": "Course Id",
+                      "type": "string"
+                    },
+                    "created_at": {
+                      "format": "date-time",
+                      "title": "Created At",
+                      "type": "string"
+                    },
+                    "full_fen": {
+                      "minLength": 1,
+                      "title": "Full Fen",
+                      "type": "string"
+                    },
+                    "id": {
+                      "format": "uuid",
+                      "title": "Id",
+                      "type": "string"
+                    },
+                    "inbound_move_edge_id": {
+                      "default": null,
+                      "format": "uuid",
+                      "nullable": true,
+                      "title": "Inbound Move Edge Id",
+                      "type": "string"
+                    },
+                    "module_id": {
+                      "default": null,
+                      "format": "uuid",
+                      "nullable": true,
+                      "title": "Module Id",
+                      "type": "string"
+                    },
+                    "nag": {
+                      "default": null,
+                      "maximum": 255,
+                      "minimum": 0,
+                      "nullable": true,
+                      "title": "Nag",
+                      "type": "integer"
+                    },
+                    "parent_id": {
+                      "default": null,
+                      "format": "uuid",
+                      "nullable": true,
+                      "title": "Parent Id",
+                      "type": "string"
+                    },
+                    "position_id": {
+                      "format": "uuid",
+                      "title": "Position Id",
+                      "type": "string"
+                    },
+                    "sort_order": {
+                      "minimum": 0,
+                      "title": "Sort Order",
+                      "type": "integer"
+                    },
+                    "updated_at": {
+                      "format": "date-time",
+                      "title": "Updated At",
+                      "type": "string"
+                    },
+                    "version": {
+                      "minimum": 1,
+                      "title": "Version",
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "version",
+                    "created_at",
+                    "updated_at",
+                    "course_id",
+                    "position_id",
+                    "full_fen",
+                    "sort_order",
+                    "context"
+                  ],
+                  "title": "OccurrenceRead",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Course occurrence"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Occurrence not found"
+          }
+        },
+        "summary": "Read one occurrence with explicit path context",
+        "tags": [
+          "course-occurrences"
+        ]
+      },
+      "patch": {
+        "operationId": "updateCourseOccurrence",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "occurrence_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "archived": {
+                    "default": null,
+                    "nullable": true,
+                    "title": "Archived",
+                    "type": "boolean"
+                  },
+                  "context": {
+                    "additionalProperties": {},
+                    "default": null,
+                    "nullable": true,
+                    "title": "Context",
+                    "type": "object"
+                  },
+                  "expected_version": {
+                    "minimum": 1,
+                    "title": "Expected Version",
+                    "type": "integer"
+                  },
+                  "module_id": {
+                    "default": null,
+                    "format": "uuid",
+                    "nullable": true,
+                    "title": "Module Id",
+                    "type": "string"
+                  },
+                  "nag": {
+                    "default": null,
+                    "maximum": 255,
+                    "minimum": 0,
+                    "nullable": true,
+                    "title": "Nag",
+                    "type": "integer"
+                  },
+                  "sort_order": {
+                    "default": null,
+                    "minimum": 0,
+                    "nullable": true,
+                    "title": "Sort Order",
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "expected_version"
+                ],
+                "title": "OccurrenceUpdate",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "archived_at": {
+                      "default": null,
+                      "format": "date-time",
+                      "nullable": true,
+                      "title": "Archived At",
+                      "type": "string"
+                    },
+                    "context": {
+                      "additionalProperties": {},
+                      "title": "Context",
+                      "type": "object"
+                    },
+                    "course_id": {
+                      "format": "uuid",
+                      "title": "Course Id",
+                      "type": "string"
+                    },
+                    "created_at": {
+                      "format": "date-time",
+                      "title": "Created At",
+                      "type": "string"
+                    },
+                    "full_fen": {
+                      "minLength": 1,
+                      "title": "Full Fen",
+                      "type": "string"
+                    },
+                    "id": {
+                      "format": "uuid",
+                      "title": "Id",
+                      "type": "string"
+                    },
+                    "inbound_move_edge_id": {
+                      "default": null,
+                      "format": "uuid",
+                      "nullable": true,
+                      "title": "Inbound Move Edge Id",
+                      "type": "string"
+                    },
+                    "module_id": {
+                      "default": null,
+                      "format": "uuid",
+                      "nullable": true,
+                      "title": "Module Id",
+                      "type": "string"
+                    },
+                    "nag": {
+                      "default": null,
+                      "maximum": 255,
+                      "minimum": 0,
+                      "nullable": true,
+                      "title": "Nag",
+                      "type": "integer"
+                    },
+                    "parent_id": {
+                      "default": null,
+                      "format": "uuid",
+                      "nullable": true,
+                      "title": "Parent Id",
+                      "type": "string"
+                    },
+                    "position_id": {
+                      "format": "uuid",
+                      "title": "Position Id",
+                      "type": "string"
+                    },
+                    "sort_order": {
+                      "minimum": 0,
+                      "title": "Sort Order",
+                      "type": "integer"
+                    },
+                    "updated_at": {
+                      "format": "date-time",
+                      "title": "Updated At",
+                      "type": "string"
+                    },
+                    "version": {
+                      "minimum": 1,
+                      "title": "Version",
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "version",
+                    "created_at",
+                    "updated_at",
+                    "course_id",
+                    "position_id",
+                    "full_fen",
+                    "sort_order",
+                    "context"
+                  ],
+                  "title": "OccurrenceRead",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Updated occurrence"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Occurrence or module not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Stale version or invalid context"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Update occurrence-local context with optimistic locking",
+        "tags": [
+          "course-occurrences"
+        ]
+      }
+    },
+    "/api/positions": {
+      "post": {
+        "operationId": "createPosition",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "fen": {
+                    "minLength": 1,
+                    "title": "Fen",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "fen"
+                ],
+                "title": "PositionCreate",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "canonical_fen": {
+                      "minLength": 1,
+                      "title": "Canonical Fen",
+                      "type": "string"
+                    },
+                    "castling_rights": {
+                      "title": "Castling Rights",
+                      "type": "string"
+                    },
+                    "created_at": {
+                      "format": "date-time",
+                      "title": "Created At",
+                      "type": "string"
+                    },
+                    "en_passant": {
+                      "title": "En Passant",
+                      "type": "string"
+                    },
+                    "id": {
+                      "format": "uuid",
+                      "title": "Id",
+                      "type": "string"
+                    },
+                    "material_signature": {
+                      "minLength": 1,
+                      "title": "Material Signature",
+                      "type": "string"
+                    },
+                    "piece_placement": {
+                      "minLength": 1,
+                      "title": "Piece Placement",
+                      "type": "string"
+                    },
+                    "position_key": {
+                      "minLength": 1,
+                      "title": "Position Key",
+                      "type": "string"
+                    },
+                    "side_to_move": {
+                      "enum": [
+                        "w",
+                        "b"
+                      ],
+                      "title": "Side To Move",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "created_at",
+                    "position_key",
+                    "canonical_fen",
+                    "piece_placement",
+                    "side_to_move",
+                    "castling_rights",
+                    "en_passant",
+                    "material_signature"
+                  ],
+                  "title": "PositionRead",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Existing canonical position"
+          },
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "canonical_fen": {
+                      "minLength": 1,
+                      "title": "Canonical Fen",
+                      "type": "string"
+                    },
+                    "castling_rights": {
+                      "title": "Castling Rights",
+                      "type": "string"
+                    },
+                    "created_at": {
+                      "format": "date-time",
+                      "title": "Created At",
+                      "type": "string"
+                    },
+                    "en_passant": {
+                      "title": "En Passant",
+                      "type": "string"
+                    },
+                    "id": {
+                      "format": "uuid",
+                      "title": "Id",
+                      "type": "string"
+                    },
+                    "material_signature": {
+                      "minLength": 1,
+                      "title": "Material Signature",
+                      "type": "string"
+                    },
+                    "piece_placement": {
+                      "minLength": 1,
+                      "title": "Piece Placement",
+                      "type": "string"
+                    },
+                    "position_key": {
+                      "minLength": 1,
+                      "title": "Position Key",
+                      "type": "string"
+                    },
+                    "side_to_move": {
+                      "enum": [
+                        "w",
+                        "b"
+                      ],
+                      "title": "Side To Move",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "created_at",
+                    "position_key",
+                    "canonical_fen",
+                    "piece_placement",
+                    "side_to_move",
+                    "castling_rights",
+                    "en_passant",
+                    "material_signature"
+                  ],
+                  "title": "PositionRead",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Canonical position created"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "FEN is invalid or structurally illegal"
+          }
+        },
+        "summary": "Validate and resolve a global standard-chess position",
+        "tags": [
+          "position-graph"
+        ]
+      }
+    },
+    "/api/positions/{position_id}": {
+      "get": {
+        "operationId": "getPosition",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "position_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "canonical_fen": {
+                      "minLength": 1,
+                      "title": "Canonical Fen",
+                      "type": "string"
+                    },
+                    "castling_rights": {
+                      "title": "Castling Rights",
+                      "type": "string"
+                    },
+                    "created_at": {
+                      "format": "date-time",
+                      "title": "Created At",
+                      "type": "string"
+                    },
+                    "en_passant": {
+                      "title": "En Passant",
+                      "type": "string"
+                    },
+                    "id": {
+                      "format": "uuid",
+                      "title": "Id",
+                      "type": "string"
+                    },
+                    "material_signature": {
+                      "minLength": 1,
+                      "title": "Material Signature",
+                      "type": "string"
+                    },
+                    "piece_placement": {
+                      "minLength": 1,
+                      "title": "Piece Placement",
+                      "type": "string"
+                    },
+                    "position_key": {
+                      "minLength": 1,
+                      "title": "Position Key",
+                      "type": "string"
+                    },
+                    "side_to_move": {
+                      "enum": [
+                        "w",
+                        "b"
+                      ],
+                      "title": "Side To Move",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "created_at",
+                    "position_key",
+                    "canonical_fen",
+                    "piece_placement",
+                    "side_to_move",
+                    "castling_rights",
+                    "en_passant",
+                    "material_signature"
+                  ],
+                  "title": "PositionRead",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Canonical position"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Position not found"
+          }
+        },
+        "summary": "Read one canonical position",
+        "tags": [
+          "position-graph"
+        ]
+      }
     }
   },
   "security": [],
@@ -110,6 +3842,15 @@
   "tags": [
     {
       "name": "system"
+    },
+    {
+      "name": "position-graph"
+    },
+    {
+      "name": "courses"
+    },
+    {
+      "name": "course-occurrences"
     }
   ]
 }

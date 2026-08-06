@@ -73,7 +73,9 @@ make contracts
 
 ## 项目文档
 
+- [AGENTS.md](AGENTS.md) — long-term rules for coding agents
+- [PLANS.md](PLANS.md) — current task plan
 - [项目说明](docs/chess-workbench-project-description.md)
 - [开发计划与验收矩阵](docs/development-plan.md)
-- [架构概览](docs/architecture.md)
-- [架构决策记录](docs/adr/README.md)
+- [架构概览](docs/architecture/overview.md)
+- [架构决策记录](docs/decisions/README.md)

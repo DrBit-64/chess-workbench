@@ -1329,7 +1329,7 @@ chess-workbench/
 7. AI 输出不能绕过审核直接进入正式知识库；
 8. WebSocket 只用于通知和协作，不替代正式 HTTP API；
 9. 关键领域行为必须有测试；
-10. 新的架构决定写入 `docs/adr/`；
+10. 新的架构决定写入 `docs/decisions/`；
 11. 不复制合作项目中的 reducer、ZeroMQ、完整镜像和 Remote ESM；
 12. 代码优先清晰、可读和可调试，而非过度抽象。
 

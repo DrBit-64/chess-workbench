@@ -93,8 +93,8 @@ smoke:
 # unit before checking the current slice. Only the aggregate target needs pnpm.
 acceptance-stage-2a: bootstrap-backend backend-static
 	uv run --project backend --locked pytest -c backend/pyproject.toml -o addopts='' backend/tests/test_position_identity.py backend/tests/test_config.py --cov=chess_workbench.domain.position_identity --cov-branch --cov-report=term-missing --cov-fail-under=90
-	@test -s docs/adr/0002-position-identity.md
-	@test -s docs/adr/0003-mysql-async-driver.md
+	@test -s docs/decisions/0002-position-identity.md
+	@test -s docs/decisions/0003-mysql-async-driver.md
 
 acceptance-stage-2b: acceptance-stage-2a
 	uv run --project backend --locked pytest -c backend/pyproject.toml -o addopts='' backend/tests/test_database.py backend/tests/test_models.py backend/tests/test_graph_repository.py --cov=chess_workbench.store.models.graph --cov=chess_workbench.store.models.mixins --cov=chess_workbench.store.graph_repository --cov-branch --cov-report=term-missing --cov-fail-under=90
@@ -106,7 +106,7 @@ acceptance-stage-2c: acceptance-stage-2b
 		exit 1; \
 	}
 	uv run --project backend --locked pytest -c backend/pyproject.toml -o addopts='' backend/tests/test_domain_schemas.py backend/tests/test_graph_api.py $(STAGE_2C_CONTENT_TEST) --cov=chess_workbench.schemas.domain --cov-branch --cov-report=term-missing --cov-fail-under=90
-	@test -s docs/adr/0004-course-context-and-lifecycle.md
+	@test -s docs/decisions/0004-course-context-and-lifecycle.md
 
 acceptance-stage-2: acceptance-stage-2c bootstrap-frontend
 	$(MAKE) verify

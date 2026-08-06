@@ -136,9 +136,7 @@ async def test_transposed_paths_share_one_position_and_retain_both_parent_chains
 
     assert knight_first[-1]["position_id"] == pawn_first[-1]["position_id"]
     assert knight_first[-1]["full_fen"] != pawn_first[-1]["full_fen"]
-    assert {item["id"] for item in knight_first}.isdisjoint(
-        {item["id"] for item in pawn_first}
-    )
+    assert {item["id"] for item in knight_first}.isdisjoint({item["id"] for item in pawn_first})
 
 
 async def test_illegal_occurrence_move_is_422_and_leaves_no_graph_writes(

@@ -63,14 +63,24 @@ class UTCCreatedAtMixin:
 
 
 class UTCTimestampMixin(UTCCreatedAtMixin):
-    """UTC creation and last-update timestamps for mutable rows."""
+    """UTC creation and last-update timestamps for mutable rows.
+
+    Both use the same ``utc_now()`` sample on first insert so that
+    ``updated_at`` can never precede ``created_at`` because of
+    separate call-site evaluation.
+    """
 
     updated_at: Mapped[datetime] = mapped_column(
         UTCDateTime(),
-        default=utc_now,
         onupdate=utc_now,
         nullable=False,
     )
+
+    def __init__(self, **kw: object) -> None:
+        now = utc_now()
+        kw.setdefault("created_at", now)
+        kw.setdefault("updated_at", now)
+        super().__init__(**kw)
 
 
 class VersionMixin:

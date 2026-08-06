@@ -242,7 +242,7 @@ class SourceSpan(MutableEntityMixin, Base):
     )
     locator_kind: Mapped[str] = mapped_column(String(12), nullable=False)
     page_number: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    bbox: Mapped[dict[str, float] | None] = mapped_column(JSON, nullable=True)
+    bbox: Mapped[dict[str, float] | None] = mapped_column(JSON(none_as_null=True), nullable=True)
     start_value: Mapped[int | None] = mapped_column(Integer, nullable=True)
     end_value: Mapped[int | None] = mapped_column(Integer, nullable=True)
     quote: Mapped[str | None] = mapped_column(Text, nullable=True)

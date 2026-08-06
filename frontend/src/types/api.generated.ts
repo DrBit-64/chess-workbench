@@ -4,6 +4,111 @@
  */
 
 export interface paths {
+    "/api/course-modules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create a course module and optional root occurrence */
+        post: operations["createCourseModule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/course-modules/{module_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read a course module */
+        get: operations["getCourseModule"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update, archive, or restore a module */
+        patch: operations["updateCourseModule"];
+        trace?: never;
+    };
+    "/api/courses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List courses */
+        get: operations["listCourses"];
+        put?: never;
+        /** Create a course */
+        post: operations["createCourse"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/courses/{course_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read a course */
+        get: operations["getCourse"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update, archive, or restore a course with optimistic locking */
+        patch: operations["updateCourse"];
+        trace?: never;
+    };
+    "/api/courses/{course_id}/modules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List modules in one course */
+        get: operations["listCourseModules"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/courses/{course_id}/occurrences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List occurrences while preserving course and path context */
+        get: operations["listCourseOccurrences"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/health": {
         parameters: {
             query?: never;
@@ -13,6 +118,109 @@ export interface paths {
         };
         /** Check API and database health */
         get: operations["getHealth"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/moves": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Validate and resolve a global legal-move edge */
+        post: operations["createMove"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/moves/{move_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read one global move edge */
+        get: operations["getMove"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/occurrences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create a root occurrence or apply one legal move in path context */
+        post: operations["createCourseOccurrence"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/occurrences/{occurrence_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read one occurrence with explicit path context */
+        get: operations["getCourseOccurrence"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update occurrence-local context with optimistic locking */
+        patch: operations["updateCourseOccurrence"];
+        trace?: never;
+    };
+    "/api/positions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Validate and resolve a global standard-chess position */
+        post: operations["createPosition"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/positions/{position_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read one canonical position */
+        get: operations["getPosition"];
         put?: never;
         post?: never;
         delete?: never;
@@ -33,6 +241,1186 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    createCourseModule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * Course Id
+                     * Format: uuid
+                     */
+                    course_id: string;
+                    /**
+                     * Description
+                     * @default
+                     */
+                    description?: string;
+                    /**
+                     * Parent Id
+                     * Format: uuid
+                     * @default null
+                     */
+                    parent_id?: string | null;
+                    /**
+                     * Sort Order
+                     * @default 0
+                     */
+                    sort_order?: number;
+                    /**
+                     * Start Fen
+                     * @default null
+                     */
+                    start_fen?: string | null;
+                    /** Title */
+                    title: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Module created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Archived At
+                         * Format: date-time
+                         * @default null
+                         */
+                        archived_at: string | null;
+                        /**
+                         * Course Id
+                         * Format: uuid
+                         */
+                        course_id: string;
+                        /**
+                         * Created At
+                         * Format: date-time
+                         */
+                        created_at: string;
+                        /** Description */
+                        description: string;
+                        /**
+                         * Id
+                         * Format: uuid
+                         */
+                        id: string;
+                        /**
+                         * Parent Id
+                         * Format: uuid
+                         * @default null
+                         */
+                        parent_id: string | null;
+                        /** Sort Order */
+                        sort_order: number;
+                        /**
+                         * Start Occurrence Id
+                         * Format: uuid
+                         * @default null
+                         */
+                        start_occurrence_id: string | null;
+                        /** Title */
+                        title: string;
+                        /**
+                         * Updated At
+                         * Format: date-time
+                         */
+                        updated_at: string;
+                        /** Version */
+                        version: number;
+                    };
+                };
+            };
+            /** @description Course or parent module not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description Module context conflicts */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description Request validation or FEN validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    getCourseModule: {
+        parameters: {
+            query?: {
+                include_archived?: boolean;
+            };
+            header?: never;
+            path: {
+                module_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Course module */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Archived At
+                         * Format: date-time
+                         * @default null
+                         */
+                        archived_at: string | null;
+                        /**
+                         * Course Id
+                         * Format: uuid
+                         */
+                        course_id: string;
+                        /**
+                         * Created At
+                         * Format: date-time
+                         */
+                        created_at: string;
+                        /** Description */
+                        description: string;
+                        /**
+                         * Id
+                         * Format: uuid
+                         */
+                        id: string;
+                        /**
+                         * Parent Id
+                         * Format: uuid
+                         * @default null
+                         */
+                        parent_id: string | null;
+                        /** Sort Order */
+                        sort_order: number;
+                        /**
+                         * Start Occurrence Id
+                         * Format: uuid
+                         * @default null
+                         */
+                        start_occurrence_id: string | null;
+                        /** Title */
+                        title: string;
+                        /**
+                         * Updated At
+                         * Format: date-time
+                         */
+                        updated_at: string;
+                        /** Version */
+                        version: number;
+                    };
+                };
+            };
+            /** @description Module not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description Module has ambiguous root context */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    updateCourseModule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                module_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * Archived
+                     * @default null
+                     */
+                    archived?: boolean | null;
+                    /**
+                     * Description
+                     * @default null
+                     */
+                    description?: string | null;
+                    /** Expected Version */
+                    expected_version: number;
+                    /**
+                     * Parent Id
+                     * Format: uuid
+                     * @default null
+                     */
+                    parent_id?: string | null;
+                    /**
+                     * Sort Order
+                     * @default null
+                     */
+                    sort_order?: number | null;
+                    /**
+                     * Title
+                     * @default null
+                     */
+                    title?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description Updated module */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Archived At
+                         * Format: date-time
+                         * @default null
+                         */
+                        archived_at: string | null;
+                        /**
+                         * Course Id
+                         * Format: uuid
+                         */
+                        course_id: string;
+                        /**
+                         * Created At
+                         * Format: date-time
+                         */
+                        created_at: string;
+                        /** Description */
+                        description: string;
+                        /**
+                         * Id
+                         * Format: uuid
+                         */
+                        id: string;
+                        /**
+                         * Parent Id
+                         * Format: uuid
+                         * @default null
+                         */
+                        parent_id: string | null;
+                        /** Sort Order */
+                        sort_order: number;
+                        /**
+                         * Start Occurrence Id
+                         * Format: uuid
+                         * @default null
+                         */
+                        start_occurrence_id: string | null;
+                        /** Title */
+                        title: string;
+                        /**
+                         * Updated At
+                         * Format: date-time
+                         */
+                        updated_at: string;
+                        /** Version */
+                        version: number;
+                    };
+                };
+            };
+            /** @description Module or parent not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description Stale version or invalid parent context */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description Request validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    listCourses: {
+        parameters: {
+            query?: {
+                include_archived?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Courses */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Archived At
+                         * Format: date-time
+                         * @default null
+                         */
+                        archived_at: string | null;
+                        /**
+                         * Category
+                         * @default null
+                         */
+                        category: string | null;
+                        /**
+                         * Created At
+                         * Format: date-time
+                         */
+                        created_at: string;
+                        /** Description */
+                        description: string;
+                        /**
+                         * Id
+                         * Format: uuid
+                         */
+                        id: string;
+                        /**
+                         * Status
+                         * @enum {string}
+                         */
+                        status: "draft" | "published";
+                        /** Tags */
+                        tags: string[];
+                        /** Title */
+                        title: string;
+                        /**
+                         * Updated At
+                         * Format: date-time
+                         */
+                        updated_at: string;
+                        /** Version */
+                        version: number;
+                    }[];
+                };
+            };
+            /** @description Query validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    createCourse: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * Category
+                     * @default null
+                     */
+                    category?: string | null;
+                    /**
+                     * Description
+                     * @default
+                     */
+                    description?: string;
+                    /**
+                     * Status
+                     * @default draft
+                     * @enum {string}
+                     */
+                    status?: "draft" | "published";
+                    /** Tags */
+                    tags?: string[];
+                    /** Title */
+                    title: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Course created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Archived At
+                         * Format: date-time
+                         * @default null
+                         */
+                        archived_at: string | null;
+                        /**
+                         * Category
+                         * @default null
+                         */
+                        category: string | null;
+                        /**
+                         * Created At
+                         * Format: date-time
+                         */
+                        created_at: string;
+                        /** Description */
+                        description: string;
+                        /**
+                         * Id
+                         * Format: uuid
+                         */
+                        id: string;
+                        /**
+                         * Status
+                         * @enum {string}
+                         */
+                        status: "draft" | "published";
+                        /** Tags */
+                        tags: string[];
+                        /** Title */
+                        title: string;
+                        /**
+                         * Updated At
+                         * Format: date-time
+                         */
+                        updated_at: string;
+                        /** Version */
+                        version: number;
+                    };
+                };
+            };
+            /** @description Request validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    getCourse: {
+        parameters: {
+            query?: {
+                include_archived?: boolean;
+            };
+            header?: never;
+            path: {
+                course_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Course */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Archived At
+                         * Format: date-time
+                         * @default null
+                         */
+                        archived_at: string | null;
+                        /**
+                         * Category
+                         * @default null
+                         */
+                        category: string | null;
+                        /**
+                         * Created At
+                         * Format: date-time
+                         */
+                        created_at: string;
+                        /** Description */
+                        description: string;
+                        /**
+                         * Id
+                         * Format: uuid
+                         */
+                        id: string;
+                        /**
+                         * Status
+                         * @enum {string}
+                         */
+                        status: "draft" | "published";
+                        /** Tags */
+                        tags: string[];
+                        /** Title */
+                        title: string;
+                        /**
+                         * Updated At
+                         * Format: date-time
+                         */
+                        updated_at: string;
+                        /** Version */
+                        version: number;
+                    };
+                };
+            };
+            /** @description Course not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    updateCourse: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                course_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * Archived
+                     * @default null
+                     */
+                    archived?: boolean | null;
+                    /**
+                     * Category
+                     * @default null
+                     */
+                    category?: string | null;
+                    /**
+                     * Description
+                     * @default null
+                     */
+                    description?: string | null;
+                    /** Expected Version */
+                    expected_version: number;
+                    /**
+                     * Status
+                     * @default null
+                     * @enum {string|null}
+                     */
+                    status?: "draft" | "published" | null;
+                    /**
+                     * Tags
+                     * @default null
+                     */
+                    tags?: string[] | null;
+                    /**
+                     * Title
+                     * @default null
+                     */
+                    title?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description Updated course */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Archived At
+                         * Format: date-time
+                         * @default null
+                         */
+                        archived_at: string | null;
+                        /**
+                         * Category
+                         * @default null
+                         */
+                        category: string | null;
+                        /**
+                         * Created At
+                         * Format: date-time
+                         */
+                        created_at: string;
+                        /** Description */
+                        description: string;
+                        /**
+                         * Id
+                         * Format: uuid
+                         */
+                        id: string;
+                        /**
+                         * Status
+                         * @enum {string}
+                         */
+                        status: "draft" | "published";
+                        /** Tags */
+                        tags: string[];
+                        /** Title */
+                        title: string;
+                        /**
+                         * Updated At
+                         * Format: date-time
+                         */
+                        updated_at: string;
+                        /** Version */
+                        version: number;
+                    };
+                };
+            };
+            /** @description Course not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description Version is stale */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description Request validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    listCourseModules: {
+        parameters: {
+            query?: {
+                include_archived?: boolean;
+                parent_id?: string;
+            };
+            header?: never;
+            path: {
+                course_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Course modules */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Archived At
+                         * Format: date-time
+                         * @default null
+                         */
+                        archived_at: string | null;
+                        /**
+                         * Course Id
+                         * Format: uuid
+                         */
+                        course_id: string;
+                        /**
+                         * Created At
+                         * Format: date-time
+                         */
+                        created_at: string;
+                        /** Description */
+                        description: string;
+                        /**
+                         * Id
+                         * Format: uuid
+                         */
+                        id: string;
+                        /**
+                         * Parent Id
+                         * Format: uuid
+                         * @default null
+                         */
+                        parent_id: string | null;
+                        /** Sort Order */
+                        sort_order: number;
+                        /**
+                         * Start Occurrence Id
+                         * Format: uuid
+                         * @default null
+                         */
+                        start_occurrence_id: string | null;
+                        /** Title */
+                        title: string;
+                        /**
+                         * Updated At
+                         * Format: date-time
+                         */
+                        updated_at: string;
+                        /** Version */
+                        version: number;
+                    }[];
+                };
+            };
+            /** @description Course not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description Query validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    listCourseOccurrences: {
+        parameters: {
+            query?: {
+                include_archived?: boolean;
+                roots_only?: boolean;
+                parent_id?: string;
+                module_id?: string;
+            };
+            header?: never;
+            path: {
+                course_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Course occurrences */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Archived At
+                         * Format: date-time
+                         * @default null
+                         */
+                        archived_at: string | null;
+                        /** Context */
+                        context: {
+                            [key: string]: unknown;
+                        };
+                        /**
+                         * Course Id
+                         * Format: uuid
+                         */
+                        course_id: string;
+                        /**
+                         * Created At
+                         * Format: date-time
+                         */
+                        created_at: string;
+                        /** Full Fen */
+                        full_fen: string;
+                        /**
+                         * Id
+                         * Format: uuid
+                         */
+                        id: string;
+                        /**
+                         * Inbound Move Edge Id
+                         * Format: uuid
+                         * @default null
+                         */
+                        inbound_move_edge_id: string | null;
+                        /**
+                         * Module Id
+                         * Format: uuid
+                         * @default null
+                         */
+                        module_id: string | null;
+                        /**
+                         * Nag
+                         * @default null
+                         */
+                        nag: number | null;
+                        /**
+                         * Parent Id
+                         * Format: uuid
+                         * @default null
+                         */
+                        parent_id: string | null;
+                        /**
+                         * Position Id
+                         * Format: uuid
+                         */
+                        position_id: string;
+                        /** Sort Order */
+                        sort_order: number;
+                        /**
+                         * Updated At
+                         * Format: date-time
+                         */
+                        updated_at: string;
+                        /** Version */
+                        version: number;
+                    }[];
+                };
+            };
+            /** @description Course, module, or parent not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description Query validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
     getHealth: {
         parameters: {
             query?: never;
@@ -91,6 +1479,936 @@ export interface operations {
                         status: "error";
                         /** Version */
                         version: string;
+                    };
+                };
+            };
+        };
+    };
+    createMove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * From Position Id
+                     * Format: uuid
+                     */
+                    from_position_id: string;
+                    /** Uci */
+                    uci: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Existing move edge */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Created At
+                         * Format: date-time
+                         */
+                        created_at: string;
+                        /**
+                         * From Position Id
+                         * Format: uuid
+                         */
+                        from_position_id: string;
+                        /**
+                         * Id
+                         * Format: uuid
+                         */
+                        id: string;
+                        /** San */
+                        san: string;
+                        /**
+                         * To Position Id
+                         * Format: uuid
+                         */
+                        to_position_id: string;
+                        /** Uci */
+                        uci: string;
+                    };
+                };
+            };
+            /** @description Move edge created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Created At
+                         * Format: date-time
+                         */
+                        created_at: string;
+                        /**
+                         * From Position Id
+                         * Format: uuid
+                         */
+                        from_position_id: string;
+                        /**
+                         * Id
+                         * Format: uuid
+                         */
+                        id: string;
+                        /** San */
+                        san: string;
+                        /**
+                         * To Position Id
+                         * Format: uuid
+                         */
+                        to_position_id: string;
+                        /** Uci */
+                        uci: string;
+                    };
+                };
+            };
+            /** @description Source position not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description Move is invalid or illegal */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    getMove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                move_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Move edge */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Created At
+                         * Format: date-time
+                         */
+                        created_at: string;
+                        /**
+                         * From Position Id
+                         * Format: uuid
+                         */
+                        from_position_id: string;
+                        /**
+                         * Id
+                         * Format: uuid
+                         */
+                        id: string;
+                        /** San */
+                        san: string;
+                        /**
+                         * To Position Id
+                         * Format: uuid
+                         */
+                        to_position_id: string;
+                        /** Uci */
+                        uci: string;
+                    };
+                };
+            };
+            /** @description Move edge not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    createCourseOccurrence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Context */
+                    context?: {
+                        [key: string]: unknown;
+                    };
+                    /**
+                     * Course Id
+                     * Format: uuid
+                     */
+                    course_id: string;
+                    /** Fen */
+                    fen: string;
+                    /**
+                     * Kind
+                     * @default root
+                     * @enum {string}
+                     */
+                    kind?: "root";
+                    /**
+                     * Module Id
+                     * Format: uuid
+                     * @default null
+                     */
+                    module_id?: string | null;
+                    /**
+                     * Nag
+                     * @default null
+                     */
+                    nag?: number | null;
+                    /**
+                     * Sort Order
+                     * @default 0
+                     */
+                    sort_order?: number;
+                } | {
+                    /** Context */
+                    context?: {
+                        [key: string]: unknown;
+                    };
+                    /**
+                     * Kind
+                     * @default move
+                     * @enum {string}
+                     */
+                    kind?: "move";
+                    /**
+                     * Nag
+                     * @default null
+                     */
+                    nag?: number | null;
+                    /**
+                     * Parent Occurrence Id
+                     * Format: uuid
+                     */
+                    parent_occurrence_id: string;
+                    /**
+                     * Sort Order
+                     * @default 0
+                     */
+                    sort_order?: number;
+                    /** Uci */
+                    uci: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Occurrence created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Archived At
+                         * Format: date-time
+                         * @default null
+                         */
+                        archived_at: string | null;
+                        /** Context */
+                        context: {
+                            [key: string]: unknown;
+                        };
+                        /**
+                         * Course Id
+                         * Format: uuid
+                         */
+                        course_id: string;
+                        /**
+                         * Created At
+                         * Format: date-time
+                         */
+                        created_at: string;
+                        /** Full Fen */
+                        full_fen: string;
+                        /**
+                         * Id
+                         * Format: uuid
+                         */
+                        id: string;
+                        /**
+                         * Inbound Move Edge Id
+                         * Format: uuid
+                         * @default null
+                         */
+                        inbound_move_edge_id: string | null;
+                        /**
+                         * Module Id
+                         * Format: uuid
+                         * @default null
+                         */
+                        module_id: string | null;
+                        /**
+                         * Nag
+                         * @default null
+                         */
+                        nag: number | null;
+                        /**
+                         * Parent Id
+                         * Format: uuid
+                         * @default null
+                         */
+                        parent_id: string | null;
+                        /**
+                         * Position Id
+                         * Format: uuid
+                         */
+                        position_id: string;
+                        /** Sort Order */
+                        sort_order: number;
+                        /**
+                         * Updated At
+                         * Format: date-time
+                         */
+                        updated_at: string;
+                        /** Version */
+                        version: number;
+                    };
+                };
+            };
+            /** @description Course, module, or parent occurrence not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description Occurrence context is ambiguous */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description FEN or move is invalid or illegal */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    getCourseOccurrence: {
+        parameters: {
+            query?: {
+                include_archived?: boolean;
+            };
+            header?: never;
+            path: {
+                occurrence_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Course occurrence */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Archived At
+                         * Format: date-time
+                         * @default null
+                         */
+                        archived_at: string | null;
+                        /** Context */
+                        context: {
+                            [key: string]: unknown;
+                        };
+                        /**
+                         * Course Id
+                         * Format: uuid
+                         */
+                        course_id: string;
+                        /**
+                         * Created At
+                         * Format: date-time
+                         */
+                        created_at: string;
+                        /** Full Fen */
+                        full_fen: string;
+                        /**
+                         * Id
+                         * Format: uuid
+                         */
+                        id: string;
+                        /**
+                         * Inbound Move Edge Id
+                         * Format: uuid
+                         * @default null
+                         */
+                        inbound_move_edge_id: string | null;
+                        /**
+                         * Module Id
+                         * Format: uuid
+                         * @default null
+                         */
+                        module_id: string | null;
+                        /**
+                         * Nag
+                         * @default null
+                         */
+                        nag: number | null;
+                        /**
+                         * Parent Id
+                         * Format: uuid
+                         * @default null
+                         */
+                        parent_id: string | null;
+                        /**
+                         * Position Id
+                         * Format: uuid
+                         */
+                        position_id: string;
+                        /** Sort Order */
+                        sort_order: number;
+                        /**
+                         * Updated At
+                         * Format: date-time
+                         */
+                        updated_at: string;
+                        /** Version */
+                        version: number;
+                    };
+                };
+            };
+            /** @description Occurrence not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    updateCourseOccurrence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                occurrence_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * Archived
+                     * @default null
+                     */
+                    archived?: boolean | null;
+                    /**
+                     * Context
+                     * @default null
+                     */
+                    context?: {
+                        [key: string]: unknown;
+                    } | null;
+                    /** Expected Version */
+                    expected_version: number;
+                    /**
+                     * Module Id
+                     * Format: uuid
+                     * @default null
+                     */
+                    module_id?: string | null;
+                    /**
+                     * Nag
+                     * @default null
+                     */
+                    nag?: number | null;
+                    /**
+                     * Sort Order
+                     * @default null
+                     */
+                    sort_order?: number | null;
+                };
+            };
+        };
+        responses: {
+            /** @description Updated occurrence */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Archived At
+                         * Format: date-time
+                         * @default null
+                         */
+                        archived_at: string | null;
+                        /** Context */
+                        context: {
+                            [key: string]: unknown;
+                        };
+                        /**
+                         * Course Id
+                         * Format: uuid
+                         */
+                        course_id: string;
+                        /**
+                         * Created At
+                         * Format: date-time
+                         */
+                        created_at: string;
+                        /** Full Fen */
+                        full_fen: string;
+                        /**
+                         * Id
+                         * Format: uuid
+                         */
+                        id: string;
+                        /**
+                         * Inbound Move Edge Id
+                         * Format: uuid
+                         * @default null
+                         */
+                        inbound_move_edge_id: string | null;
+                        /**
+                         * Module Id
+                         * Format: uuid
+                         * @default null
+                         */
+                        module_id: string | null;
+                        /**
+                         * Nag
+                         * @default null
+                         */
+                        nag: number | null;
+                        /**
+                         * Parent Id
+                         * Format: uuid
+                         * @default null
+                         */
+                        parent_id: string | null;
+                        /**
+                         * Position Id
+                         * Format: uuid
+                         */
+                        position_id: string;
+                        /** Sort Order */
+                        sort_order: number;
+                        /**
+                         * Updated At
+                         * Format: date-time
+                         */
+                        updated_at: string;
+                        /** Version */
+                        version: number;
+                    };
+                };
+            };
+            /** @description Occurrence or module not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description Stale version or invalid context */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description Request validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    createPosition: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Fen */
+                    fen: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Existing canonical position */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Canonical Fen */
+                        canonical_fen: string;
+                        /** Castling Rights */
+                        castling_rights: string;
+                        /**
+                         * Created At
+                         * Format: date-time
+                         */
+                        created_at: string;
+                        /** En Passant */
+                        en_passant: string;
+                        /**
+                         * Id
+                         * Format: uuid
+                         */
+                        id: string;
+                        /** Material Signature */
+                        material_signature: string;
+                        /** Piece Placement */
+                        piece_placement: string;
+                        /** Position Key */
+                        position_key: string;
+                        /**
+                         * Side To Move
+                         * @enum {string}
+                         */
+                        side_to_move: "w" | "b";
+                    };
+                };
+            };
+            /** @description Canonical position created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Canonical Fen */
+                        canonical_fen: string;
+                        /** Castling Rights */
+                        castling_rights: string;
+                        /**
+                         * Created At
+                         * Format: date-time
+                         */
+                        created_at: string;
+                        /** En Passant */
+                        en_passant: string;
+                        /**
+                         * Id
+                         * Format: uuid
+                         */
+                        id: string;
+                        /** Material Signature */
+                        material_signature: string;
+                        /** Piece Placement */
+                        piece_placement: string;
+                        /** Position Key */
+                        position_key: string;
+                        /**
+                         * Side To Move
+                         * @enum {string}
+                         */
+                        side_to_move: "w" | "b";
+                    };
+                };
+            };
+            /** @description FEN is invalid or structurally illegal */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    getPosition: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                position_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Canonical position */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Canonical Fen */
+                        canonical_fen: string;
+                        /** Castling Rights */
+                        castling_rights: string;
+                        /**
+                         * Created At
+                         * Format: date-time
+                         */
+                        created_at: string;
+                        /** En Passant */
+                        en_passant: string;
+                        /**
+                         * Id
+                         * Format: uuid
+                         */
+                        id: string;
+                        /** Material Signature */
+                        material_signature: string;
+                        /** Piece Placement */
+                        piece_placement: string;
+                        /** Position Key */
+                        position_key: string;
+                        /**
+                         * Side To Move
+                         * @enum {string}
+                         */
+                        side_to_move: "w" | "b";
+                    };
+                };
+            };
+            /** @description Position not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
                     };
                 };
             };
