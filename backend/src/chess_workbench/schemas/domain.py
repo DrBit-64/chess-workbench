@@ -42,6 +42,7 @@ Nag = Annotated[int, Field(ge=0, le=255)]
 SideToMove = Literal["w", "b"]
 SourceKind = Literal["book", "video", "article", "web", "pgn", "game", "manual", "other"]
 CourseStatus = Literal["draft", "published"]
+CourseMode = Literal["traditional", "opening_explorer"]
 ReviewStatus = Literal["draft", "approved", "rejected"]
 NoteType = Literal[
     "general",
@@ -166,6 +167,7 @@ class CourseCreate(StrictContract):
     category: Title | None = None
     tags: list[Title] = Field(default_factory=list, max_length=50)
     status: CourseStatus = "draft"
+    mode: CourseMode = "traditional"
 
     @field_validator("tags")
     @classmethod
@@ -181,6 +183,7 @@ class CourseRead(VersionedRead):
     category: Title | None = None
     tags: list[Title]
     status: CourseStatus
+    mode: CourseMode
 
 
 class CourseUpdate(VersionedUpdate):
@@ -189,8 +192,11 @@ class CourseUpdate(VersionedUpdate):
     category: Title | None = None
     tags: list[Title] | None = Field(default=None, max_length=50)
     status: CourseStatus | None = None
+    mode: CourseMode | None = None
     archived: bool | None = None
-    _non_nullable_updates = frozenset({"title", "description", "tags", "status", "archived"})
+    _non_nullable_updates = frozenset(
+        {"title", "description", "tags", "status", "mode", "archived"}
+    )
 
     @field_validator("tags")
     @classmethod
@@ -481,6 +487,7 @@ class KnowledgeNoteCreate(StrictContract):
 
     occurrence_id: EntityId | None = None
     target: GlobalNoteTarget | None = None
+    source_note_id: EntityId | None = None
     note_type: NoteType = "general"
     markdown: Markdown
     source_span_ids: list[EntityId] = Field(default_factory=list, max_length=100)
@@ -497,6 +504,7 @@ class KnowledgeNoteCreate(StrictContract):
 
 class KnowledgeNoteRead(VersionedRead):
     target: NoteTarget
+    source_note_id: EntityId | None = None
     note_type: NoteType
     markdown: Markdown
     source_span_ids: list[EntityId]

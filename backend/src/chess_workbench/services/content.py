@@ -641,6 +641,7 @@ class ContentService:
                 occurrence_id=occurrence_id,
                 position_id=position_id,
                 move_edge_id=move_edge_id,
+                source_note_id=data.source_note_id,
                 note_type=data.note_type,
                 markdown=data.markdown,
                 review_status=data.review_status,
@@ -952,6 +953,7 @@ class ContentService:
                 "category": row.category,
                 "tags": row.tags,
                 "status": row.status,
+                "mode": row.mode,
             }
         )
 
@@ -1114,6 +1116,7 @@ class ContentService:
             {
                 **self._lifecycle(row),
                 "target": target,
+                "source_note_id": row.source_note_id,
                 "note_type": row.note_type,
                 "markdown": row.markdown,
                 "source_span_ids": citation_ids,

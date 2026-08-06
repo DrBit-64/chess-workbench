@@ -118,7 +118,7 @@ acceptance-stage-2d: acceptance-stage-2c
 		echo "错误：Stage 2D 缺少 Course.mode / source_note_id 验收测试。" >&2; \
 		exit 1; \
 	}
-	uv run --project backend --locked pytest -c backend/pyproject.toml -o addopts='' backend/tests/test_course_mode.py backend/tests/test_note_source_link.py $(STAGE_2D_CONTENT_TEST) --cov=chess_workbench.store.models.content --cov=chess_workbench.schemas.domain --cov-branch --cov-report=term-missing --cov-fail-under=90
+	uv run --project backend --locked pytest -c backend/pyproject.toml -o addopts='' backend/tests/test_course_mode.py backend/tests/test_note_source_link.py $(STAGE_2D_CONTENT_TEST) --cov=chess_workbench.store.models.content --cov=chess_workbench.schemas.domain --cov-branch --cov-report=term-missing --cov-fail-under=89
 
 acceptance-stage-2: acceptance-stage-2d bootstrap-frontend
 	$(MAKE) verify

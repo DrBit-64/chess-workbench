@@ -376,7 +376,7 @@ def test_sync_sqlite_migrations_match_metadata_enforce_checks_and_downgrade() ->
 
 
 def test_migrations_render_mysql_specific_ddl() -> None:
-    assert len(_revision_modules()) == 2
+    assert len(_revision_modules()) == 3
     output = StringIO()
     context = MigrationContext.configure(
         dialect=mysql.dialect(),

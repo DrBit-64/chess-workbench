@@ -15,6 +15,7 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy.dialects import mysql
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -70,6 +71,9 @@ class Course(MutableEntityMixin, Base):
     category: Mapped[str | None] = mapped_column(String(200), nullable=True)
     tags: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
     status: Mapped[str] = mapped_column(String(16), default="draft", nullable=False)
+    mode: Mapped[str] = mapped_column(
+        String(32), default="traditional", server_default=text("'traditional'"), nullable=False
+    )
 
     modules: Mapped[list[CourseModule]] = relationship(back_populates="course")
     occurrences: Mapped[list[CourseOccurrence]] = relationship(back_populates="course")
@@ -293,6 +297,9 @@ class KnowledgeNote(MutableEntityMixin, Base):
     )
     move_edge_id: Mapped[UUID | None] = mapped_column(
         ForeignKey("move_edges.id", ondelete="RESTRICT"), nullable=True
+    )
+    source_note_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("knowledge_notes.id", ondelete="RESTRICT"), nullable=True
     )
     note_type: Mapped[str] = mapped_column(String(32), default="general", nullable=False)
     markdown: Mapped[str] = mapped_column(Text, nullable=False)

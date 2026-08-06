@@ -77,6 +77,7 @@ def course_read(value: Course) -> CourseRead:
         category=value.category,
         tags=value.tags,
         status=value.status,  # type: ignore[arg-type]
+        mode=value.mode,  # type: ignore[arg-type]
     )
 
 
@@ -219,6 +220,7 @@ def note_read(value: KnowledgeNote) -> KnowledgeNoteRead:
         updated_at=value.updated_at,
         archived_at=value.archived_at,
         target=target,
+        source_note_id=value.source_note_id,
         note_type=value.note_type,  # type: ignore[arg-type]
         markdown=value.markdown,
         source_span_ids=sorted((citation.source_span_id for citation in value.citations), key=str),

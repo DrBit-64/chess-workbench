@@ -865,6 +865,14 @@
                         "title": "Id",
                         "type": "string"
                       },
+                      "mode": {
+                        "enum": [
+                          "traditional",
+                          "opening_explorer"
+                        ],
+                        "title": "Mode",
+                        "type": "string"
+                      },
                       "status": {
                         "enum": [
                           "draft",
@@ -907,7 +915,8 @@
                       "title",
                       "description",
                       "tags",
-                      "status"
+                      "status",
+                      "mode"
                     ],
                     "title": "CourseRead",
                     "type": "object"
@@ -993,6 +1002,15 @@
                     "title": "Description",
                     "type": "string"
                   },
+                  "mode": {
+                    "default": "traditional",
+                    "enum": [
+                      "traditional",
+                      "opening_explorer"
+                    ],
+                    "title": "Mode",
+                    "type": "string"
+                  },
                   "status": {
                     "default": "draft",
                     "enum": [
@@ -1066,6 +1084,14 @@
                       "title": "Id",
                       "type": "string"
                     },
+                    "mode": {
+                      "enum": [
+                        "traditional",
+                        "opening_explorer"
+                      ],
+                      "title": "Mode",
+                      "type": "string"
+                    },
                     "status": {
                       "enum": [
                         "draft",
@@ -1108,7 +1134,8 @@
                     "title",
                     "description",
                     "tags",
-                    "status"
+                    "status",
+                    "mode"
                   ],
                   "title": "CourseRead",
                   "type": "object"
@@ -1230,6 +1257,14 @@
                       "title": "Id",
                       "type": "string"
                     },
+                    "mode": {
+                      "enum": [
+                        "traditional",
+                        "opening_explorer"
+                      ],
+                      "title": "Mode",
+                      "type": "string"
+                    },
                     "status": {
                       "enum": [
                         "draft",
@@ -1272,7 +1307,8 @@
                     "title",
                     "description",
                     "tags",
-                    "status"
+                    "status",
+                    "mode"
                   ],
                   "title": "CourseRead",
                   "type": "object"
@@ -1379,6 +1415,16 @@
                     "title": "Expected Version",
                     "type": "integer"
                   },
+                  "mode": {
+                    "default": null,
+                    "enum": [
+                      "traditional",
+                      "opening_explorer"
+                    ],
+                    "nullable": true,
+                    "title": "Mode",
+                    "type": "string"
+                  },
                   "status": {
                     "default": null,
                     "enum": [
@@ -1457,6 +1503,14 @@
                       "title": "Id",
                       "type": "string"
                     },
+                    "mode": {
+                      "enum": [
+                        "traditional",
+                        "opening_explorer"
+                      ],
+                      "title": "Mode",
+                      "type": "string"
+                    },
                     "status": {
                       "enum": [
                         "draft",
@@ -1499,7 +1553,8 @@
                     "title",
                     "description",
                     "tags",
-                    "status"
+                    "status",
+                    "mode"
                   ],
                   "title": "CourseRead",
                   "type": "object"

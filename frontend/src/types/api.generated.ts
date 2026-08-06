@@ -748,6 +748,11 @@ export interface operations {
                          */
                         id: string;
                         /**
+                         * Mode
+                         * @enum {string}
+                         */
+                        mode: "traditional" | "opening_explorer";
+                        /**
                          * Status
                          * @enum {string}
                          */
@@ -813,6 +818,12 @@ export interface operations {
                      */
                     description?: string;
                     /**
+                     * Mode
+                     * @default traditional
+                     * @enum {string}
+                     */
+                    mode?: "traditional" | "opening_explorer";
+                    /**
                      * Status
                      * @default draft
                      * @enum {string}
@@ -856,6 +867,11 @@ export interface operations {
                          * Format: uuid
                          */
                         id: string;
+                        /**
+                         * Mode
+                         * @enum {string}
+                         */
+                        mode: "traditional" | "opening_explorer";
                         /**
                          * Status
                          * @enum {string}
@@ -945,6 +961,11 @@ export interface operations {
                          */
                         id: string;
                         /**
+                         * Mode
+                         * @enum {string}
+                         */
+                        mode: "traditional" | "opening_explorer";
+                        /**
                          * Status
                          * @enum {string}
                          */
@@ -1019,6 +1040,12 @@ export interface operations {
                     /** Expected Version */
                     expected_version: number;
                     /**
+                     * Mode
+                     * @default null
+                     * @enum {string|null}
+                     */
+                    mode?: "traditional" | "opening_explorer" | null;
+                    /**
                      * Status
                      * @default null
                      * @enum {string|null}
@@ -1068,6 +1095,11 @@ export interface operations {
                          * Format: uuid
                          */
                         id: string;
+                        /**
+                         * Mode
+                         * @enum {string}
+                         */
+                        mode: "traditional" | "opening_explorer";
                         /**
                          * Status
                          * @enum {string}
