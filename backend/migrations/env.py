@@ -10,6 +10,33 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from chess_workbench.config import Settings
 from chess_workbench.store.base import Base
+from chess_workbench.store.models import (
+    Course,
+    CourseModule,
+    CourseOccurrence,
+    KnowledgeNote,
+    KnowledgeNoteCitation,
+    MoveEdge,
+    Position,
+    Source,
+    SourceFile,
+    SourceSpan,
+    SourceVersion,
+)
+
+_REGISTERED_MODELS = (
+    Course,
+    CourseModule,
+    CourseOccurrence,
+    KnowledgeNote,
+    KnowledgeNoteCitation,
+    MoveEdge,
+    Position,
+    Source,
+    SourceFile,
+    SourceSpan,
+    SourceVersion,
+)
 
 config = context.config
 

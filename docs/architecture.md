@@ -8,7 +8,9 @@ ChessWorkbench 从一个本地优先的模块化单体开始：React SPA 通过 
 React SPA
   └─ SWR /api/*
        └─ Sanic application services
-            └─ SQLAlchemy → SQLite（后续 MySQL）
+            ├─ Pydantic API schemas
+            ├─ domain（棋规与局面身份，不依赖 HTTP）
+            └─ repositories / SQLAlchemy → SQLite（后续 MySQL）
 ```
 
 后台任务、Stockfish、OCR、AI 和 WebSocket 会在对应阶段进入系统，但不会改变以下边界：
@@ -27,8 +29,21 @@ React SPA
 - `frontend/src/logic/api`：HTTP 客户端与从生成契约派生的类型；
 - `backend/src/chess_workbench/api`：传输层与应用组装；
 - `backend/src/chess_workbench/schemas`：Pydantic API 契约；
-- `backend/src/chess_workbench/store`：数据库基础设施；
-- 后续领域模块会放入 `backend/src/chess_workbench/domain`，不依赖 Sanic 请求对象。
+- `backend/src/chess_workbench/domain`：局面身份、FEN/棋步规则和稳定领域错误，不依赖 Sanic 请求对象；
+- `backend/src/chess_workbench/store/models`：持久化模型与数据库约束；
+- `backend/src/chess_workbench/store` 的 repository：事务内的数据访问与并发收敛；API 不直接拼装 SQL。
+
+## 局面图与课程语境
+
+Stage 2 已接受的架构决定记录在 ADR 0002–0004：
+
+- 当前只接受标准国际象棋；`position_key` 使用带版本的 `standard:v1:` 身份，保留子布局、行棋方、易位权和仅在确有合法吃过路兵时的 en-passant 格；半回合钟和回合数不参与图去重；
+- 完整六字段 FEN 与规范图身份同时保存。前者服务五十回合规则、对局重放和未来残局分析，后者服务转置合并，二者不能互相替代；
+- `Position` 与合法 `MoveEdge` 表达可多父的全局事实。课程中的顺序、comment、NAG、来源和局部注释放在 occurrence/课程语境层，不写回全局边；
+- `Source → SourceVersion → SourceFile` 区分逻辑来源、不可变版本和文件；`SourceSpan` 用带判别字段的页码/bbox/视频毫秒范围定位证据；
+- 删除优先使用显式归档和引用保护。正式记录使用 UTC 时间、UUID 与乐观版本字段，破坏性历史审计仍在后续单元扩展。
+
+异步 SQLAlchemy 的 MySQL 方言固定为 `mysql+asyncmy`，当前依赖版本为 0.2.11；SQLite 是现阶段自动验收数据库，真实 MySQL 兼容门禁按计划在 Stage 3D 引入。同步 PyMySQL 不能传给 AsyncEngine。
 
 ## 契约链路
 
@@ -40,4 +55,4 @@ Pydantic Schema 通过 Sanic Extensions 形成 OpenAPI。`scripts/contracts.py` 
 
 ## 尚未作出的决定
 
-Position identity、课程上下文如何引用全局图、PGN occurrence 模型、版本审计、任务租约与重试等会在进入相应阶段前单独写 ADR，避免在脚手架阶段凭空固化。
+PGN 导入如何把任意层 variation 映射为 occurrence、超出乐观锁字段的版本审计、后台任务租约与重试，以及正式 MySQL 发布拓扑仍未冻结。它们会在进入相应阶段前单独写 ADR，避免提前固化未经真实夹具验证的设计。

@@ -85,6 +85,8 @@ Position 等业务表、首个 migration、棋盘组件、Docker、Stockfish、�
 
 ## Stage 2：棋规内核、局面身份与最小领域模型
 
+状态：**实施中（2026-08-06）**。本状态不代表各单元已经通过；以下分层命令和最终聚合命令的退出码才是验收证据。
+
 ### 目标
 
 先解决数据系统最难逆转的语义：什么算同一局面、图如何表达转置、课程语境如何引用全局图，再建立第一批表和 API。
@@ -92,7 +94,7 @@ Position 等业务表、首个 migration、棋盘组件、Docker、Stockfish、�
 ### 交付物
 
 - ADR：`position_key` 的规范化规则；明确半回合钟、回合数、易位权和 en-passant 的处理；
-- ADR：SQLAlchemy 保持异步时 MySQL 选择 `asyncmy`/`aiomysql`，或改回同步访问；不得把同步 PyMySQL 塞给 AsyncEngine；
+- ADR：SQLAlchemy 异步 MySQL URL 使用 `mysql+asyncmy`，锁定 `asyncmy 0.2.11`；`aiomysql` 仅作为出现已验证兼容性问题时的候选，不得把同步 PyMySQL 塞给 AsyncEngine；
 - 区分用于图去重的规范局面身份和完整对局状态，避免破坏五十回合规则/DTZ；
 - `Position`、`MoveEdge`、`Source`、`SourceSpan`、`Course`、`CourseModule`、`KnowledgeNote`；
 - 课程/来源 occurrence 或等价的上下文关联，避免把某本书的 comment/NAG 污染为全局边属性；
@@ -118,6 +120,17 @@ Position 等业务表、首个 migration、棋盘组件、Docker、Stockfish、�
 - 局面图允许多父，所有“返回父节点”API 都必须带当前路径语境；
 - 图遍历默认防环、限制深度和节点数；
 - `SourceSpan` 必须有稳定主键，因为 KnowledgeNote 会引用它。
+
+### 分层自动验收入口
+
+Stage 2 的单元门禁按依赖关系累积，不能用文档中的“已实现”描述替代命令结果：
+
+1. `make acceptance-stage-2a`：运行全后端静态检查，以及局面身份、FEN/棋步固定向量、性质测试和数据库 URL 配置测试；关键身份模块覆盖率门槛为 90%，并检查 ADR 0002/0003 存在；
+2. `make acceptance-stage-2b`：先验收 2A，再运行模型、仓储、唯一约束与并发收敛测试；从临时空 SQLite 数据库执行 `upgrade head → alembic check → downgrade base`，关键仓储模块覆盖率门槛为 90%；
+3. `make acceptance-stage-2c`：先验收 2B，再运行课程/来源/语境 Schema 和 CRUD API 测试，包括确定的 422 错误码、事务回滚及跨课程隔离；关键 Schema 模块覆盖率门槛为 90%，并检查 ADR 0004 存在；
+4. `make acceptance-stage-2`：先验收 2C，再执行全仓 `verify` 与双服务 `smoke`，因此还覆盖全局覆盖率、OpenAPI/TypeScript 生成物漂移、前端类型/测试/生产构建和真实代理链路。
+
+前三个单元只需要 Python 工具链；最终聚合验收因为包含契约和前端检查，需要 Node.js 22 与 pnpm 10.14.0。若 pnpm 缺失，Make 会给出 Corepack 安装提示。CI 使用的稳定入口 `make acceptance` 当前是 `make acceptance-stage-2` 的薄别名；Stage 2 只有在最终聚合命令于 clean checkout 退出 0 后才能标记完成。
 
 ---
 
@@ -432,7 +445,7 @@ Playwright 在全新临时数据库中自动完成：
 | 1 | 无 | 工程底座、health、契约、测试、CI | 临时 SQLite、health 成功/失败响应 | `make acceptance` |
 | 2A | 1 | position identity/异步 MySQL 驱动 ADR、纯函数与 FEN/棋步错误模型 | FEN/转置/易位/en-passant/升变及数据库 URL 向量 | `make acceptance-stage-2a` |
 | 2B | 2A | Position/MoveEdge migration、约束与 repository | 空库、重复/并发插入、非法边夹具 | `make acceptance-stage-2b` |
-| 2C | 2B | Course/Module/Source/Span/Note 与 occurrence API | 两课程共享局面但注释不同的夹具 | `make acceptance-stage-2c` |
+| 2C | 2B | Position/MoveEdge HTTP 边界，以及 Course/Module/Source/Span/Note 与 occurrence CRUD API | 非法棋步零写入；两课程共享局面但注释不同的夹具 | `make acceptance-stage-2c` |
 | 3A | 2C | 不写库的 PGN parser 与语义树 | 主线、嵌套分支、NAG、Unicode、SetUp/FEN | `make acceptance-stage-3a` |
 | 3B | 3A | 原子、幂等的 PGN → graph/course 导入 | 重复导入、非法 ply、转置、超限输入 | `make acceptance-stage-3b` |
 | 3C | 3B | graph/course → PGN 导出与语义 round-trip | Stage 3A 黄金 PGN 全集 | `make acceptance-stage-3c` |

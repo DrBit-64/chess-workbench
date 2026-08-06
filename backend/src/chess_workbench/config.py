@@ -1,13 +1,15 @@
 from pathlib import Path
 
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from sqlalchemy.engine import make_url
 
 from chess_workbench import __version__
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_DATABASE_PATH = PROJECT_ROOT / "data" / "database" / "chess-workbench.db"
 DEFAULT_DATABASE_URL = f"sqlite+aiosqlite:///{DEFAULT_DATABASE_PATH.as_posix()}"
+SUPPORTED_DATABASE_DRIVERS = frozenset({"mysql+asyncmy", "sqlite+aiosqlite"})
 
 
 class Settings(BaseSettings):
@@ -27,3 +29,16 @@ class Settings(BaseSettings):
     port: int = Field(default=8000, ge=1, le=65535)
     debug: bool = False
     database_url: str = DEFAULT_DATABASE_URL
+
+    @field_validator("database_url")
+    @classmethod
+    def database_driver_must_be_async(cls, value: str) -> str:
+        try:
+            driver_name = make_url(value).drivername
+        except Exception as error:
+            raise ValueError("database_url must be a valid SQLAlchemy URL") from error
+
+        if driver_name not in SUPPORTED_DATABASE_DRIVERS:
+            supported = ", ".join(sorted(SUPPORTED_DATABASE_DRIVERS))
+            raise ValueError(f"database_url driver must be one of: {supported}")
+        return value

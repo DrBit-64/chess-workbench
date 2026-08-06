@@ -1,6 +1,6 @@
 # ChessWorkbench
 
-ChessWorkbench 是一个单用户、本地优先的国际象棋知识整理、交互训练、实战复盘与 AI 辅助导入平台。当前仓库已完成第一阶段工程底座；领域功能会按照[开发计划](docs/development-plan.md)逐步实现。
+ChessWorkbench 是一个单用户、本地优先的国际象棋知识整理、交互训练、实战复盘与 AI 辅助导入平台。当前仓库已完成第一阶段工程底座，Stage 2 领域内核正在实施；范围、状态和机器验收标准以[开发计划](docs/development-plan.md)为准。
 
 ## 已完成的工程底座
 
@@ -14,10 +14,19 @@ ChessWorkbench 是一个单用户、本地优先的国际象棋知识整理、�
 ## 环境要求
 
 - Node.js 22
-- pnpm 10
+- pnpm 10.14.0（由仓库的 `packageManager` 字段锁定）
 - Python 3.13
 - uv
 - Make
+
+推荐通过 Node.js 自带的 Corepack 启用 pnpm：
+
+```bash
+corepack enable
+corepack prepare pnpm@10.14.0 --activate
+```
+
+依赖前端或契约工具的 Make 目标会先检查 pnpm；缺失时会直接给出上述修复方式，而不是留下难以定位的子进程错误。
 
 ## 启动
 
@@ -41,7 +50,18 @@ make dev-web
 make acceptance
 ```
 
-`make acceptance` 会先用锁文件安装依赖，再执行所有静态检查、类型检查、单元/集成测试、API 契约漂移检查和前端生产构建，最后自动启动前后端，同时验证 API 直连和 Vite 代理链路并清理进程；它可直接用于 clean checkout，不需要人工打开浏览器判断成功。
+`make acceptance` 会先用锁文件安装依赖，再执行当前阶段门禁、所有静态检查、类型检查、单元/集成测试、API 契约漂移检查和前端生产构建，最后自动启动前后端，同时验证 API 直连和 Vite 代理链路并清理进程；它可直接用于 clean checkout，不需要人工打开浏览器判断成功。当前它是 `make acceptance-stage-2` 的薄别名，因此 GitHub Actions 的稳定入口也会运行 Stage 2 分层门禁。
+
+Stage 2 可以按依赖关系逐层验收：
+
+```bash
+make acceptance-stage-2a  # 局面身份、棋规向量和异步数据库配置
+make acceptance-stage-2b  # 另含模型、仓储、约束和 migration 往返
+make acceptance-stage-2c  # 另含课程语境 Schema、CRUD API 和错误事务
+make acceptance-stage-2   # 另含全仓检查、契约漂移、前端构建和 smoke
+```
+
+这些目标是累积的：后一个目标会先运行前面的目标。Stage 2 仍处于实施中；只有 `make acceptance-stage-2` 在 clean checkout 退出码为 0，才表示该阶段满足计划中的自动验收门槛。
 
 修改后端 API Schema 后，执行：
 

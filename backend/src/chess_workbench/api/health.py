@@ -1,30 +1,17 @@
-from typing import Any, cast
+from typing import cast
 
-from pydantic import BaseModel
 from sanic import Blueprint, Request
 from sanic.response import HTTPResponse, json
 from sanic_ext import openapi
 
+from chess_workbench.api.contracts import openapi_schema
 from chess_workbench.config import Settings
 from chess_workbench.schemas.health import HealthResponse, UnhealthyResponse
 from chess_workbench.store.database import Database
 
 health_blueprint = Blueprint("health", url_prefix="/api")
-
-
-def _oas30_schema(model: type[BaseModel]) -> dict[str, Any]:
-    """Translate Pydantic's single-value const into an OpenAPI 3.0 enum."""
-
-    schema = model.model_json_schema(ref_template="#/components/schemas/{model}")
-    properties = cast(dict[str, dict[str, Any]], schema.get("properties", {}))
-    for property_schema in properties.values():
-        if "const" in property_schema:
-            property_schema["enum"] = [property_schema.pop("const")]
-    return schema
-
-
-HEALTH_SCHEMA = _oas30_schema(HealthResponse)
-UNHEALTHY_SCHEMA = _oas30_schema(UnhealthyResponse)
+HEALTH_SCHEMA = openapi_schema(HealthResponse)
+UNHEALTHY_SCHEMA = openapi_schema(UnhealthyResponse)
 
 
 @health_blueprint.get("/health", name="health")

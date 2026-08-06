@@ -4,6 +4,7 @@ import argparse
 import asyncio
 import difflib
 import json
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -17,6 +18,10 @@ from chess_workbench.config import Settings
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 OPENAPI_PATH = PROJECT_ROOT / "backend" / "openapi.json"
 TYPESCRIPT_PATH = PROJECT_ROOT / "frontend" / "src" / "types" / "api.generated.ts"
+
+
+class MissingToolError(RuntimeError):
+    """Raised when a required local build tool is unavailable."""
 
 
 async def render_openapi(instance_name: str) -> str:
@@ -38,9 +43,16 @@ async def render_openapi(instance_name: str) -> str:
 
 
 def generate_types(openapi_path: Path, output_path: Path) -> None:
+    pnpm = shutil.which("pnpm")
+    if pnpm is None:
+        raise MissingToolError(
+            "未找到 pnpm；请安装 Node.js 22，并通过 Corepack 启用仓库锁定的 "
+            "pnpm 10.14.0（例如：corepack enable && "
+            "corepack prepare pnpm@10.14.0 --activate）。"
+        )
     subprocess.run(
         [
-            "pnpm",
+            pnpm,
             "--dir",
             str(PROJECT_ROOT / "frontend"),
             "exec",
@@ -133,10 +145,14 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
-    if args.write:
-        write_contracts()
-        return 0
-    return check_contracts()
+    try:
+        if args.write:
+            write_contracts()
+            return 0
+        return check_contracts()
+    except MissingToolError as error:
+        print(f"合同生成失败：{error}", file=sys.stderr)
+        return 2
 
 
 if __name__ == "__main__":
