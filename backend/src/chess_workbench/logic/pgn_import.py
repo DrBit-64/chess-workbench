@@ -46,6 +46,17 @@ class PgnImporter:
         title = course_title or game.headers.get("event", "Imported game")
 
         course = await self._service.create_course(CourseCreate(title=title, mode="traditional"))
+        # Store original headers as JSON in description for round-trip export.
+        import json
+
+        stored: dict[str, str] = dict(game.headers)
+        stored["_title"] = title
+        from chess_workbench.schemas.domain import CourseUpdate
+
+        course = await self._service.update_course(
+            course.id,
+            CourseUpdate(expected_version=course.version, description=json.dumps(stored)),
+        )
         module = await self._service.create_module(
             CourseModuleCreate(
                 course_id=course.id,
