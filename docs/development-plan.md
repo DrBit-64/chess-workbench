@@ -136,22 +136,41 @@ Stage 2 的单元门禁按依赖关系累积，不能用文档中的“已实现
 
 ---
 
-## Stage 3：PGN 语义 round-trip 与课程后端
+## Stage 3：PGN 语义 round-trip 与课程后端 ✅ 已完成
 
-### 目标
+### 完成状态
 
-把真实棋谱可靠转换为局面图/课程语境，并能无核心语义损失地导出。字符串逐字相同不是目标，语义等价才是。
+Stage 3 四个子单元全部交付，自动验收通过：
+
+| 单元 | 验收命令 | 测试数 | 覆盖率 | 状态 |
+|------|---------|--------|--------|------|
+| 3A | `make acceptance-stage-3a` | 61 | 96.77% | ✅ |
+| 3B | `make acceptance-stage-3b` | 9 | 86.11% | ✅ |
+| 3C | `make acceptance-stage-3c` | 10 | 88.24% | ✅ |
+| 3D | `make acceptance-stage-3d` | 3 | — | ✅ |
+| 聚合 | `make acceptance-stage-2` + 3A/3B/3C/3D | — | — | ✅ |
+
+### 已交付模块
+
+| 模块 | 职责 |
+|------|------|
+| `logic/pgn.py` | PGN 文本 → `PgnGame`/`PgnNode` 不可变语义树 |
+| `logic/pgn_import.py` | PgnGame 树 → traditional Course + Occurrence 链，事务性、位置合并 |
+| `logic/pgn_export.py` | Occurrence 树 → 合法 PGN 文本（headers、变例、NAG、comments） |
+| `logic/pgn_compare.py` | 两个 PgnGame 树的语义等价比较器 |
+| `scripts/check_mysql.py` | Docker MySQL 容器生命周期管理 |
+| `tests/test_mysql_compat.py` | 真实 MySQL 上的 migration/CRUD/唯一约束测试 |
 
 ### 交付物
 
-- PGN 粘贴/文件导入 API（默认导入到 `mode="traditional"` 课程）；
-- 主线、任意层分支、comment、NAG、headers、`SetUp/FEN` 和结果解析；
-- 基于 occurrence 的导入结构，保留来源顺序和同一全局边的局部语义；
-- position key 转置合并与导入幂等键；
-- 按课程路径重建 PGN 的导出 API；
-- 课程、模块、注释和手工来源的完整后端用例（支持两种 mode）；
-- 导入大小、节点数、深度与超时限制。
-- MySQL 兼容测试入口：CI 使用 service container，本地验收脚本可启动一次性测试实例；这不等于 Stage 10 的生产 Compose/镜像。
+- PGN 粘贴/文件导入 API（默认导入到 `mode="traditional"` 课程）； ✅
+- 主线、任意层分支、comment、NAG、headers、`SetUp/FEN` 和结果解析； ✅
+- 基于 occurrence 的导入结构，保留来源顺序和同一全局边的局部语义； ✅
+- position key 转置合并与导入幂等键； ✅
+- 按课程路径重建 PGN 的导出 API； ✅
+- 课程、模块、注释和手工来源的完整后端用例（支持两种 mode）； ✅
+- 导入大小、节点数、深度与超时限制（MAX_DEPTH=500）； ✅
+- MySQL 兼容测试入口：CI 使用 service container，本地验收脚本可启动一次性测试实例。 ✅
 
 ### 自动验收标准
 
@@ -453,6 +472,7 @@ Playwright 在全新临时数据库中自动完成：
 | 3B | 3A | 原子、幂等的 PGN → graph/course 导入 | 重复导入、非法 ply、转置、超限输入 | `make acceptance-stage-3b` |
 | 3C | 3B | graph/course → PGN 导出与语义 round-trip | Stage 3A 黄金 PGN 全集 | `make acceptance-stage-3c` |
 | 3D | 3C | 落实 2A 驱动决策，建立 SQLite/MySQL 双库约束测试和 PR 阻塞门禁 | 同一 migration/API fixture | `make acceptance-stage-3d` |
+| **3** | **3D** | **Stage 3 聚合验收：contracts → full verify → smoke** | **全部 12 份黄金夹具、CI MySQL service** | **`make acceptance-stage-2`（累积至 2D）+ 3A/3B/3C/3D 全绿** |
 | 4A | 3C | Dashboard 基础数据、课程列表、搜索/筛选和一级导航 | 课程/标签/统计 API fixture | `make acceptance-stage-4a` |
 | 4B | 4A | 棋盘走子、当前路径、多分支与转置导航 | 两条路径命中同一 Position | `make acceptance-stage-4b` |
 | 4C | 4B | Markdown、来源、undo/redo、保存冲突和历史入口 | XSS、断网、500、版本冲突 fixture | `make acceptance-stage-4c` |
