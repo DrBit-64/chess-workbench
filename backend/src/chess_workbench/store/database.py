@@ -2,7 +2,6 @@ from pathlib import Path
 from typing import Any
 
 from sqlalchemy import event, text
-from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -23,9 +22,9 @@ class Database:
     """Small async SQLAlchemy lifecycle wrapper used by application services."""
 
     def __init__(self, database_url: str) -> None:
-        self._prepare_sqlite_directory(database_url)
         self._engine: AsyncEngine = create_async_engine(database_url, pool_pre_ping=True)
-        if make_url(database_url).get_backend_name() == "sqlite":
+        if self._engine.url.get_backend_name() == "sqlite":
+            self._prepare_sqlite_directory(self._engine.url)
             event.listen(self._engine.sync_engine, "connect", _enable_sqlite_foreign_keys)
         self._sessions = async_sessionmaker(self._engine, expire_on_commit=False)
 
@@ -41,12 +40,10 @@ class Database:
         return self._sessions()
 
     @staticmethod
-    def _prepare_sqlite_directory(database_url: str) -> None:
-        url = make_url(database_url)
-        database_name = url.database
-        if url.get_backend_name() != "sqlite" or not database_name or database_name == ":memory:":
+    def _prepare_sqlite_directory(engine_url: Any) -> None:
+        database_name = engine_url.database
+        if not database_name or database_name == ":memory:":
             return
-
         database_path = Path(database_name)
         if not database_path.is_absolute():
             database_path = Path.cwd() / database_path

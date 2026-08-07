@@ -6,6 +6,7 @@ requires-python = ">=3.13,<3.14"
 dependencies = [
   "aiosqlite>=0.21,<1",
   "asyncmy>=0.2.10,<1",
+  "cryptography>=42,<45",
   "pydantic>=2.11,<3",
   "pydantic-settings>=2.10,<3",
   "python-chess>=1.999,<2",

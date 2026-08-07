@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "read-in-cwd",
+      "write-in-cwd",
+      "query-git-log",
+      "read-out-cwd",
+      "network"
+    ],
+    "deny": [
+      "write-out-cwd",
+      "delete-out-cwd"
+    ],
+    "ask": [
+      "delete-in-cwd",
+      "mutate-git-log",
+      "mcp"
+    ],
+    "defaultMode": "askAll"
+  }
+}

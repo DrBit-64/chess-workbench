@@ -19,7 +19,7 @@ STAGE_2D_CONTENT_TEST := $(firstword $(wildcard \
 	frontend-typecheck frontend-test frontend-build frontend-check contracts \
 	check-contracts verify smoke acceptance acceptance-stage-2a \
 	acceptance-stage-2b acceptance-stage-2c acceptance-stage-2d acceptance-stage-2 \
-	acceptance-stage-3a acceptance-stage-3b acceptance-stage-3c acceptance-stage-3
+	acceptance-stage-3a acceptance-stage-3b acceptance-stage-3c acceptance-stage-3d acceptance-stage-3
 
 check-pnpm:
 	@if ! command -v pnpm >/dev/null 2>&1; then \
@@ -133,6 +133,13 @@ acceptance-stage-3b: acceptance-stage-2d
 
 acceptance-stage-3c: acceptance-stage-2d
 	uv run --project backend --locked pytest -c backend/pyproject.toml -o addopts='' backend/tests/test_pgn_export.py --cov=chess_workbench.logic.pgn_export --cov=chess_workbench.logic.pgn_compare --cov-branch --cov-report=term-missing --cov-fail-under=85
+
+acceptance-stage-3d:
+	@if [ -n "$$CHESS_WORKBENCH_MYSQL_URL" ]; then \
+		uv run --project backend --locked pytest -c backend/pyproject.toml -o addopts='' backend/tests/test_mysql_compat.py -v --no-cov; \
+	else \
+		echo "CHESS_WORKBENCH_MYSQL_URL not set; skipping MySQL compat tests (use --container for local Docker)"; \
+	fi
 
 acceptance-stage-3: acceptance-stage-3a bootstrap-frontend
 	$(MAKE) verify

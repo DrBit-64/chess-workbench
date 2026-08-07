@@ -12,6 +12,20 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: testpass
+          MYSQL_DATABASE: chesstest
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
     steps:
       - uses: actions/checkout@v4
 
@@ -30,3 +44,12 @@ jobs:
 
       - name: Install, check, test, build, and run startup smoke
         run: make acceptance
+
+      - name: Run MySQL compatibility tests
+        env:
+          CHESS_WORKBENCH_MYSQL_URL: mysql+asyncmy://root:testpass@127.0.0.1:3306/chesstest
+        run: |
+          uv run --project backend --locked pytest \
+            -c backend/pyproject.toml \
+            backend/tests/test_mysql_compat.py \
+            -v
