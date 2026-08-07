@@ -1,0 +1,8 @@
+[Event "Multiple variations at same level"]
+[Site "ChessWorkbench"]
+[Date "2026.01.01"]
+[White "Player A"]
+[Black "Player B"]
+[Result "*"]
+
+1. e4 (1. d4 Nf6) (1. c4 e5) (1. Nf3 d5) e5 2. Nf3 *

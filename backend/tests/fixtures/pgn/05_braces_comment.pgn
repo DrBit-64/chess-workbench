@@ -1,0 +1,8 @@
+[Event "Braces comment"]
+[Site "ChessWorkbench"]
+[Date "2026.01.01"]
+[White "Player A"]
+[Black "Player B"]
+[Result "*"]
+
+{Starting the game} 1. e4 {A good opening move} e5 {Black responds in kind} 2. Nf3 Nc6 *

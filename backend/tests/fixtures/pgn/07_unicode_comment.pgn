@@ -1,0 +1,8 @@
+[Event "Unicode comment — 中文"]
+[Site "ChessWorkbench"]
+[Date "2026.01.01"]
+[White "棋手 A"]
+[Black "棋手 B"]
+[Result "*"]
+
+{开局：王兵开局} 1. e4 e5 {黑方回应王兵，中心对称} 2. Nf3 Nc6 {白方出马攻击e5兵} *

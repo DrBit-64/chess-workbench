@@ -1,0 +1,8 @@
+[Event "NAG annotations"]
+[Site "ChessWorkbench"]
+[Date "2026.01.01"]
+[White "Player A"]
+[Black "Player B"]
+[Result "*"]
+
+1. e4 $1 e5 $2 2. Nf3 $3 Nc6 $4 3. Bb5 $5 *

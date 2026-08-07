@@ -1,0 +1,8 @@
+[Event "Transposition via different move order"]
+[Site "ChessWorkbench"]
+[Date "2026.01.01"]
+[White "Player A"]
+[Black "Player B"]
+[Result "*"]
+
+1. d4 Nf6 2. c4 e6 3. Nc3 Bb4 4. e3 O-O 5. Bd3 d5 6. Nf3 c5 *
