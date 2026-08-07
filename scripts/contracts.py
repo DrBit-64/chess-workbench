@@ -39,6 +39,12 @@ async def render_openapi(instance_name: str) -> str:
         raise RuntimeError(f"OpenAPI endpoint returned HTTP {response.status}")
 
     document = cast(dict[str, Any], response.json)
+    # Sanic generates tags in non-deterministic order across runs.
+    # Sort them by name so consecutive generations produce identical bytes.
+    tags: list[dict[str, Any]] = document.get("tags", [])
+    if tags:
+        tags.sort(key=lambda t: str(t.get("name", "")))
+        document["tags"] = tags
     return f"{json.dumps(document, ensure_ascii=False, indent=2, sort_keys=True)}\n"
 
 

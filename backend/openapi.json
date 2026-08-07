@@ -3896,16 +3896,16 @@
   "servers": [],
   "tags": [
     {
-      "name": "system"
-    },
-    {
-      "name": "position-graph"
+      "name": "course-occurrences"
     },
     {
       "name": "courses"
     },
     {
-      "name": "course-occurrences"
+      "name": "position-graph"
+    },
+    {
+      "name": "system"
     }
   ]
 }
