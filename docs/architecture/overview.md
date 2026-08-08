@@ -62,6 +62,21 @@ ADR 0005 引入了两种课程模式：
 
 两种模式共用同一套表结构，通过 `Course.mode` 区分。AI 导入和手动导入默认进入 traditional 模式；用户选择章节发布到 opening_explorer。
 
+## 章节内容块
+
+ADR 0006 定义了章节内容的 Block 序列格式：
+
+```
+Block = SectionHeader | NarrativeParagraph | MoveSequence | KnowledgeNote
+```
+
+- `SectionHeader`：小节标题（纯文本）
+- `NarrativeParagraph`：不属于任何特定局面的 Markdown 叙事段落
+- `MoveSequence`：一连串着法，内部展开为 `CourseOccurrence` 链，中心棋盘随走子同步更新
+- `KnowledgeNote`：对当前局面的评注，可引用 `SourceSpan`
+
+棋盘图不单独存储——OCR 提取着法和 FEN 后丢弃，交互界面用可交互棋盘替代。AI 从棋书中提取一章时直接产出这个 Block 序列，经用户审核后写入数据库。
+
 ## 尚未作出的决定
 
 PGN 导入如何把任意层 variation 映射为 occurrence、超出乐观锁字段的版本审计、后台任务租约与重试，以及正式 MySQL 发布拓扑仍未冻结。它们会在进入相应阶段前单独写 ADR，避免提前固化未经真实夹具验证的设计。

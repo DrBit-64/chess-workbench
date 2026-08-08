@@ -7,3 +7,4 @@ ADR 记录会长期影响数据兼容性、模块边界或运维方式的决定�
 - [0003：异步 MySQL 驱动选择](0003-mysql-async-driver.md)
 - [0004：课程语境、来源定位与生命周期](0004-course-context-and-lifecycle.md)
 - [0005：双模课程：传统课程与开局探索器](0005-dual-course-mode.md)
+- [0006：章节内容块格式](0006-chapter-content-block-format.md)

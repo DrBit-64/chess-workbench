@@ -100,6 +100,7 @@ make acceptance-stage-3d       ✅ exit 0  (local: skip when no MySQL; CI: 3/3 p
 - **Dual course mode (ADR 0005)**: `Course.mode ∈ {traditional, opening_explorer}`
 - PGN round-trip is **semantic** equivalence, not byte-identical
 - PGN headers stored in `Course.description` as JSON for round-trip fidelity
+- **Chapter content block format (ADR 0006)**: Chapter = ordered Block sequence (`SectionHeader | NarrativeParagraph | MoveSequence | KnowledgeNote`). Board diagrams not stored. AI extraction produces this format directly. Implementation deferred to Stage 4.
 
 ## Known risks
 
