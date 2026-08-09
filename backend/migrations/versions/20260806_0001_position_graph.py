@@ -127,6 +127,5 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_index("ix_move_edges_to_position_id", table_name="move_edges")
     op.drop_table("move_edges")
     op.drop_table("positions")

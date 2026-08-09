@@ -1,13 +1,6 @@
-"""Run backend tests against a real MySQL instance (Stage 3D).
+"""Run Alembic-based MySQL compat tests (DS-MYSQL-01).
 
-Usage: python scripts/check_mysql.py [--container]
-
-When ``--container`` is passed the script starts a temporary MySQL 8
-Docker container, waits for it to become healthy, runs the minimal
-domain-schema + migration tests against it, and tears down the
-container on exit.  Without the flag the script expects the
-``CHESS_WORKBENCH_MYSQL_URL`` environment variable to point at an
-already-running MySQL instance.
+Usage: python scripts/check_mysql.py [--container] [--port PORT]
 """
 
 from __future__ import annotations
@@ -22,11 +15,12 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 BACKEND_DIR = PROJECT_ROOT / "backend"
 
+_CONTAINER_DATABASE = "chesstest"
+_CONTAINER_USER = "chesstest"
+_CONTAINER_PASSWORD = "testpass"
 
-def _start_mysql_container(
-    container_name: str, database: str, user: str, password: str, port: int
-) -> str:
-    """Start a disposable MySQL container and return the connection URL."""
+
+def _start_mysql_container(name: str, port: int) -> str:
     subprocess.run(
         [
             "docker",
@@ -34,15 +28,15 @@ def _start_mysql_container(
             "-d",
             "--rm",
             "--name",
-            container_name,
+            name,
             "-e",
-            f"MYSQL_ROOT_PASSWORD={password}",
+            f"MYSQL_ROOT_PASSWORD={_CONTAINER_PASSWORD}",
             "-e",
-            f"MYSQL_DATABASE={database}",
+            f"MYSQL_DATABASE={_CONTAINER_DATABASE}",
             "-e",
-            f"MYSQL_USER={user}",
+            f"MYSQL_USER={_CONTAINER_USER}",
             "-e",
-            f"MYSQL_PASSWORD={password}",
+            f"MYSQL_PASSWORD={_CONTAINER_PASSWORD}",
             "-p",
             f"{port}:3306",
             "mysql:8.4",
@@ -52,19 +46,18 @@ def _start_mysql_container(
         text=True,
         timeout=120,
     )
-    url = f"mysql+asyncmy://{user}:{password}@127.0.0.1:{port}/{database}"
-    return url
+    return f"mysql+asyncmy://{_CONTAINER_USER}:{_CONTAINER_PASSWORD}@127.0.0.1:{port}/{_CONTAINER_DATABASE}"
 
 
-def _wait_for_mysql(url: str, timeout: int = 60) -> None:
-    """Poll the MySQL instance until it is ready."""
+def _wait_for_mysql(url: str, timeout: int = 90) -> None:
+    import asyncio
+
+    from sqlalchemy import text
+    from sqlalchemy.ext.asyncio import create_async_engine
+
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         try:
-            import asyncio
-
-            from sqlalchemy import text
-            from sqlalchemy.ext.asyncio import create_async_engine
 
             async def _ping() -> None:
                 engine = create_async_engine(url, echo=False)
@@ -78,13 +71,45 @@ def _wait_for_mysql(url: str, timeout: int = 60) -> None:
             return
         except Exception:
             time.sleep(2)
-    raise TimeoutError(f"MySQL did not become ready within {timeout}s")
+    raise TimeoutError(f"MySQL not ready within {timeout}s")
 
 
-def _run_tests(url: str) -> int:
-    """Run the compatibility test suite with the given MySQL URL."""
+def _has_data(url: str) -> bool:
+    """Return True if the MySQL database already contains project tables or
+    a non-empty alembic_version."""
+    import asyncio
+
+    from sqlalchemy import text
+    from sqlalchemy.ext.asyncio import create_async_engine
+
+    async def _check() -> bool:
+        engine = create_async_engine(url)
+        try:
+            async with engine.connect() as conn:
+                tables = await conn.execute(
+                    text(
+                        "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES "
+                        "WHERE TABLE_SCHEMA = DATABASE()"
+                    )
+                )
+                names = {row[0] for row in tables.fetchall()}
+                if names - {"alembic_version"}:
+                    return True
+                if "alembic_version" in names:
+                    rev = await conn.execute(text("SELECT COUNT(*) FROM alembic_version"))
+                    if rev.scalar():
+                        return True
+                return False
+        finally:
+            await engine.dispose()
+
+    return asyncio.run(_check())
+
+
+def _run_tests(mysql_url: str) -> int:
     env = os.environ.copy()
-    env["CHESS_WORKBENCH_MYSQL_URL"] = url
+    env["CHESS_WORKBENCH_MYSQL_URL"] = mysql_url
+    env["CHESS_WORKBENCH_DATABASE_URL"] = mysql_url
     result = subprocess.run(
         [
             sys.executable,
@@ -92,58 +117,71 @@ def _run_tests(url: str) -> int:
             "pytest",
             "-c",
             str(BACKEND_DIR / "pyproject.toml"),
+            "-o",
+            "addopts=",
             str(BACKEND_DIR / "tests" / "test_mysql_compat.py"),
             "-v",
+            "--no-cov",
         ],
         cwd=PROJECT_ROOT,
         env=env,
         capture_output=False,
+        timeout=180,
     )
     return result.returncode
 
 
-def _stop_container(container_name: str) -> None:
-    subprocess.run(
-        ["docker", "stop", container_name],
+def _stop_container(name: str) -> int:
+    """Stop and remove the container.  Returns the Docker exit code."""
+    result = subprocess.run(
+        ["docker", "stop", name],
         capture_output=True,
         timeout=30,
     )
+    return result.returncode
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Run MySQL compatibility tests")
-    parser.add_argument(
-        "--container",
-        action="store_true",
-        help="start a temporary Docker MySQL container",
-    )
-    parser.add_argument(
-        "--port",
-        type=int,
-        default=13306,
-        help="MySQL port (default: 13306)",
-    )
+    parser = argparse.ArgumentParser(description="Run MySQL compat tests")
+    parser.add_argument("--container", action="store_true")
+    parser.add_argument("--port", type=int, default=13306)
     args = parser.parse_args()
 
     if args.container:
         name = f"chess-workbench-mysql-{os.getpid()}"
-        password = "testpass"
+        url = _start_mysql_container(name, args.port)
+        print(f"MySQL container started: {name}")
+        test_rc = 1
         try:
-            url = _start_mysql_container(name, "chesstest", "chesstest", password, args.port)
-            print(f"MySQL container started: {name}")
             _wait_for_mysql(url)
             print("MySQL is ready")
-            return _run_tests(url)
+            test_rc = _run_tests(url)
         finally:
-            _stop_container(name)
+            print("Stopping container …")
+            stop_rc = _stop_container(name)
+            if stop_rc == 0:
+                print("Container stopped")
+            else:
+                print(
+                    f"Container stop failed (exit {stop_rc}); "
+                    f"manual cleanup may be needed: docker stop {name}",
+                    file=sys.stderr,
+                )
+                if test_rc == 0:
+                    test_rc = 4
+        return test_rc
     else:
         url = os.environ.get("CHESS_WORKBENCH_MYSQL_URL", "")
         if not url:
+            print("Set CHESS_WORKBENCH_MYSQL_URL or use --container", file=sys.stderr)
+            return 2
+        if _has_data(url):
             print(
-                "Set CHESS_WORKBENCH_MYSQL_URL or use --container",
+                "Refusing to run against database that already contains tables "
+                "or a non-empty alembic_version.  Use a fresh empty database.",
                 file=sys.stderr,
             )
-            return 2
+            return 3
         return _run_tests(url)
 
 

@@ -365,18 +365,11 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     op.drop_table("knowledge_note_citations")
-    op.drop_index("ix_source_spans_source_version_id", table_name="source_spans")
     op.drop_table("source_spans")
-    op.drop_index("ix_knowledge_notes_move_edge_id", table_name="knowledge_notes")
-    op.drop_index("ix_knowledge_notes_position_id", table_name="knowledge_notes")
-    op.drop_index("ix_knowledge_notes_occurrence_id", table_name="knowledge_notes")
     op.drop_table("knowledge_notes")
     op.drop_table("source_files")
-    op.drop_index("ix_occurrences_position_id", table_name="course_occurrences")
-    op.drop_index("ix_occurrences_course_module", table_name="course_occurrences")
     op.drop_table("course_occurrences")
     op.drop_table("source_versions")
-    op.drop_index("ix_course_modules_course_parent", table_name="course_modules")
     op.drop_table("course_modules")
     op.drop_table("sources")
     op.drop_table("courses")

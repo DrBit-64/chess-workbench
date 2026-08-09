@@ -410,4 +410,10 @@ def test_migrations_render_mysql_specific_ddl() -> None:
     downgrade_ddl = downgrade_output.getvalue()
 
     assert downgrade_ddl.count("DROP TABLE") == len(Base.metadata.tables)
-    assert "DROP INDEX ix_move_edges_to_position_id ON move_edges" in downgrade_ddl
+    # MySQL error 1553: cannot drop an index still needed by an FK
+    # constraint.  DROP TABLE already cleans up all indexes on InnoDB,
+    # so the downgrade must not emit any explicit DROP INDEX.
+    assert "DROP INDEX" not in downgrade_ddl, (
+        "downgrade DDL contains explicit DROP INDEX; "
+        "DROP TABLE on InnoDB handles indexes automatically (error 1553 otherwise)"
+    )

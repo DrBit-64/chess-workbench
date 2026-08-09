@@ -1,54 +1,159 @@
-"""Verify SQLite/MySQL schema and data compatibility (Stage 3D).
+"""Verify real MySQL Alembic round-trip (Stage 3D / DS-MYSQL-01).
 
 These tests run against a real MySQL instance when
-``CHESS_WORKBENCH_MYSQL_URL`` is set, and are skipped otherwise.
+``CHESS_WORKBENCH_MYSQL_URL`` is set.  They use the *actual* Alembic
+``upgrade → check → downgrade → upgrade`` cycle and assert revision
+state and business-table presence against the live database.
 """
 
 from __future__ import annotations
 
 import os
+from typing import Any
 
 import pytest
-from chess_workbench.store.base import Base
 from chess_workbench.store.database import Database
 
 MYSQL_URL = os.environ.get("CHESS_WORKBENCH_MYSQL_URL", "")
 
 requires_mysql = pytest.mark.skipif(not MYSQL_URL, reason="CHESS_WORKBENCH_MYSQL_URL not set")
 
+# –– Alembic helpers –––––––––––––––––––––––––––––––––––––––––––––––
 
-def _db_kind(url: str) -> str:
-    return "mysql" if "mysql" in url else "sqlite"
+_ALEMBIC_INI = os.path.join(os.path.dirname(__file__), os.pardir, "alembic.ini")
+
+
+def _alembic_config() -> Any:  # alembic.config.Config
+    import alembic.config
+
+    cfg = alembic.config.Config(_ALEMBIC_INI)
+    db_url = os.environ.get("CHESS_WORKBENCH_DATABASE_URL", "")
+    if db_url:
+        cfg.set_main_option("sqlalchemy.url", db_url)
+    return cfg
+
+
+_BUSINESS_TABLES = frozenset(
+    {
+        "courses",
+        "course_modules",
+        "course_occurrences",
+        "knowledge_notes",
+        "knowledge_note_citations",
+        "sources",
+        "source_files",
+        "source_spans",
+        "source_versions",
+        "positions",
+        "move_edges",
+    }
+)
+
+
+def _current_revision(config: Any) -> str | None:
+    """Return the current Alembic head revision or None."""
+    import asyncio
+
+    from sqlalchemy import text
+    from sqlalchemy.ext.asyncio import create_async_engine
+
+    url = config.get_main_option("sqlalchemy.url")
+
+    async def _get() -> str | None:
+        engine = create_async_engine(url)
+        try:
+            async with engine.connect() as conn:
+                result = await conn.execute(text("SELECT version_num FROM alembic_version"))
+                row = result.fetchone()
+                return row[0] if row else None
+        finally:
+            await engine.dispose()
+
+    return asyncio.run(_get())
+
+
+def _present_tables(config: Any) -> frozenset[str]:
+    """Return the set of non-Alembic table names present in the database."""
+    import asyncio
+
+    from sqlalchemy import text
+    from sqlalchemy.ext.asyncio import create_async_engine
+
+    url = config.get_main_option("sqlalchemy.url")
+
+    async def _get() -> frozenset[str]:
+        engine = create_async_engine(url)
+        try:
+            async with engine.connect() as conn:
+                result = await conn.execute(
+                    text(
+                        "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES "
+                        "WHERE TABLE_SCHEMA = DATABASE() "
+                        "AND TABLE_NAME != 'alembic_version'"
+                    )
+                )
+                return frozenset(row[0] for row in result.fetchall())
+        finally:
+            await engine.dispose()
+
+    return asyncio.run(_get())
+
+
+# –– fixtures –––––––––––––––––––––––––––––––––––––––––––––––––––––––
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _mysql_head_schema() -> None:
+    """Ensure head revision and all business tables exist once per session.
+
+    Runs before any test that needs the schema, independent of
+    collection or execution order.
+    """
+    import alembic.command
+
+    os.environ.setdefault("CHESS_WORKBENCH_DATABASE_URL", MYSQL_URL)
+    cfg = _alembic_config()
+    alembic.command.upgrade(cfg, "head")
+
+    assert _current_revision(cfg) == "20260806_0003", "session fixture did not reach head revision"
+    assert _present_tables(cfg) >= _BUSINESS_TABLES, "session fixture is missing business tables"
+
+
+# –– tests ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
 
 @requires_mysql
-async def test_mysql_migration_round_trip() -> None:
-    """Alembic upgrade→check→downgrade works against a real MySQL."""
-    db = Database(MYSQL_URL)
-    try:
-        async with db.engine.begin() as conn:
-            await conn.run_sync(Base.metadata.drop_all)
-            await conn.run_sync(Base.metadata.create_all)
-        # Verify we can connect and query.
-        async with db.session() as session:
-            result = await session.execute(__import__("sqlalchemy").text("SELECT 1"))
-            assert result.scalar() == 1
-    finally:
-        await db.close()
+def test_migration_upgrade_check_downgrade_upgrade() -> None:
+    """Alembic upgrade→check→downgrade→upgrade cycle on real MySQL."""
+    import alembic.command
+
+    cfg = _alembic_config()
+
+    # Already at head via session fixture; assertions validate pre-state.
+    assert _current_revision(cfg) == "20260806_0003"
+    assert _present_tables(cfg) >= _BUSINESS_TABLES
+
+    # Real Alembic check (Codex verified: exits 0 on fresh MySQL 8.4).
+    alembic.command.check(cfg)
+
+    # Downgrade to empty.
+    alembic.command.downgrade(cfg, "base")
+    assert _current_revision(cfg) is None
+    assert len(_present_tables(cfg)) == 0
+
+    # Re-upgrade so sibling tests see head schema.
+    alembic.command.upgrade(cfg, "head")
+    assert _current_revision(cfg) == "20260806_0003"
 
 
 @requires_mysql
 async def test_mysql_crud_round_trip() -> None:
-    """Create a course via the service layer against MySQL and read it back."""
+    """Create a course via the service layer on Alembic-created schema."""
     from chess_workbench.schemas.domain import CourseCreate
     from chess_workbench.services.content import ContentService
 
     db = Database(MYSQL_URL)
     try:
-        async with db.engine.begin() as conn:
-            await conn.run_sync(Base.metadata.drop_all)
-            await conn.run_sync(Base.metadata.create_all)
-
         async with db.session() as session, session.begin():
             service = ContentService(session)
             course = await service.create_course(
@@ -65,16 +170,12 @@ async def test_mysql_crud_round_trip() -> None:
 
 @requires_mysql
 async def test_mysql_position_key_uniqueness() -> None:
-    """Position key unique constraint works on MySQL."""
+    """Position key unique constraint works on Alembic-created MySQL schema."""
     from chess_workbench.domain.position_identity import PositionState
     from chess_workbench.store.graph_repository import get_or_create_position
 
     db = Database(MYSQL_URL)
     try:
-        async with db.engine.begin() as conn:
-            await conn.run_sync(Base.metadata.drop_all)
-            await conn.run_sync(Base.metadata.create_all)
-
         async with db.session() as session, session.begin():
             state = PositionState.from_fen(
                 "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"

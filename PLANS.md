@@ -42,7 +42,7 @@ The independent audit is recorded in `docs/agent/stage-2-3-audit.md`.
 - [x] Record reproducible counterexamples and update the shared handoff state.
 - [x] Codex: decide and record PGN variation mapping, import identity/Source ownership,
   round-trip semantic scope, and HTTP transaction/path contracts.
-- [ ] DeepSeek (`DS-MYSQL-01`): repair MySQL migration downgrade and replace the false metadata
+- [x] DeepSeek (`DS-MYSQL-01`): repair MySQL migration downgrade and replace the false metadata
   test with a real Alembic `upgrade → check → downgrade → upgrade` gate. Execute only the bounded
   task in `docs/agent/tasks/DS-MYSQL-01.md`.
 - [ ] DeepSeek: pin the MySQL image digest and make Stage 3 gates/CI cumulative after
