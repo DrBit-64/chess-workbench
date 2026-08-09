@@ -2,72 +2,97 @@
 
 ## Goal
 
-Stage 3 complete. Next: Stage 4 — three-pane course editor MVP.
+Bring Stage 2 and Stage 3 back into agreement with their documented contracts and establish a
+trustworthy automated acceptance gate before starting Stage 4.
 
-## Completed phases
+The independent audit is recorded in `docs/agent/stage-2-3-audit.md`.
 
-| Stage | Status | Deliverables |
-|-------|--------|-------------|
-| 1 | ✅ | Engineering foundation, health, contracts, test harness, CI |
-| 2 | ✅ | Domain model: Position, MoveEdge, Course, Occurrence, Source, Note |
-| 2D | ✅ | Dual course mode (ADR 0005): `Course.mode`, `KnowledgeNote.source_note_id` |
-| 3A | ✅ | Pure PGN parser → semantic tree (61 tests, 96.77%) |
-| 3B | ✅ | PGN → graph/course import (9 tests, 86.11%) |
-| 3C | ✅ | Course → PGN export + semantic comparator (10 tests, 88.24%) |
-| 3D | ✅ | SQLite/MySQL dual-database gate (3 MySQL tests in CI) |
-| 3 | ✅ | Aggregate: contracts + full verify + smoke |
+## Scope
 
-## Stage 3 completion summary
+- Resolve PGN-to-course semantics and API/idempotency ownership.
+- Complete the Stage 2 Source/Span/KnowledgeNote HTTP boundary.
+- Enforce accepted dual-course/source-note invariants.
+- Make PGN import/export bounded, atomic, idempotent, and semantically testable.
+- Establish real SQLite/MySQL migration and behavior parity gates.
+- Restore documented coverage thresholds and cumulative Stage 3 gate wiring.
+- Reconcile status and architecture documents after behavior is accepted.
 
-### Verified by machine
+## Out of scope
 
-```
-make acceptance-stage-2        ✅ exit 0  (cumulative gate: 2A → 2D → contracts → verify → smoke)
+- Stage 4 UI/editor implementation.
+- New frameworks or distributed components.
+- Stage 5+ training, engines, Lichess, OCR, AI, or collaboration work.
 
-Individual sub-unit gates:
-├── make acceptance-stage-3a   ✅ 61/61 tests, 96.77% coverage  (PGN parser)
-├── make acceptance-stage-3b   ✅  9/9  tests, 86.11% coverage  (PGN import)
-├── make acceptance-stage-3c   ✅ 10/10 tests, 88.24% coverage  (PGN export + comparator)
-└── make acceptance-stage-3d   ✅  3/3  tests                   (MySQL compat, CI only)
-```
+## Current audited status
 
-### Architecture decisions recorded
+| Unit | Status |
+|---|---|
+| 2A | Accepted |
+| 2B | Accepted on tested SQLite paths |
+| 2C | Partial — Source/Span/Note APIs missing |
+| 2D | Partial — stored fields exist; ADR invariants missing |
+| 3A | Partial — basic parser only |
+| 3B | Not accepted |
+| 3C | Not accepted |
+| 3D | Not accepted |
 
-- `docs/decisions/0001` — Local-first modular monolith
-- `docs/decisions/0002` — Position identity (`standard:v1:` key)
-- `docs/decisions/0003` — MySQL async driver (`asyncmy 0.2.11`)
-- `docs/decisions/0004` — Course context, occurrence layer, source hierarchy, lifecycle
-- `docs/decisions/0005` — Dual course mode: traditional + opening_explorer
+## Steps
 
-### New modules delivered in Stage 3
+- [x] Independently audit all `feat(dpsk)` Stage 2/3 changes, declared gates, and design edits.
+- [x] Record reproducible counterexamples and update the shared handoff state.
+- [x] Codex: decide and record PGN variation mapping, import identity/Source ownership,
+  round-trip semantic scope, and HTTP transaction/path contracts.
+- [ ] DeepSeek (`DS-MYSQL-01`): repair MySQL migration downgrade and replace the false metadata
+  test with a real Alembic `upgrade → check → downgrade → upgrade` gate. Execute only the bounded
+  task in `docs/agent/tasks/DS-MYSQL-01.md`.
+- [ ] DeepSeek: pin the MySQL image digest and make Stage 3 gates/CI cumulative after
+  `DS-MYSQL-01` proves the real migration entry point.
+- [ ] DeepSeek: add Source/SourceVersion/SourceFile/SourceSpan/KnowledgeNote CRUD routes and
+  generated contract tests.
+- [ ] DeepSeek: implement the accepted Course.mode and source-note invariants with migration,
+  service, HTTP, and negative tests.
+- [ ] DeepSeek: implement the accepted PGN APIs, Source/idempotency model, atomic rollback,
+  typed errors, limits, and module/path export.
+- [ ] DeepSeek: replace misleading fixtures and add all-12 semantic round-trip, comparator
+  negative, long-input, duplicate-import, rollback, and dual-database tests.
+- [ ] Codex: run final adversarial review and the repaired aggregate acceptance on clean SQLite
+  and disposable MySQL.
+- [ ] Only after every criterion is green, mark Stage 2/3 complete and begin Stage 4.
 
-| Module | Purpose | Tests |
-|--------|---------|-------|
-| `logic/pgn.py` | Parse PGN text → immutable `PgnGame` semantic tree | 61 |
-| `logic/pgn_import.py` | Atomic PGN tree → Course + Occurrence chain via `ContentService` | 9 |
-| `logic/pgn_export.py` | Occurrence tree → valid PGN text (headers, variations, NAG, comments) | 10 (shared) |
-| `logic/pgn_compare.py` | Semantic equivalence comparator between two `PgnGame` trees | — |
-| `scripts/check_mysql.py` | Docker MySQL lifecycle management for local MySQL testing | — |
-| `tests/test_mysql_compat.py` | Migration, CRUD, position-key uniqueness on real MySQL | 3 |
+## Frozen architecture inputs
 
-### Issues fixed during Stage 3
+- ADR 0006 is accepted: a MoveSequence is an ordered source move tree; Stage 3 may represent one
+  PGN game as an implicit block until the Stage 4 block migration.
+- ADR 0007 maps every PGN game to one ordered Module occurrence tree. Traditional means
+  source-organized/default-mainline reading, not branchless storage; transpositions merge only
+  Position/MoveEdge.
+- ADR 0008 fixes semantic round-trip scope, Source/CAS ownership, immutable import receipts,
+  transport-independent idempotency, transaction ordering, HTTP/error contracts, and resource
+  limits.
 
-| Issue | Fix |
-|-------|-----|
-| PGN parser python-chess API (v1.x `game.variations`, `node.move`) | Used correct v1.x attributes |
-| PGN export wrapped all children in `()` | Side-variation detection: index > 0 → `()`, main line plain |
-| PGN export lost original headers | Importer stores headers in `Course.description` JSON |
-| MySQL `cryptography` missing | Added `cryptography>=42,<45` to dependencies |
-| MySQL coverage gate false failure in CI | `--no-cov` on MySQL compat step |
-| OpenAPI tag ordering non-deterministic | `contracts.py` sorts tags by name before serialization |
-| `Database.__init__` parsed MySQL URL as SQLite | Deferred SQLite dir check until after engine creation |
+## Execution guard
 
-### Upcoming: Stage 4 — Three-pane course editor MVP
+Do not start DeepSeek in this working tree while Codex documentation changes are uncommitted.
+Either obtain permission for an atomic documentation commit and then work sequentially, or create
+an independent Git worktree/branch. Agents must not share one dirty working tree.
 
-See `docs/development-plan.md` §4 for detailed breakdown.
+## Completion criteria
 
-## Agent notes
-
-- **Codex** should review Stage 3 deliverables, then design Stage 4 editor architecture.
-- **Deep Code** can implement well-specified sub-tasks once architectural decisions are recorded.
-- See `docs/agent/HANDOFF.md` for detailed handoff state.
+- Every Stage 2/3 deliverable and numbered automatic criterion in
+  `docs/development-plan.md` has a direct automated test or an explicitly accepted revised ADR.
+- Runtime OpenAPI and generated TypeScript expose the completed Source/Note and PGN contracts.
+- Repeating one logical PGN import does not increase Course/Module/Occurrence/Position/Source
+  counts and returns the original logical result.
+- Any failed import leaves zero new business rows and returns a stable error containing ply/path.
+- All 12 corrected golden fixtures pass semantic import/export/reimport checks; comparator
+  mutation tests prove each required semantic field is actually compared.
+- Oversized, over-node, over-depth, and over-time imports fail deterministically with 413/422
+  without recursion crashes or partial writes.
+- Multi-module/path export and traversal bounds have deterministic behavior.
+- SQLite and MySQL both pass real Alembic upgrade/check/downgrade and shared API/domain fixtures.
+- Global line coverage is at least 80%, global branch coverage at least 75%, and critical
+  position/PGN modules at least 90% without exclusions that hide business branches.
+- One cumulative Stage 3 command runs all focused gates, contracts, full verification, MySQL,
+  and smoke; CI invokes that same semantic entry point.
+- The final handoff lists exact commands, exit codes, coverage, skipped tests, and no unverified
+  completion claims.

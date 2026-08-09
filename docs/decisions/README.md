@@ -8,3 +8,5 @@ ADR 记录会长期影响数据兼容性、模块边界或运维方式的决定�
 - [0004：课程语境、来源定位与生命周期](0004-course-context-and-lifecycle.md)
 - [0005：双模课程：传统课程与开局探索器](0005-dual-course-mode.md)
 - [0006：章节内容块格式](0006-chapter-content-block-format.md)
+- [0007：来源有序课程中的 PGN 变例树](0007-source-ordered-pgn-variation-trees.md)
+- [0008：PGN 语义、来源资产、幂等导入与 HTTP 边界](0008-pgn-import-export-contract.md)

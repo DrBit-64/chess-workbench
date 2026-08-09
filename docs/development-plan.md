@@ -85,7 +85,10 @@ Position 等业务表、首个 migration、棋盘组件、Docker、Stockfish、�
 
 ## Stage 2：棋规内核、局面身份与最小领域模型
 
-状态：**已完成（2026-08-06）**。`make acceptance-stage-2` 在 clean checkout 退出码为 0。
+状态：**独立验收未通过（2026-08-09）**。现有 `make acceptance-stage-2` 可以退出 0，
+但 2C 的 Source/Span/KnowledgeNote HTTP CRUD 缺失，2D 的双模课程与来源笔记约束未按
+ADR 0005 实现，且覆盖率门槛低于本计划的完成定义。2A 与 2B 的已测内核可保留；整改证据
+见 `docs/agent/stage-2-3-audit.md`。
 
 ### 目标
 
@@ -136,53 +139,69 @@ Stage 2 的单元门禁按依赖关系累积，不能用文档中的“已实现
 
 ---
 
-## Stage 3：PGN 语义 round-trip 与课程后端 ✅ 已完成
+## Stage 3：PGN 语义 round-trip 与课程后端
 
-### 完成状态
+### 独立审计后的状态（2026-08-09）
 
-Stage 3 四个子单元全部交付，自动验收通过：
+现有 happy-path 测试会通过，但不满足下列交付物和自动验收标准。完整反例、命令结果和
+整改顺序见 `docs/agent/stage-2-3-audit.md`。
 
-| 单元 | 验收命令 | 测试数 | 覆盖率 | 状态 |
-|------|---------|--------|--------|------|
-| 3A | `make acceptance-stage-3a` | 61 | 96.77% | ✅ |
-| 3B | `make acceptance-stage-3b` | 9 | 86.11% | ✅ |
-| 3C | `make acceptance-stage-3c` | 10 | 88.24% | ✅ |
-| 3D | `make acceptance-stage-3d` | 3 | — | ✅ |
-| 聚合 | `make acceptance-stage-2` + 3A/3B/3C/3D | — | — | ✅ |
+| 单元 | 现有测试情况 | 功能状态 |
+|------|-------------|----------|
+| 3A | 61 个现有测试通过 | 部分完成：基础解析可用，完整状态、无损语义与资源边界缺失 |
+| 3B | 9 个现有测试通过 | 未验收：无 API、幂等/Source、完整事务错误和限制 |
+| 3C | 10 个现有测试通过 | 未验收：全夹具 round-trip 失败，比较器有假阳性，导出边界不完整 |
+| 3D | 3 个现有断言可在 MySQL 通过 | 未验收：测试未跑 Alembic，真实 MySQL downgrade 失败 |
+| 聚合 | 依赖接线不完整 | 未验收 |
 
-### 已交付模块
+### 已有实现模块（待按验收标准整改）
 
 | 模块 | 职责 |
 |------|------|
 | `logic/pgn.py` | PGN 文本 → `PgnGame`/`PgnNode` 不可变语义树 |
-| `logic/pgn_import.py` | PgnGame 树 → traditional Course + Occurrence 链，事务性、位置合并 |
-| `logic/pgn_export.py` | Occurrence 树 → 合法 PGN 文本（headers、变例、NAG、comments） |
-| `logic/pgn_compare.py` | 两个 PgnGame 树的语义等价比较器 |
+| `logic/pgn_import.py` | PgnGame 树 → 新 traditional Course + Occurrence 树；可复用全局 Position，但尚无完整事务/幂等契约 |
+| `logic/pgn_export.py` | 单根 Course occurrence 树 → 基础 PGN 文本；尚未覆盖完整 header/result/path 语义 |
+| `logic/pgn_compare.py` | 两个 PgnGame 树的部分字段比较器；尚不能作为完整语义等价证明 |
 | `scripts/check_mysql.py` | Docker MySQL 容器生命周期管理 |
-| `tests/test_mysql_compat.py` | 真实 MySQL 上的 migration/CRUD/唯一约束测试 |
+| `tests/test_mysql_compat.py` | 真实 MySQL 上的 metadata create/drop、基础 service CRUD 与顺序去重断言；未执行 Alembic |
 
-### 交付物
+### 目标交付物
 
-- PGN 粘贴/文件导入 API（默认导入到 `mode="traditional"` 课程）； ✅
-- 主线、任意层分支、comment、NAG、headers、`SetUp/FEN` 和结果解析； ✅
-- 基于 occurrence 的导入结构，保留来源顺序和同一全局边的局部语义； ✅
-- position key 转置合并与导入幂等键； ✅
-- 按课程路径重建 PGN 的导出 API； ✅
-- 课程、模块、注释和手工来源的完整后端用例（支持两种 mode）； ✅
-- 导入大小、节点数、深度与超时限制（MAX_DEPTH=500）； ✅
-- MySQL 兼容测试入口：CI 使用 service container，本地验收脚本可启动一次性测试实例。 ✅
+- 按 ADR 0007 将一份 PGN 的全部 game 映射到一个 traditional Course 的有序 Module，保留
+  mainline/RAV occurrence 树；traditional 表示按来源组织，不表示底层无分支；
+- PGN 粘贴/文件导入 API（默认导入到 `mode="traditional"` 课程）；
+- 主线、任意层分支、comment、NAG、headers、`SetUp/FEN` 和结果解析；
+- 基于 occurrence 的导入结构，保留来源顺序和同一全局边的局部语义；
+- 按 ADR 0008 建立原始 bytes 的 Source/Version/File CAS 资产、不可变 import receipt、
+  transport-independent 幂等键与同内容 Source 复用；
+- 提供 Module 完整树、Module 内 root-to-leaf 路径和 receipt 多局下载三种明确导出范围；
+- 课程、模块、注释和手工来源的完整后端用例（支持两种 mode）；
+- 固定 5 MiB、1,000 game、50,000 move occurrence、RAV nesting 128 和 15 秒/512 MiB 资源
+  边界；合法 5,000-ply 主线不得依赖 Python 递归；
+- MySQL 兼容测试入口：CI 使用 service container，本地验收脚本可启动一次性测试实例。
+
+ADR 0007–0008 是 Stage 3 实现的规范来源。若实现与旧代码或旧测试冲突，以 ADR 为准并修改
+误导性测试；不得为了保留现有接口而静默降低语义范围。
 
 ### 自动验收标准
 
-1. 黄金夹具覆盖主线、嵌套分支、Unicode 注释、NAG、起始 FEN、升变、转置和不完整结果；
-2. `import → export → import` 后，用结构化比较器断言 headers、变化拓扑、SAN/UCI、comment/NAG 和起始局面语义等价；
-3. 同一输入重复导入不增加 occurrence、Position 或 Source 记录；
+1. 至少 12 份修正后的黄金夹具覆盖多 game、主线、嵌套分支、Unicode 注释、多个 NAG、
+   root/starting/普通 comment、完整起始 FEN、升变、转置、自定义 header 和不完整结果；
+2. `parse all → import → export → parse all` 后，用结构化比较器断言全部 game、headers、
+   result、变化拓扑与顺序、SAN/UCI、comment/NAG 和起始完整 FEN 语义等价；每个字段的单点
+   mutation 都必须令比较失败；
+3. 相同逻辑输入跨 JSON/raw/multipart 重放时返回同一 receipt，Course/Module/Occurrence/
+   Position/Source 计数和 Course version 均不增加；同一 key 的不同请求返回 409 且零写入；
 4. 两份 PGN 到达同一局面会共享 Position，但各自注释和分支顺序独立；
 5. 任一非法棋步导致整个导入事务回滚，并返回带 ply/path 的可定位错误；
-6. 导出对多父、转置和潜在环有确定策略，不无限递归；
-7. 5000-ply/约定规模夹具在 CI 性能预算内完成，超限输入返回 413/422 而非拖垮进程；
-8. API 契约测试验证 multipart、文本导入、错误响应和下载 headers；
-9. 从本阶段起 SQLite 与 MySQL 都作为 PR 阻塞集成环境，验证 JSON、布尔、排序、时间和唯一约束行为一致。
+6. 导出按 occurrence scope 处理转置；Module、路径和多 game 下载均有结构断言，损坏环与
+   跨模块 leaf 返回稳定错误且不无限递归；
+7. 边界值通过，越界输入返回 413/422；合法 5,000-ply 主线不出现 RecursionError，2-core CI
+   中不超过 15 秒且峰值 RSS 低于 512 MiB；
+8. Runtime OpenAPI 与生成 TS 类型覆盖 JSON/raw/multipart、receipt、Module/path 导出、
+   multi-game 下载、错误响应及安全下载 headers；
+9. 从本阶段起 SQLite 与 MySQL 都作为 PR 阻塞集成环境，使用真实 Alembic migration 和共享
+   API/domain fixture 验证 JSON、布尔、排序、时间和唯一约束行为一致。
 
 ---
 
@@ -529,7 +548,7 @@ Playwright 在全新临时数据库中自动完成：
 | PDF/视频生成 Course/Exercise 草稿 | 8D、9C | `publish-import-draft.spec` | 与审核发布共用边界 |
 | 视频关键帧、转录、局面对齐 | 9A–9C | fixed short-video fixtures | 复用 PDF 审核基础 |
 | 双模课程（traditional + opening_explorer） | 2D；API 4A；发布 4C | `course-mode.spec`、`note-source-link.spec` | 核心数据模型先行 |
-| 传统课程按来源组织（书籍/视频 → 章节线性浏览） | 2D、4A | `traditional-course-navigation.spec` | 依赖 Course.mode + 编辑器 UI |
+| 传统课程按来源组织（书籍/视频/PGN → 章节，默认主线阅读并保留作者变例） | 2D、3B、4A | `traditional-course-navigation.spec` + PGN RAV fixture | 依赖 Course.mode + 编辑器 UI |
 | 开局探索器按问题组织（局面多来源观点聚合） | 2D、4B–4C | `explorer-candidate-navigation.spec` | 依赖 Course.mode + 图导航 |
 | 从传统课程发布章节到开局探索器 | 4C | `publish-to-explorer.spec` | 依赖编辑器 + 发布 API |
 | 网页笔记与手工来源 | 4C | source CRUD contract + `web-note-source.spec` | 无需等 AI |

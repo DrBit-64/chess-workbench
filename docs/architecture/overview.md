@@ -55,12 +55,18 @@ Pydantic Schema 通过 Sanic Extensions 形成 OpenAPI。`scripts/contracts.py` 
 
 ## 双模课程
 
-ADR 0005 引入了两种课程模式：
+ADR 0005 与 ADR 0007 定义了两种课程模式。`mode` 表达内容的组织与所有权，而不是底层是否
+允许分支：
 
-- **`traditional`**：按来源组织（一本书/视频系列 → 章节），Occurrence 构成线性链。用于整本棋书、中局专题、残局手册。
-- **`opening_explorer`**：按问题和决策点组织（开局主题 → 变例分支），Occurrence 构成图，支持转置合并和多分支。KnowledgeNote 通过 `source_note_id` 引用 traditional 模块中的原始内容。
+- **`traditional`**：按来源组织（一本书/视频系列/PGN → 章节）。默认界面沿作者主线线性
+  阅读，但一个 MoveSequence 可以保留作者原有的有序变例树。用于整本棋书、中局专题、
+  残局手册与 PGN 来源。
+- **`opening_explorer`**：按问题和决策点组织（开局主题 → 变例分支），聚合用户显式发布的
+  多来源观点。KnowledgeNote 通过 `source_note_id` 引用 traditional 模块中的原始内容。
 
-两种模式共用同一套表结构，通过 `Course.mode` 区分。AI 导入和手动导入默认进入 traditional 模式；用户选择章节发布到 opening_explorer。
+两种模式共用 Position/MoveEdge 全局图和 occurrence 语境层。每个 occurrence 始终最多只有
+一个父节点；两条路径转置到同一局面时只复用 Position/MoveEdge，不能合并 occurrence。
+AI、PGN 和手动来源默认进入 traditional；进入 opening_explorer 必须经过显式发布。
 
 ## 章节内容块
 
@@ -72,11 +78,32 @@ Block = SectionHeader | NarrativeParagraph | MoveSequence | KnowledgeNote
 
 - `SectionHeader`：小节标题（纯文本）
 - `NarrativeParagraph`：不属于任何特定局面的 Markdown 叙事段落
-- `MoveSequence`：一连串着法，内部展开为 `CourseOccurrence` 链，中心棋盘随走子同步更新
+- `MoveSequence`：有根、有序的来源着法树；第一个子节点是主线，其余是作者变例，中心棋盘
+  随当前路径同步更新
 - `KnowledgeNote`：对当前局面的评注，可引用 `SourceSpan`
 
 棋盘图不单独存储——OCR 提取着法和 FEN 后丢弃，交互界面用可交互棋盘替代。AI 从棋书中提取一章时直接产出这个 Block 序列，经用户审核后写入数据库。
 
+Stage 3 先把每个 PGN game 的 Module occurrence 树视为一个隐式 MoveSequence；Stage 4
+编辑器开始前再用 migration 确定性回填显式 Block，不为 PGN 导入提前引入两套结构。
+
+## PGN 来源与语义边界
+
+ADR 0007–0008 冻结 Stage 3 的 PGN 契约：
+
+- 一份原始 PGN bytes 对应一个可复用的 Source/Version/File 资产；一次逻辑导入另有不可变
+  receipt。相同内容与目标自动重放，不能重复创建用户课程内容；
+- 一份文档解析全部 game，一次新导入默认创建一个 traditional Course，每局创建一个有序的
+  顶层 Module 和一个根 occurrence；主线与全部 RAV 保留为来源有序树；
+- round-trip 比较语义而非原始排版，必须覆盖全部 game、headers、起始完整 FEN、结果、
+  分支顺序、root/starting/普通 comment 和全部 NAG；
+- 导入先完成有界解析和文件 CAS，再在一个 SQL 事务内处理幂等、Source、Course、Module、
+  occurrence、annotation 与 receipt，失败时不得留下部分业务行；
+- 导出范围必须明确为一个 Module、该 Module 内一条 root-to-leaf 路径，或一个 import receipt
+  的全部 game。遍历 occurrence 路径，不遍历无界的全局 Position 图。
+
 ## 尚未作出的决定
 
-PGN 导入如何把任意层 variation 映射为 occurrence、超出乐观锁字段的版本审计、后台任务租约与重试，以及正式 MySQL 发布拓扑仍未冻结。它们会在进入相应阶段前单独写 ADR，避免提前固化未经真实夹具验证的设计。
+超出乐观锁字段的版本审计、后台任务租约与重试、opening_explorer 引用卡片的完整发布不变量，
+以及正式 MySQL 发布拓扑仍未冻结。它们会在进入相应阶段前单独写 ADR，避免提前固化未经
+真实夹具验证的设计。

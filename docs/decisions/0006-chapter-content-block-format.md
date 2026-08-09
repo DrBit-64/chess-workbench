@@ -1,7 +1,8 @@
 # ADR 0006：章节内容块格式
 
-- 状态：Proposed
-- 日期：2026-08-07
+- 状态：Accepted
+- 提议日期：2026-08-07
+- 接受日期：2026-08-09
 
 ## 背景
 
@@ -27,7 +28,7 @@ Block = SectionHeader | NarrativeParagraph | MoveSequence | KnowledgeNote
 |-----------|------|---------|
 | `SectionHeader` | 标题文本（纯字符串） | 无 |
 | `NarrativeParagraph` | Markdown 文本 | 无 |
-| `MoveSequence` | 一个着法序列（多步），每步推进棋盘 | **是**——中心棋盘随走子同步更新 |
+| `MoveSequence` | 一棵有根、有序的来源着法树；第一个子节点是主线，其余是作者变例 | **是**——中心棋盘沿当前路径同步更新 |
 | `KnowledgeNote` | 对当前棋盘局面的评注（Markdown），可引用 SourceSpan | 停在当前局面 |
 
 ### 棋盘图不保留
@@ -36,9 +37,14 @@ Block = SectionHeader | NarrativeParagraph | MoveSequence | KnowledgeNote
 
 ### 与现有模型的关系
 
-- `MoveSequence` → 内部展开为一组 `CourseOccurrence` 节点（复用现有 `create_root_occurrence` / `create_move_occurrence`）
+- `MoveSequence` → 内部展开为一个根 `CourseOccurrence` 及其有序子树（复用现有
+  `create_root_occurrence` / `create_move_occurrence`）；只含主线时自然退化为线性链
 - `KnowledgeNote` → 复用现有 `KnowledgeNote` 模型，关联到当前 `Occurrence`
 - `SectionHeader` / `NarrativeParagraph` → **新模型**，属于 CourseModule 的内容块序列
+
+`CourseOccurrence` 始终只有一个父 occurrence。不同路径到达同一局面时复用全局
+`Position`/`MoveEdge`，但不合并带有来源顺序、注释和 NAG 的 occurrence。PGN 的具体映射
+由 ADR 0007 定义。
 
 ### AI 提取格式
 
@@ -46,7 +52,9 @@ AI 从棋书 PDF 中提取一章时，输出就是这个 Block 序列。经用�
 
 ### 实施阶段
 
-此格式在 **Stage 4（三栏课程编辑器）** 前落地为模型 + migration。
+Stage 3 的 PGN 导入可以先把“每局棋 → 一个 Module 根及 occurrence 子树”视为一个隐式
+`MoveSequence`。在 **Stage 4（三栏课程编辑器）** 开始前，内容块模型与 migration 必须
+落地，并把已有 PGN Module 确定性回填为一个显式 `MoveSequence` Block。
 
 ## 后果
 

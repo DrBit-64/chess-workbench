@@ -7,7 +7,7 @@ theory, interactive training, game review, and AI-assisted content import. The i
 model is a position graph (not a PGN tree), and the system enforces a strict four-layer
 separation: Source → Knowledge → Repertoire → Exercise.
 
-Current phase: Stage 2 — position identity, domain model kernel, and core CRUD APIs.
+Current phase: Stage 2/3 remediation after independent acceptance audit.
 See `PLANS.md` for current tasks and `docs/development-plan.md` for the full roadmap.
 
 ## Repository layout
@@ -87,7 +87,13 @@ All commands run from the repository root.
 | Stage 2A acceptance | `make acceptance-stage-2a` |
 | Stage 2B acceptance | `make acceptance-stage-2b` |
 | Stage 2C acceptance | `make acceptance-stage-2c` |
+| Stage 2D acceptance | `make acceptance-stage-2d` |
 | Full Stage 2 acceptance | `make acceptance-stage-2` |
+| Stage 3A acceptance | `make acceptance-stage-3a` |
+| Stage 3B acceptance | `make acceptance-stage-3b` |
+| Stage 3C acceptance | `make acceptance-stage-3c` |
+| Stage 3D acceptance | `make acceptance-stage-3d` |
+| Full Stage 3 acceptance | `make acceptance-stage-3` |
 | CI entry point | `make acceptance` |
 
 ## Engineering rules
