@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "stockfish": {
+    "version": "18",
+    "release": "sf_18",
+    "license": "GPL-3.0-or-later",
+    "homepage": "https://stockfishchess.org/",
+    "release_url": "https://github.com/official-stockfish/Stockfish/releases/tag/sf_18",
+    "linux_x64_archive": "stockfish-ubuntu-x86-64.tar",
+    "linux_x64_url": "https://github.com/official-stockfish/Stockfish/releases/download/sf_18/stockfish-ubuntu-x86-64.tar",
+    "linux_x64_sha256": "5c6f38b02a4da5f3ffe763f27da6c3e743eebefd92b50cb3661623b96696adff",
+    "install_root": "data/engines/stockfish-18"
+  },
+  "syzygy": {
+    "format": "Syzygy WDL/DTZ",
+    "install_root": "data/tablebases/syzygy",
+    "optional": true,
+    "fixture_source": "https://github.com/niklasf/python-chess/tree/master/data/syzygy/regular",
+    "fixture_license": "GPL-3.0",
+    "fixtures": {
+      "KQvK.rtbw": "45c453e5113a714bd4ece1cb5ba78cf5d21dd8b06f89708675d164fbe9bd3b53",
+      "KQvK.rtbz": "ad20819e947f38bf06865a888dbde488ee4a34d2aa64b5727e1882313b1273a3"
+    }
+  }
+}

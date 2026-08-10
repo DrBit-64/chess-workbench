@@ -13,7 +13,8 @@ React SPA
             └─ repositories / SQLAlchemy → SQLite（后续 MySQL）
 ```
 
-后台任务、Stockfish、OCR、AI 和 WebSocket 会在对应阶段进入系统，但不会改变以下边界：
+Stage 6 已加入 SQL 后台任务、Stockfish、Syzygy 和 WebSocket 失效通知；OCR 与 AI 会在
+后续阶段进入系统，但不会改变以下边界：
 
 1. 后端 SQL 数据是正式事实源；
 2. 前端 `chess.js` 只能做交互预检，持久化棋步由 `python-chess` 验证；
@@ -52,6 +53,14 @@ Pydantic Schema 通过 Sanic Extensions 形成 OpenAPI。`scripts/contracts.py` 
 ## 运行时数据
 
 默认 SQLite URL 指向 `data/database/chess-workbench.db`。目录由数据库适配层按需创建，clean checkout 不依赖被忽略的数据文件。测试注入临时 SQLite URL，避免污染个人数据。
+
+## SQL 任务与本地引擎
+
+ADR 0009 冻结 Stage 6A–6D：`jobs` 是带租约、心跳、重试、取消和幂等键的正式队列；
+`invalidation_events` 是持久 outbox，WebSocket 断开后 HTTP polling 仍能取得同一事实。
+Stockfish 子进程按操作创建并在所有退出路径清理，Threads/Hash/MultiPV/耗时受配置上限
+约束。分析缓存包含完整六字段 FEN、引擎名称/版本和全部相关参数。Syzygy 能覆盖局面时
+优先返回精确 WDL/DTZ，否则显式回退 Stockfish。Exercise 接线仍属于 Stage 5 后的 6E。
 
 ## 双模课程
 
@@ -104,6 +113,5 @@ ADR 0007–0008 冻结 Stage 3 的 PGN 契约：
 
 ## 尚未作出的决定
 
-超出乐观锁字段的版本审计、后台任务租约与重试、opening_explorer 引用卡片的完整发布不变量，
-以及正式 MySQL 发布拓扑仍未冻结。它们会在进入相应阶段前单独写 ADR，避免提前固化未经
-真实夹具验证的设计。
+正式 MySQL 发布拓扑与 Stage 8 AI provider 审核协议仍未冻结。它们会在进入相应阶段前
+单独写 ADR，避免提前固化未经真实夹具验证的设计。

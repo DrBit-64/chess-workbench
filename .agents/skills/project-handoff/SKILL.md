@@ -21,6 +21,10 @@ description: Prepare or consume a handoff between coding agents (Deep Code ↔ C
 - Record material architectural decisions in `docs/decisions/`.
 - Add or update tests for behavioral changes.
 - Match the existing code style and patterns.
+- For V4-Flash, work on one independently verifiable behavior at a time. The task packet must state
+  relevant files, preserved invariants, permitted edit boundaries and exact acceptance commands.
+- Stop and escalate under the rules in `AGENTS.md`; never turn an ambiguous investigation into an
+  unrequested refactor.
 
 ## At task completion
 
@@ -39,13 +43,15 @@ description: Prepare or consume a handoff between coding agents (Deep Code ↔ C
 
 ## Agent responsibilities
 
-### Deep Code (DeepSeek-V4-Pro)
+### Deep Code (DeepSeek-V4-Flash)
 
-- Bounded, well-specified implementation tasks
-- Single API endpoints and unit tests
-- Type annotations, formatting, config changes
-- Documentation updates
-- Bug fixes with clear reproduction steps
+- Executes already-defined, bounded implementation work
+- Local search/explanation, documentation, formatting and type/config fixes
+- Focused unit tests and clear single-module bugs
+- Already-designed small features and local refactors with deterministic gates
+- Default profile: thinking enabled, `high` effort; use non-thinking only for mechanical work and
+  do not use `max` routinely
+- Stops with an evidence report when root cause, design, scope or invariants are unclear
 
 ### Codex (OpenAI)
 
@@ -54,6 +60,20 @@ description: Prepare or consume a handoff between coding agents (Deep Code ↔ C
 - Security review and final diff review
 - Task planning, scoping, and decomposition
 - Handling ambiguous or under-specified requirements
+
+## Risk and review routing
+
+- **Low risk:** mechanical/local Flash task plus complete deterministic gate. It may proceed without
+  a per-task Codex review only when its packet says so.
+- **Medium risk:** a few related Flash packets are reviewed together by Codex at the feature
+  boundary.
+- **High risk:** unclear root cause, architecture, unrelated cross-module changes, database/schema,
+  protocol, security, concurrency/state-machine work or a large refactor goes directly to Codex.
+- V4-Pro is an optional user-selected fallback when Flash has escalated and Codex capacity is being
+  conserved; it is not the default delegation tier.
+
+No risk tier overrides repository safety rules. In particular, do not commit unless the user has
+explicitly authorized it, and never lower a quality gate to turn a failing task green.
 
 ## Shared state
 

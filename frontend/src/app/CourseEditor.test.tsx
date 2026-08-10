@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { SWRConfig } from 'swr';
 import { describe, expect, it, vi } from 'vitest';
@@ -12,12 +18,14 @@ vi.mock('react-chessboard', () => ({
     onSquareClick,
     animationDuration,
     customSquareStyles,
+    customArrows = [],
   }: {
     position: string;
     onPieceDrop: (source: string, target: string) => boolean;
     onSquareClick: (square: string) => void;
     animationDuration: number;
     customSquareStyles: Record<string, Record<string, string | number>>;
+    customArrows?: unknown[];
   }) => (
     <div aria-label="测试棋盘">
       <span>{position}</span>
@@ -27,6 +35,7 @@ vi.mock('react-chessboard', () => ({
       >
         {JSON.stringify(customSquareStyles)}
       </output>
+      <output data-testid="board-arrows">{JSON.stringify(customArrows)}</output>
       <button onClick={() => onSquareClick('e2')}>选择 e2</button>
       <button onClick={() => onPieceDrop('e2', 'e4')}>走 e4</button>
       <button onClick={() => onPieceDrop('g1', 'f3')}>走 Nf3</button>
@@ -89,6 +98,26 @@ const e4 = {
   inbound_uci: 'e2e4',
   inbound_san: 'e4',
 };
+const e5 = {
+  ...e4,
+  id: 'occ-e5',
+  parent_id: 'occ-e4',
+  position_id: 'position-e5',
+  move_edge_id: 'move-e5',
+  full_fen: 'rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2',
+  inbound_uci: 'e7e5',
+  inbound_san: 'e5',
+};
+const nf3 = {
+  ...e5,
+  id: 'occ-nf3-line',
+  parent_id: 'occ-e5',
+  position_id: 'position-nf3',
+  move_edge_id: 'move-nf3',
+  full_fen: 'rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2',
+  inbound_uci: 'g1f3',
+  inbound_san: 'Nf3',
+};
 const transposedRoot = { ...root, id: 'occ-transposed' };
 const note = {
   id: 'note-1',
@@ -113,6 +142,92 @@ const citableSource = {
   source_version: { id: 'version-1' },
   source_span: { id: 'span-1', locator: { kind: 'whole' } },
 };
+
+const engineCapabilities = {
+  available: true,
+  engine_path: '/tmp/fakefish',
+  engine_name: 'FakeFish',
+  engine_version: '1.2',
+  syzygy_available: false,
+  syzygy_path: '/tmp/missing',
+  default_parameters: {
+    multipv: 4,
+    movetime_ms: 800,
+    depth: null,
+    threads: 1,
+    hash_mb: 128,
+    ponder: false,
+  },
+  max_threads: 4,
+  max_hash_mb: 1024,
+  max_time_ms: 30000,
+  time_presets_ms: [500, 800, 2000, 4000, 8000],
+  multipv_max: 5,
+  install_hint: null,
+};
+
+function engineAnalysis(fen: string) {
+  const blackToMove = fen === e4Fen;
+  return {
+    id: blackToMove ? 'analysis-e4' : 'analysis-root',
+    fen,
+    source: 'engine',
+    engine_name: 'FakeFish',
+    engine_version: '1.2',
+    parameters: engineCapabilities.default_parameters,
+    lines: blackToMove
+      ? [
+          {
+            rank: 1,
+            score_cp: 20,
+            mate: null,
+            wdl: [400, 400, 200],
+            uci: ['e7e5', 'g1f3'],
+            san: ['e5', 'Nf3'],
+          },
+        ]
+      : [
+          {
+            rank: 1,
+            score_cp: 34,
+            mate: null,
+            wdl: [420, 400, 180],
+            uci: ['e2e4', 'e7e5', 'g1f3'],
+            san: ['e4', 'e5', 'Nf3'],
+          },
+          {
+            rank: 2,
+            score_cp: 27,
+            mate: null,
+            wdl: null,
+            uci: ['d2d4', 'd7d5'],
+            san: ['d4', 'd5'],
+          },
+          {
+            rank: 3,
+            score_cp: 18,
+            mate: null,
+            wdl: null,
+            uci: ['g1f3', 'd7d5'],
+            san: ['Nf3', 'd5'],
+          },
+          {
+            rank: 4,
+            score_cp: 12,
+            mate: null,
+            wdl: null,
+            uci: ['c2c4', 'e7e5'],
+            san: ['c4', 'e5'],
+          },
+        ],
+    depth: 12,
+    seldepth: 16,
+    nodes: 1004,
+    elapsed_ms: 800,
+    from_cache: false,
+    created_at: '2026-08-10T00:00:00Z',
+  };
+}
 
 function json(body: unknown, status = 200) {
   return Promise.resolve(
@@ -142,6 +257,68 @@ function renderEditor() {
 }
 
 describe('Stage 4B course editor', () => {
+  it('auto-analyzes every selected course position and draws configurable MultiPV arrows', async () => {
+    const analyzedFens: string[] = [];
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url === '/api/citable-sources') return json([]);
+      if (url === '/api/courses/course-1') return json(course);
+      if (url === '/api/courses/course-1/modules') return json([module]);
+      if (url === '/api/courses/course-1/editor/module-1') {
+        return json({
+          module,
+          content_blocks: [],
+          occurrences: [root, e4],
+          notes: [],
+        });
+      }
+      if (url === '/api/engine/capabilities') return json(engineCapabilities);
+      if (url === '/api/engine/analyses' && init?.method === 'POST') {
+        const body = JSON.parse(String(init.body)) as { fen: string };
+        analyzedFens.push(body.fen);
+        return json(engineAnalysis(body.fen));
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderEditor();
+
+    fireEvent.click(
+      await screen.findByRole('switch', { name: '课程实时引擎分析' }),
+    );
+    expect(await screen.findByText('e4 e5 Nf3')).toBeTruthy();
+    await waitFor(() => expect(analyzedFens).toContain(startFen));
+    const arrows = screen.getByTestId('board-arrows');
+    await waitFor(() => {
+      expect(arrows.textContent).toContain('e2');
+      expect(arrows.textContent).toContain('e4');
+      expect(arrows.textContent).toContain('d2');
+      expect(arrows.textContent).toContain('g1');
+      expect(arrows.textContent).not.toContain('c2');
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: '课程引擎设置' }));
+    expect(await screen.findByText('分析线路：4')).toBeTruthy();
+    expect(screen.getByText('推荐箭头：3')).toBeTruthy();
+    fireEvent.mouseDown(
+      screen.getByRole('combobox', { name: '课程引擎搜索时间' }),
+    );
+    fireEvent.click(await screen.findByText('2 秒'));
+    fireEvent.click(screen.getByRole('switch', { name: '显示引擎推荐箭头' }));
+    await waitFor(() => expect(arrows.textContent).toBe('[]'));
+    fireEvent.click(screen.getByRole('switch', { name: '显示引擎推荐箭头' }));
+    fireEvent.click(screen.getByLabelText('Close'));
+
+    fireEvent.click(screen.getByRole('button', { name: /e4 e2e4/ }));
+    expect(await screen.findByText('e5 Nf3')).toBeTruthy();
+    await waitFor(() => expect(analyzedFens).toContain(e4Fen));
+    await waitFor(() => {
+      expect(arrows.textContent).toContain('e7');
+      expect(arrows.textContent).toContain('e5');
+      expect(arrows.textContent).not.toContain('e2');
+    });
+  });
+
   it('loads mixed content, follows candidates, exposes transpositions, and appends a legal move', async () => {
     const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
@@ -246,6 +423,50 @@ describe('Stage 4B course editor', () => {
           }),
         }),
       ),
+    );
+  });
+
+  it('shows a persistent clickable mainline score and removes keyboard move entry', async () => {
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url === '/api/citable-sources') return json([]);
+      if (url === '/api/courses/course-1') return json(course);
+      if (url === '/api/courses/course-1/modules') return json([module]);
+      if (url === '/api/courses/course-1/editor/module-1') {
+        return json({
+          module,
+          content_blocks: [],
+          occurrences: [root, e4, e5, nf3],
+          notes: [],
+        });
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderEditor();
+
+    await screen.findByRole('navigation', { name: '主线棋谱' });
+    expect(screen.queryByLabelText('键盘输入着法 UCI')).toBeNull();
+    expect(screen.queryByRole('button', { name: '提交着法' })).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: /e4 e2e4/ }));
+    fireEvent.click(await screen.findByRole('button', { name: /e5 e7e5/ }));
+    fireEvent.click(await screen.findByRole('button', { name: /Nf3 g1f3/ }));
+
+    const score = screen.getByRole('navigation', { name: '主线棋谱' });
+    expect(within(score).getByText('1.')).toBeTruthy();
+    expect(within(score).getByText('2.')).toBeTruthy();
+    expect(within(score).getByRole('button', { name: 'e4' })).toBeTruthy();
+    expect(within(score).getByRole('button', { name: 'e5' })).toBeTruthy();
+    expect(within(score).getByRole('button', { name: 'Nf3' })).toBeTruthy();
+
+    fireEvent.click(within(score).getByRole('button', { name: '起点' }));
+    expect(screen.getByLabelText('测试棋盘').textContent).toContain(startFen);
+    expect(within(score).getByRole('button', { name: 'Nf3' })).toBeTruthy();
+
+    fireEvent.click(within(score).getByRole('button', { name: 'e5' }));
+    expect(screen.getByLabelText('测试棋盘').textContent).toContain(
+      e5.full_fen,
     );
   });
 

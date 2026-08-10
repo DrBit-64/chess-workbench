@@ -16,6 +16,7 @@ def build_test_app(tmp_path: Path) -> ChessWorkbenchApp:
         Settings(
             service_name=f"chess-workbench-occurrence-invariants-{tmp_path.name}",
             database_url=f"sqlite+aiosqlite:///{tmp_path / 'occurrence-invariants.db'}",
+            engine_worker_enabled=False,
         )
     )
 

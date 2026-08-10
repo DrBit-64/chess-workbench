@@ -17,5 +17,8 @@
       "mcp"
     ],
     "defaultMode": "askAll"
-  }
+  },
+  "model": "deepseek-v4-flash",
+  "thinkingEnabled": true,
+  "reasoningEffort": "high"
 }

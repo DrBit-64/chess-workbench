@@ -59,19 +59,6 @@ async function clickMove(page: Page, from: string, to: string) {
   expect((await response).status()).toBe(201);
 }
 
-async function keyboardMove(page: Page, uci: string) {
-  const input = page.getByLabel('键盘输入着法 UCI');
-  await input.fill(uci);
-  const response = page.waitForResponse(
-    (item) =>
-      item.url().endsWith('/api/occurrences') &&
-      item.request().method() === 'POST',
-    { timeout: 10_000 },
-  );
-  await input.press('Enter');
-  expect((await response).status()).toBe(201);
-}
-
 async function openTraditionalEditing(page: Page) {
   await page.getByRole('button', { name: /编\s*辑/ }).click();
   await expect(page.getByLabel('Markdown 说明')).toBeVisible();
@@ -145,7 +132,7 @@ test('editor MVP persists branches, citations, failures, transpositions, and PGN
   await page.getByRole('button', { name: /保存说明/ }).click();
   await expect(page.getByText('已与服务器同步')).toBeVisible();
   await page.getByRole('button', { name: /^起\s*点$/ }).click();
-  await keyboardMove(page, 'd2d4');
+  await clickMove(page, 'd2', 'd4');
   await expect(page.getByRole('button', { name: /^d4$/ })).toBeVisible();
   await page.getByRole('button', { name: /^起\s*点$/ }).click();
   await expect(page.getByRole('button', { name: /d4 d2d4/ })).toBeVisible();

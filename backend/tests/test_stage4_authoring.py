@@ -17,6 +17,7 @@ def build_test_app(tmp_path: Path) -> ChessWorkbenchApp:
             service_name=f"chess-workbench-stage4c-{tmp_path.name}",
             database_url=f"sqlite+aiosqlite:///{tmp_path / 'stage4c.db'}",
             source_storage_root=tmp_path / "data",
+            engine_worker_enabled=False,
         )
     )
 

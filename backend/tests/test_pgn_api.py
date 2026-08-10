@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, cast
 from uuid import UUID, uuid4
 
+import httpx
 from chess_workbench.api.app import ChessWorkbenchApp, create_app
 from chess_workbench.config import Settings
 from chess_workbench.logic.pgn import parse_pgn, parse_pgn_document
@@ -34,6 +35,7 @@ def build_test_app(tmp_path: Path) -> ChessWorkbenchApp:
             service_name=f"chess-workbench-pgn-api-{tmp_path.name}",
             database_url=f"sqlite+aiosqlite:///{tmp_path / 'pgn-api.db'}",
             source_storage_root=tmp_path / "data",
+            engine_worker_enabled=False,
         )
     )
 
@@ -266,15 +268,36 @@ async def test_concurrent_same_request_converges_to_one_receipt(tmp_path: Path) 
     app = build_test_app(tmp_path)
     await create_schema(app)
     client = cast(Any, app.asgi_client)
+    lifecycle_app = cast(Any, app)
     text = (FIXTURE_DIR / "02_one_variation.pgn").read_text()
 
-    results = await asyncio.gather(
-        *(client.post("/api/pgn/imports", json={"pgn": text}) for _ in range(4))
-    )
-    responses = [response for _, response in results]
-    assert sorted(response.status for response in responses) == [200, 200, 200, 201]
-    assert len({response.json["import_receipt"]["id"] for response in responses}) == 1
-    assert (await table_counts(app))[0] == 1
+    # SanicASGITestClient starts and stops the whole app around every request,
+    # which is deliberately unsuitable for concurrent calls on one client.
+    # Keep one application lifespan around the four ASGI transport requests so
+    # this exercises endpoint concurrency rather than racing test lifecycles.
+    lifecycle_app.router.reset()
+    lifecycle_app.signal_router.reset()
+    await lifecycle_app._startup()
+    await lifecycle_app._server_event("init", "before")
+    await lifecycle_app._server_event("init", "after")
+    try:
+        responses = await asyncio.gather(
+            *(
+                httpx.AsyncClient.request(
+                    client,
+                    "POST",
+                    "/api/pgn/imports",
+                    json={"pgn": text},
+                )
+                for _ in range(4)
+            )
+        )
+        assert sorted(response.status_code for response in responses) == [200, 200, 200, 201]
+        assert len({response.json()["import_receipt"]["id"] for response in responses}) == 1
+        assert (await table_counts(app))[0] == 1
+    finally:
+        await lifecycle_app._server_event("shutdown", "before")
+        await lifecycle_app._server_event("shutdown", "after")
 
 
 async def test_transport_shape_media_and_payload_limits_are_strict(tmp_path: Path) -> None:

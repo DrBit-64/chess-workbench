@@ -22,6 +22,12 @@ from chess_workbench.store.models import (
     SourceFile,
     SourceSpan,
     SourceVersion,
+    EngineAnalysis,
+    EngineGame,
+    EngineGameMove,
+    EngineGameReview,
+    InvalidationEvent,
+    Job,
 )
 
 _REGISTERED_MODELS = (
@@ -36,6 +42,12 @@ _REGISTERED_MODELS = (
     SourceFile,
     SourceSpan,
     SourceVersion,
+    EngineAnalysis,
+    EngineGame,
+    EngineGameMove,
+    EngineGameReview,
+    InvalidationEvent,
+    Job,
 )
 
 config = context.config

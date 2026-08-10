@@ -31,6 +31,13 @@ class Settings(BaseSettings):
     debug: bool = False
     database_url: str = DEFAULT_DATABASE_URL
     source_storage_root: Path = DEFAULT_SOURCE_STORAGE_ROOT
+    stockfish_path: Path = PROJECT_ROOT / "data" / "engines" / "stockfish-18" / "stockfish"
+    syzygy_path: Path = PROJECT_ROOT / "data" / "tablebases" / "syzygy"
+    engine_max_threads: int = Field(default=4, ge=1, le=64)
+    engine_max_hash_mb: int = Field(default=1024, ge=16, le=65_536)
+    engine_max_time_ms: int = Field(default=30_000, ge=100, le=600_000)
+    engine_worker_enabled: bool = True
+    engine_worker_poll_ms: int = Field(default=250, ge=50, le=10_000)
 
     @field_validator("database_url")
     @classmethod

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 from dataclasses import dataclass
 
 from sanic import Request, Sanic
@@ -9,12 +10,14 @@ from sanic.response import HTTPResponse
 from sanic_ext import Extend
 
 from chess_workbench.api.content import content_blueprint
+from chess_workbench.api.engine import engine_blueprint
 from chess_workbench.api.errors import ApiError, handle_api_error
 from chess_workbench.api.graph import graph_blueprint
 from chess_workbench.api.health import health_blueprint
 from chess_workbench.api.pgn import pgn_blueprint
 from chess_workbench.config import Settings
 from chess_workbench.services import ServiceError
+from chess_workbench.services.worker import SqlWorker
 from chess_workbench.store.database import Database
 
 
@@ -23,6 +26,7 @@ class AppContext:
     settings: Settings
     database: Database
     pgn_import_lock: asyncio.Lock
+    worker_task: asyncio.Task[None] | None = None
 
 
 ChessWorkbenchApp = Sanic[Config, AppContext]
@@ -63,9 +67,27 @@ def create_app(settings: Settings | None = None) -> ChessWorkbenchApp:
     app.blueprint(graph_blueprint)
     app.blueprint(content_blueprint)
     app.blueprint(pgn_blueprint)
+    app.blueprint(engine_blueprint)
+
+    @app.before_server_start
+    async def start_worker(starting_app: ChessWorkbenchApp) -> None:
+        if (
+            starting_app.ctx.settings.engine_worker_enabled
+            and starting_app.ctx.settings.stockfish_path.is_file()
+        ):
+            worker = SqlWorker(
+                starting_app.ctx.database,
+                starting_app.ctx.settings,
+                worker_id=f"api-{id(starting_app)}",
+            )
+            starting_app.ctx.worker_task = asyncio.create_task(worker.run_forever())
 
     @app.after_server_stop
     async def close_database(stopping_app: ChessWorkbenchApp) -> None:
+        if stopping_app.ctx.worker_task is not None:
+            stopping_app.ctx.worker_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await stopping_app.ctx.worker_task
         await stopping_app.ctx.database.close()
 
     return app

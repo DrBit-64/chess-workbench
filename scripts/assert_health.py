@@ -8,7 +8,12 @@ from urllib.error import HTTPError, URLError
 from urllib.request import urlopen
 
 
-def wait_for_health(url: str, timeout_seconds: float) -> dict[str, Any]:
+def wait_for_health(
+    url: str,
+    timeout_seconds: float,
+    *,
+    expected_service: str,
+) -> dict[str, Any]:
     deadline = time.monotonic() + timeout_seconds
     last_error: Exception | None = None
 
@@ -20,7 +25,7 @@ def wait_for_health(url: str, timeout_seconds: float) -> dict[str, Any]:
                 payload = cast(dict[str, Any], json.load(response))
                 if payload != {
                     "status": "ok",
-                    "service": "chess-workbench-api",
+                    "service": expected_service,
                     "version": "0.1.0",
                     "database": "ok",
                 }:
@@ -37,13 +42,14 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Wait for and validate health endpoints")
     parser.add_argument("urls", nargs="+", help="health URLs to validate")
     parser.add_argument("--timeout", type=float, default=20.0)
+    parser.add_argument("--service", default="chess-workbench-api")
     return parser.parse_args()
 
 
 def main() -> int:
     args = parse_args()
     for url in args.urls:
-        wait_for_health(url, args.timeout)
+        wait_for_health(url, args.timeout, expected_service=args.service)
         print(f"healthy: {url}")
     return 0
 

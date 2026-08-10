@@ -38,6 +38,8 @@ packages = ["src/chess_workbench"]
 asyncio_mode = "auto"
 testpaths = ["tests"]
 filterwarnings = [
+  "error::ResourceWarning",
+  "error::pytest.PytestUnraisableExceptionWarning",
   "ignore:websockets.legacy is deprecated:DeprecationWarning:websockets.legacy",
 ]
 addopts = [

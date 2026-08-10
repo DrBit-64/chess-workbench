@@ -7,7 +7,6 @@ import {
   Empty,
   Form,
   Input,
-  List,
   Modal,
   Select,
   Space,
@@ -37,6 +36,7 @@ import {
   FAST_MOVE_ANIMATION_MS,
   lichessSquareStyles,
 } from './boardInteraction';
+import { CourseEnginePanel, type CourseEngineArrow } from './CourseEnginePanel';
 import { createDraftState, editorDraftReducer } from './editorDraft';
 
 const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
@@ -55,9 +55,10 @@ export function CourseEditor() {
   );
   const [moduleId, setModuleId] = useState<string>();
   const [occurrenceId, setOccurrenceId] = useState<string>();
+  const [lineLeafId, setLineLeafId] = useState<string>();
   const [pendingFen, setPendingFen] = useState<string>();
   const [selectedSquare, setSelectedSquare] = useState<string>();
-  const [uciInput, setUciInput] = useState('');
+  const [engineArrows, setEngineArrows] = useState<CourseEngineArrow[]>([]);
   const [moduleModal, setModuleModal] = useState(false);
   const [publishModal, setPublishModal] = useState(false);
   const [publishTarget, setPublishTarget] = useState<string>();
@@ -155,6 +156,7 @@ export function CourseEditor() {
       !editor.occurrences.some((item) => item.id === occurrenceId)
     ) {
       setOccurrenceId(root.id);
+      setLineLeafId(root.id);
       setPendingFen(undefined);
     }
   }, [editor, moduleId, occurrenceId, searchParams]);
@@ -201,17 +203,45 @@ export function CourseEditor() {
     }
     return [...merged.values()];
   }, [course?.mode, current, editor]);
-  const path = useMemo(() => {
+  const linePath = useMemo(() => {
     const result: ModuleEditor['occurrences'] = [];
     const visited = new Set<string>();
-    let node = current;
+    let node = (lineLeafId ? byId.get(lineLeafId) : undefined) ?? current;
     while (node && !visited.has(node.id)) {
       visited.add(node.id);
       result.push(node);
       node = node.parent_id ? byId.get(node.parent_id) : undefined;
     }
     return result.reverse();
-  }, [byId, current]);
+  }, [byId, current, lineLeafId]);
+  const moveRows = useMemo(() => {
+    const root = linePath[0];
+    if (!root) return [];
+    const fenFields = root.full_fen.split(/\s+/);
+    let side: 'white' | 'black' = fenFields[1] === 'b' ? 'black' : 'white';
+    let moveNumber = Number.parseInt(fenFields[5] ?? '1', 10);
+    if (!Number.isFinite(moveNumber) || moveNumber < 1) moveNumber = 1;
+    const rows: Array<{
+      moveNumber: number;
+      white?: ModuleEditor['occurrences'][number];
+      black?: ModuleEditor['occurrences'][number];
+    }> = [];
+    for (const occurrence of linePath.slice(1)) {
+      let row = rows.at(-1);
+      if (!row || row.moveNumber !== moveNumber) {
+        row = { moveNumber };
+        rows.push(row);
+      }
+      row[side] = occurrence;
+      if (side === 'white') {
+        side = 'black';
+      } else {
+        side = 'white';
+        moveNumber += 1;
+      }
+    }
+    return rows;
+  }, [linePath]);
   const transpositionCount = useMemo(() => {
     if (!current) return 0;
     const matching =
@@ -322,11 +352,12 @@ export function CourseEditor() {
     fetchJson,
   );
 
-  function selectOccurrence(id: string) {
+  function selectOccurrence(id: string, preserveLine = false) {
     const selected = byId.get(id);
     if (course?.mode === 'opening_explorer' && selected?.module_id) {
       setModuleId(selected.module_id);
     }
+    if (!preserveLine) setLineLeafId(id);
     setOccurrenceId(id);
     setPendingFen(undefined);
     setSelectedSquare(undefined);
@@ -365,6 +396,7 @@ export function CourseEditor() {
           await mutateModuleEditor();
         }
         setOccurrenceId(created.id);
+        setLineLeafId(created.id);
         setPendingFen(undefined);
       })
       .catch((error: unknown) => {
@@ -403,17 +435,6 @@ export function CourseEditor() {
       return;
     }
     selectOwnPiece(square);
-  }
-
-  function submitUciInput() {
-    const normalized = uciInput.trim().toLowerCase();
-    if (!/^[a-h][1-8][a-h][1-8]q?$/.test(normalized)) {
-      void message.warning('请输入标准 UCI，例如 e2e4');
-      return;
-    }
-    if (submitMove(normalized.slice(0, 2), normalized.slice(2, 4))) {
-      setUciInput('');
-    }
   }
 
   async function createModule(values: {
@@ -668,12 +689,11 @@ export function CourseEditor() {
                 </Typography.Paragraph>
               )}
             </>
-          ) : (
-            <List
-              dataSource={modules}
-              locale={{ emptyText: '先创建一个章节' }}
-              renderItem={(item) => (
-                <List.Item
+          ) : modules.length ? (
+            <ul className="list-none p-0!">
+              {modules.map((item) => (
+                <li
+                  key={item.id}
                   className={item.id === moduleId ? 'bg-emerald-50' : ''}
                 >
                   <Button
@@ -682,20 +702,23 @@ export function CourseEditor() {
                     onClick={() => {
                       setModuleId(item.id);
                       setOccurrenceId(undefined);
+                      setLineLeafId(undefined);
                     }}
                   >
                     {item.parent_id ? '↳ ' : ''}
                     {item.title}
                   </Button>
-                </List.Item>
-              )}
-            />
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <Empty description="先创建一个章节" />
           )}
         </Card>
         <section className="min-w-0">
           {current ? (
             <>
-              <div className="mx-auto max-w-[600px]">
+              <div className="mx-auto max-w-[560px]">
                 <Chessboard
                   id="course-editor-board"
                   position={pendingFen ?? current.full_fen}
@@ -706,47 +729,90 @@ export function CourseEditor() {
                   onSquareClick={onSquareClick}
                   autoPromoteToQueen
                   customSquareStyles={boardSquareStyles}
+                  customArrows={engineArrows}
                   customBoardStyle={{
                     borderRadius: '8px',
                     boxShadow: '0 12px 30px rgba(28,25,23,.16)',
                   }}
                 />
               </div>
-              <div className="mx-auto mt-3 max-w-[600px]">
-                <Space.Compact className="w-full">
-                  <Input
-                    aria-label="键盘输入着法 UCI"
-                    placeholder="键盘落子，例如 e2e4"
-                    value={uciInput}
-                    onChange={(event) => setUciInput(event.target.value)}
-                    onPressEnter={submitUciInput}
-                  />
-                  <Button onClick={submitUciInput}>提交着法</Button>
-                </Space.Compact>
-                <Typography.Text type="secondary" className="text-xs">
-                  可拖动棋子、依次点选起止格，或输入 UCI 着法。
-                </Typography.Text>
-              </div>
-              <div
-                className="mt-4 flex flex-wrap items-center justify-center gap-2"
-                aria-label="当前路径"
-              >
-                {path.map((item, index) => (
-                  <Button
-                    key={item.id}
-                    size="small"
-                    type={item.id === current.id ? 'primary' : 'default'}
-                    onClick={() => selectOccurrence(item.id)}
-                  >
-                    {index === 0 ? '起点' : item.inbound_san}
-                  </Button>
-                ))}
+              <div className="mx-auto mt-3 max-w-[560px]">
+                <CourseEnginePanel
+                  fen={pendingFen ?? current.full_fen}
+                  onArrowsChange={setEngineArrows}
+                />
               </div>
             </>
           ) : (
             <Empty description="选择带起始局面的章节" />
           )}
         </section>
+        <Card
+          title="棋谱"
+          size="small"
+          className="editor-panel move-score-panel"
+        >
+          {linePath.length ? (
+            <nav aria-label="主线棋谱">
+              <button
+                type="button"
+                className={`move-score-start ${current?.id === linePath[0]?.id ? 'active' : ''}`}
+                aria-current={
+                  current?.id === linePath[0]?.id ? 'step' : undefined
+                }
+                onClick={() => selectOccurrence(linePath[0]!.id, true)}
+              >
+                起点
+              </button>
+              {moveRows.length ? (
+                <div className="move-score-list">
+                  {moveRows.map((row) => (
+                    <div className="move-score-row" key={row.moveNumber}>
+                      <span className="move-score-number">
+                        {row.moveNumber}.
+                      </span>
+                      {(['white', 'black'] as const).map((side) => {
+                        const occurrence = row[side];
+                        return occurrence ? (
+                          <button
+                            key={side}
+                            type="button"
+                            className={`move-score-move ${occurrence.id === current?.id ? 'active' : ''}`}
+                            aria-current={
+                              occurrence.id === current?.id ? 'step' : undefined
+                            }
+                            title={occurrence.inbound_uci ?? undefined}
+                            onClick={() =>
+                              selectOccurrence(occurrence.id, true)
+                            }
+                          >
+                            {occurrence.inbound_san ?? occurrence.inbound_uci}
+                          </button>
+                        ) : (
+                          <span key={side} className="move-score-placeholder">
+                            {side === 'white' ? '…' : ''}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <Typography.Paragraph
+                  type="secondary"
+                  className="mt-3 text-center text-xs"
+                >
+                  当前位于起始局面
+                </Typography.Paragraph>
+              )}
+            </nav>
+          ) : (
+            <Empty
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
+              description="暂无棋谱"
+            />
+          )}
+        </Card>
         <Card
           title={course.mode === 'traditional' ? '章节正文' : '当前局面'}
           size="small"
@@ -877,23 +943,28 @@ export function CourseEditor() {
             ) : null}
           </div>
           <Typography.Text type="secondary">直接候选着</Typography.Text>
-          <List
-            className="mt-2"
-            dataSource={candidates}
-            locale={{ emptyText: '在棋盘走一步以创建候选着' }}
-            renderItem={(item, index) => (
-              <List.Item>
-                <Button
-                  className="w-full"
-                  type={index === 0 ? 'primary' : 'default'}
-                  onClick={() => selectOccurrence(item.id)}
-                >
-                  {item.inbound_san}
-                  <span className="ml-2">{item.inbound_uci}</span>
-                </Button>
-              </List.Item>
-            )}
-          />
+          {candidates.length ? (
+            <ul className="mt-2 list-none p-0!">
+              {candidates.map((item, index) => (
+                <li key={item.id} className="mb-1 last:mb-0">
+                  <Button
+                    className="w-full"
+                    type={index === 0 ? 'primary' : 'default'}
+                    onClick={() => selectOccurrence(item.id)}
+                  >
+                    {item.inbound_san}
+                    <span className="ml-2">{item.inbound_uci}</span>
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <Empty
+              className="mt-2"
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
+              description="在棋盘走一步以创建候选着"
+            />
+          )}
           {current ? (
             <Typography.Paragraph className="mt-4 break-all text-xs text-stone-500">
               {current.full_fen}

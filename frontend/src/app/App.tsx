@@ -16,11 +16,15 @@ const CourseEditor = lazy(() =>
 const SourcesPage = lazy(() =>
   import('./SourcesPage').then((module) => ({ default: module.SourcesPage })),
 );
+const AnalysisPage = lazy(() =>
+  import('./AnalysisPage').then((module) => ({ default: module.AnalysisPage })),
+);
 
 const navigation = [
   { key: '/', label: <Link to="/">首页</Link> },
   { key: '/learn', label: <Link to="/learn">学习</Link> },
   { key: '/sources', label: <Link to="/sources">资料</Link> },
+  { key: '/analysis', label: <Link to="/analysis">引擎</Link> },
   { key: '/repertoire', label: '个人开局库', disabled: true },
   { key: '/practice', label: '练习', disabled: true },
   { key: '/games', label: '我的对局', disabled: true },
@@ -62,6 +66,7 @@ export function App() {
             <Route path="/learn" element={<CourseCatalog />} />
             <Route path="/learn/:courseId" element={<CourseEditor />} />
             <Route path="/sources" element={<SourcesPage />} />
+            <Route path="/analysis" element={<AnalysisPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>

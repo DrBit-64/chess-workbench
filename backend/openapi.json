@@ -926,7 +926,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -981,7 +983,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -1234,7 +1238,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -1289,7 +1295,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -1344,7 +1352,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -1538,7 +1548,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -1784,7 +1796,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -1839,7 +1853,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -1894,7 +1910,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -2101,7 +2119,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -2156,7 +2176,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -2211,7 +2233,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -2382,7 +2406,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -2437,7 +2463,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -2655,7 +2683,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -2710,7 +2740,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -2765,7 +2797,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -2962,7 +2996,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -3388,7 +3424,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -3443,7 +3481,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -3498,7 +3538,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -3713,7 +3755,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -3938,7 +3982,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -4119,7 +4165,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -4373,7 +4421,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -4428,7 +4478,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -4483,7 +4535,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -5097,7 +5151,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -5152,7 +5208,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -5335,7 +5393,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -5390,7 +5450,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -5610,7 +5672,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -5665,7 +5729,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -5770,7 +5836,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -5825,7 +5893,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -5880,7 +5950,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -6061,7 +6133,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -6116,7 +6190,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -6171,7 +6247,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -6367,6 +6445,1664 @@
         "summary": "Read real active-content counts and recent courses",
         "tags": [
           "dashboard"
+        ]
+      }
+    },
+    "/api/engine/analyses": {
+      "post": {
+        "operationId": "createEngineAnalysis",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "fen": {
+                    "default": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+                    "minLength": 1,
+                    "title": "Fen",
+                    "type": "string"
+                  },
+                  "parameters": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "depth": {
+                        "default": null,
+                        "maximum": 50,
+                        "minimum": 1,
+                        "nullable": true,
+                        "title": "Depth",
+                        "type": "integer"
+                      },
+                      "hash_mb": {
+                        "default": 128,
+                        "maximum": 4096,
+                        "minimum": 16,
+                        "title": "Hash Mb",
+                        "type": "integer"
+                      },
+                      "movetime_ms": {
+                        "default": 800,
+                        "maximum": 30000,
+                        "minimum": 100,
+                        "title": "Movetime Ms",
+                        "type": "integer"
+                      },
+                      "multipv": {
+                        "default": 4,
+                        "maximum": 5,
+                        "minimum": 1,
+                        "title": "Multipv",
+                        "type": "integer"
+                      },
+                      "ponder": {
+                        "default": false,
+                        "enum": [
+                          false
+                        ],
+                        "title": "Ponder",
+                        "type": "boolean"
+                      },
+                      "threads": {
+                        "default": 1,
+                        "maximum": 32,
+                        "minimum": 1,
+                        "title": "Threads",
+                        "type": "integer"
+                      }
+                    },
+                    "title": "EngineParameters",
+                    "type": "object"
+                  }
+                },
+                "title": "AnalysisRequest",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "created_at": {
+                      "format": "date-time",
+                      "title": "Created At",
+                      "type": "string"
+                    },
+                    "depth": {
+                      "nullable": true,
+                      "title": "Depth",
+                      "type": "integer"
+                    },
+                    "elapsed_ms": {
+                      "minimum": 0,
+                      "title": "Elapsed Ms",
+                      "type": "integer"
+                    },
+                    "engine_name": {
+                      "minLength": 1,
+                      "title": "Engine Name",
+                      "type": "string"
+                    },
+                    "engine_version": {
+                      "minLength": 1,
+                      "title": "Engine Version",
+                      "type": "string"
+                    },
+                    "fen": {
+                      "minLength": 1,
+                      "title": "Fen",
+                      "type": "string"
+                    },
+                    "from_cache": {
+                      "title": "From Cache",
+                      "type": "boolean"
+                    },
+                    "id": {
+                      "format": "uuid",
+                      "title": "Id",
+                      "type": "string"
+                    },
+                    "lines": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "mate": {
+                            "nullable": true,
+                            "title": "Mate",
+                            "type": "integer"
+                          },
+                          "rank": {
+                            "maximum": 5,
+                            "minimum": 1,
+                            "title": "Rank",
+                            "type": "integer"
+                          },
+                          "san": {
+                            "items": {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "title": "San",
+                            "type": "array"
+                          },
+                          "score_cp": {
+                            "nullable": true,
+                            "title": "Score Cp",
+                            "type": "integer"
+                          },
+                          "uci": {
+                            "items": {
+                              "pattern": "^[a-h][1-8][a-h][1-8][qrbn]?$",
+                              "type": "string"
+                            },
+                            "title": "Uci",
+                            "type": "array"
+                          },
+                          "wdl": {
+                            "maxItems": 3,
+                            "minItems": 3,
+                            "nullable": true,
+                            "prefixItems": [
+                              {
+                                "type": "integer"
+                              },
+                              {
+                                "type": "integer"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ],
+                            "title": "Wdl",
+                            "type": "array"
+                          }
+                        },
+                        "required": [
+                          "rank",
+                          "score_cp",
+                          "mate",
+                          "wdl",
+                          "uci",
+                          "san"
+                        ],
+                        "title": "AnalysisLine",
+                        "type": "object"
+                      },
+                      "title": "Lines",
+                      "type": "array"
+                    },
+                    "nodes": {
+                      "nullable": true,
+                      "title": "Nodes",
+                      "type": "integer"
+                    },
+                    "parameters": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "depth": {
+                          "default": null,
+                          "maximum": 50,
+                          "minimum": 1,
+                          "nullable": true,
+                          "title": "Depth",
+                          "type": "integer"
+                        },
+                        "hash_mb": {
+                          "default": 128,
+                          "maximum": 4096,
+                          "minimum": 16,
+                          "title": "Hash Mb",
+                          "type": "integer"
+                        },
+                        "movetime_ms": {
+                          "default": 800,
+                          "maximum": 30000,
+                          "minimum": 100,
+                          "title": "Movetime Ms",
+                          "type": "integer"
+                        },
+                        "multipv": {
+                          "default": 4,
+                          "maximum": 5,
+                          "minimum": 1,
+                          "title": "Multipv",
+                          "type": "integer"
+                        },
+                        "ponder": {
+                          "default": false,
+                          "enum": [
+                            false
+                          ],
+                          "title": "Ponder",
+                          "type": "boolean"
+                        },
+                        "threads": {
+                          "default": 1,
+                          "maximum": 32,
+                          "minimum": 1,
+                          "title": "Threads",
+                          "type": "integer"
+                        }
+                      },
+                      "title": "EngineParameters",
+                      "type": "object"
+                    },
+                    "seldepth": {
+                      "nullable": true,
+                      "title": "Seldepth",
+                      "type": "integer"
+                    },
+                    "source": {
+                      "enum": [
+                        "engine",
+                        "tablebase"
+                      ],
+                      "title": "Source",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "fen",
+                    "source",
+                    "engine_name",
+                    "engine_version",
+                    "parameters",
+                    "lines",
+                    "depth",
+                    "seldepth",
+                    "nodes",
+                    "elapsed_ms",
+                    "from_cache",
+                    "created_at"
+                  ],
+                  "title": "AnalysisRead",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Analysis result or cache hit"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error",
+                        "payload_too_large",
+                        "unsupported_media_type",
+                        "invalid_pgn",
+                        "pgn_limit_exceeded",
+                        "idempotency_conflict",
+                        "course_mode_conflict",
+                        "pgn_not_exportable",
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Engine unavailable"
+          }
+        },
+        "summary": "Create Analysis",
+        "tags": [
+          "engine"
+        ]
+      }
+    },
+    "/api/engine/analyses/{analysis_id}": {
+      "get": {
+        "operationId": "getEngineAnalysis",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "analysis_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "created_at": {
+                      "format": "date-time",
+                      "title": "Created At",
+                      "type": "string"
+                    },
+                    "depth": {
+                      "nullable": true,
+                      "title": "Depth",
+                      "type": "integer"
+                    },
+                    "elapsed_ms": {
+                      "minimum": 0,
+                      "title": "Elapsed Ms",
+                      "type": "integer"
+                    },
+                    "engine_name": {
+                      "minLength": 1,
+                      "title": "Engine Name",
+                      "type": "string"
+                    },
+                    "engine_version": {
+                      "minLength": 1,
+                      "title": "Engine Version",
+                      "type": "string"
+                    },
+                    "fen": {
+                      "minLength": 1,
+                      "title": "Fen",
+                      "type": "string"
+                    },
+                    "from_cache": {
+                      "title": "From Cache",
+                      "type": "boolean"
+                    },
+                    "id": {
+                      "format": "uuid",
+                      "title": "Id",
+                      "type": "string"
+                    },
+                    "lines": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "mate": {
+                            "nullable": true,
+                            "title": "Mate",
+                            "type": "integer"
+                          },
+                          "rank": {
+                            "maximum": 5,
+                            "minimum": 1,
+                            "title": "Rank",
+                            "type": "integer"
+                          },
+                          "san": {
+                            "items": {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "title": "San",
+                            "type": "array"
+                          },
+                          "score_cp": {
+                            "nullable": true,
+                            "title": "Score Cp",
+                            "type": "integer"
+                          },
+                          "uci": {
+                            "items": {
+                              "pattern": "^[a-h][1-8][a-h][1-8][qrbn]?$",
+                              "type": "string"
+                            },
+                            "title": "Uci",
+                            "type": "array"
+                          },
+                          "wdl": {
+                            "maxItems": 3,
+                            "minItems": 3,
+                            "nullable": true,
+                            "prefixItems": [
+                              {
+                                "type": "integer"
+                              },
+                              {
+                                "type": "integer"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ],
+                            "title": "Wdl",
+                            "type": "array"
+                          }
+                        },
+                        "required": [
+                          "rank",
+                          "score_cp",
+                          "mate",
+                          "wdl",
+                          "uci",
+                          "san"
+                        ],
+                        "title": "AnalysisLine",
+                        "type": "object"
+                      },
+                      "title": "Lines",
+                      "type": "array"
+                    },
+                    "nodes": {
+                      "nullable": true,
+                      "title": "Nodes",
+                      "type": "integer"
+                    },
+                    "parameters": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "depth": {
+                          "default": null,
+                          "maximum": 50,
+                          "minimum": 1,
+                          "nullable": true,
+                          "title": "Depth",
+                          "type": "integer"
+                        },
+                        "hash_mb": {
+                          "default": 128,
+                          "maximum": 4096,
+                          "minimum": 16,
+                          "title": "Hash Mb",
+                          "type": "integer"
+                        },
+                        "movetime_ms": {
+                          "default": 800,
+                          "maximum": 30000,
+                          "minimum": 100,
+                          "title": "Movetime Ms",
+                          "type": "integer"
+                        },
+                        "multipv": {
+                          "default": 4,
+                          "maximum": 5,
+                          "minimum": 1,
+                          "title": "Multipv",
+                          "type": "integer"
+                        },
+                        "ponder": {
+                          "default": false,
+                          "enum": [
+                            false
+                          ],
+                          "title": "Ponder",
+                          "type": "boolean"
+                        },
+                        "threads": {
+                          "default": 1,
+                          "maximum": 32,
+                          "minimum": 1,
+                          "title": "Threads",
+                          "type": "integer"
+                        }
+                      },
+                      "title": "EngineParameters",
+                      "type": "object"
+                    },
+                    "seldepth": {
+                      "nullable": true,
+                      "title": "Seldepth",
+                      "type": "integer"
+                    },
+                    "source": {
+                      "enum": [
+                        "engine",
+                        "tablebase"
+                      ],
+                      "title": "Source",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "fen",
+                    "source",
+                    "engine_name",
+                    "engine_version",
+                    "parameters",
+                    "lines",
+                    "depth",
+                    "seldepth",
+                    "nodes",
+                    "elapsed_ms",
+                    "from_cache",
+                    "created_at"
+                  ],
+                  "title": "AnalysisRead",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Persisted analysis"
+          }
+        },
+        "summary": "Get Analysis",
+        "tags": [
+          "engine"
+        ]
+      }
+    },
+    "/api/engine/analysis-jobs": {
+      "post": {
+        "operationId": "createEngineAnalysisJob",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "fen": {
+                    "default": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+                    "minLength": 1,
+                    "title": "Fen",
+                    "type": "string"
+                  },
+                  "idempotency_key": {
+                    "maxLength": 128,
+                    "minLength": 1,
+                    "title": "Idempotency Key",
+                    "type": "string"
+                  },
+                  "parameters": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "depth": {
+                        "default": null,
+                        "maximum": 50,
+                        "minimum": 1,
+                        "nullable": true,
+                        "title": "Depth",
+                        "type": "integer"
+                      },
+                      "hash_mb": {
+                        "default": 128,
+                        "maximum": 4096,
+                        "minimum": 16,
+                        "title": "Hash Mb",
+                        "type": "integer"
+                      },
+                      "movetime_ms": {
+                        "default": 800,
+                        "maximum": 30000,
+                        "minimum": 100,
+                        "title": "Movetime Ms",
+                        "type": "integer"
+                      },
+                      "multipv": {
+                        "default": 4,
+                        "maximum": 5,
+                        "minimum": 1,
+                        "title": "Multipv",
+                        "type": "integer"
+                      },
+                      "ponder": {
+                        "default": false,
+                        "enum": [
+                          false
+                        ],
+                        "title": "Ponder",
+                        "type": "boolean"
+                      },
+                      "threads": {
+                        "default": 1,
+                        "maximum": 32,
+                        "minimum": 1,
+                        "title": "Threads",
+                        "type": "integer"
+                      }
+                    },
+                    "title": "EngineParameters",
+                    "type": "object"
+                  }
+                },
+                "required": [
+                  "idempotency_key"
+                ],
+                "title": "AnalysisJobRequest",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "attempt_count": {
+                      "title": "Attempt Count",
+                      "type": "integer"
+                    },
+                    "cancel_requested_at": {
+                      "format": "date-time",
+                      "nullable": true,
+                      "title": "Cancel Requested At",
+                      "type": "string"
+                    },
+                    "created_at": {
+                      "format": "date-time",
+                      "title": "Created At",
+                      "type": "string"
+                    },
+                    "id": {
+                      "format": "uuid",
+                      "title": "Id",
+                      "type": "string"
+                    },
+                    "kind": {
+                      "minLength": 1,
+                      "title": "Kind",
+                      "type": "string"
+                    },
+                    "last_error_code": {
+                      "nullable": true,
+                      "title": "Last Error Code",
+                      "type": "string"
+                    },
+                    "last_error_message": {
+                      "nullable": true,
+                      "title": "Last Error Message",
+                      "type": "string"
+                    },
+                    "max_attempts": {
+                      "title": "Max Attempts",
+                      "type": "integer"
+                    },
+                    "payload": {
+                      "additionalProperties": true,
+                      "title": "Payload",
+                      "type": "object"
+                    },
+                    "result": {
+                      "additionalProperties": true,
+                      "nullable": true,
+                      "title": "Result",
+                      "type": "object"
+                    },
+                    "status": {
+                      "enum": [
+                        "queued",
+                        "running",
+                        "succeeded",
+                        "failed",
+                        "cancelled"
+                      ],
+                      "title": "Status",
+                      "type": "string"
+                    },
+                    "updated_at": {
+                      "format": "date-time",
+                      "title": "Updated At",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "kind",
+                    "status",
+                    "payload",
+                    "result",
+                    "attempt_count",
+                    "max_attempts",
+                    "cancel_requested_at",
+                    "last_error_code",
+                    "last_error_message",
+                    "created_at",
+                    "updated_at"
+                  ],
+                  "title": "JobRead",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Analysis queued"
+          }
+        },
+        "summary": "Create Analysis Job",
+        "tags": [
+          "engine"
+        ]
+      }
+    },
+    "/api/engine/capabilities": {
+      "get": {
+        "operationId": "getEngineCapabilities",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "available": {
+                      "title": "Available",
+                      "type": "boolean"
+                    },
+                    "default_parameters": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "depth": {
+                          "default": null,
+                          "maximum": 50,
+                          "minimum": 1,
+                          "nullable": true,
+                          "title": "Depth",
+                          "type": "integer"
+                        },
+                        "hash_mb": {
+                          "default": 128,
+                          "maximum": 4096,
+                          "minimum": 16,
+                          "title": "Hash Mb",
+                          "type": "integer"
+                        },
+                        "movetime_ms": {
+                          "default": 800,
+                          "maximum": 30000,
+                          "minimum": 100,
+                          "title": "Movetime Ms",
+                          "type": "integer"
+                        },
+                        "multipv": {
+                          "default": 4,
+                          "maximum": 5,
+                          "minimum": 1,
+                          "title": "Multipv",
+                          "type": "integer"
+                        },
+                        "ponder": {
+                          "default": false,
+                          "enum": [
+                            false
+                          ],
+                          "title": "Ponder",
+                          "type": "boolean"
+                        },
+                        "threads": {
+                          "default": 1,
+                          "maximum": 32,
+                          "minimum": 1,
+                          "title": "Threads",
+                          "type": "integer"
+                        }
+                      },
+                      "title": "EngineParameters",
+                      "type": "object"
+                    },
+                    "engine_name": {
+                      "nullable": true,
+                      "title": "Engine Name",
+                      "type": "string"
+                    },
+                    "engine_path": {
+                      "title": "Engine Path",
+                      "type": "string"
+                    },
+                    "engine_version": {
+                      "nullable": true,
+                      "title": "Engine Version",
+                      "type": "string"
+                    },
+                    "install_hint": {
+                      "nullable": true,
+                      "title": "Install Hint",
+                      "type": "string"
+                    },
+                    "max_hash_mb": {
+                      "title": "Max Hash Mb",
+                      "type": "integer"
+                    },
+                    "max_threads": {
+                      "title": "Max Threads",
+                      "type": "integer"
+                    },
+                    "max_time_ms": {
+                      "title": "Max Time Ms",
+                      "type": "integer"
+                    },
+                    "multipv_max": {
+                      "default": 5,
+                      "title": "Multipv Max",
+                      "type": "integer"
+                    },
+                    "syzygy_available": {
+                      "title": "Syzygy Available",
+                      "type": "boolean"
+                    },
+                    "syzygy_path": {
+                      "title": "Syzygy Path",
+                      "type": "string"
+                    },
+                    "time_presets_ms": {
+                      "items": {
+                        "type": "integer"
+                      },
+                      "title": "Time Presets Ms",
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "available",
+                    "engine_path",
+                    "engine_name",
+                    "engine_version",
+                    "syzygy_available",
+                    "syzygy_path",
+                    "default_parameters",
+                    "max_threads",
+                    "max_hash_mb",
+                    "max_time_ms",
+                    "time_presets_ms",
+                    "install_hint"
+                  ],
+                  "title": "EngineCapabilities",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Local engine capabilities"
+          }
+        },
+        "summary": "Engine Capabilities",
+        "tags": [
+          "engine"
+        ]
+      }
+    },
+    "/api/engine/games": {
+      "post": {
+        "operationId": "createEngineGame",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "fen": {
+                    "default": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+                    "minLength": 1,
+                    "title": "Fen",
+                    "type": "string"
+                  },
+                  "strength": {
+                    "default": 5,
+                    "maximum": 8,
+                    "minimum": 1,
+                    "title": "Strength",
+                    "type": "integer"
+                  },
+                  "user_color": {
+                    "default": "white",
+                    "enum": [
+                      "white",
+                      "black"
+                    ],
+                    "title": "User Color",
+                    "type": "string"
+                  }
+                },
+                "title": "EngineGameCreate",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "created_at": {
+                      "format": "date-time",
+                      "title": "Created At",
+                      "type": "string"
+                    },
+                    "current_fen": {
+                      "minLength": 1,
+                      "title": "Current Fen",
+                      "type": "string"
+                    },
+                    "engine_name": {
+                      "minLength": 1,
+                      "title": "Engine Name",
+                      "type": "string"
+                    },
+                    "engine_version": {
+                      "minLength": 1,
+                      "title": "Engine Version",
+                      "type": "string"
+                    },
+                    "id": {
+                      "format": "uuid",
+                      "title": "Id",
+                      "type": "string"
+                    },
+                    "initial_fen": {
+                      "minLength": 1,
+                      "title": "Initial Fen",
+                      "type": "string"
+                    },
+                    "moves": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "actor": {
+                            "enum": [
+                              "user",
+                              "engine"
+                            ],
+                            "title": "Actor",
+                            "type": "string"
+                          },
+                          "after_fen": {
+                            "minLength": 1,
+                            "title": "After Fen",
+                            "type": "string"
+                          },
+                          "before_fen": {
+                            "minLength": 1,
+                            "title": "Before Fen",
+                            "type": "string"
+                          },
+                          "ply": {
+                            "title": "Ply",
+                            "type": "integer"
+                          },
+                          "san": {
+                            "minLength": 1,
+                            "title": "San",
+                            "type": "string"
+                          },
+                          "uci": {
+                            "pattern": "^[a-h][1-8][a-h][1-8][qrbn]?$",
+                            "title": "Uci",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "ply",
+                          "actor",
+                          "before_fen",
+                          "after_fen",
+                          "uci",
+                          "san"
+                        ],
+                        "title": "EngineGameMoveRead",
+                        "type": "object"
+                      },
+                      "title": "Moves",
+                      "type": "array"
+                    },
+                    "result": {
+                      "nullable": true,
+                      "title": "Result",
+                      "type": "string"
+                    },
+                    "status": {
+                      "enum": [
+                        "active",
+                        "finished",
+                        "abandoned"
+                      ],
+                      "title": "Status",
+                      "type": "string"
+                    },
+                    "strength": {
+                      "title": "Strength",
+                      "type": "integer"
+                    },
+                    "updated_at": {
+                      "format": "date-time",
+                      "title": "Updated At",
+                      "type": "string"
+                    },
+                    "user_color": {
+                      "enum": [
+                        "white",
+                        "black"
+                      ],
+                      "title": "User Color",
+                      "type": "string"
+                    },
+                    "version": {
+                      "title": "Version",
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "version",
+                    "initial_fen",
+                    "current_fen",
+                    "user_color",
+                    "strength",
+                    "status",
+                    "result",
+                    "engine_name",
+                    "engine_version",
+                    "moves",
+                    "created_at",
+                    "updated_at"
+                  ],
+                  "title": "EngineGameRead",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Engine game created"
+          }
+        },
+        "summary": "Create Engine Game",
+        "tags": [
+          "engine games"
+        ]
+      }
+    },
+    "/api/engine/games/{game_id}": {
+      "get": {
+        "operationId": "getEngineGame",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "game_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "created_at": {
+                      "format": "date-time",
+                      "title": "Created At",
+                      "type": "string"
+                    },
+                    "current_fen": {
+                      "minLength": 1,
+                      "title": "Current Fen",
+                      "type": "string"
+                    },
+                    "engine_name": {
+                      "minLength": 1,
+                      "title": "Engine Name",
+                      "type": "string"
+                    },
+                    "engine_version": {
+                      "minLength": 1,
+                      "title": "Engine Version",
+                      "type": "string"
+                    },
+                    "id": {
+                      "format": "uuid",
+                      "title": "Id",
+                      "type": "string"
+                    },
+                    "initial_fen": {
+                      "minLength": 1,
+                      "title": "Initial Fen",
+                      "type": "string"
+                    },
+                    "moves": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "actor": {
+                            "enum": [
+                              "user",
+                              "engine"
+                            ],
+                            "title": "Actor",
+                            "type": "string"
+                          },
+                          "after_fen": {
+                            "minLength": 1,
+                            "title": "After Fen",
+                            "type": "string"
+                          },
+                          "before_fen": {
+                            "minLength": 1,
+                            "title": "Before Fen",
+                            "type": "string"
+                          },
+                          "ply": {
+                            "title": "Ply",
+                            "type": "integer"
+                          },
+                          "san": {
+                            "minLength": 1,
+                            "title": "San",
+                            "type": "string"
+                          },
+                          "uci": {
+                            "pattern": "^[a-h][1-8][a-h][1-8][qrbn]?$",
+                            "title": "Uci",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "ply",
+                          "actor",
+                          "before_fen",
+                          "after_fen",
+                          "uci",
+                          "san"
+                        ],
+                        "title": "EngineGameMoveRead",
+                        "type": "object"
+                      },
+                      "title": "Moves",
+                      "type": "array"
+                    },
+                    "result": {
+                      "nullable": true,
+                      "title": "Result",
+                      "type": "string"
+                    },
+                    "status": {
+                      "enum": [
+                        "active",
+                        "finished",
+                        "abandoned"
+                      ],
+                      "title": "Status",
+                      "type": "string"
+                    },
+                    "strength": {
+                      "title": "Strength",
+                      "type": "integer"
+                    },
+                    "updated_at": {
+                      "format": "date-time",
+                      "title": "Updated At",
+                      "type": "string"
+                    },
+                    "user_color": {
+                      "enum": [
+                        "white",
+                        "black"
+                      ],
+                      "title": "User Color",
+                      "type": "string"
+                    },
+                    "version": {
+                      "title": "Version",
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "version",
+                    "initial_fen",
+                    "current_fen",
+                    "user_color",
+                    "strength",
+                    "status",
+                    "result",
+                    "engine_name",
+                    "engine_version",
+                    "moves",
+                    "created_at",
+                    "updated_at"
+                  ],
+                  "title": "EngineGameRead",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Engine game"
+          }
+        },
+        "summary": "Get Engine Game",
+        "tags": [
+          "engine games"
+        ]
+      }
+    },
+    "/api/engine/games/{game_id}/moves": {
+      "post": {
+        "operationId": "playEngineGameMove",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "game_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "expected_version": {
+                    "minimum": 1,
+                    "title": "Expected Version",
+                    "type": "integer"
+                  },
+                  "uci": {
+                    "pattern": "^[a-h][1-8][a-h][1-8][qrbn]?$",
+                    "title": "Uci",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "uci",
+                  "expected_version"
+                ],
+                "title": "EngineGameMoveCreate",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "created_at": {
+                      "format": "date-time",
+                      "title": "Created At",
+                      "type": "string"
+                    },
+                    "current_fen": {
+                      "minLength": 1,
+                      "title": "Current Fen",
+                      "type": "string"
+                    },
+                    "engine_name": {
+                      "minLength": 1,
+                      "title": "Engine Name",
+                      "type": "string"
+                    },
+                    "engine_version": {
+                      "minLength": 1,
+                      "title": "Engine Version",
+                      "type": "string"
+                    },
+                    "id": {
+                      "format": "uuid",
+                      "title": "Id",
+                      "type": "string"
+                    },
+                    "initial_fen": {
+                      "minLength": 1,
+                      "title": "Initial Fen",
+                      "type": "string"
+                    },
+                    "moves": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "actor": {
+                            "enum": [
+                              "user",
+                              "engine"
+                            ],
+                            "title": "Actor",
+                            "type": "string"
+                          },
+                          "after_fen": {
+                            "minLength": 1,
+                            "title": "After Fen",
+                            "type": "string"
+                          },
+                          "before_fen": {
+                            "minLength": 1,
+                            "title": "Before Fen",
+                            "type": "string"
+                          },
+                          "ply": {
+                            "title": "Ply",
+                            "type": "integer"
+                          },
+                          "san": {
+                            "minLength": 1,
+                            "title": "San",
+                            "type": "string"
+                          },
+                          "uci": {
+                            "pattern": "^[a-h][1-8][a-h][1-8][qrbn]?$",
+                            "title": "Uci",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "ply",
+                          "actor",
+                          "before_fen",
+                          "after_fen",
+                          "uci",
+                          "san"
+                        ],
+                        "title": "EngineGameMoveRead",
+                        "type": "object"
+                      },
+                      "title": "Moves",
+                      "type": "array"
+                    },
+                    "result": {
+                      "nullable": true,
+                      "title": "Result",
+                      "type": "string"
+                    },
+                    "status": {
+                      "enum": [
+                        "active",
+                        "finished",
+                        "abandoned"
+                      ],
+                      "title": "Status",
+                      "type": "string"
+                    },
+                    "strength": {
+                      "title": "Strength",
+                      "type": "integer"
+                    },
+                    "updated_at": {
+                      "format": "date-time",
+                      "title": "Updated At",
+                      "type": "string"
+                    },
+                    "user_color": {
+                      "enum": [
+                        "white",
+                        "black"
+                      ],
+                      "title": "User Color",
+                      "type": "string"
+                    },
+                    "version": {
+                      "title": "Version",
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "version",
+                    "initial_fen",
+                    "current_fen",
+                    "user_color",
+                    "strength",
+                    "status",
+                    "result",
+                    "engine_name",
+                    "engine_version",
+                    "moves",
+                    "created_at",
+                    "updated_at"
+                  ],
+                  "title": "EngineGameRead",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "User and engine move applied"
+          }
+        },
+        "summary": "Play Engine Game Move",
+        "tags": [
+          "engine games"
+        ]
+      }
+    },
+    "/api/engine/games/{game_id}/review": {
+      "post": {
+        "operationId": "reviewEngineGame",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "game_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "analyzed_positions": {
+                      "title": "Analyzed Positions",
+                      "type": "integer"
+                    },
+                    "created_at": {
+                      "format": "date-time",
+                      "title": "Created At",
+                      "type": "string"
+                    },
+                    "findings": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "best_uci": {
+                            "pattern": "^[a-h][1-8][a-h][1-8][qrbn]?$",
+                            "title": "Best Uci",
+                            "type": "string"
+                          },
+                          "explanation": {
+                            "title": "Explanation",
+                            "type": "string"
+                          },
+                          "fen": {
+                            "minLength": 1,
+                            "title": "Fen",
+                            "type": "string"
+                          },
+                          "loss_cp": {
+                            "minimum": 0,
+                            "title": "Loss Cp",
+                            "type": "integer"
+                          },
+                          "played_uci": {
+                            "pattern": "^[a-h][1-8][a-h][1-8][qrbn]?$",
+                            "title": "Played Uci",
+                            "type": "string"
+                          },
+                          "ply": {
+                            "title": "Ply",
+                            "type": "integer"
+                          },
+                          "verdict": {
+                            "enum": [
+                              "best",
+                              "good",
+                              "inaccuracy",
+                              "mistake",
+                              "blunder"
+                            ],
+                            "title": "Verdict",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "ply",
+                          "fen",
+                          "played_uci",
+                          "best_uci",
+                          "loss_cp",
+                          "verdict",
+                          "explanation"
+                        ],
+                        "title": "ReviewFinding",
+                        "type": "object"
+                      },
+                      "title": "Findings",
+                      "type": "array"
+                    },
+                    "game_id": {
+                      "format": "uuid",
+                      "title": "Game Id",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "game_id",
+                    "findings",
+                    "analyzed_positions",
+                    "created_at"
+                  ],
+                  "title": "EngineGameReviewRead",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Engine game review"
+          }
+        },
+        "summary": "Review Engine Game",
+        "tags": [
+          "engine games"
+        ]
+      }
+    },
+    "/api/engine/games/{game_id}/review/course-draft": {
+      "post": {
+        "operationId": "saveEngineReviewCourseDraft",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "game_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "finding_plies": {
+                    "items": {
+                      "type": "integer"
+                    },
+                    "maxItems": 100,
+                    "minItems": 1,
+                    "title": "Finding Plies",
+                    "type": "array"
+                  },
+                  "title": {
+                    "maxLength": 200,
+                    "minLength": 1,
+                    "title": "Title",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "title",
+                  "finding_plies"
+                ],
+                "title": "SaveReviewDraftRequest",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "course_id": {
+                      "format": "uuid",
+                      "title": "Course Id",
+                      "type": "string"
+                    },
+                    "module_ids": {
+                      "items": {
+                        "format": "uuid",
+                        "type": "string"
+                      },
+                      "title": "Module Ids",
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "course_id",
+                    "module_ids"
+                  ],
+                  "title": "SaveReviewDraftRead",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Traditional course draft"
+          }
+        },
+        "summary": "Save Review Course Draft",
+        "tags": [
+          "engine games"
         ]
       }
     },
@@ -6610,7 +8346,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -6665,7 +8403,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -6698,6 +8438,322 @@
         "summary": "Read immutable pre-edit snapshots for authoring content",
         "tags": [
           "history"
+        ]
+      }
+    },
+    "/api/invalidations": {
+      "get": {
+        "operationId": "listInvalidations",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "after",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "created_at": {
+                        "format": "date-time",
+                        "title": "Created At",
+                        "type": "string"
+                      },
+                      "id": {
+                        "title": "Id",
+                        "type": "integer"
+                      },
+                      "reason": {
+                        "minLength": 1,
+                        "title": "Reason",
+                        "type": "string"
+                      },
+                      "resource_id": {
+                        "minLength": 1,
+                        "title": "Resource Id",
+                        "type": "string"
+                      },
+                      "resource_type": {
+                        "minLength": 1,
+                        "title": "Resource Type",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "resource_type",
+                      "resource_id",
+                      "reason",
+                      "created_at"
+                    ],
+                    "title": "InvalidationRead",
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Durable invalidations"
+          }
+        },
+        "summary": "List Invalidations",
+        "tags": [
+          "invalidation"
+        ]
+      }
+    },
+    "/api/invalidations/ws": {
+      "get": {
+        "operationId": "get~engine.invalidation_socket",
+        "responses": {
+          "default": {
+            "description": "OK"
+          }
+        },
+        "summary": "Invalidation Socket",
+        "tags": [
+          "engine"
+        ]
+      }
+    },
+    "/api/jobs/{job_id}": {
+      "get": {
+        "operationId": "getJob",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "attempt_count": {
+                      "title": "Attempt Count",
+                      "type": "integer"
+                    },
+                    "cancel_requested_at": {
+                      "format": "date-time",
+                      "nullable": true,
+                      "title": "Cancel Requested At",
+                      "type": "string"
+                    },
+                    "created_at": {
+                      "format": "date-time",
+                      "title": "Created At",
+                      "type": "string"
+                    },
+                    "id": {
+                      "format": "uuid",
+                      "title": "Id",
+                      "type": "string"
+                    },
+                    "kind": {
+                      "minLength": 1,
+                      "title": "Kind",
+                      "type": "string"
+                    },
+                    "last_error_code": {
+                      "nullable": true,
+                      "title": "Last Error Code",
+                      "type": "string"
+                    },
+                    "last_error_message": {
+                      "nullable": true,
+                      "title": "Last Error Message",
+                      "type": "string"
+                    },
+                    "max_attempts": {
+                      "title": "Max Attempts",
+                      "type": "integer"
+                    },
+                    "payload": {
+                      "additionalProperties": true,
+                      "title": "Payload",
+                      "type": "object"
+                    },
+                    "result": {
+                      "additionalProperties": true,
+                      "nullable": true,
+                      "title": "Result",
+                      "type": "object"
+                    },
+                    "status": {
+                      "enum": [
+                        "queued",
+                        "running",
+                        "succeeded",
+                        "failed",
+                        "cancelled"
+                      ],
+                      "title": "Status",
+                      "type": "string"
+                    },
+                    "updated_at": {
+                      "format": "date-time",
+                      "title": "Updated At",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "kind",
+                    "status",
+                    "payload",
+                    "result",
+                    "attempt_count",
+                    "max_attempts",
+                    "cancel_requested_at",
+                    "last_error_code",
+                    "last_error_message",
+                    "created_at",
+                    "updated_at"
+                  ],
+                  "title": "JobRead",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Job"
+          }
+        },
+        "summary": "Get Job",
+        "tags": [
+          "jobs"
+        ]
+      }
+    },
+    "/api/jobs/{job_id}/cancel": {
+      "post": {
+        "operationId": "cancelJob",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "attempt_count": {
+                      "title": "Attempt Count",
+                      "type": "integer"
+                    },
+                    "cancel_requested_at": {
+                      "format": "date-time",
+                      "nullable": true,
+                      "title": "Cancel Requested At",
+                      "type": "string"
+                    },
+                    "created_at": {
+                      "format": "date-time",
+                      "title": "Created At",
+                      "type": "string"
+                    },
+                    "id": {
+                      "format": "uuid",
+                      "title": "Id",
+                      "type": "string"
+                    },
+                    "kind": {
+                      "minLength": 1,
+                      "title": "Kind",
+                      "type": "string"
+                    },
+                    "last_error_code": {
+                      "nullable": true,
+                      "title": "Last Error Code",
+                      "type": "string"
+                    },
+                    "last_error_message": {
+                      "nullable": true,
+                      "title": "Last Error Message",
+                      "type": "string"
+                    },
+                    "max_attempts": {
+                      "title": "Max Attempts",
+                      "type": "integer"
+                    },
+                    "payload": {
+                      "additionalProperties": true,
+                      "title": "Payload",
+                      "type": "object"
+                    },
+                    "result": {
+                      "additionalProperties": true,
+                      "nullable": true,
+                      "title": "Result",
+                      "type": "object"
+                    },
+                    "status": {
+                      "enum": [
+                        "queued",
+                        "running",
+                        "succeeded",
+                        "failed",
+                        "cancelled"
+                      ],
+                      "title": "Status",
+                      "type": "string"
+                    },
+                    "updated_at": {
+                      "format": "date-time",
+                      "title": "Updated At",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "kind",
+                    "status",
+                    "payload",
+                    "result",
+                    "attempt_count",
+                    "max_attempts",
+                    "cancel_requested_at",
+                    "last_error_code",
+                    "last_error_message",
+                    "created_at",
+                    "updated_at"
+                  ],
+                  "title": "JobRead",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Job cancellation state"
+          }
+        },
+        "summary": "Cancel Job",
+        "tags": [
+          "jobs"
         ]
       }
     },
@@ -6944,7 +9000,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -6999,7 +9057,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -7054,7 +9114,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -7417,7 +9479,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -7472,7 +9536,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -7527,7 +9593,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -7785,7 +9853,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -8106,7 +10176,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -8161,7 +10233,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -8216,7 +10290,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -8414,7 +10490,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -8469,7 +10547,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -8598,7 +10678,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -8887,7 +10969,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -8942,7 +11026,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -8997,7 +11083,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -9188,7 +11276,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -9426,7 +11516,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -9481,7 +11573,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -9536,7 +11630,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -10016,7 +12112,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -10071,7 +12169,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -10126,7 +12226,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -10181,7 +12283,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -10236,7 +12340,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -10434,7 +12540,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -10521,7 +12629,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -10576,7 +12686,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -10806,7 +12918,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -10954,7 +13068,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -11159,7 +13275,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -11214,7 +13332,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -11269,7 +13389,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -11439,7 +13561,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -11627,7 +13751,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -11682,7 +13808,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -11737,7 +13865,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -12224,7 +14354,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -12279,7 +14411,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -12334,7 +14468,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -12645,7 +14781,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -13141,7 +15279,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -13196,7 +15336,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -13251,7 +15393,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -13463,7 +15607,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -13518,7 +15664,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -13573,7 +15721,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -13747,7 +15897,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -13977,7 +16129,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -14032,7 +16186,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -14087,7 +16243,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -14260,7 +16418,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -14315,7 +16475,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -14629,7 +16791,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -14684,7 +16848,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -14870,7 +17036,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -15086,7 +17254,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -15141,7 +17311,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -15317,7 +17489,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -15558,7 +17732,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -15613,7 +17789,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -15668,7 +17846,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -15845,7 +18025,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -15900,7 +18082,9 @@
                         "idempotency_conflict",
                         "course_mode_conflict",
                         "pgn_not_exportable",
-                        "source_storage_unavailable"
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -15935,6 +18119,141 @@
           "sources"
         ]
       }
+    },
+    "/api/tablebase/probe": {
+      "post": {
+        "operationId": "probeTablebase",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "fen": {
+                    "default": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+                    "minLength": 1,
+                    "title": "Fen",
+                    "type": "string"
+                  },
+                  "parameters": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "depth": {
+                        "default": null,
+                        "maximum": 50,
+                        "minimum": 1,
+                        "nullable": true,
+                        "title": "Depth",
+                        "type": "integer"
+                      },
+                      "hash_mb": {
+                        "default": 128,
+                        "maximum": 4096,
+                        "minimum": 16,
+                        "title": "Hash Mb",
+                        "type": "integer"
+                      },
+                      "movetime_ms": {
+                        "default": 800,
+                        "maximum": 30000,
+                        "minimum": 100,
+                        "title": "Movetime Ms",
+                        "type": "integer"
+                      },
+                      "multipv": {
+                        "default": 4,
+                        "maximum": 5,
+                        "minimum": 1,
+                        "title": "Multipv",
+                        "type": "integer"
+                      },
+                      "ponder": {
+                        "default": false,
+                        "enum": [
+                          false
+                        ],
+                        "title": "Ponder",
+                        "type": "boolean"
+                      },
+                      "threads": {
+                        "default": 1,
+                        "maximum": 32,
+                        "minimum": 1,
+                        "title": "Threads",
+                        "type": "integer"
+                      }
+                    },
+                    "title": "EngineParameters",
+                    "type": "object"
+                  }
+                },
+                "title": "AnalysisRequest",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "available": {
+                      "title": "Available",
+                      "type": "boolean"
+                    },
+                    "best_moves": {
+                      "items": {
+                        "pattern": "^[a-h][1-8][a-h][1-8][qrbn]?$",
+                        "type": "string"
+                      },
+                      "title": "Best Moves",
+                      "type": "array"
+                    },
+                    "dtz": {
+                      "nullable": true,
+                      "title": "Dtz",
+                      "type": "integer"
+                    },
+                    "eligible": {
+                      "title": "Eligible",
+                      "type": "boolean"
+                    },
+                    "reason": {
+                      "nullable": true,
+                      "title": "Reason",
+                      "type": "string"
+                    },
+                    "wdl": {
+                      "nullable": true,
+                      "title": "Wdl",
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "available",
+                    "eligible",
+                    "wdl",
+                    "dtz",
+                    "best_moves",
+                    "reason"
+                  ],
+                  "title": "TablebaseRead",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Syzygy probe or fallback reason"
+          }
+        },
+        "summary": "Probe Tablebase",
+        "tags": [
+          "engine"
+        ]
+      }
     }
   },
   "security": [],
@@ -15950,7 +18269,19 @@
       "name": "dashboard"
     },
     {
+      "name": "engine"
+    },
+    {
+      "name": "engine games"
+    },
+    {
       "name": "history"
+    },
+    {
+      "name": "invalidation"
+    },
+    {
+      "name": "jobs"
     },
     {
       "name": "knowledge-notes"

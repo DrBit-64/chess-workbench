@@ -162,9 +162,7 @@ async def test_transposition_merges_positions(tmp_path: Path) -> None:
 
 async def test_import_rejects_illegal_pgn(tmp_path: Path) -> None:
     """Illegal PGN raises ValueError before any DB writes."""
-    db = Database(f"sqlite+aiosqlite:///{tmp_path / '3b_illegal.db'}")
-    async with db.engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    del tmp_path
 
     with pytest.raises(ValueError, match="illegal"):
         parse_pgn("1. e4 e5 2. Kf3")  # King to f3 is illegal

@@ -43,6 +43,7 @@ def build_test_app(tmp_path: Path) -> ChessWorkbenchApp:
             service_name=f"chess-workbench-pgn-export-{tmp_path.name}",
             database_url=f"sqlite+aiosqlite:///{tmp_path / 'pgn-export.db'}",
             source_storage_root=tmp_path / "data",
+            engine_worker_enabled=False,
         )
     )
 

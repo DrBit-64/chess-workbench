@@ -304,6 +304,10 @@ block 原子创建；Explorer 的来源观点可打开原章节相邻正文。�
 
 ## Stage 6：Stockfish、Syzygy 与可靠后台任务
 
+实现状态（2026-08-10）：6A–6D 代码与验收脚本已落地；真实 Stockfish、完整异步 SQL 与
+Chromium 累计门禁仍需在允许网络和工作线程的正常主机环境执行后，才能标记为最终验收通过。
+6E 继续等待 Stage 5。
+
 执行顺序：**核心基础提前到 Stage 8 之前**。先交付不依赖个人库的 6A SQL job 基础，
 再按需要交付 6B 引擎分析和 Syzygy/对弈核心。`engine-threshold`、`tablebase` 判题以及
 “保存为 Exercise”属于 Stage 5 的集成尾项，在 Stage 5 模型存在后启用；提前阶段不得
@@ -316,7 +320,8 @@ block 原子创建；Explorer 的来源观点可打开原章节相邻正文。�
 ### 交付物
 
 - UCI adapter 与进程生命周期管理；
-- 默认实时参数 Threads=1、Hash=128MB、MultiPV=3、movetime=300–800ms、Ponder=false；
+- 默认实时参数 Threads=1、Hash=128MB、MultiPV=4、movetime=800ms、Ponder=false；设置界面
+  参照 Lichess 的搜索时间、线路数（1–5）、线程和 Hash 层级；
 - MultiPV、score、WDL、引擎版本和完整参数持久化；
 - `ImportJob`/通用 job 表、worker、租约、心跳、重试、取消和幂等键；
 - 实时浅分析与后台深分析；
@@ -613,8 +618,8 @@ Repertoire/Exercise 发布 adapter 等 Stage 5 模型存在后再接入。
 
 ## 6. 推荐执行节奏与验收方式
 
-当前 AI 棋书优先路线为：**完成 Stage 4 → Stage 6A（可靠任务基础）→ 视需要完成
-6B–6D 核心 → Stage 8 → Stage 9 → Stage 5 → 6E → Stage 7**。这只是交付顺序调整，
+当前 AI 棋书优先路线为：**完成 Stage 4 → 完成 Stage 6A–6D → Stage 8 → Stage 9 →
+Stage 5 → 6E → Stage 7**。这只是交付顺序调整，
 不是层级倒置：Source → Knowledge 先完成，Repertoire → Exercise 后接。2D 作为 ADR 0005
 双模课程基础已经先于 Stage 3 落地；Stage 8 与 Stage 9 仍共用审核基础并顺序推进；
 Stage 7B–7D 仍必须等待 Stage 6B 引擎分析和 Stage 5D 训练流。Stage 11 不应为了预留

@@ -12,6 +12,7 @@ def build_test_app(tmp_path: Path) -> ChessWorkbenchApp:
             service_name=f"chess-workbench-test-{tmp_path.name}",
             version="0.1.0",
             database_url=f"sqlite+aiosqlite:///{tmp_path / 'health.db'}",
+            engine_worker_enabled=False,
         )
     )
 

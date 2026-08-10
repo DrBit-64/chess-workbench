@@ -64,7 +64,20 @@ def test_stage_4_make_targets_are_cumulative() -> None:
     assert _target_prerequisites(makefile, "acceptance-stage-4b") == ("acceptance-stage-4a",)
     assert _target_prerequisites(makefile, "acceptance-stage-4c") == ("acceptance-stage-4b",)
     assert _target_prerequisites(makefile, "acceptance-stage-4") == ("acceptance-stage-4c",)
-    assert _target_prerequisites(makefile, "acceptance") == ("acceptance-stage-4",)
+
+
+def test_stage_6_make_targets_are_cumulative() -> None:
+    makefile = MAKEFILE.read_text(encoding="utf-8")
+
+    assert _target_prerequisites(makefile, "acceptance-stage-6a") == ("acceptance-stage-4c",)
+    assert _target_prerequisites(makefile, "acceptance-stage-6b") == (
+        "acceptance-stage-6a",
+        "install-stockfish",
+    )
+    assert _target_prerequisites(makefile, "acceptance-stage-6c") == ("acceptance-stage-6b",)
+    assert _target_prerequisites(makefile, "acceptance-stage-6d") == ("acceptance-stage-6c",)
+    assert _target_prerequisites(makefile, "acceptance-stage-6") == ("acceptance-stage-6d",)
+    assert _target_prerequisites(makefile, "acceptance") == ("acceptance-stage-6",)
 
 
 def test_development_api_upgrades_the_database_before_starting() -> None:

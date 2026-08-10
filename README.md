@@ -1,6 +1,6 @@
 # ChessWorkbench
 
-ChessWorkbench 是一个单用户、本地优先的国际象棋知识整理、交互训练、实战复盘与 AI 辅助导入平台。当前仓库已完成 Stage 4 编辑器 MVP，正在等待交互式产品验收；范围、状态和机器验收标准以[开发计划](docs/development-plan.md)为准。
+ChessWorkbench 是一个单用户、本地优先的国际象棋知识整理、交互训练、实战复盘与 AI 辅助导入平台。当前仓库已完成 Stage 4 编辑器 MVP，并实现 Stage 6A–6D 本地引擎工作台；范围、状态和机器验收标准以[开发计划](docs/development-plan.md)为准。
 
 ## 已完成的工程底座
 
@@ -33,6 +33,7 @@ corepack prepare pnpm@10.14.0 --activate
 ```bash
 cp .env.example .env
 make bootstrap
+make install-stockfish
 ```
 
 分别在两个终端启动 API 和前端：
@@ -43,7 +44,9 @@ make dev-web
 ```
 
 `make dev-api` 会先把本地数据库升级到最新版本，再启动服务。访问 `http://127.0.0.1:5173`；
-Dashboard、Learn、Sources 与三栏课程编辑器均可直接操作。API 文档的机器可读契约位于
+Dashboard、Learn、Sources、三栏课程编辑器与“引擎”工作台均可直接操作。引擎页默认显示
+四条 Stockfish 主变，包含白方视角评分、WDL、深度/节点，并可从任意 FEN 对弈和保存复盘
+课程草稿。Syzygy 表可选放入 `data/tablebases/syzygy/`。API 文档的机器可读契约位于
 `http://127.0.0.1:8000/docs/openapi.json`。
 
 ## 自动验收
@@ -52,10 +55,10 @@ Dashboard、Learn、Sources 与三栏课程编辑器均可直接操作。API 文
 make acceptance
 ```
 
-`make acceptance` 会先用锁文件安装依赖，再累计执行 Stage 2–4 门禁、真实 MySQL 8.4
+`make acceptance` 会先用锁文件安装依赖和校验 Stockfish 18，再累计执行 Stage 2–6 门禁、真实 MySQL 8.4
 兼容性检查、所有静态检查、类型检查、单元/集成测试、API 契约漂移检查、前端生产构建、
 双服务 smoke 和 Chromium 编辑器关键路径；测试数据库与进程会自动创建和清理。当前它是
-`make acceptance-stage-4` 的稳定别名。
+`make acceptance-stage-6` 的稳定别名。
 
 各阶段可按依赖关系逐层验收：
 
@@ -69,6 +72,10 @@ make acceptance-stage-4a  # Dashboard、Learn、Sources
 make acceptance-stage-4b  # 棋盘、当前路径、分支与转置
 make acceptance-stage-4c  # Markdown、来源、历史、恢复与发布
 make acceptance-stage-4   # 全仓检查、smoke 与 Chromium 编辑器 E2E
+make acceptance-stage-6a  # SQL job 状态机、租约、重试和取消
+make acceptance-stage-6b  # fake/真实 Stockfish、MultiPV 与缓存
+make acceptance-stage-6c  # Syzygy、纯判定与失效通知
+make acceptance-stage-6   # 对弈、复盘、课程草稿与全仓累计门禁
 ```
 
 这些目标是累积的：后一个目标会先运行它所依赖的前置门禁。

@@ -75,6 +75,8 @@ ErrorCode = Literal[
     "course_mode_conflict",
     "pgn_not_exportable",
     "source_storage_unavailable",
+    "engine_unavailable",
+    "engine_failure",
 ]
 
 

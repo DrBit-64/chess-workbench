@@ -128,12 +128,44 @@ All commands run from the repository root.
 
 ## Agent division
 
-- **Deep Code (DeepSeek-V4-Pro)**: bounded, well-specified implementation tasks —
-  single API endpoints, unit tests, type annotations, formatting, documentation,
-  config changes, simple refactoring, bug fixes with clear repro steps.
+- **Deep Code (DeepSeek-V4-Flash)**: executes small, bounded work after the behavior and acceptance
+  oracle are already defined — local code search/explanation, documentation, formatting, type
+  fixes, focused unit tests, configuration edits, clear single-module bugs and already-designed
+  small features. Default to thinking enabled with `high` effort; non-thinking is only for purely
+  mechanical work, and `max` is not the routine default.
 - **Codex (OpenAI)**: architecture design, cross-module changes, complex debugging,
   formal verification, security review, final diff review, task planning and scoping,
   ambiguous requirements.
+
+V4-Flash task packets must name the relevant files, invariants that must remain unchanged, exact
+acceptance commands and the permitted edit boundary. Prefer one independently verifiable behavior
+per packet. Tests and generated contracts may accompany their owning module, but a task that needs
+changes across more than two unrelated implementation modules belongs to Codex or must first be
+split by Codex.
+
+### Deep Code escalation rules
+
+Deep Code must stop implementation, leave the worktree recoverable and report evidence instead of
+guessing when any of the following is true:
+
+- the task requires changing public architecture, an unspecified API/interface, database schema,
+  protocol, authentication, authorization or a concurrency/state-machine invariant;
+- more than two unrelated implementation modules need modification;
+- existing tests contradict the requested behavior or the requested oracle appears incorrect;
+- the root cause remains unclear after inspecting the named code and reproducing the failure;
+- implementation requires an assumption not stated in the task, a new dependency or a material
+  expansion of scope;
+- the same attempted fix fails twice, or the focused gate exposes a new failure outside the task
+  boundary.
+
+On escalation, report the reproduction, inspected files, best current hypothesis, attempted changes
+and exact blocking decision. Do not weaken tests, coverage floors, type checks, lint rules or
+warnings-as-errors to obtain a pass.
+
+Low-risk Flash work with a complete deterministic gate may continue without an individual Codex
+review when the current task packet explicitly permits it. Batch related medium-risk changes for
+one Codex review. High-risk work goes directly to Codex. These review tiers do not grant permission
+to commit: no agent commits unless the user explicitly authorizes it.
 
 Work is coordinated through Git, `PLANS.md`, `docs/agent/HANDOFF.md`, and ADRs —
 not by sharing raw chat history.

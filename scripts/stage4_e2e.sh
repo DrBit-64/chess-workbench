@@ -65,7 +65,7 @@ fi
 
 set +e
 CHESS_WORKBENCH_E2E_BASE_URL="http://127.0.0.1:$web_port" \
-  "${pnpm_command[@]}" --dir frontend e2e
+  "${pnpm_command[@]}" --dir frontend exec playwright test e2e/editor-mvp.spec.ts
 test_rc=$?
 set -e
 if [[ "$test_rc" -ne 0 ]]; then

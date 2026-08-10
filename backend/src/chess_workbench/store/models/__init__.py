@@ -12,6 +12,14 @@ from chess_workbench.store.models.content import (
     SourceSpan,
     SourceVersion,
 )
+from chess_workbench.store.models.engine import (
+    EngineAnalysis,
+    EngineGame,
+    EngineGameMove,
+    EngineGameReview,
+    InvalidationEvent,
+    Job,
+)
 from chess_workbench.store.models.graph import MoveEdge, Position
 from chess_workbench.store.models.mixins import (
     ArchiveMixin,
@@ -37,6 +45,12 @@ __all__ = [
     "CourseModule",
     "CourseOccurrence",
     "ContentRevision",
+    "EngineAnalysis",
+    "EngineGame",
+    "EngineGameMove",
+    "EngineGameReview",
+    "InvalidationEvent",
+    "Job",
     "KnowledgeNote",
     "KnowledgeNoteCitation",
     "MoveEdge",

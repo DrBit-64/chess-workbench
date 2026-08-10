@@ -1,141 +1,151 @@
 # Agent handoff
 
-## Current branch and ownership
+## Goal
 
-- Branch: `main`
-- Review baseline: `0705701 feat(codex): pass DS-MYSQL-01`
-- Worktree: uncommitted Codex changes spanning the accepted Stage 2/3 remediation and Stage 4
-  editor MVP. Preserve the complete worktree; do not treat individual uncommitted files as
-  independent patches.
-- User-authorized boundary: Stage 4 implementation and both interactive-review fix sets are
-  complete. Continue product review on request; otherwise the revised AI-book-first route starts at
-  Stage 6A. Stage 4E remains optional backlog.
+Stage 6A–6D and the first interaction-review correction are cumulatively accepted. A second,
+focused course-layout adjustment replaces keyboard entry/path chips with a four-column desktop
+layout and clickable move score; it is awaiting user interaction review. Stage 5/6E and Stage 7
+remain deferred by agreement.
 
-## Accepted status
+## Working state
 
-| Unit | Status and evidence |
-|---|---|
-| 2A–2D | Accepted: position identity, graph persistence, content HTTP boundary, dual-course and citation/reference-card invariants |
-| 3A–3D | Accepted: bounded semantic PGN parse/import/export, idempotent CAS/receipts, SQLite/MySQL parity |
-| Stage 4 prerequisite | Accepted: ADR 0006 ordered content blocks, deterministic legacy/PGN backfill, lifecycle coupling |
-| 4A | Accepted: real Dashboard, searchable/filterable Learn catalog, Sources page and navigation |
-| 4B | Accepted: three-column editor, initial/FEN roots, board/click/UCI moves, Lichess-style legal targets, 100 ms animation, current path, branches, transpositions and reload |
-| 4C | Accepted: readable ordered prose, SourceSpan citations, atomic note/block creation, sanitized Markdown, undo/redo, failure recovery, immutable history, source-context drawers and atomic position/path-merged Explorer publication |
-| 4D | Accepted: fresh-database Chromium path, backend bypass rejection, retry/idempotency, accessibility and desktop viewports |
+- Branch: `main`; accepted committed baseline: `d1a2f99 feat(codex): finish stage 4`.
+- The worktree contains the uncommitted Stage 6A–6D implementation, Flash warning remediation and
+  Codex final-review fixes as one working set. Do not commit, reset, rebase or split it without user
+  permission.
+- Migration `20260810_0009` and ADR 0009 define the SQL jobs, analysis cache and engine-game
+  persistence boundary.
+- Default delegated model is DeepSeek V4-Flash (`high`). Give it one bounded behavior at a time;
+  architecture, concurrency, cross-module diagnosis and final review remain Codex-owned.
 
-Required Stage 4 items remaining: **0**.
+## Accepted Stage 6 behavior
 
-## Final cumulative verification (2026-08-10)
+- Durable SQL jobs provide claim leases, heartbeat, retry, cancellation, recovery, idempotency and
+  SQL-backed invalidation events. WebSocket messages are hints; HTTP/SQL remains authoritative.
+- Stockfish 18 analysis is bounded, cached by the complete identity, returns four White-POV PVs by
+  default, and reaps engine processes on success, failure, timeout, cancellation and shutdown.
+- Syzygy is probed before Stockfish and falls back explicitly when assets are absent.
+- `/analysis` provides Lichess-shaped local settings, four scored lines, board interaction,
+  play-from-position, review findings and save-to-traditional-course draft.
+- Course boards have a collapsed-by-default live engine strip beneath a slightly smaller 560 px
+  board. Enabling it automatically analyzes every selected/pending FEN, shows four compact PVs and
+  draws three configurable first-move recommendation arrows.
+- Course reading uses chapter directory | board/engine | narrow move score | prose/candidates on
+  desktop. The numbered move score preserves its continuation while the user visits an earlier ply;
+  keyboard/UCI move entry is deliberately absent.
+- Explorer publication still merges source modules into one graph; ordered narrative and
+  position-bound knowledge content remain distinct.
+- Stage 6E was not built against placeholder Exercise tables.
 
-`make acceptance-stage-4` exited 0 with isolated ports and repository-pinned toolchains.
+## Codex final-review fixes
 
-- Stage 2/3 focused cumulative gates passed; real pinned MySQL 8.4 ran 4/4 tests with no
-  skip/xfail and stopped its disposable container.
-- Backend full suite: 247 passed, 4 expected conditional MySQL skips in the ordinary SQLite run.
-- Backend coverage: 92.47% line / 75.06% branch (floors: 80% / 75%).
-- Frontend: format, ESLint, strict TypeScript, 26/26 Vitest tests and production build passed;
-  frontend statement/branch coverage is 95.37% / 85.47%.
-- OpenAPI/TypeScript drift check and SQLite empty→head→metadata check→base migration round-trip
-  passed.
-- Direct API and Vite-proxy smoke passed.
-- Playwright: 1/1 full Chromium editor scenario passed against a fresh temporary SQLite database;
-  it asserts readable/cited narrative persistence, atomic position notes, source-context navigation,
-  merged publication, hidden source chapter names, real-board legal-target markers, axe
-  serious/critical scan and 1280×720, 1440×900, 1920×1080 layouts.
-- `make acceptance` is the stable alias for the same cumulative Stage 4 gate.
+- Restored the required backend branch floor from 73% to **75%** and covered real worker/error
+  branches instead of weakening the gate.
+- Promoted `ResourceWarning` and `PytestUnraisableExceptionWarning` to errors and added per-test GC
+  attribution. Non-worker API tests explicitly disable the installed Stockfish worker.
+- Corrected the PGN concurrency test to issue four ASGI requests inside one application lifespan;
+  it no longer races four test-client startup/shutdown sequences.
+- Fixed engine-first game creation by initializing `EngineGame.moves`, avoiding async lazy-load
+  `MissingGreenlet` after flush.
+- Removed `setpgrp=True` from python-chess UCI startup because Python 3.13 translates it to
+  `process_group`, which uvloop rejects. A real uvloop fake-engine regression and real Stockfish
+  tests protect the supported path.
+- Made `assert_health.py` accept the expected service name, allowing isolated Stage 6 E2E health
+  validation without weakening payload checks.
+- Replaced deprecated Ant Design course lists, supplied finite jsdom TextArea metrics, and retained
+  focused regressions with clean stderr.
+- Replaced Ant Design's low-contrast green completion tag with a project-owned WCAG-AA treatment;
+  the browser Axe scan now passes.
 
-## First interactive-review delta
+## Interaction-review correction (2026-08-10)
 
-- `backend/src/chess_workbench/services/content.py` and
-  `backend/tests/test_stage4_authoring.py`: merge publications by root Position and shared
-  parent/MoveEdge path, preserve idempotent live note references, and cover empty/existing Explorer
-  publication.
-- `frontend/src/app/CourseEditor.tsx`, `boardInteraction.ts` and their tests: aggregate Explorer
-  components into one course-level view, hide source Module titles, show legal-target feedback and
-  use the 100 ms animation.
-- `frontend/e2e/editor-mvp.spec.ts` and `frontend/src/styles.css`: assert the real rendered legal
-  marker and merged Explorer flow in Chromium, then fix the select-placeholder contrast issue found
-  by axe.
-- `docs/decisions/0005-dual-course-mode.md`, `docs/development-plan.md`, `PLANS.md` and this handoff:
-  record the revised product semantics, evidence and interactive-review boundary.
-- No API schema or database migration was required for this feedback set.
+- The reported `sqlite3.OperationalError: database is locked` was a real Stage 6 defect. The move
+  endpoint held a read transaction while waiting for Stockfish, while the SQL worker heartbeat
+  wrote on another connection. `play_game_move` now reads a snapshot, computes outside SQL and
+  atomically writes both plies under the existing version/current-FEN guard.
+- Synchronous analysis now reuses `process_analysis_job`'s short cache/persist transactions instead
+  of holding an HTTP-owned transaction across Stockfish. Cache-hit responses still expose
+  `from_cache=true`.
+- `CourseEnginePanel.tsx` owns the course-local enable toggle, automatic FEN refresh, four-PV strip,
+  time/MultiPV/thread/hash controls and independent recommendation-arrow controls. Stale browser
+  requests are aborted and stale lines/arrows are cleared immediately.
+- The course board forwards up to four MultiPV first moves through `customArrows`; default display is
+  three translucent blue arrows. This is analysis-only and never creates an occurrence.
+- Browser acceptance now exercises the embedded engine after saving a review course, checks WCAG
+  A/AA and verifies no horizontal overflow at 1280, 1440 and 1920 px.
+- The Sanic “PRODUCTION mode” line in `make dev-api` output is informational; the actual failure in
+  the supplied log was the SQLite exception above. The stable single-process local mode is retained
+  so the SQL worker is not duplicated by a development reloader.
 
-## Stage 4 implementation highlights
+Focused evidence before the cumulative gate:
 
-- Migrations `0006`, `0007` and `0008` add ordered `CourseModule` blocks, immutable content
-  revisions, Explorer publication receipts and narrative-to-SourceSpan citations. MySQL migration
-  parity is covered by the cumulative gate.
-- Module roots and MoveSequence blocks remain lifecycle-coupled. Replacing an archived root reuses
-  its archived move block so ordering uniqueness cannot strand a module and its history is kept.
-- Every persisted move goes through the backend `python-chess` validation path. `chess.js` only
-  preflights drag, click-to-move and accessible keyboard UCI entry.
-- Editor navigation is path-based and preserves local occurrence comments/NAG/source context while
-  global Positions/MoveEdges merge transpositions.
-- Markdown is sanitized before preview. Failed saves remain recoverable; retry does not duplicate
-  writes. History is immutable and Explorer publication is atomic.
-- Traditional courses default to a wide ordered reading surface. Narrative blocks support one or
-  more SourceSpan citations; position-linked KnowledgeNotes are inserted into that flow in the same
-  database transaction as the note itself. Explorer reference cards load adjacent source blocks in
-  a context drawer without copying source prose into the Explorer.
-- Explorer publication now reuses any occurrence at the source root Position, then merges each
-  shared child by parent occurrence plus MoveEdge. Multiple publication receipts may intentionally
-  point to one internal Module/component; disconnected FEN roots use anonymous entry labels instead
-  of source chapter titles.
-- Explorer UI aggregates all component editors at course level and groups equal entry Positions, so
-  legacy pre-fix data is also presented as one position graph without exposing source Module names.
-- Board click and drag-start selection show Lichess-style destination dots/capture rings plus
-  selected/last-move highlights. Programmatic movement animation is fixed at the requested 100 ms.
-- PGN import supports retry identity; Module and current-path PGN downloads use the accepted Stage 3
-  semantic layer.
-- Frontend routes are lazy-loaded. Playwright uses system Chromium when available and otherwise the
-  installed browser; temporary database/source files and server processes are cleaned up.
-- Make/smoke/E2E automatically fall back to `corepack pnpm` when no global `pnpm` binary exists.
-- `make dev-api` now runs Alembic `upgrade head` before serving, so a first-time interactive launch
-  does not fail with missing business tables.
+- Backend Stage 6 API/engine: **24/24 passed**; Ruff and strict mypy pass.
+- Frontend: **8 files / 35 tests passed**; 93.35% statements, 82.31% branches and 80.16%
+  functions. Format/lint/typecheck pass.
+- Chromium Stage 6 flow: **1/1 passed**, including the new course engine, WCAG A/AA and desktop
+  overflow checks.
+- The first full backend run measured 74.80% branch coverage after adding the concurrency path.
+  Missing-resource and mate-terminal API paths were then covered without lowering the threshold;
+  the cumulative result below confirms the restored floor.
 
-## Interactive handoff
+## Final evidence (2026-08-10)
 
-From the repository root:
+`make acceptance` exited 0 after the interaction correction and all final fixes:
 
-```bash
-cp .env.example .env  # only if .env does not already exist
-make bootstrap
-```
+- Backend static checks: Ruff format/lint and strict mypy pass.
+- Full backend: **309 passed, 4 skipped**.
+- Backend coverage: **91.62% line**, **75.00% branch** (thresholds 80%/75%).
+- Resource lifecycle: strict warning gates pass with no unclosed SQLite/aiosqlite connection.
+- MySQL disposable container: **4/4 passed** and container stopped.
+- Real Stockfish 18, fake UCI under uvloop, Syzygy fixture and tool-manifest tests pass.
+- SQLite migration round-trip and metadata drift check pass through revision `0009`.
+- Frontend: **8 files, 35 tests passed**; format/lint/typecheck/build pass; coverage is 93.35%
+  statements, 82.31% branches and 80.16% functions.
+- OpenAPI/TypeScript contracts are deterministic and drift-free.
+- Direct API/Vite-proxy smoke passes.
+- Chromium Stage 6 E2E: **1/1 passed**. It covers the course-embedded live engine and arrows,
+  capabilities, four PVs, background SQL work, play, review, save-to-course-draft, WCAG A/AA and
+  1280/1440/1920 viewport overflow.
+- `git diff --check` passes.
 
-Then run `make dev-api` and `make dev-web` in separate terminals and open
-`http://127.0.0.1:5173`.
+The cumulative evidence above predates the second course-layout adjustment. That adjustment changed
+only frontend course layout/navigation and its Stage 4 E2E specification. Focused post-change
+evidence: `CourseEditor.test.tsx` **11/11 passed**, frontend lint and typecheck pass. The user asked
+to defer the cumulative and real-browser suites until the interactive UX is finalized.
 
-Suggested product review path:
+## Interaction review checklist
 
-1. Add a manual Source.
-2. Create a traditional Course and a Module from both the initial position and a custom FEN.
-3. Enter moves by board drag/click and keyboard UCI; create two branches and switch paths.
-4. Add root/move Markdown and a citation; refresh and confirm persistence.
-5. Exercise undo/redo, history, PGN import, Module/current-line export and Explorer publication.
-6. Publish two traditional chapters sharing the initial position, open the Explorer, and confirm
-   there is one merged entry with combined branches and no source chapter-name list.
-7. Select and drag pieces on the board; confirm legal empty destinations use dots, captures use
-   rings, and movement feels like the 100 ms “fast” setting.
-8. In a traditional chapter, add cited narrative prose and a position explanation, refresh, and
-   confirm both appear in the ordered reading column; publish to Explorer and open the reference
-   card's original-context drawer.
+Run the application with `make dev-api` and `make dev-web`, open a course, then check:
 
-## Known non-blocking risks and deferred scope
+1. At desktop width, confirm the page is chapter directory | board | narrow move score |
+   prose/candidates, and that no keyboard/UCI move field remains.
+2. Follow several course moves. The score should group SAN by move number and White/Black; clicking
+   an earlier ply changes the board while leaving the later score available to jump forward again.
+3. The board is slightly smaller and an “引擎分析” strip appears directly beneath it.
+4. Turning the strip on produces four scored lines for the current course position without clicking
+   a separate Analyze button; following a course move refreshes those lines.
+5. Three translucent recommendation arrows appear by default. Settings can hide them or change the
+   count independently from the number of displayed PVs.
+6. Changing time, lines, threads or hash triggers a fresh bounded calculation; turning analysis off
+   removes the lines/arrows and stops further requests.
 
-- Ant Design emits `List` deprecation warnings in component tests; current behavior and production
-  build are correct, but replace it before the next Ant major upgrade. jsdom also emits a harmless
-  TextArea `NaN` height warning that does not reproduce in the Chromium acceptance path.
-- Existing Explorer rows created before this fix are merged at the UI/query presentation layer;
-  new publications merge physically. No destructive backfill migration was introduced.
-- The global graph visualization is Stage 4E backlog and intentionally does not block the editor
-  MVP or Stage 5.
-- Stage 5 repertoire/training, Stage 6 engine/tablebase/job infrastructure, Stage 7 Lichess,
-  Stage 8 OCR/AI and collaboration have not started.
-- Source CAS orphan garbage collection remains deferred to Stage 8; committed SQL references are
-  still checked for valid immutable assets.
+Then open `/analysis` and check:
 
-## Next action
+1. The default position displays four readable PV rows with evaluation, WDL and moves.
+2. Selecting a PV previews the line on the board; board selection and quick move animation feel
+   natural.
+3. Settings expose time, lines, threads, hash and Ponder-off explanation without offering values
+   above server limits.
+4. Background analysis visibly transitions through its durable job state and can be cancelled.
+5. Play from both colors, including engine-first as Black, then review the game and save findings as
+   a draft course.
+6. A terminal FEN immediately shows a readable finished state.
 
-Collect any further interaction/visual feedback. When the user is ready to advance, start Stage 6A
-(SQL-backed reliable jobs), then prioritize Stage 8. Stage 5 and Stage 7 are deliberately deferred;
-the Stage 5-dependent engine answer-policy wiring remains the later Stage 6E integration tail.
+Record any mismatch as a concrete interaction, expected result and screenshot. Do not begin Stage 8
+until the user completes this review or explicitly waives it.
+
+## Next route
+
+After the interaction review, scope Stage 8A first: immutable source ingestion and extraction job
+contracts that reuse Stage 6 SQL jobs/outbox, while preserving Source → Knowledge human review.
+Do not start personal repertoire or Lichess import work unless the user changes the agreed order.

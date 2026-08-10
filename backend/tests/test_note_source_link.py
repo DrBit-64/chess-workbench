@@ -17,6 +17,7 @@ def build_test_app(tmp_path: Path) -> ChessWorkbenchApp:
         Settings(
             service_name=f"chess-workbench-note-link-{tmp_path.name}",
             database_url=f"sqlite+aiosqlite:///{tmp_path / 'note-link.db'}",
+            engine_worker_enabled=False,
         )
     )
 

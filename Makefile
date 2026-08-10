@@ -21,14 +21,18 @@ STAGE_2D_CONTENT_TESTS := $(wildcard \
 	backend/tests/test_note_source_link.py \
 	backend/tests/test_occurrence_invariants.py)
 
-.PHONY: check-pnpm bootstrap-backend bootstrap-frontend bootstrap lock migrate dev-api dev-web \
+.PHONY: check-pnpm bootstrap-backend bootstrap-frontend bootstrap lock migrate dev-api dev-web install-stockfish \
 	backend-format backend-lint backend-typecheck backend-static backend-test \
 	backend-migration-check backend-check frontend-format frontend-lint \
 	frontend-typecheck frontend-test frontend-build frontend-check contracts \
 	check-contracts verify smoke acceptance acceptance-stage-2a \
 	acceptance-stage-2b acceptance-stage-2c acceptance-stage-2d acceptance-stage-2 \
 	acceptance-stage-3a acceptance-stage-3b acceptance-stage-3c acceptance-stage-3d acceptance-stage-3 \
-	acceptance-stage-4a acceptance-stage-4b acceptance-stage-4c acceptance-stage-4
+	acceptance-stage-4a acceptance-stage-4b acceptance-stage-4c acceptance-stage-4 \
+	acceptance-stage-6a acceptance-stage-6b acceptance-stage-6c acceptance-stage-6d acceptance-stage-6
+
+install-stockfish:
+	uv run --project backend --locked python scripts/install_stockfish.py
 
 check-pnpm:
 	@if [ -z "$(PNPM)" ]; then \
@@ -59,13 +63,13 @@ dev-web: check-pnpm
 	$(PNPM) --dir frontend dev
 
 backend-format:
-	uv run --project backend --locked ruff format --config backend/pyproject.toml backend/src backend/tests scripts/contracts.py scripts/assert_health.py scripts/check_backend_coverage.py scripts/check_migrations.py --check
+	uv run --project backend --locked ruff format --config backend/pyproject.toml backend/src backend/tests scripts/contracts.py scripts/assert_health.py scripts/check_backend_coverage.py scripts/check_migrations.py scripts/install_stockfish.py --check
 
 backend-lint:
-	uv run --project backend --locked ruff check --config backend/pyproject.toml backend/src backend/tests scripts/contracts.py scripts/assert_health.py scripts/check_backend_coverage.py scripts/check_migrations.py
+	uv run --project backend --locked ruff check --config backend/pyproject.toml backend/src backend/tests scripts/contracts.py scripts/assert_health.py scripts/check_backend_coverage.py scripts/check_migrations.py scripts/install_stockfish.py
 
 backend-typecheck:
-	uv run --project backend --locked mypy --config-file backend/pyproject.toml backend/src backend/tests scripts/contracts.py scripts/assert_health.py scripts/check_backend_coverage.py scripts/check_migrations.py
+	uv run --project backend --locked mypy --config-file backend/pyproject.toml backend/src backend/tests scripts/contracts.py scripts/assert_health.py scripts/check_backend_coverage.py scripts/check_migrations.py scripts/install_stockfish.py
 
 backend-static: backend-format backend-lint backend-typecheck
 
@@ -176,5 +180,26 @@ acceptance-stage-4: acceptance-stage-4c
 	$(MAKE) smoke
 	bash scripts/stage4_e2e.sh
 
+acceptance-stage-6a: acceptance-stage-4c
+	uv run --project backend --locked pytest -c backend/pyproject.toml -o addopts='' backend/tests/test_stage6_jobs.py
+	@test -s docs/decisions/0009-sql-jobs-and-local-engine-runtime.md
+
+acceptance-stage-6b: acceptance-stage-6a install-stockfish
+	uv run --project backend --locked pytest -c backend/pyproject.toml -o addopts='' backend/tests/test_stage6_engine.py backend/tests/test_stage6_real_stockfish.py backend/tests/test_stage6_tool_manifest.py
+	$(PNPM) --dir frontend exec vitest run src/app/AnalysisPage.test.tsx --coverage=false
+
+acceptance-stage-6c: acceptance-stage-6b
+	uv run --project backend --locked pytest -c backend/pyproject.toml -o addopts='' backend/tests/test_stage6_analysis_policy.py backend/tests/test_stage6_api.py
+
+acceptance-stage-6d: acceptance-stage-6c
+	uv run --project backend --locked pytest -c backend/pyproject.toml -o addopts='' backend/tests/test_stage6_engine.py::test_play_review_and_save_course_draft_use_existing_knowledge_layer
+	$(PNPM) --dir frontend exec vitest run src/app/AnalysisPage.test.tsx --coverage=false
+	$(MAKE) check-contracts
+
+acceptance-stage-6: acceptance-stage-6d
+	$(MAKE) verify
+	$(MAKE) smoke
+	bash scripts/stage6_e2e.sh
+
 # CI keeps one stable entry point while inheriting the current stage gate.
-acceptance: acceptance-stage-4
+acceptance: acceptance-stage-6
