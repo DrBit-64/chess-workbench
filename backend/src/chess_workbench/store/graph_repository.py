@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from uuid import UUID
 
 from sqlalchemy import select
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -36,10 +37,43 @@ async def find_position(session: AsyncSession, position_id: UUID) -> Position | 
     return await session.get(Position, position_id)
 
 
+def _uses_sqlite_upsert(session: AsyncSession) -> bool:
+    return session.get_bind().dialect.name == "sqlite"
+
+
 async def get_or_create_position(
     session: AsyncSession,
     state: PositionState,
 ) -> StoredPosition:
+    # A SQLite read-before-write upsert can deadlock: concurrent deferred
+    # transactions all acquire SHARED locks for the SELECT and then cannot
+    # upgrade while another writer is waiting to commit.  Start with one
+    # atomic INSERT .. ON CONFLICT instead.  This also lets SQLite's busy
+    # timeout serialize contenders without leaking database-is-locked errors.
+    if _uses_sqlite_upsert(session):
+        inserted_id = (
+            await session.execute(
+                sqlite_insert(Position)
+                .values(
+                    position_key=state.position_key,
+                    canonical_fen=state.canonical_fen,
+                    piece_placement=state.piece_placement,
+                    side_to_move=state.side_to_move,
+                    castling_rights=state.castling_rights,
+                    en_passant=state.en_passant,
+                    material_signature=state.material_signature,
+                )
+                .on_conflict_do_nothing(index_elements=[Position.position_key])
+                .returning(Position.id)
+            )
+        ).scalar_one_or_none()
+        stored = await session.scalar(
+            select(Position).where(Position.position_key == state.position_key)
+        )
+        if stored is None:
+            raise GraphInvariantError("SQLite position upsert did not return a persisted row")
+        return StoredPosition(stored, created=inserted_id is not None)
+
     existing = await session.scalar(
         select(Position).where(Position.position_key == state.position_key)
     )

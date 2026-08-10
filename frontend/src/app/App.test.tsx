@@ -26,7 +26,7 @@ describe('App routing', () => {
 
     expect(
       screen.getByRole('heading', {
-        name: /把资料、局面与练习连成一条学习闭环/,
+        name: /你的棋局知识工作台/,
       }),
     ).toBeTruthy();
   });

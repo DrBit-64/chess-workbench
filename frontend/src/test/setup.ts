@@ -27,3 +27,6 @@ class ResizeObserverStub implements ResizeObserver {
 }
 
 vi.stubGlobal('ResizeObserver', ResizeObserverStub);
+
+const getComputedStyle = window.getComputedStyle.bind(window);
+window.getComputedStyle = (element: Element) => getComputedStyle(element);

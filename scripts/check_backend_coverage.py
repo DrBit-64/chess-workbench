@@ -6,13 +6,7 @@ from pathlib import Path
 from typing import Any, cast
 
 MINIMUM_LINE_PERCENT = 80.0
-# Per-stage subunit gates (acceptance-stage-2a/2b/2c) already enforce
-# 90 % branch coverage on the critical domain modules.  The global
-# branch floor is intentionally lower than the eventual project target
-# (75 %) to avoid blocking early-stage work where service / repository
-# edge paths and thin serializers are exercised later by integration
-# and Playwright E2E tests.
-MINIMUM_BRANCH_PERCENT = 45.0
+MINIMUM_BRANCH_PERCENT = 75.0
 
 
 def percentage(covered: int, total: int) -> float:

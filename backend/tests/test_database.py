@@ -1,7 +1,12 @@
 from pathlib import Path
 
+import pytest
+from chess_workbench.schemas.domain import SourceCreate
+from chess_workbench.services import ContentService
+from chess_workbench.store.base import Base
 from chess_workbench.store.database import Database
-from sqlalchemy import text
+from chess_workbench.store.models import Source
+from sqlalchemy import func, select, text
 
 
 async def test_ping_creates_parent_directory_and_database(tmp_path: Path) -> None:
@@ -45,5 +50,25 @@ async def test_session_factory_creates_an_independent_unit_of_work() -> None:
             result = await session.execute(text("SELECT 1"))
 
         assert result.scalar_one() == 1
+    finally:
+        await database.close()
+
+
+async def test_outer_transaction_rolls_back_rows_flushed_in_savepoint(tmp_path: Path) -> None:
+    """Regression: sqlite legacy mode must not commit a released first SAVEPOINT."""
+    database = Database(f"sqlite+aiosqlite:///{tmp_path / 'savepoint-rollback.db'}")
+    try:
+        async with database.engine.begin() as connection:
+            await connection.run_sync(Base.metadata.create_all)
+
+        with pytest.raises(RuntimeError, match="fault after savepoint"):
+            async with database.session() as session, session.begin():
+                await ContentService(session).create_source(
+                    SourceCreate(kind="pgn", title="Must roll back")
+                )
+                raise RuntimeError("fault after savepoint")
+
+        async with database.session() as session:
+            assert await session.scalar(select(func.count()).select_from(Source)) == 0
     finally:
         await database.close()

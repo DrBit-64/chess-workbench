@@ -13,7 +13,13 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <ConfigProvider
       theme={{
         algorithm: theme.defaultAlgorithm,
-        token: { colorPrimary: '#315c45', borderRadius: 8 },
+        token: {
+          colorPrimary: '#315c45',
+          colorLink: '#0b57c0',
+          colorLinkHover: '#073f91',
+          colorTextSecondary: '#595959',
+          borderRadius: 8,
+        },
       }}
     >
       <SWRConfig value={{ revalidateOnFocus: false }}>

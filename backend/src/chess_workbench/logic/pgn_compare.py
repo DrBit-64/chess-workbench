@@ -1,97 +1,68 @@
-"""Semantic PGN comparison (Stage 3C round-trip verifier)."""
+"""Complete, iterative semantic PGN comparison."""
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from dataclasses import dataclass
 
-if TYPE_CHECKING:
-    from chess_workbench.logic.pgn import PgnGame
+from chess_workbench.logic.pgn import PgnDocument, PgnGame, PgnNode
 
 
+@dataclass(frozen=True, slots=True)
 class PgnCompareResult:
-    """Outcome of a semantic PGN comparison."""
-
-    __slots__ = ("equivalent", "differences")
-
-    def __init__(self, equivalent: bool, differences: list[str]) -> None:
-        self.equivalent = equivalent
-        self.differences = differences
+    equivalent: bool
+    differences: tuple[str, ...]
 
 
-_STANDARD_HEADERS = frozenset(
-    {
-        "event",
-        "site",
-        "date",
-        "round",
-        "white",
-        "black",
-        "result",
-        "fen",
-        "setup",
-    }
-)
+def compare_documents(original: PgnDocument, reimported: PgnDocument) -> PgnCompareResult:
+    differences: list[str] = []
+    if len(original.games) != len(reimported.games):
+        differences.append(f"document: {len(original.games)} vs {len(reimported.games)} games")
+    for game_index, (left, right) in enumerate(zip(original.games, reimported.games, strict=False)):
+        _compare_game(left, right, f"game[{game_index}]", differences)
+    return PgnCompareResult(not differences, tuple(differences))
 
 
 def compare_games(original: PgnGame, reimported: PgnGame) -> PgnCompareResult:
-    """Compare two parsed PGN games for semantic equivalence.
-
-    Returns a :class:`PgnCompareResult` whose ``equivalent`` field is
-    ``True`` when the two games express the same chess content.
-    """
-    diffs: list[str] = []
-
-    _compare_headers(original.headers, reimported.headers, diffs)
-    _compare_nodes(original.root, reimported.root, path="root", diffs=diffs)
-
-    return PgnCompareResult(
-        equivalent=len(diffs) == 0,
-        differences=diffs,
-    )
+    differences: list[str] = []
+    _compare_game(original, reimported, "game[0]", differences)
+    return PgnCompareResult(not differences, tuple(differences))
 
 
-# ── helpers ───────────────────────────────────────────────────────
+def _compare_game(left: PgnGame, right: PgnGame, path: str, differences: list[str]) -> None:
+    left_headers = tuple((item.name, item.value) for item in left.header_items)
+    right_headers = tuple((item.name, item.value) for item in right.header_items)
+    if left_headers != right_headers:
+        differences.append(f"{path}: headers {left_headers!r} != {right_headers!r}")
+    if left.result != right.result:
+        differences.append(f"{path}: result {left.result!r} != {right.result!r}")
 
-
-def _compare_headers(
-    orig: dict[str, str],
-    reimp: dict[str, str],
-    diffs: list[str],
-) -> None:
-    for key in _STANDARD_HEADERS:
-        a = orig.get(key, "")
-        b = reimp.get(key, "")
-        if a != b:
-            diffs.append(f"header [{key}]: {a!r} != {b!r}")
-
-
-def _compare_nodes(
-    orig: Any,
-    reimp: Any,
-    *,
-    path: str,
-    diffs: list[str],
-) -> None:
-    """Recursively compare two PgnNode trees."""
-    # UCI comparison (non-root nodes only).
-    if orig.uci is not None and reimp.uci is not None and orig.uci != reimp.uci:
-        diffs.append(f"{path}: UCI {orig.uci} != {reimp.uci}")
-
-    # NAG
-    if orig.nag != reimp.nag:
-        diffs.append(f"{path}: NAG {orig.nag} != {reimp.nag}")
-
-    # Comment (trimmed).
-    oc = orig.comment.strip() if orig.comment else ""
-    rc = reimp.comment.strip() if reimp.comment else ""
-    if oc != rc:
-        diffs.append(f"{path}: comment {oc!r} != {rc!r}")
-
-    # Variation count.
-    if len(orig.children) != len(reimp.children):
-        diffs.append(f"{path}: {len(orig.children)} vs {len(reimp.children)} children")
-        return
-
-    for i, (oc, rc) in enumerate(zip(orig.children, reimp.children, strict=False)):
-        child_path = f"{path}/{oc.san or 'root'}[{i}]"
-        _compare_nodes(oc, rc, path=child_path, diffs=diffs)
+    stack: list[tuple[PgnNode, PgnNode, str]] = [(left.root, right.root, f"{path}/root")]
+    while stack:
+        left_node, right_node, node_path = stack.pop()
+        for field in (
+            "ply",
+            "fen",
+            "san",
+            "uci",
+            "nags",
+            "starting_comment",
+            "comment",
+        ):
+            left_value = getattr(left_node, field)
+            right_value = getattr(right_node, field)
+            if left_value != right_value:
+                differences.append(f"{node_path}: {field} {left_value!r} != {right_value!r}")
+        if len(left_node.children) != len(right_node.children):
+            differences.append(
+                f"{node_path}: {len(left_node.children)} vs {len(right_node.children)} children"
+            )
+        for child_index, (left_child, right_child) in reversed(
+            list(enumerate(zip(left_node.children, right_node.children, strict=False)))
+        ):
+            stack.append(
+                (
+                    left_child,
+                    right_child,
+                    f"{node_path}/{child_index}:{left_child.uci or 'root'}",
+                )
+            )

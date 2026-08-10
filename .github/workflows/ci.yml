@@ -14,7 +14,7 @@ jobs:
 
     services:
       mysql:
-        image: mysql:8.4
+        image: mysql:8.4@sha256:b3b90af2a6552ae30c266fdb7d5dd55f3afb72404bb78d37fe8a23eb857fd3fb
         env:
           MYSQL_ROOT_PASSWORD: testpass
           MYSQL_DATABASE: chesstest
@@ -42,15 +42,12 @@ jobs:
           enable-cache: true
           python-version: "3.13"
 
-      - name: Install, check, test, build, and run startup smoke
-        run: make acceptance
-
-      - name: Run MySQL compatibility tests
-        env:
-          CHESS_WORKBENCH_MYSQL_URL: mysql+asyncmy://root:testpass@127.0.0.1:3306/chesstest
+      - name: Install Chromium for Stage 4 browser acceptance
         run: |
-          CHESS_WORKBENCH_MYSQL_URL="${CHESS_WORKBENCH_MYSQL_URL}" uv run --project backend --locked pytest \
-            -c backend/pyproject.toml \
-            -o addopts='' \
-            backend/tests/test_mysql_compat.py \
-            -v --no-cov
+          pnpm install --frozen-lockfile
+          pnpm --dir frontend exec playwright install --with-deps chromium
+
+      - name: Run cumulative Stage 4 acceptance
+        env:
+          MYSQL_ACCEPTANCE_URL: mysql+asyncmy://root:testpass@127.0.0.1:3306/chesstest
+        run: make acceptance

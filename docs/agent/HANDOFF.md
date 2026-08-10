@@ -1,229 +1,141 @@
 # Agent handoff
 
-## Current branch and baseline
+## Current branch and ownership
 
 - Branch: `main`
-- Review baseline: `949e304 docs: freeze stage 2 and 3 remediation contracts`
-- Current working tree: uncommitted DS-MYSQL-01 implementation plus this Codex review update; do
-  not start another task or mix in unrelated edits.
+- Review baseline: `0705701 feat(codex): pass DS-MYSQL-01`
+- Worktree: uncommitted Codex changes spanning the accepted Stage 2/3 remediation and Stage 4
+  editor MVP. Preserve the complete worktree; do not treat individual uncommitted files as
+  independent patches.
+- User-authorized boundary: Stage 4 implementation and both interactive-review fix sets are
+  complete. Continue product review on request; otherwise the revised AI-book-first route starts at
+  Stage 6A. Stage 4E remains optional backlog.
 
-## Current objective
+## Accepted status
 
-Remediate the independent Stage 2/3 acceptance audit before starting Stage 4.
-
-Stage 2 and Stage 3 were previously marked complete, but Codex's 2026-08-09 audit found
-blocking requirement gaps and false-positive acceptance checks. The durable evidence and exact
-remediation order are in `docs/agent/stage-2-3-audit.md`.
-
-## Current status
-
-| Unit | Status after independent audit |
+| Unit | Status and evidence |
 |---|---|
-| 2A position identity/domain kernel | Accepted |
-| 2B SQLite graph persistence | Accepted on tested paths |
-| 2C HTTP content boundary | Partial; Source/Span/Note APIs absent |
-| 2D dual course mode/source-note link | Partial; fields exist, semantics not enforced |
-| 3A PGN parser | Partial; basic parser works, lossless/bounded semantics do not |
-| 3B PGN import | Not accepted |
-| 3C PGN export/comparator | Not accepted |
-| 3D MySQL parity | Partial overall — DS-MYSQL-01 accepted; image digest and cumulative CI gate remain |
+| 2A–2D | Accepted: position identity, graph persistence, content HTTP boundary, dual-course and citation/reference-card invariants |
+| 3A–3D | Accepted: bounded semantic PGN parse/import/export, idempotent CAS/receipts, SQLite/MySQL parity |
+| Stage 4 prerequisite | Accepted: ADR 0006 ordered content blocks, deterministic legacy/PGN backfill, lifecycle coupling |
+| 4A | Accepted: real Dashboard, searchable/filterable Learn catalog, Sources page and navigation |
+| 4B | Accepted: three-column editor, initial/FEN roots, board/click/UCI moves, Lichess-style legal targets, 100 ms animation, current path, branches, transpositions and reload |
+| 4C | Accepted: readable ordered prose, SourceSpan citations, atomic note/block creation, sanitized Markdown, undo/redo, failure recovery, immutable history, source-context drawers and atomic position/path-merged Explorer publication |
+| 4D | Accepted: fresh-database Chromium path, backend bypass rejection, retry/idempotency, accessibility and desktop viewports |
 
-Do not begin Stage 4 on the assumption that Stage 3 is complete.
+Required Stage 4 items remaining: **0**.
 
-## Baseline verification before DS-MYSQL-01
+## Final cumulative verification (2026-08-10)
 
-- `make acceptance`: exit 0 using pinned Node/pnpm and Python environments.
-  - backend: 166 passed, 3 MySQL skipped, 2 connection-cleanup warnings;
-  - actual backend line coverage: 86.72%;
-  - actual backend branch coverage: 57.34% against the documented 75% target;
-  - frontend: 5 passed; lint/typecheck/build passed;
-  - SQLite migration, contracts, and smoke passed.
-- Existing three MySQL tests pass against disposable MySQL 8.4, but they do not run Alembic.
-- Real MySQL Alembic upgrade/check pass; downgrade to base fails with MySQL error 1553 at
-  migration 0002's `ix_source_spans_source_version_id` drop.
-- Runtime OpenAPI has no Source/Span/Note or PGN import/export paths.
-- Same-PGN repeat import doubles Course/Module/Occurrence counts while Position count remains
-  stable and Source remains zero.
-- All-12 semantic PGN round-trip loses two root comments; all non-empty exports omit the movetext
-  result marker; comparator counterexamples produce false positives.
-- Legal 500-ply parsing and 1050-ply export hit bare recursion errors.
+`make acceptance-stage-4` exited 0 with isolated ports and repository-pinned toolchains.
 
-## Files changed by Codex in this handoff
+- Stage 2/3 focused cumulative gates passed; real pinned MySQL 8.4 ran 4/4 tests with no
+  skip/xfail and stopped its disposable container.
+- Backend full suite: 247 passed, 4 expected conditional MySQL skips in the ordinary SQLite run.
+- Backend coverage: 92.47% line / 75.06% branch (floors: 80% / 75%).
+- Frontend: format, ESLint, strict TypeScript, 26/26 Vitest tests and production build passed;
+  frontend statement/branch coverage is 95.37% / 85.47%.
+- OpenAPI/TypeScript drift check and SQLite empty→head→metadata check→base migration round-trip
+  passed.
+- Direct API and Vite-proxy smoke passed.
+- Playwright: 1/1 full Chromium editor scenario passed against a fresh temporary SQLite database;
+  it asserts readable/cited narrative persistence, atomic position notes, source-context navigation,
+  merged publication, hidden source chapter names, real-board legal-target markers, axe
+  serious/critical scan and 1280×720, 1440×900, 1920×1080 layouts.
+- `make acceptance` is the stable alias for the same cumulative Stage 4 gate.
 
-- `docs/agent/stage-2-3-audit.md`: added detailed evidence and requirement matrix.
-- `docs/agent/HANDOFF.md`: replaced the inaccurate completion handoff with audited state.
-- `PLANS.md`: changed the active goal from Stage 4 to Stage 2/3 remediation.
-- `docs/development-plan.md`: removed false Stage 2/3 completion labels while preserving the
-  intended acceptance contract, then bound Stage 3 to the accepted PGN ADRs.
-- `docs/decisions/0006-chapter-content-block-format.md`: accepted the Block decision and defined
-  Stage 3's implicit MoveSequence transition.
-- `docs/decisions/0007-source-ordered-pgn-variation-trees.md`: froze traditional/RAV/occurrence
-  mapping and export scopes.
-- `docs/decisions/0008-pgn-import-export-contract.md`: froze semantic preservation, Source/CAS,
-  idempotency, HTTP, transaction, error, and resource contracts.
-- `docs/decisions/README.md`, `docs/architecture/overview.md`, `AGENTS.md`: synchronized stable
-  architecture and command references.
-- `docs/agent/tasks/DS-MYSQL-01.md`: added the first bounded DeepSeek remediation packet.
+## First interactive-review delta
 
-The Codex architecture commit `949e304` changed no production code, tests, migrations, dependency
-files, or generated contracts. The current uncommitted DeepSeek diff does change migrations and
-tests as recorded below.
+- `backend/src/chess_workbench/services/content.py` and
+  `backend/tests/test_stage4_authoring.py`: merge publications by root Position and shared
+  parent/MoveEdge path, preserve idempotent live note references, and cover empty/existing Explorer
+  publication.
+- `frontend/src/app/CourseEditor.tsx`, `boardInteraction.ts` and their tests: aggregate Explorer
+  components into one course-level view, hide source Module titles, show legal-target feedback and
+  use the 100 ms animation.
+- `frontend/e2e/editor-mvp.spec.ts` and `frontend/src/styles.css`: assert the real rendered legal
+  marker and merged Explorer flow in Chromium, then fix the select-placeholder contrast issue found
+  by axe.
+- `docs/decisions/0005-dual-course-mode.md`, `docs/development-plan.md`, `PLANS.md` and this handoff:
+  record the revised product semantics, evidence and interactive-review boundary.
+- No API schema or database migration was required for this feedback set.
 
-## Architecture decisions completed
+## Stage 4 implementation highlights
 
-ADR 0006–0008 now define the previously ambiguous Stage 3 behavior:
+- Migrations `0006`, `0007` and `0008` add ordered `CourseModule` blocks, immutable content
+  revisions, Explorer publication receipts and narrative-to-SourceSpan citations. MySQL migration
+  parity is covered by the cumulative gate.
+- Module roots and MoveSequence blocks remain lifecycle-coupled. Replacing an archived root reuses
+  its archived move block so ordering uniqueness cannot strand a module and its history is kept.
+- Every persisted move goes through the backend `python-chess` validation path. `chess.js` only
+  preflights drag, click-to-move and accessible keyboard UCI entry.
+- Editor navigation is path-based and preserves local occurrence comments/NAG/source context while
+  global Positions/MoveEdges merge transpositions.
+- Markdown is sanitized before preview. Failed saves remain recoverable; retry does not duplicate
+  writes. History is immutable and Explorer publication is atomic.
+- Traditional courses default to a wide ordered reading surface. Narrative blocks support one or
+  more SourceSpan citations; position-linked KnowledgeNotes are inserted into that flow in the same
+  database transaction as the note itself. Explorer reference cards load adjacent source blocks in
+  a context drawer without copying source prose into the Explorer.
+- Explorer publication now reuses any occurrence at the source root Position, then merges each
+  shared child by parent occurrence plus MoveEdge. Multiple publication receipts may intentionally
+  point to one internal Module/component; disconnected FEN roots use anonymous entry labels instead
+  of source chapter titles.
+- Explorer UI aggregates all component editors at course level and groups equal entry Positions, so
+  legacy pre-fix data is also presented as one position graph without exposing source Module names.
+- Board click and drag-start selection show Lichess-style destination dots/capture rings plus
+  selected/last-move highlights. Programmatic movement animation is fixed at the requested 100 ms.
+- PGN import supports retry identity; Module and current-path PGN downloads use the accepted Stage 3
+  semantic layer.
+- Frontend routes are lazy-loaded. Playwright uses system Chromium when available and otherwise the
+  installed browser; temporary database/source files and server processes are cleaned up.
+- Make/smoke/E2E automatically fall back to `corepack pnpm` when no global `pnpm` binary exists.
+- `make dev-api` now runs Alembic `upgrade head` before serving, so a first-time interactive launch
+  does not fail with missing business tables.
 
-1. Traditional is source-organized with default-mainline reading; a MoveSequence may contain the
-   author's ordered variation tree. Occurrences remain single-parent and transpositions merge only
-   global Position/MoveEdge.
-2. Raw bytes identify a reusable Source asset; an immutable receipt and canonical fingerprint
-   identify one logical import across JSON/raw/multipart transports.
-3. Semantic round-trip includes every game, all unique headers, full starting FEN, result,
-   variation order, root/starting/normal comments, and all NAGs. Lexical formatting is not part of
-   equality.
-4. Import/CAS/SQL ordering, replay/conflict behavior, module/path/receipt export scopes, stable
-   errors, and fixed resource limits are explicit in ADR 0008.
+## Interactive handoff
 
-## Recommended next action
+From the repository root:
 
-**DS-MYSQL-01 is accepted.** The next bounded implementation task may pin the MySQL 8.4 image by
-digest and make the Stage 3/CI gates cumulative. Overall 3D remains partial until that wiring is
-implemented and independently reviewed.
+```bash
+cp .env.example .env  # only if .env does not already exist
+make bootstrap
+```
 
-The next architecture item still reserved for Codex is the full opening_explorer reference-card
-and publishing invariant design. It must be frozen before assigning the Stage 2D invariant repair.
+Then run `make dev-api` and `make dev-web` in separate terminals and open
+`http://127.0.0.1:5173`.
 
-### DS-MYSQL-01 implementation and Codex review record
+Suggested product review path:
 
-- **Modified files**: `backend/migrations/versions/20260806_0002_content_context.py`,
-  `backend/migrations/versions/20260806_0001_position_graph.py`,
-  `backend/tests/test_mysql_compat.py`, `scripts/check_mysql.py`,
-  `backend/tests/test_models.py`, `backend/tests/test_check_mysql_script.py`
-- **Root cause**: Both migrations' downgrade functions called `drop_index()` before `drop_table()`
-  on InnoDB. MySQL requires FK-enforcing indexes to remain until the table (and its FK) is dropped.
-  `drop_table()` already cleans up all indexes; the explicit `drop_index()` calls were redundant
-  and triggered MySQL error 1553.
-- **Accepted fix**: Removing the redundant `drop_index` calls lets real MySQL complete
-  `upgrade head → downgrade base → upgrade head`. Eight explicit index drops were removed across
-  migrations 0001 and 0002. Codex accepted the `test_models.py` counterfactual assertion because
-  restoring any explicit MySQL `DROP INDEX` makes it fail.
-- **MySQL test rewrite**: Replaced `Base.metadata.create_all/drop_all` with real
-  Alembic `upgrade("head") → downgrade("base") → upgrade("head")`. Tests pass
-  `CHESS_WORKBENCH_DATABASE_URL` via monkeypatch; `_current_revision` and `_present_tables`
-  use `create_async_engine` (the Alembic URL is `mysql+asyncmy`).
-- **Unique acceptance command**: `uv run --project backend --locked python scripts/check_mysql.py --container`
-- **Exit code**: 0
-- **Passed**: 3/3 (test_migration_upgrade_check_downgrade_upgrade, test_mysql_crud_round_trip, test_mysql_position_key_uniqueness)
-- **Container**: Started and stopped by the script (`--rm` flag). Output confirms "Container stopped".
-- **Initial blocking omission (resolved)**: the migration test contained `pass` instead of the required
-  `alembic.command.check(cfg)`. Codex ran `upgrade head → command.check(cfg)` directly against a
-  fresh MySQL 8.4 container; it exited 0 with `No new upgrade operations detected`. The claimed
-  variant-type false positive was not reproducible.
-- **Initial order dependency (resolved)**: the autouse fixture only set an environment variable. On a fresh
-  MySQL schema, running CRUD and position uniqueness before the migration test produced 2 failed /
-  1 passed (`courses` and `positions` did not exist). A session fixture or equivalent must establish
-  head schema independently of test collection order.
-- **Initial cleanup weakness (resolved)**: `_stop_container()` ignored the Docker exit code, while `main()` always
-  prints `Container stopped`; the script can therefore report cleanup success when cleanup failed.
-- **Codex verification**:
-  - unique command as submitted: exit 0, 3 passed, 0 skipped; container stopped;
-  - direct real-MySQL Alembic check: exit 0, no schema drift;
-  - reversed test order on a fresh MySQL: exit 1, 2 failed / 1 passed;
-  - changed-file Ruff format, Ruff lint, and mypy: passed;
-  - `git diff --check`: passed;
-  - full backend check was not completed because concurrent local pytest activity caused an
-    environment wait; it is not acceptance evidence.
+1. Add a manual Source.
+2. Create a traditional Course and a Module from both the initial position and a custom FEN.
+3. Enter moves by board drag/click and keyboard UCI; create two branches and switch paths.
+4. Add root/move Markdown and a citation; refresh and confirm persistence.
+5. Exercise undo/redo, history, PGN import, Module/current-line export and Explorer publication.
+6. Publish two traditional chapters sharing the initial position, open the Explorer, and confirm
+   there is one merged entry with combined branches and no source chapter-name list.
+7. Select and drag pieces on the board; confirm legal empty destinations use dots, captures use
+   rings, and movement feels like the 100 ms “fast” setting.
+8. In a traditional chapter, add cited narrative prose and a position explanation, refresh, and
+   confirm both appear in the ordered reading column; publish to Explorer and open the reference
+   card's original-context drawer.
 
-Corrective acceptance still uses the same unique command. It must execute a real
-`upgrade → check → downgrade → upgrade` cycle, provide order-independent schema setup, fail if
-container cleanup fails, and report 3 executed tests with no skip/xfail. Do not mark 3D accepted
-until Codex reruns the corrected command and the counterfactual order check.
+## Known non-blocking risks and deferred scope
 
-### Corrective-pass re-review
+- Ant Design emits `List` deprecation warnings in component tests; current behavior and production
+  build are correct, but replace it before the next Ant major upgrade. jsdom also emits a harmless
+  TextArea `NaN` height warning that does not reproduce in the Chromium acceptance path.
+- Existing Explorer rows created before this fix are merged at the UI/query presentation layer;
+  new publications merge physically. No destructive backfill migration was introduced.
+- The global graph visualization is Stage 4E backlog and intentionally does not block the editor
+  MVP or Stage 5.
+- Stage 5 repertoire/training, Stage 6 engine/tablebase/job infrastructure, Stage 7 Lichess,
+  Stage 8 OCR/AI and collaboration have not started.
+- Source CAS orphan garbage collection remains deferred to Stage 8; committed SQL references are
+  still checked for valid immutable assets.
 
-Resolved in the first corrective pass:
+## Next action
 
-- the real `alembic.command.check(cfg)` executes;
-- a session-scoped fixture establishes Alembic head independently of test order;
-- the unique container command passed 3/3 and the reversed node-id order passed 3/3 on separate
-  fresh MySQL 8.4 containers;
-- changed-file Ruff format/lint, mypy, the two focused migration-rendering tests, and
-  `git diff --check` passed;
-- with MySQL environment variables absent, all three integration tests skip without executing the
-  session fixture.
-
-Corrections made in the second pass:
-
-1. ~~Regex~~ → `assert "DROP INDEX" not in downgrade_ddl`.
-   Restoring `drop_index("ix_move_edges_to_position_id", ...)` in migration 0001
-   now fails this assertion.
-2. `test_rc` was initialised before `try`, removing the `UnboundLocalError`; its temporary broad
-   `except BaseException: pass` was rejected and then removed in the third pass.
-
-### Second corrective pass verification
-
-- `uv run --project backend --locked pytest …/test_check_mysql_script.py -v --no-cov -o addopts=''`:
-  exit 0, **5/5 passed** (success+cleanup, failure+cleanup, readiness+cleanup, success+cleanup-fail, readiness+cleanup-fail).
-- `uv run --project backend --locked python scripts/check_mysql.py --container`:
-  exit 0, **3/3 passed**, container stopped.
-- Reversed-order (CRUD → position → migration) on fresh MySQL:
-  exit 0, **3/3 passed**.
-- Counterfactual: restoring `drop_index` in migration 0001 triggers `test_migrations_render_mysql_specific_ddl`
-  failure with `assert "DROP INDEX" not in downgrade_ddl`.
-- Changed-file Ruff format/lint/mypy: clean.
-- `make acceptance-stage-2`: exit 0.
-- `git diff --check`: clean.
-
-### Third corrective pass (DS-MYSQL-01 final)
-
-**`except BaseException: pass` removed.** Control flow: `test_rc = 1` → `try: readiness + tests` →
-`finally: cleanup` → `return test_rc`. Readiness `TimeoutError`/`KeyboardInterrupt` propagate after
-cleanup.
-
-Codex final-review evidence on 2026-08-09:
-
-- full focused file plus DDL assertion: exit 0, **7/7 passed**;
-- the readiness-plus-cleanup-failure test alone: exit 1 with
-  `KeyError: 'check_mysql_script'`, proving test-order dependence;
-- project-standard `make backend-static`: exit 0;
-- changed-script Ruff format/lint and mypy with `backend/pyproject.toml`: exit 0;
-- unique MySQL command on port 19306: exit 0, **3/3 passed**, container stopped;
-- `git diff --check`: exit 0.
-
-The production-script blocker from the second review is resolved: `TimeoutError` and
-`KeyboardInterrupt` propagate after cleanup. Codex then removed the final unit-test order
-dependency by patching the shared `sys.stderr` directly instead of looking up an import created by
-an earlier test.
-
-Final acceptance evidence on 2026-08-09:
-
-- isolated readiness-plus-cleanup-failure node ID: exit 0, **1/1 passed**;
-- all script tests in reverse node-ID order plus the MySQL DDL assertion: exit 0,
-  **7/7 passed**;
-- project-standard `make backend-static`: exit 0;
-- changed-script Ruff format/lint and mypy with `backend/pyproject.toml`: exit 0;
-- exact unique MySQL command without extra arguments: exit 0, **3/3 passed**, no skip/xfail,
-  container stopped;
-- `git diff --check`: exit 0.
-
-DS-MYSQL-01 is accepted. Overall 3D remains partial pending the separately planned image-digest
-pin and cumulative Stage 3/CI gate.
-
-## Known risks
-
-- Existing green commands are not sufficient acceptance evidence until Make/CI coverage and
-  dependency wiring are repaired.
-- Source/Knowledge HTTP features cannot currently be used by a frontend.
-- Current PGN import can create duplicate user content and partial writes if a future caller does
-  not provide a correct outer transaction.
-- Current Course/Occurrence lifecycle operations can create multiple active roots or cross-module
-  paths.
-- Source CAS orphan garbage collection is deliberately deferred to Stage 8; Stage 3 still must
-  guarantee that committed SQL never references a missing or hash-mismatched file.
-
-## Earlier architecture-document verification
-
-These statements refer only to the committed architecture-document step at `949e304`, before
-DeepSeek began DS-MYSQL-01: no application command was rerun for that docs-only commit, while
-`git diff --check`, trailing-whitespace scan, and changed-file/status review passed. Current code
-review evidence is listed in the DS-MYSQL-01 record above.
+Collect any further interaction/visual feedback. When the user is ready to advance, start Stage 6A
+(SQL-backed reliable jobs), then prioritize Stage 8. Stage 5 and Stage 7 are deliberately deferred;
+the Stage 5-dependent engine answer-policy wiring remains the later Stage 6E integration tail.

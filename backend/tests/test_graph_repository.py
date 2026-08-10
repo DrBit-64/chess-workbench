@@ -2,14 +2,18 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import chess
 import pytest
 from chess_workbench.domain import PositionError, PositionState
+from chess_workbench.store import graph_repository
 from chess_workbench.store.base import Base
 from chess_workbench.store.database import Database
 from chess_workbench.store.graph_repository import (
+    GraphInvariantError,
+    _assert_edge_matches,
+    find_position,
     get_or_create_move,
     get_or_create_position,
 )
@@ -40,15 +44,23 @@ async def test_position_identity_converges_while_full_state_stays_external(
         assert first.position.id == second.position.id
         assert first.position.canonical_fen.endswith(" 0 1")
         assert "99 73" not in first.position.canonical_fen
+        async with database.session() as session:
+            assert await find_position(session, first.position.id) is not None
     finally:
         await database.close()
 
 
-async def test_move_creation_is_legal_atomic_and_idempotent(tmp_path: Path) -> None:
+async def test_move_creation_is_legal_atomic_and_idempotent(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     database = Database(f"sqlite+aiosqlite:///{tmp_path / 'moves.db'}")
 
     try:
         await create_schema(database)
+        # Exercise the portable fallback used by MySQL while retaining a
+        # deterministic local database fixture for the focused Stage 2B gate.
+        monkeypatch.setattr(graph_repository, "_uses_sqlite_upsert", lambda _session: False)
         async with database.session() as session, session.begin():
             first = await get_or_create_move(session, PositionState(chess.STARTING_FEN), "e2e4")
             repeated = await get_or_create_move(session, PositionState(chess.STARTING_FEN), "e2e4")
@@ -113,3 +125,19 @@ async def test_concurrent_position_creation_converges_on_one_row(tmp_path: Path)
         assert count == 1
     finally:
         await database.close()
+
+
+def test_persisted_edge_corruption_is_detected() -> None:
+    move = PositionState(chess.STARTING_FEN).apply_uci("e2e4")
+    target = Position.from_state(move.after)
+    target.id = uuid4()
+    edge = MoveEdge(
+        from_position_id=uuid4(),
+        to_position_id=uuid4(),
+        uci=move.uci,
+        san=move.san,
+    )
+    with pytest.raises(GraphInvariantError, match="disagrees"):
+        _assert_edge_matches(edge, target, move)
+    edge.to_position_id = target.id
+    _assert_edge_matches(edge, target, move)

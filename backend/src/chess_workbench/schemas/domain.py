@@ -43,6 +43,9 @@ SideToMove = Literal["w", "b"]
 SourceKind = Literal["book", "video", "article", "web", "pgn", "game", "manual", "other"]
 CourseStatus = Literal["draft", "published"]
 CourseMode = Literal["traditional", "opening_explorer"]
+HistoryEntityType = Literal[
+    "course_module", "course_content_block", "course_occurrence", "knowledge_note"
+]
 ReviewStatus = Literal["draft", "approved", "rejected"]
 NoteType = Literal[
     "general",
@@ -64,6 +67,14 @@ ErrorCode = Literal[
     "resource_referenced",
     "ambiguous_context",
     "validation_error",
+    "payload_too_large",
+    "unsupported_media_type",
+    "invalid_pgn",
+    "pgn_limit_exceeded",
+    "idempotency_conflict",
+    "course_mode_conflict",
+    "pgn_not_exportable",
+    "source_storage_unavailable",
 ]
 
 
@@ -186,6 +197,17 @@ class CourseRead(VersionedRead):
     mode: CourseMode
 
 
+class DashboardSummary(StrictContract):
+    course_count: NonNegativeInt
+    traditional_course_count: NonNegativeInt
+    explorer_course_count: NonNegativeInt
+    module_count: NonNegativeInt
+    source_count: NonNegativeInt
+    knowledge_note_count: NonNegativeInt
+    position_count: NonNegativeInt
+    recent_courses: list[CourseRead]
+
+
 class CourseUpdate(VersionedUpdate):
     title: Title | None = None
     description: Description | None = None
@@ -231,6 +253,89 @@ class CourseModuleUpdate(VersionedUpdate):
     sort_order: NonNegativeInt | None = None
     archived: bool | None = None
     _non_nullable_updates = frozenset({"title", "description", "sort_order", "archived"})
+
+
+ContentBlockKind = Literal["section_header", "narrative", "move_sequence", "knowledge_note"]
+
+
+class CourseContentBlockCreate(StrictContract):
+    module_id: EntityId
+    kind: ContentBlockKind
+    sort_order: NonNegativeInt
+    heading: Title | None = None
+    markdown: Markdown | None = None
+    root_occurrence_id: EntityId | None = None
+    knowledge_note_id: EntityId | None = None
+    source_span_ids: list[EntityId] = Field(default_factory=list, max_length=100)
+
+    @model_validator(mode="after")
+    def payload_matches_kind(self) -> CourseContentBlockCreate:
+        present = {
+            "heading": self.heading is not None,
+            "markdown": self.markdown is not None,
+            "root_occurrence_id": self.root_occurrence_id is not None,
+            "knowledge_note_id": self.knowledge_note_id is not None,
+        }
+        expected = {
+            "section_header": "heading",
+            "narrative": "markdown",
+            "move_sequence": "root_occurrence_id",
+            "knowledge_note": "knowledge_note_id",
+        }[self.kind]
+        if present[expected] is not True or sum(present.values()) != 1:
+            raise ValueError(f"{self.kind} requires only {expected}")
+        if self.source_span_ids and self.kind != "narrative":
+            raise ValueError("only narrative blocks may cite source spans")
+        if len(self.source_span_ids) != len(set(self.source_span_ids)):
+            raise ValueError("source_span_ids must be unique")
+        return self
+
+
+class CourseContentBlockRead(VersionedRead):
+    module_id: EntityId
+    kind: ContentBlockKind
+    sort_order: NonNegativeInt
+    heading: Title | None = None
+    markdown: Markdown | None = None
+    root_occurrence_id: EntityId | None = None
+    knowledge_note_id: EntityId | None = None
+    source_span_ids: list[EntityId]
+
+
+class CourseContentBlockUpdate(VersionedUpdate):
+    sort_order: NonNegativeInt | None = None
+    heading: Title | None = None
+    markdown: Markdown | None = None
+    source_span_ids: list[EntityId] | None = Field(default=None, max_length=100)
+    archived: bool | None = None
+    _non_nullable_updates = frozenset({"sort_order", "archived"})
+
+    @model_validator(mode="after")
+    def only_editable_payload_may_be_supplied(self) -> CourseContentBlockUpdate:
+        if self.heading is not None and self.markdown is not None:
+            raise ValueError("a content block cannot contain both heading and markdown")
+        if self.source_span_ids is not None and len(self.source_span_ids) != len(
+            set(self.source_span_ids)
+        ):
+            raise ValueError("source_span_ids must be unique")
+        return self
+
+
+class CourseKnowledgeNoteBlockCreate(StrictContract):
+    """Create one local position note and place it in a Module atomically."""
+
+    occurrence_id: EntityId
+    note_type: NoteType = "general"
+    markdown: Markdown
+    source_span_ids: list[EntityId] = Field(default_factory=list, max_length=100)
+    review_status: ReviewStatus = "approved"
+
+    @field_validator("source_span_ids")
+    @classmethod
+    def source_spans_must_be_unique(cls, value: list[UUID]) -> list[UUID]:
+        if len(value) != len(set(value)):
+            raise ValueError("source_span_ids must be unique")
+        return value
 
 
 class SourceCreate(StrictContract):
@@ -378,6 +483,12 @@ class SourceSpanCreate(StrictContract):
     ocr_text: Description | None = None
     confidence: Annotated[float, Field(ge=0, le=1)] | None = None
 
+    @model_validator(mode="after")
+    def coordinates_require_a_file(self) -> SourceSpanCreate:
+        if not isinstance(self.locator, WholeSpan) and self.source_file_id is None:
+            raise ValueError("page, video, and text locators require source_file_id")
+        return self
+
 
 class SourceSpanRead(VersionedRead):
     source_version_id: EntityId
@@ -395,6 +506,24 @@ class SourceSpanUpdate(VersionedUpdate):
     confidence: Annotated[float, Field(ge=0, le=1)] | None = None
     archived: bool | None = None
     _non_nullable_updates = frozenset({"locator", "archived"})
+
+
+class CitableSourceCreate(StrictContract):
+    """Create a human-entered Source, first version, and whole-work span atomically."""
+
+    kind: Literal["manual", "web"] = "manual"
+    title: Title
+    author: Title | None = None
+    description: Description = ""
+    external_url: AnyHttpUrl | None = None
+    version_label: Title = "manual"
+    quote: Description | None = None
+
+
+class CitableSourceRead(StrictContract):
+    source: SourceRead
+    source_version: SourceVersionRead
+    source_span: SourceSpanRead
 
 
 class RootOccurrenceCreate(StrictContract):
@@ -436,6 +565,19 @@ class OccurrenceRead(VersionedRead):
     def parent_and_move_must_form_a_pair(self) -> OccurrenceRead:
         if (self.parent_id is None) != (self.inbound_move_edge_id is None):
             raise ValueError("parent_id and inbound_move_edge_id must both be set or both be null")
+        return self
+
+
+class EditorOccurrenceRead(OccurrenceRead):
+    inbound_uci: UciMove | None = None
+    inbound_san: NonEmptyText | None = None
+
+    @model_validator(mode="after")
+    def move_labels_match_root_state(self) -> EditorOccurrenceRead:
+        if (self.parent_id is None) != (self.inbound_uci is None):
+            raise ValueError("root occurrences omit move labels; child occurrences require them")
+        if (self.inbound_uci is None) != (self.inbound_san is None):
+            raise ValueError("inbound_uci and inbound_san must form a pair")
         return self
 
 
@@ -489,7 +631,7 @@ class KnowledgeNoteCreate(StrictContract):
     target: GlobalNoteTarget | None = None
     source_note_id: EntityId | None = None
     note_type: NoteType = "general"
-    markdown: Markdown
+    markdown: Markdown | None = None
     source_span_ids: list[EntityId] = Field(default_factory=list, max_length=100)
     review_status: ReviewStatus = "approved"
 
@@ -499,6 +641,17 @@ class KnowledgeNoteCreate(StrictContract):
             raise ValueError("provide occurrence_id for a local note or one explicit global target")
         if len(self.source_span_ids) != len(set(self.source_span_ids)):
             raise ValueError("source_span_ids must be unique")
+        if self.source_note_id is None and self.markdown is None:
+            raise ValueError("an original knowledge note requires markdown")
+        if self.source_note_id is not None:
+            if self.occurrence_id is None:
+                raise ValueError("a reference card must target an occurrence")
+            if self.markdown is not None:
+                raise ValueError(
+                    "a reference card renders its source note and must not copy markdown"
+                )
+            if self.source_span_ids:
+                raise ValueError("a reference card inherits citations from its source note")
         return self
 
 
@@ -506,9 +659,14 @@ class KnowledgeNoteRead(VersionedRead):
     target: NoteTarget
     source_note_id: EntityId | None = None
     note_type: NoteType
-    markdown: Markdown
+    markdown: Markdown | None = None
     source_span_ids: list[EntityId]
     review_status: ReviewStatus
+
+
+class CourseKnowledgeNoteBlockRead(StrictContract):
+    note: KnowledgeNoteRead
+    block: CourseContentBlockRead
 
 
 class KnowledgeNoteUpdate(VersionedUpdate):
@@ -527,3 +685,58 @@ class KnowledgeNoteUpdate(VersionedUpdate):
         if value is not None and len(value) != len(set(value)):
             raise ValueError("source_span_ids must be unique")
         return value
+
+
+class EditorKnowledgeNoteRead(KnowledgeNoteRead):
+    """An editor note plus its live rendered source when it is a reference card."""
+
+    rendered_markdown: Markdown
+    rendered_source_span_ids: list[EntityId]
+    source_course_id: EntityId
+    source_module_id: EntityId | None = None
+    source_occurrence_id: EntityId
+
+
+class CourseModuleEditorRead(StrictContract):
+    module: CourseModuleRead
+    content_blocks: list[CourseContentBlockRead]
+    occurrences: list[EditorOccurrenceRead]
+    notes: list[EditorKnowledgeNoteRead]
+
+
+class ContentRevisionRead(ImmutableRead):
+    entity_type: HistoryEntityType
+    entity_id: EntityId
+    entity_version: VersionNumber
+    snapshot: dict[str, JsonValue]
+
+
+class ContentHistoryRead(StrictContract):
+    entity_type: HistoryEntityType
+    entity_id: EntityId
+    current_version: VersionNumber
+    revisions: list[ContentRevisionRead]
+
+
+class PublishModulesRequest(StrictContract):
+    module_ids: list[EntityId] = Field(min_length=1, max_length=100)
+
+    @field_validator("module_ids")
+    @classmethod
+    def module_ids_must_be_unique(cls, value: list[UUID]) -> list[UUID]:
+        if len(value) != len(set(value)):
+            raise ValueError("module_ids must be unique")
+        return value
+
+
+class ModulePublicationRead(ImmutableRead):
+    target_course_id: EntityId
+    source_module_id: EntityId
+    target_module_id: EntityId
+    occurrence_count: NonNegativeInt
+    note_count: NonNegativeInt
+    replayed: bool
+
+
+class PublishModulesRead(StrictContract):
+    publications: list[ModulePublicationRead]

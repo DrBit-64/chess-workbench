@@ -11,11 +11,21 @@ from sqlalchemy.ext.asyncio import (
 
 
 def _enable_sqlite_foreign_keys(dbapi_connection: Any, _: Any) -> None:
-    """Enable SQLite FK enforcement for every pooled connection."""
+    """Enable FKs and leave transaction BEGIN under SQLAlchemy control."""
 
     cursor = dbapi_connection.cursor()
     cursor.execute("PRAGMA foreign_keys=ON")
     cursor.close()
+    # Python's sqlite3 legacy transaction mode does not BEGIN for SELECT or
+    # DDL. A SAVEPOINT can therefore become the outer transaction and RELEASE
+    # may commit writes that a caller-owned session.begin() later tries to
+    # roll back. SQLAlchemy's explicit begin event below restores real outer
+    # transaction semantics for both sqlite3 and aiosqlite.
+    dbapi_connection.isolation_level = None
+
+
+def _begin_sqlite_transaction(connection: Any) -> None:
+    connection.exec_driver_sql("BEGIN")
 
 
 class Database:
@@ -26,6 +36,7 @@ class Database:
         if self._engine.url.get_backend_name() == "sqlite":
             self._prepare_sqlite_directory(self._engine.url)
             event.listen(self._engine.sync_engine, "connect", _enable_sqlite_foreign_keys)
+            event.listen(self._engine.sync_engine, "begin", _begin_sqlite_transaction)
         self._sessions = async_sessionmaker(self._engine, expire_on_commit=False)
 
     @property

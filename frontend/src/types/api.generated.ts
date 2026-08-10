@@ -4,6 +4,59 @@
  */
 
 export interface paths {
+    "/api/citable-sources": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List active source spans that can be linked to an editor note */
+        get: operations["listCitableSources"];
+        put?: never;
+        /** Atomically create a human source, version, and whole-work citation span */
+        post: operations["createCitableSource"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/course-content-blocks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create one ordered ADR 0006 Module content block */
+        post: operations["createCourseContentBlock"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/course-content-blocks/{block_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read one Module content block */
+        get: operations["getCourseContentBlock"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Edit, reorder, archive, or restore a Module content block */
+        patch: operations["updateCourseContentBlock"];
+        trace?: never;
+    };
     "/api/course-modules": {
         parameters: {
             query?: never;
@@ -37,6 +90,40 @@ export interface paths {
         head?: never;
         /** Update, archive, or restore a module */
         patch: operations["updateCourseModule"];
+        trace?: never;
+    };
+    "/api/course-modules/{module_id}/content-blocks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List a Module's ordered mixed-content sequence */
+        get: operations["listCourseContentBlocks"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/course-modules/{module_id}/knowledge-note-blocks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Atomically create a local position note and append it to Module reading */
+        post: operations["createCourseKnowledgeNoteBlock"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/courses": {
@@ -75,6 +162,23 @@ export interface paths {
         patch: operations["updateCourse"];
         trace?: never;
     };
+    "/api/courses/{course_id}/editor/{module_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read one Module's blocks and occurrence tree for the editor */
+        get: operations["getCourseModuleEditor"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/courses/{course_id}/modules": {
         parameters: {
             query?: never;
@@ -109,6 +213,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/courses/{course_id}/pgn": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download one Module tree or root-to-leaf path as PGN */
+        get: operations["downloadCoursePgn"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/courses/{course_id}/publish-modules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Atomically and idempotently publish Traditional Modules to an Explorer */
+        post: operations["publishModulesToExplorer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/dashboard/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read real active-content counts and recent courses */
+        get: operations["getDashboardSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/health": {
         parameters: {
             query?: never;
@@ -124,6 +279,59 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/history/{entity_type}/{entity_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read immutable pre-edit snapshots for authoring content */
+        get: operations["getContentHistory"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/knowledge-notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List knowledge notes with an optional explicit target filter */
+        get: operations["listKnowledgeNotes"];
+        put?: never;
+        /** Create an occurrence-local or explicitly global knowledge note */
+        post: operations["createKnowledgeNote"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/knowledge-notes/{note_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read a knowledge note */
+        get: operations["getKnowledgeNote"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update, archive, or restore a knowledge note */
+        patch: operations["updateKnowledgeNote"];
         trace?: never;
     };
     "/api/moves": {
@@ -195,6 +403,57 @@ export interface paths {
         patch: operations["updateCourseOccurrence"];
         trace?: never;
     };
+    "/api/pgn/imports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Import every game in a PGN payload atomically */
+        post: operations["createPgnImport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/pgn/imports/{import_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read an immutable PGN import receipt */
+        get: operations["getPgnImport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/pgn/imports/{import_id}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download every game in an import receipt */
+        get: operations["downloadPgnImport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/positions": {
         parameters: {
             query?: never;
@@ -229,6 +488,198 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/source-files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Register an immutable source file */
+        post: operations["createSourceFile"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/source-files/{file_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read immutable source file metadata */
+        get: operations["getSourceFile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Archive or restore immutable source file metadata */
+        patch: operations["updateSourceFile"];
+        trace?: never;
+    };
+    "/api/source-spans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create a citable span in a source version */
+        post: operations["createSourceSpan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/source-spans/{span_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read a citable source span */
+        get: operations["getSourceSpan"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update, archive, or restore a citable source span */
+        patch: operations["updateSourceSpan"];
+        trace?: never;
+    };
+    "/api/source-versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create a version of a source work */
+        post: operations["createSourceVersion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/source-versions/{version_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read a source version */
+        get: operations["getSourceVersion"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update, archive, or restore a source version */
+        patch: operations["updateSourceVersion"];
+        trace?: never;
+    };
+    "/api/source-versions/{version_id}/files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List immutable files for one source version */
+        get: operations["listSourceFiles"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/source-versions/{version_id}/spans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List citable spans for one source version */
+        get: operations["listSourceSpans"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sources": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List conceptual source works */
+        get: operations["listSources"];
+        put?: never;
+        /** Create a conceptual source work */
+        post: operations["createSource"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sources/{source_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read a conceptual source work */
+        get: operations["getSource"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update, archive, or restore a source work */
+        patch: operations["updateSource"];
+        trace?: never;
+    };
+    "/api/sources/{source_id}/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List versions of one source work */
+        get: operations["listSourceVersions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -241,6 +692,1034 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    listCitableSources: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Citable sources */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** SourceRead */
+                        source: {
+                            /**
+                             * Archived At
+                             * Format: date-time
+                             * @default null
+                             */
+                            archived_at: string | null;
+                            /**
+                             * Author
+                             * @default null
+                             */
+                            author: string | null;
+                            /**
+                             * Created At
+                             * Format: date-time
+                             */
+                            created_at: string;
+                            /** Description */
+                            description: string;
+                            /**
+                             * External Url
+                             * Format: uri
+                             * @default null
+                             */
+                            external_url: string | null;
+                            /**
+                             * Id
+                             * Format: uuid
+                             */
+                            id: string;
+                            /**
+                             * Kind
+                             * @enum {string}
+                             */
+                            kind: "book" | "video" | "article" | "web" | "pgn" | "game" | "manual" | "other";
+                            /** Title */
+                            title: string;
+                            /**
+                             * Updated At
+                             * Format: date-time
+                             */
+                            updated_at: string;
+                            /** Version */
+                            version: number;
+                        };
+                        /** SourceSpanRead */
+                        source_span: {
+                            /**
+                             * Archived At
+                             * Format: date-time
+                             * @default null
+                             */
+                            archived_at: string | null;
+                            /**
+                             * Confidence
+                             * @default null
+                             */
+                            confidence: number | null;
+                            /**
+                             * Created At
+                             * Format: date-time
+                             */
+                            created_at: string;
+                            /**
+                             * Id
+                             * Format: uuid
+                             */
+                            id: string;
+                            /** Locator */
+                            locator: {
+                                /**
+                                 * Kind
+                                 * @default whole
+                                 * @enum {string}
+                                 */
+                                kind: "whole";
+                            } | {
+                                /**
+                                 * NormalizedBoundingBox
+                                 * @default null
+                                 */
+                                bbox: {
+                                    /** X0 */
+                                    x0: number;
+                                    /** X1 */
+                                    x1: number;
+                                    /** Y0 */
+                                    y0: number;
+                                    /** Y1 */
+                                    y1: number;
+                                } | null;
+                                /**
+                                 * Kind
+                                 * @default page
+                                 * @enum {string}
+                                 */
+                                kind: "page";
+                                /** Page Number */
+                                page_number: number;
+                            } | {
+                                /** End Ms */
+                                end_ms: number;
+                                /**
+                                 * Kind
+                                 * @default video
+                                 * @enum {string}
+                                 */
+                                kind: "video";
+                                /** Start Ms */
+                                start_ms: number;
+                            } | {
+                                /** End Offset */
+                                end_offset: number;
+                                /**
+                                 * Kind
+                                 * @default text
+                                 * @enum {string}
+                                 */
+                                kind: "text";
+                                /** Start Offset */
+                                start_offset: number;
+                            };
+                            /**
+                             * Ocr Text
+                             * @default null
+                             */
+                            ocr_text: string | null;
+                            /**
+                             * Quote
+                             * @default null
+                             */
+                            quote: string | null;
+                            /**
+                             * Source File Id
+                             * Format: uuid
+                             * @default null
+                             */
+                            source_file_id: string | null;
+                            /**
+                             * Source Version Id
+                             * Format: uuid
+                             */
+                            source_version_id: string;
+                            /**
+                             * Updated At
+                             * Format: date-time
+                             */
+                            updated_at: string;
+                            /** Version */
+                            version: number;
+                        };
+                        /** SourceVersionRead */
+                        source_version: {
+                            /**
+                             * Archived At
+                             * Format: date-time
+                             * @default null
+                             */
+                            archived_at: string | null;
+                            /**
+                             * Created At
+                             * Format: date-time
+                             */
+                            created_at: string;
+                            /**
+                             * Edition
+                             * @default null
+                             */
+                            edition: string | null;
+                            /**
+                             * External Url
+                             * Format: uri
+                             * @default null
+                             */
+                            external_url: string | null;
+                            /**
+                             * Id
+                             * Format: uuid
+                             */
+                            id: string;
+                            /** Label */
+                            label: string;
+                            /** Metadata */
+                            metadata: {
+                                [key: string]: unknown;
+                            };
+                            /**
+                             * Published On
+                             * Format: date
+                             * @default null
+                             */
+                            published_on: string | null;
+                            /**
+                             * Source Id
+                             * Format: uuid
+                             */
+                            source_id: string;
+                            /**
+                             * Updated At
+                             * Format: date-time
+                             */
+                            updated_at: string;
+                            /** Version */
+                            version: number;
+                        };
+                    }[];
+                };
+            };
+        };
+    };
+    createCitableSource: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * Author
+                     * @default null
+                     */
+                    author?: string | null;
+                    /**
+                     * Description
+                     * @default
+                     */
+                    description?: string;
+                    /**
+                     * External Url
+                     * Format: uri
+                     * @default null
+                     */
+                    external_url?: string | null;
+                    /**
+                     * Kind
+                     * @default manual
+                     * @enum {string}
+                     */
+                    kind?: "manual" | "web";
+                    /**
+                     * Quote
+                     * @default null
+                     */
+                    quote?: string | null;
+                    /** Title */
+                    title: string;
+                    /**
+                     * Version Label
+                     * @default manual
+                     */
+                    version_label?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Citable source created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** SourceRead */
+                        source: {
+                            /**
+                             * Archived At
+                             * Format: date-time
+                             * @default null
+                             */
+                            archived_at: string | null;
+                            /**
+                             * Author
+                             * @default null
+                             */
+                            author: string | null;
+                            /**
+                             * Created At
+                             * Format: date-time
+                             */
+                            created_at: string;
+                            /** Description */
+                            description: string;
+                            /**
+                             * External Url
+                             * Format: uri
+                             * @default null
+                             */
+                            external_url: string | null;
+                            /**
+                             * Id
+                             * Format: uuid
+                             */
+                            id: string;
+                            /**
+                             * Kind
+                             * @enum {string}
+                             */
+                            kind: "book" | "video" | "article" | "web" | "pgn" | "game" | "manual" | "other";
+                            /** Title */
+                            title: string;
+                            /**
+                             * Updated At
+                             * Format: date-time
+                             */
+                            updated_at: string;
+                            /** Version */
+                            version: number;
+                        };
+                        /** SourceSpanRead */
+                        source_span: {
+                            /**
+                             * Archived At
+                             * Format: date-time
+                             * @default null
+                             */
+                            archived_at: string | null;
+                            /**
+                             * Confidence
+                             * @default null
+                             */
+                            confidence: number | null;
+                            /**
+                             * Created At
+                             * Format: date-time
+                             */
+                            created_at: string;
+                            /**
+                             * Id
+                             * Format: uuid
+                             */
+                            id: string;
+                            /** Locator */
+                            locator: {
+                                /**
+                                 * Kind
+                                 * @default whole
+                                 * @enum {string}
+                                 */
+                                kind: "whole";
+                            } | {
+                                /**
+                                 * NormalizedBoundingBox
+                                 * @default null
+                                 */
+                                bbox: {
+                                    /** X0 */
+                                    x0: number;
+                                    /** X1 */
+                                    x1: number;
+                                    /** Y0 */
+                                    y0: number;
+                                    /** Y1 */
+                                    y1: number;
+                                } | null;
+                                /**
+                                 * Kind
+                                 * @default page
+                                 * @enum {string}
+                                 */
+                                kind: "page";
+                                /** Page Number */
+                                page_number: number;
+                            } | {
+                                /** End Ms */
+                                end_ms: number;
+                                /**
+                                 * Kind
+                                 * @default video
+                                 * @enum {string}
+                                 */
+                                kind: "video";
+                                /** Start Ms */
+                                start_ms: number;
+                            } | {
+                                /** End Offset */
+                                end_offset: number;
+                                /**
+                                 * Kind
+                                 * @default text
+                                 * @enum {string}
+                                 */
+                                kind: "text";
+                                /** Start Offset */
+                                start_offset: number;
+                            };
+                            /**
+                             * Ocr Text
+                             * @default null
+                             */
+                            ocr_text: string | null;
+                            /**
+                             * Quote
+                             * @default null
+                             */
+                            quote: string | null;
+                            /**
+                             * Source File Id
+                             * Format: uuid
+                             * @default null
+                             */
+                            source_file_id: string | null;
+                            /**
+                             * Source Version Id
+                             * Format: uuid
+                             */
+                            source_version_id: string;
+                            /**
+                             * Updated At
+                             * Format: date-time
+                             */
+                            updated_at: string;
+                            /** Version */
+                            version: number;
+                        };
+                        /** SourceVersionRead */
+                        source_version: {
+                            /**
+                             * Archived At
+                             * Format: date-time
+                             * @default null
+                             */
+                            archived_at: string | null;
+                            /**
+                             * Created At
+                             * Format: date-time
+                             */
+                            created_at: string;
+                            /**
+                             * Edition
+                             * @default null
+                             */
+                            edition: string | null;
+                            /**
+                             * External Url
+                             * Format: uri
+                             * @default null
+                             */
+                            external_url: string | null;
+                            /**
+                             * Id
+                             * Format: uuid
+                             */
+                            id: string;
+                            /** Label */
+                            label: string;
+                            /** Metadata */
+                            metadata: {
+                                [key: string]: unknown;
+                            };
+                            /**
+                             * Published On
+                             * Format: date
+                             * @default null
+                             */
+                            published_on: string | null;
+                            /**
+                             * Source Id
+                             * Format: uuid
+                             */
+                            source_id: string;
+                            /**
+                             * Updated At
+                             * Format: date-time
+                             */
+                            updated_at: string;
+                            /** Version */
+                            version: number;
+                        };
+                    };
+                };
+            };
+            /** @description Source chain conflicts */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description Request validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    createCourseContentBlock: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * Heading
+                     * @default null
+                     */
+                    heading?: string | null;
+                    /**
+                     * Kind
+                     * @enum {string}
+                     */
+                    kind: "section_header" | "narrative" | "move_sequence" | "knowledge_note";
+                    /**
+                     * Knowledge Note Id
+                     * Format: uuid
+                     * @default null
+                     */
+                    knowledge_note_id?: string | null;
+                    /**
+                     * Markdown
+                     * @default null
+                     */
+                    markdown?: string | null;
+                    /**
+                     * Module Id
+                     * Format: uuid
+                     */
+                    module_id: string;
+                    /**
+                     * Root Occurrence Id
+                     * Format: uuid
+                     * @default null
+                     */
+                    root_occurrence_id?: string | null;
+                    /** Sort Order */
+                    sort_order: number;
+                    /** Source Span Ids */
+                    source_span_ids?: string[];
+                };
+            };
+        };
+        responses: {
+            /** @description Content block created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Archived At
+                         * Format: date-time
+                         * @default null
+                         */
+                        archived_at: string | null;
+                        /**
+                         * Created At
+                         * Format: date-time
+                         */
+                        created_at: string;
+                        /**
+                         * Heading
+                         * @default null
+                         */
+                        heading: string | null;
+                        /**
+                         * Id
+                         * Format: uuid
+                         */
+                        id: string;
+                        /**
+                         * Kind
+                         * @enum {string}
+                         */
+                        kind: "section_header" | "narrative" | "move_sequence" | "knowledge_note";
+                        /**
+                         * Knowledge Note Id
+                         * Format: uuid
+                         * @default null
+                         */
+                        knowledge_note_id: string | null;
+                        /**
+                         * Markdown
+                         * @default null
+                         */
+                        markdown: string | null;
+                        /**
+                         * Module Id
+                         * Format: uuid
+                         */
+                        module_id: string;
+                        /**
+                         * Root Occurrence Id
+                         * Format: uuid
+                         * @default null
+                         */
+                        root_occurrence_id: string | null;
+                        /** Sort Order */
+                        sort_order: number;
+                        /** Source Span Ids */
+                        source_span_ids: string[];
+                        /**
+                         * Updated At
+                         * Format: date-time
+                         */
+                        updated_at: string;
+                        /** Version */
+                        version: number;
+                    };
+                };
+            };
+            /** @description Module or referenced content not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description Block order or reference conflicts */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description Request validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    getCourseContentBlock: {
+        parameters: {
+            query?: {
+                include_archived?: boolean;
+            };
+            header?: never;
+            path: {
+                block_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Content block */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Archived At
+                         * Format: date-time
+                         * @default null
+                         */
+                        archived_at: string | null;
+                        /**
+                         * Created At
+                         * Format: date-time
+                         */
+                        created_at: string;
+                        /**
+                         * Heading
+                         * @default null
+                         */
+                        heading: string | null;
+                        /**
+                         * Id
+                         * Format: uuid
+                         */
+                        id: string;
+                        /**
+                         * Kind
+                         * @enum {string}
+                         */
+                        kind: "section_header" | "narrative" | "move_sequence" | "knowledge_note";
+                        /**
+                         * Knowledge Note Id
+                         * Format: uuid
+                         * @default null
+                         */
+                        knowledge_note_id: string | null;
+                        /**
+                         * Markdown
+                         * @default null
+                         */
+                        markdown: string | null;
+                        /**
+                         * Module Id
+                         * Format: uuid
+                         */
+                        module_id: string;
+                        /**
+                         * Root Occurrence Id
+                         * Format: uuid
+                         * @default null
+                         */
+                        root_occurrence_id: string | null;
+                        /** Sort Order */
+                        sort_order: number;
+                        /** Source Span Ids */
+                        source_span_ids: string[];
+                        /**
+                         * Updated At
+                         * Format: date-time
+                         */
+                        updated_at: string;
+                        /** Version */
+                        version: number;
+                    };
+                };
+            };
+            /** @description Content block not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    updateCourseContentBlock: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                block_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * Archived
+                     * @default null
+                     */
+                    archived?: boolean | null;
+                    /** Expected Version */
+                    expected_version: number;
+                    /**
+                     * Heading
+                     * @default null
+                     */
+                    heading?: string | null;
+                    /**
+                     * Markdown
+                     * @default null
+                     */
+                    markdown?: string | null;
+                    /**
+                     * Sort Order
+                     * @default null
+                     */
+                    sort_order?: number | null;
+                    /**
+                     * Source Span Ids
+                     * @default null
+                     */
+                    source_span_ids?: string[] | null;
+                };
+            };
+        };
+        responses: {
+            /** @description Content block updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Archived At
+                         * Format: date-time
+                         * @default null
+                         */
+                        archived_at: string | null;
+                        /**
+                         * Created At
+                         * Format: date-time
+                         */
+                        created_at: string;
+                        /**
+                         * Heading
+                         * @default null
+                         */
+                        heading: string | null;
+                        /**
+                         * Id
+                         * Format: uuid
+                         */
+                        id: string;
+                        /**
+                         * Kind
+                         * @enum {string}
+                         */
+                        kind: "section_header" | "narrative" | "move_sequence" | "knowledge_note";
+                        /**
+                         * Knowledge Note Id
+                         * Format: uuid
+                         * @default null
+                         */
+                        knowledge_note_id: string | null;
+                        /**
+                         * Markdown
+                         * @default null
+                         */
+                        markdown: string | null;
+                        /**
+                         * Module Id
+                         * Format: uuid
+                         */
+                        module_id: string;
+                        /**
+                         * Root Occurrence Id
+                         * Format: uuid
+                         * @default null
+                         */
+                        root_occurrence_id: string | null;
+                        /** Sort Order */
+                        sort_order: number;
+                        /** Source Span Ids */
+                        source_span_ids: string[];
+                        /**
+                         * Updated At
+                         * Format: date-time
+                         */
+                        updated_at: string;
+                        /** Version */
+                        version: number;
+                    };
+                };
+            };
+            /** @description Content block not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description Version, order, or block-kind conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description Request validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
     createCourseModule: {
         parameters: {
             query?: never;
@@ -350,7 +1829,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
                         /**
                          * Details
                          * @default null
@@ -374,7 +1853,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
                         /**
                          * Details
                          * @default null
@@ -398,7 +1877,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
                         /**
                          * Details
                          * @default null
@@ -493,7 +1972,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
                         /**
                          * Details
                          * @default null
@@ -517,7 +1996,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
                         /**
                          * Details
                          * @default null
@@ -643,7 +2122,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
                         /**
                          * Details
                          * @default null
@@ -667,7 +2146,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
                         /**
                          * Details
                          * @default null
@@ -691,7 +2170,385 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    listCourseContentBlocks: {
+        parameters: {
+            query?: {
+                include_archived?: boolean;
+            };
+            header?: never;
+            path: {
+                module_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Content blocks */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Archived At
+                         * Format: date-time
+                         * @default null
+                         */
+                        archived_at: string | null;
+                        /**
+                         * Created At
+                         * Format: date-time
+                         */
+                        created_at: string;
+                        /**
+                         * Heading
+                         * @default null
+                         */
+                        heading: string | null;
+                        /**
+                         * Id
+                         * Format: uuid
+                         */
+                        id: string;
+                        /**
+                         * Kind
+                         * @enum {string}
+                         */
+                        kind: "section_header" | "narrative" | "move_sequence" | "knowledge_note";
+                        /**
+                         * Knowledge Note Id
+                         * Format: uuid
+                         * @default null
+                         */
+                        knowledge_note_id: string | null;
+                        /**
+                         * Markdown
+                         * @default null
+                         */
+                        markdown: string | null;
+                        /**
+                         * Module Id
+                         * Format: uuid
+                         */
+                        module_id: string;
+                        /**
+                         * Root Occurrence Id
+                         * Format: uuid
+                         * @default null
+                         */
+                        root_occurrence_id: string | null;
+                        /** Sort Order */
+                        sort_order: number;
+                        /** Source Span Ids */
+                        source_span_ids: string[];
+                        /**
+                         * Updated At
+                         * Format: date-time
+                         */
+                        updated_at: string;
+                        /** Version */
+                        version: number;
+                    }[];
+                };
+            };
+            /** @description Module not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    createCourseKnowledgeNoteBlock: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                module_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Markdown */
+                    markdown: string;
+                    /**
+                     * Note Type
+                     * @default general
+                     * @enum {string}
+                     */
+                    note_type?: "general" | "explanation" | "plan" | "candidate_comparison" | "common_error" | "memory_hint" | "source_quote";
+                    /**
+                     * Occurrence Id
+                     * Format: uuid
+                     */
+                    occurrence_id: string;
+                    /**
+                     * Review Status
+                     * @default approved
+                     * @enum {string}
+                     */
+                    review_status?: "draft" | "approved" | "rejected";
+                    /** Source Span Ids */
+                    source_span_ids?: string[];
+                };
+            };
+        };
+        responses: {
+            /** @description Knowledge note and block created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** CourseContentBlockRead */
+                        block: {
+                            /**
+                             * Archived At
+                             * Format: date-time
+                             * @default null
+                             */
+                            archived_at: string | null;
+                            /**
+                             * Created At
+                             * Format: date-time
+                             */
+                            created_at: string;
+                            /**
+                             * Heading
+                             * @default null
+                             */
+                            heading: string | null;
+                            /**
+                             * Id
+                             * Format: uuid
+                             */
+                            id: string;
+                            /**
+                             * Kind
+                             * @enum {string}
+                             */
+                            kind: "section_header" | "narrative" | "move_sequence" | "knowledge_note";
+                            /**
+                             * Knowledge Note Id
+                             * Format: uuid
+                             * @default null
+                             */
+                            knowledge_note_id: string | null;
+                            /**
+                             * Markdown
+                             * @default null
+                             */
+                            markdown: string | null;
+                            /**
+                             * Module Id
+                             * Format: uuid
+                             */
+                            module_id: string;
+                            /**
+                             * Root Occurrence Id
+                             * Format: uuid
+                             * @default null
+                             */
+                            root_occurrence_id: string | null;
+                            /** Sort Order */
+                            sort_order: number;
+                            /** Source Span Ids */
+                            source_span_ids: string[];
+                            /**
+                             * Updated At
+                             * Format: date-time
+                             */
+                            updated_at: string;
+                            /** Version */
+                            version: number;
+                        };
+                        /** KnowledgeNoteRead */
+                        note: {
+                            /**
+                             * Archived At
+                             * Format: date-time
+                             * @default null
+                             */
+                            archived_at: string | null;
+                            /**
+                             * Created At
+                             * Format: date-time
+                             */
+                            created_at: string;
+                            /**
+                             * Id
+                             * Format: uuid
+                             */
+                            id: string;
+                            /**
+                             * Markdown
+                             * @default null
+                             */
+                            markdown: string | null;
+                            /**
+                             * Note Type
+                             * @enum {string}
+                             */
+                            note_type: "general" | "explanation" | "plan" | "candidate_comparison" | "common_error" | "memory_hint" | "source_quote";
+                            /**
+                             * Review Status
+                             * @enum {string}
+                             */
+                            review_status: "draft" | "approved" | "rejected";
+                            /**
+                             * Source Note Id
+                             * Format: uuid
+                             * @default null
+                             */
+                            source_note_id: string | null;
+                            /** Source Span Ids */
+                            source_span_ids: string[];
+                            /** Target */
+                            target: {
+                                /**
+                                 * Kind
+                                 * @default occurrence
+                                 * @enum {string}
+                                 */
+                                kind: "occurrence";
+                                /**
+                                 * Occurrence Id
+                                 * Format: uuid
+                                 */
+                                occurrence_id: string;
+                            } | {
+                                /**
+                                 * Kind
+                                 * @default global_position
+                                 * @enum {string}
+                                 */
+                                kind: "global_position";
+                                /**
+                                 * Position Id
+                                 * Format: uuid
+                                 */
+                                position_id: string;
+                            } | {
+                                /**
+                                 * Kind
+                                 * @default global_move
+                                 * @enum {string}
+                                 */
+                                kind: "global_move";
+                                /**
+                                 * Move Edge Id
+                                 * Format: uuid
+                                 */
+                                move_edge_id: string;
+                            };
+                            /**
+                             * Updated At
+                             * Format: date-time
+                             */
+                            updated_at: string;
+                            /** Version */
+                            version: number;
+                        };
+                    };
+                };
+            };
+            /** @description Module, occurrence, or source span not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description Occurrence belongs to another Module */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description Request validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
                         /**
                          * Details
                          * @default null
@@ -709,6 +2566,11 @@ export interface operations {
     listCourses: {
         parameters: {
             query?: {
+                sort?: string;
+                tag?: string;
+                status?: string;
+                mode?: string;
+                q?: string;
                 include_archived?: boolean;
             };
             header?: never;
@@ -782,7 +2644,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
                         /**
                          * Details
                          * @default null
@@ -902,7 +2764,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
                         /**
                          * Details
                          * @default null
@@ -995,7 +2857,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
                         /**
                          * Details
                          * @default null
@@ -1130,7 +2992,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
                         /**
                          * Details
                          * @default null
@@ -1154,7 +3016,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
                         /**
                          * Details
                          * @default null
@@ -1178,7 +3040,374 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    getCourseModuleEditor: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                course_id: string;
+                module_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Module editor state */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Content Blocks */
+                        content_blocks: {
+                            /**
+                             * Archived At
+                             * Format: date-time
+                             * @default null
+                             */
+                            archived_at: string | null;
+                            /**
+                             * Created At
+                             * Format: date-time
+                             */
+                            created_at: string;
+                            /**
+                             * Heading
+                             * @default null
+                             */
+                            heading: string | null;
+                            /**
+                             * Id
+                             * Format: uuid
+                             */
+                            id: string;
+                            /**
+                             * Kind
+                             * @enum {string}
+                             */
+                            kind: "section_header" | "narrative" | "move_sequence" | "knowledge_note";
+                            /**
+                             * Knowledge Note Id
+                             * Format: uuid
+                             * @default null
+                             */
+                            knowledge_note_id: string | null;
+                            /**
+                             * Markdown
+                             * @default null
+                             */
+                            markdown: string | null;
+                            /**
+                             * Module Id
+                             * Format: uuid
+                             */
+                            module_id: string;
+                            /**
+                             * Root Occurrence Id
+                             * Format: uuid
+                             * @default null
+                             */
+                            root_occurrence_id: string | null;
+                            /** Sort Order */
+                            sort_order: number;
+                            /** Source Span Ids */
+                            source_span_ids: string[];
+                            /**
+                             * Updated At
+                             * Format: date-time
+                             */
+                            updated_at: string;
+                            /** Version */
+                            version: number;
+                        }[];
+                        /** CourseModuleRead */
+                        module: {
+                            /**
+                             * Archived At
+                             * Format: date-time
+                             * @default null
+                             */
+                            archived_at: string | null;
+                            /**
+                             * Course Id
+                             * Format: uuid
+                             */
+                            course_id: string;
+                            /**
+                             * Created At
+                             * Format: date-time
+                             */
+                            created_at: string;
+                            /** Description */
+                            description: string;
+                            /**
+                             * Id
+                             * Format: uuid
+                             */
+                            id: string;
+                            /**
+                             * Parent Id
+                             * Format: uuid
+                             * @default null
+                             */
+                            parent_id: string | null;
+                            /** Sort Order */
+                            sort_order: number;
+                            /**
+                             * Start Occurrence Id
+                             * Format: uuid
+                             * @default null
+                             */
+                            start_occurrence_id: string | null;
+                            /** Title */
+                            title: string;
+                            /**
+                             * Updated At
+                             * Format: date-time
+                             */
+                            updated_at: string;
+                            /** Version */
+                            version: number;
+                        };
+                        /** Notes */
+                        notes: {
+                            /**
+                             * Archived At
+                             * Format: date-time
+                             * @default null
+                             */
+                            archived_at: string | null;
+                            /**
+                             * Created At
+                             * Format: date-time
+                             */
+                            created_at: string;
+                            /**
+                             * Id
+                             * Format: uuid
+                             */
+                            id: string;
+                            /**
+                             * Markdown
+                             * @default null
+                             */
+                            markdown: string | null;
+                            /**
+                             * Note Type
+                             * @enum {string}
+                             */
+                            note_type: "general" | "explanation" | "plan" | "candidate_comparison" | "common_error" | "memory_hint" | "source_quote";
+                            /** Rendered Markdown */
+                            rendered_markdown: string;
+                            /** Rendered Source Span Ids */
+                            rendered_source_span_ids: string[];
+                            /**
+                             * Review Status
+                             * @enum {string}
+                             */
+                            review_status: "draft" | "approved" | "rejected";
+                            /**
+                             * Source Course Id
+                             * Format: uuid
+                             */
+                            source_course_id: string;
+                            /**
+                             * Source Module Id
+                             * Format: uuid
+                             * @default null
+                             */
+                            source_module_id: string | null;
+                            /**
+                             * Source Note Id
+                             * Format: uuid
+                             * @default null
+                             */
+                            source_note_id: string | null;
+                            /**
+                             * Source Occurrence Id
+                             * Format: uuid
+                             */
+                            source_occurrence_id: string;
+                            /** Source Span Ids */
+                            source_span_ids: string[];
+                            /** Target */
+                            target: {
+                                /**
+                                 * Kind
+                                 * @default occurrence
+                                 * @enum {string}
+                                 */
+                                kind: "occurrence";
+                                /**
+                                 * Occurrence Id
+                                 * Format: uuid
+                                 */
+                                occurrence_id: string;
+                            } | {
+                                /**
+                                 * Kind
+                                 * @default global_position
+                                 * @enum {string}
+                                 */
+                                kind: "global_position";
+                                /**
+                                 * Position Id
+                                 * Format: uuid
+                                 */
+                                position_id: string;
+                            } | {
+                                /**
+                                 * Kind
+                                 * @default global_move
+                                 * @enum {string}
+                                 */
+                                kind: "global_move";
+                                /**
+                                 * Move Edge Id
+                                 * Format: uuid
+                                 */
+                                move_edge_id: string;
+                            };
+                            /**
+                             * Updated At
+                             * Format: date-time
+                             */
+                            updated_at: string;
+                            /** Version */
+                            version: number;
+                        }[];
+                        /** Occurrences */
+                        occurrences: {
+                            /**
+                             * Archived At
+                             * Format: date-time
+                             * @default null
+                             */
+                            archived_at: string | null;
+                            /** Context */
+                            context: {
+                                [key: string]: unknown;
+                            };
+                            /**
+                             * Course Id
+                             * Format: uuid
+                             */
+                            course_id: string;
+                            /**
+                             * Created At
+                             * Format: date-time
+                             */
+                            created_at: string;
+                            /** Full Fen */
+                            full_fen: string;
+                            /**
+                             * Id
+                             * Format: uuid
+                             */
+                            id: string;
+                            /**
+                             * Inbound Move Edge Id
+                             * Format: uuid
+                             * @default null
+                             */
+                            inbound_move_edge_id: string | null;
+                            /**
+                             * Inbound San
+                             * @default null
+                             */
+                            inbound_san: string | null;
+                            /**
+                             * Inbound Uci
+                             * @default null
+                             */
+                            inbound_uci: string | null;
+                            /**
+                             * Module Id
+                             * Format: uuid
+                             * @default null
+                             */
+                            module_id: string | null;
+                            /**
+                             * Nag
+                             * @default null
+                             */
+                            nag: number | null;
+                            /**
+                             * Parent Id
+                             * Format: uuid
+                             * @default null
+                             */
+                            parent_id: string | null;
+                            /**
+                             * Position Id
+                             * Format: uuid
+                             */
+                            position_id: string;
+                            /** Sort Order */
+                            sort_order: number;
+                            /**
+                             * Updated At
+                             * Format: date-time
+                             */
+                            updated_at: string;
+                            /** Version */
+                            version: number;
+                        }[];
+                    };
+                };
+            };
+            /** @description Course or Module not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description Module belongs to another Course */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
                         /**
                          * Details
                          * @default null
@@ -1274,7 +3503,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
                         /**
                          * Details
                          * @default null
@@ -1298,7 +3527,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
                         /**
                          * Details
                          * @default null
@@ -1414,7 +3643,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
                         /**
                          * Details
                          * @default null
@@ -1438,7 +3667,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
                         /**
                          * Details
                          * @default null
@@ -1448,6 +3677,321 @@ export interface operations {
                         } | null;
                         /** Message */
                         message: string;
+                    };
+                };
+            };
+        };
+    };
+    downloadCoursePgn: {
+        parameters: {
+            query: {
+                leaf_occurrence_id?: string;
+                module_id: string;
+            };
+            header?: never;
+            path: {
+                course_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description PGN download */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/x-chess-pgn": string;
+                };
+            };
+            /** @description Course, Module, or leaf not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description Module occurrence structure is not exportable */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description Query validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    publishModulesToExplorer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                course_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Module Ids */
+                    module_ids: string[];
+                };
+            };
+        };
+        responses: {
+            /** @description Publication receipts */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Publications */
+                        publications: {
+                            /**
+                             * Created At
+                             * Format: date-time
+                             */
+                            created_at: string;
+                            /**
+                             * Id
+                             * Format: uuid
+                             */
+                            id: string;
+                            /** Note Count */
+                            note_count: number;
+                            /** Occurrence Count */
+                            occurrence_count: number;
+                            /** Replayed */
+                            replayed: boolean;
+                            /**
+                             * Source Module Id
+                             * Format: uuid
+                             */
+                            source_module_id: string;
+                            /**
+                             * Target Course Id
+                             * Format: uuid
+                             */
+                            target_course_id: string;
+                            /**
+                             * Target Module Id
+                             * Format: uuid
+                             */
+                            target_module_id: string;
+                        }[];
+                    };
+                };
+            };
+            /** @description Course or Module not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description Course mode, content, or idempotency conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description Request validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    getDashboardSummary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Dashboard summary */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Course Count */
+                        course_count: number;
+                        /** Explorer Course Count */
+                        explorer_course_count: number;
+                        /** Knowledge Note Count */
+                        knowledge_note_count: number;
+                        /** Module Count */
+                        module_count: number;
+                        /** Position Count */
+                        position_count: number;
+                        /** Recent Courses */
+                        recent_courses: {
+                            /**
+                             * Archived At
+                             * Format: date-time
+                             * @default null
+                             */
+                            archived_at: string | null;
+                            /**
+                             * Category
+                             * @default null
+                             */
+                            category: string | null;
+                            /**
+                             * Created At
+                             * Format: date-time
+                             */
+                            created_at: string;
+                            /** Description */
+                            description: string;
+                            /**
+                             * Id
+                             * Format: uuid
+                             */
+                            id: string;
+                            /**
+                             * Mode
+                             * @enum {string}
+                             */
+                            mode: "traditional" | "opening_explorer";
+                            /**
+                             * Status
+                             * @enum {string}
+                             */
+                            status: "draft" | "published";
+                            /** Tags */
+                            tags: string[];
+                            /** Title */
+                            title: string;
+                            /**
+                             * Updated At
+                             * Format: date-time
+                             */
+                            updated_at: string;
+                            /** Version */
+                            version: number;
+                        }[];
+                        /** Source Count */
+                        source_count: number;
+                        /** Traditional Course Count */
+                        traditional_course_count: number;
                     };
                 };
             };
@@ -1511,6 +4055,889 @@ export interface operations {
                         status: "error";
                         /** Version */
                         version: string;
+                    };
+                };
+            };
+        };
+    };
+    getContentHistory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entity_type: string;
+                entity_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Content history */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Current Version */
+                        current_version: number;
+                        /**
+                         * Entity Id
+                         * Format: uuid
+                         */
+                        entity_id: string;
+                        /**
+                         * Entity Type
+                         * @enum {string}
+                         */
+                        entity_type: "course_module" | "course_content_block" | "course_occurrence" | "knowledge_note";
+                        /** Revisions */
+                        revisions: {
+                            /**
+                             * Created At
+                             * Format: date-time
+                             */
+                            created_at: string;
+                            /**
+                             * Entity Id
+                             * Format: uuid
+                             */
+                            entity_id: string;
+                            /**
+                             * Entity Type
+                             * @enum {string}
+                             */
+                            entity_type: "course_module" | "course_content_block" | "course_occurrence" | "knowledge_note";
+                            /** Entity Version */
+                            entity_version: number;
+                            /**
+                             * Id
+                             * Format: uuid
+                             */
+                            id: string;
+                            /** Snapshot */
+                            snapshot: {
+                                [key: string]: unknown;
+                            };
+                        }[];
+                    };
+                };
+            };
+            /** @description Entity not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description Unsupported entity type */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    listKnowledgeNotes: {
+        parameters: {
+            query?: {
+                include_archived?: boolean;
+                move_edge_id?: string;
+                position_id?: string;
+                occurrence_id?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Knowledge notes */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Archived At
+                         * Format: date-time
+                         * @default null
+                         */
+                        archived_at: string | null;
+                        /**
+                         * Created At
+                         * Format: date-time
+                         */
+                        created_at: string;
+                        /**
+                         * Id
+                         * Format: uuid
+                         */
+                        id: string;
+                        /**
+                         * Markdown
+                         * @default null
+                         */
+                        markdown: string | null;
+                        /**
+                         * Note Type
+                         * @enum {string}
+                         */
+                        note_type: "general" | "explanation" | "plan" | "candidate_comparison" | "common_error" | "memory_hint" | "source_quote";
+                        /**
+                         * Review Status
+                         * @enum {string}
+                         */
+                        review_status: "draft" | "approved" | "rejected";
+                        /**
+                         * Source Note Id
+                         * Format: uuid
+                         * @default null
+                         */
+                        source_note_id: string | null;
+                        /** Source Span Ids */
+                        source_span_ids: string[];
+                        /** Target */
+                        target: {
+                            /**
+                             * Kind
+                             * @default occurrence
+                             * @enum {string}
+                             */
+                            kind: "occurrence";
+                            /**
+                             * Occurrence Id
+                             * Format: uuid
+                             */
+                            occurrence_id: string;
+                        } | {
+                            /**
+                             * Kind
+                             * @default global_position
+                             * @enum {string}
+                             */
+                            kind: "global_position";
+                            /**
+                             * Position Id
+                             * Format: uuid
+                             */
+                            position_id: string;
+                        } | {
+                            /**
+                             * Kind
+                             * @default global_move
+                             * @enum {string}
+                             */
+                            kind: "global_move";
+                            /**
+                             * Move Edge Id
+                             * Format: uuid
+                             */
+                            move_edge_id: string;
+                        };
+                        /**
+                         * Updated At
+                         * Format: date-time
+                         */
+                        updated_at: string;
+                        /** Version */
+                        version: number;
+                    }[];
+                };
+            };
+            /** @description Filtered target not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description More than one target filter supplied */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description Query validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    createKnowledgeNote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * Markdown
+                     * @default null
+                     */
+                    markdown?: string | null;
+                    /**
+                     * Note Type
+                     * @default general
+                     * @enum {string}
+                     */
+                    note_type?: "general" | "explanation" | "plan" | "candidate_comparison" | "common_error" | "memory_hint" | "source_quote";
+                    /**
+                     * Occurrence Id
+                     * Format: uuid
+                     * @default null
+                     */
+                    occurrence_id?: string | null;
+                    /**
+                     * Review Status
+                     * @default approved
+                     * @enum {string}
+                     */
+                    review_status?: "draft" | "approved" | "rejected";
+                    /**
+                     * Source Note Id
+                     * Format: uuid
+                     * @default null
+                     */
+                    source_note_id?: string | null;
+                    /** Source Span Ids */
+                    source_span_ids?: string[];
+                    /**
+                     * Target
+                     * @default null
+                     */
+                    target?: ({
+                        /**
+                         * Kind
+                         * @default global_position
+                         * @enum {string}
+                         */
+                        kind?: "global_position";
+                        /**
+                         * Position Id
+                         * Format: uuid
+                         */
+                        position_id: string;
+                    } | {
+                        /**
+                         * Kind
+                         * @default global_move
+                         * @enum {string}
+                         */
+                        kind?: "global_move";
+                        /**
+                         * Move Edge Id
+                         * Format: uuid
+                         */
+                        move_edge_id: string;
+                    }) | null;
+                };
+            };
+        };
+        responses: {
+            /** @description Knowledge note created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Archived At
+                         * Format: date-time
+                         * @default null
+                         */
+                        archived_at: string | null;
+                        /**
+                         * Created At
+                         * Format: date-time
+                         */
+                        created_at: string;
+                        /**
+                         * Id
+                         * Format: uuid
+                         */
+                        id: string;
+                        /**
+                         * Markdown
+                         * @default null
+                         */
+                        markdown: string | null;
+                        /**
+                         * Note Type
+                         * @enum {string}
+                         */
+                        note_type: "general" | "explanation" | "plan" | "candidate_comparison" | "common_error" | "memory_hint" | "source_quote";
+                        /**
+                         * Review Status
+                         * @enum {string}
+                         */
+                        review_status: "draft" | "approved" | "rejected";
+                        /**
+                         * Source Note Id
+                         * Format: uuid
+                         * @default null
+                         */
+                        source_note_id: string | null;
+                        /** Source Span Ids */
+                        source_span_ids: string[];
+                        /** Target */
+                        target: {
+                            /**
+                             * Kind
+                             * @default occurrence
+                             * @enum {string}
+                             */
+                            kind: "occurrence";
+                            /**
+                             * Occurrence Id
+                             * Format: uuid
+                             */
+                            occurrence_id: string;
+                        } | {
+                            /**
+                             * Kind
+                             * @default global_position
+                             * @enum {string}
+                             */
+                            kind: "global_position";
+                            /**
+                             * Position Id
+                             * Format: uuid
+                             */
+                            position_id: string;
+                        } | {
+                            /**
+                             * Kind
+                             * @default global_move
+                             * @enum {string}
+                             */
+                            kind: "global_move";
+                            /**
+                             * Move Edge Id
+                             * Format: uuid
+                             */
+                            move_edge_id: string;
+                        };
+                        /**
+                         * Updated At
+                         * Format: date-time
+                         */
+                        updated_at: string;
+                        /** Version */
+                        version: number;
+                    };
+                };
+            };
+            /** @description Target or source span not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description Knowledge note context conflicts */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description Request validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    getKnowledgeNote: {
+        parameters: {
+            query?: {
+                include_archived?: boolean;
+            };
+            header?: never;
+            path: {
+                note_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Knowledge note */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Archived At
+                         * Format: date-time
+                         * @default null
+                         */
+                        archived_at: string | null;
+                        /**
+                         * Created At
+                         * Format: date-time
+                         */
+                        created_at: string;
+                        /**
+                         * Id
+                         * Format: uuid
+                         */
+                        id: string;
+                        /**
+                         * Markdown
+                         * @default null
+                         */
+                        markdown: string | null;
+                        /**
+                         * Note Type
+                         * @enum {string}
+                         */
+                        note_type: "general" | "explanation" | "plan" | "candidate_comparison" | "common_error" | "memory_hint" | "source_quote";
+                        /**
+                         * Review Status
+                         * @enum {string}
+                         */
+                        review_status: "draft" | "approved" | "rejected";
+                        /**
+                         * Source Note Id
+                         * Format: uuid
+                         * @default null
+                         */
+                        source_note_id: string | null;
+                        /** Source Span Ids */
+                        source_span_ids: string[];
+                        /** Target */
+                        target: {
+                            /**
+                             * Kind
+                             * @default occurrence
+                             * @enum {string}
+                             */
+                            kind: "occurrence";
+                            /**
+                             * Occurrence Id
+                             * Format: uuid
+                             */
+                            occurrence_id: string;
+                        } | {
+                            /**
+                             * Kind
+                             * @default global_position
+                             * @enum {string}
+                             */
+                            kind: "global_position";
+                            /**
+                             * Position Id
+                             * Format: uuid
+                             */
+                            position_id: string;
+                        } | {
+                            /**
+                             * Kind
+                             * @default global_move
+                             * @enum {string}
+                             */
+                            kind: "global_move";
+                            /**
+                             * Move Edge Id
+                             * Format: uuid
+                             */
+                            move_edge_id: string;
+                        };
+                        /**
+                         * Updated At
+                         * Format: date-time
+                         */
+                        updated_at: string;
+                        /** Version */
+                        version: number;
+                    };
+                };
+            };
+            /** @description Knowledge note not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    updateKnowledgeNote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                note_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * Archived
+                     * @default null
+                     */
+                    archived?: boolean | null;
+                    /** Expected Version */
+                    expected_version: number;
+                    /**
+                     * Markdown
+                     * @default null
+                     */
+                    markdown?: string | null;
+                    /**
+                     * Note Type
+                     * @default null
+                     * @enum {string|null}
+                     */
+                    note_type?: "general" | "explanation" | "plan" | "candidate_comparison" | "common_error" | "memory_hint" | "source_quote" | null;
+                    /**
+                     * Review Status
+                     * @default null
+                     * @enum {string|null}
+                     */
+                    review_status?: "draft" | "approved" | "rejected" | null;
+                    /**
+                     * Source Span Ids
+                     * @default null
+                     */
+                    source_span_ids?: string[] | null;
+                };
+            };
+        };
+        responses: {
+            /** @description Updated knowledge note */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Archived At
+                         * Format: date-time
+                         * @default null
+                         */
+                        archived_at: string | null;
+                        /**
+                         * Created At
+                         * Format: date-time
+                         */
+                        created_at: string;
+                        /**
+                         * Id
+                         * Format: uuid
+                         */
+                        id: string;
+                        /**
+                         * Markdown
+                         * @default null
+                         */
+                        markdown: string | null;
+                        /**
+                         * Note Type
+                         * @enum {string}
+                         */
+                        note_type: "general" | "explanation" | "plan" | "candidate_comparison" | "common_error" | "memory_hint" | "source_quote";
+                        /**
+                         * Review Status
+                         * @enum {string}
+                         */
+                        review_status: "draft" | "approved" | "rejected";
+                        /**
+                         * Source Note Id
+                         * Format: uuid
+                         * @default null
+                         */
+                        source_note_id: string | null;
+                        /** Source Span Ids */
+                        source_span_ids: string[];
+                        /** Target */
+                        target: {
+                            /**
+                             * Kind
+                             * @default occurrence
+                             * @enum {string}
+                             */
+                            kind: "occurrence";
+                            /**
+                             * Occurrence Id
+                             * Format: uuid
+                             */
+                            occurrence_id: string;
+                        } | {
+                            /**
+                             * Kind
+                             * @default global_position
+                             * @enum {string}
+                             */
+                            kind: "global_position";
+                            /**
+                             * Position Id
+                             * Format: uuid
+                             */
+                            position_id: string;
+                        } | {
+                            /**
+                             * Kind
+                             * @default global_move
+                             * @enum {string}
+                             */
+                            kind: "global_move";
+                            /**
+                             * Move Edge Id
+                             * Format: uuid
+                             */
+                            move_edge_id: string;
+                        };
+                        /**
+                         * Updated At
+                         * Format: date-time
+                         */
+                        updated_at: string;
+                        /** Version */
+                        version: number;
+                    };
+                };
+            };
+            /** @description Knowledge note or source span not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description Version is stale */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description Request validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
                     };
                 };
             };
@@ -1616,7 +5043,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
                         /**
                          * Details
                          * @default null
@@ -1640,7 +5067,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
                         /**
                          * Details
                          * @default null
@@ -1711,7 +5138,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
                         /**
                          * Details
                          * @default null
@@ -1886,7 +5313,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
                         /**
                          * Details
                          * @default null
@@ -1910,7 +5337,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
                         /**
                          * Details
                          * @default null
@@ -1934,7 +5361,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
                         /**
                          * Details
                          * @default null
@@ -2047,7 +5474,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
                         /**
                          * Details
                          * @default null
@@ -2193,7 +5620,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
                         /**
                          * Details
                          * @default null
@@ -2217,7 +5644,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
                         /**
                          * Details
                          * @default null
@@ -2241,7 +5668,543 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    createPgnImport: {
+        parameters: {
+            query?: never;
+            header?: {
+                "Idempotency-Key"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Destination */
+                    destination?: {
+                        /**
+                         * Kind
+                         * @default new_course
+                         * @enum {string}
+                         */
+                        kind?: "new_course";
+                        /**
+                         * Title
+                         * @default null
+                         */
+                        title?: string | null;
+                    } | {
+                        /**
+                         * Course Id
+                         * Format: uuid
+                         */
+                        course_id: string;
+                        /** Expected Version */
+                        expected_version: number;
+                        /**
+                         * Kind
+                         * @enum {string}
+                         */
+                        kind: "existing_course";
+                    };
+                    /**
+                     * Game Titles
+                     * @default null
+                     */
+                    game_titles?: string[] | null;
+                    /** Pgn */
+                    pgn: string;
+                    /**
+                     * Source Title
+                     * @default null
+                     */
+                    source_title?: string | null;
+                };
+                "application/x-chess-pgn": string;
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                    /** @description JSON PgnImportOptions */
+                    options?: string;
+                };
+                "text/plain": string;
+            };
+        };
+        responses: {
+            /** @description Idempotent replay */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** PgnImportRead */
+                        import_receipt: {
+                            /**
+                             * Asset Id
+                             * Format: uuid
+                             */
+                            asset_id: string;
+                            /**
+                             * Course Id
+                             * Format: uuid
+                             */
+                            course_id: string;
+                            /** Course Version */
+                            course_version: number;
+                            /**
+                             * Created At
+                             * Format: date-time
+                             */
+                            created_at: string;
+                            /** Game Count */
+                            game_count: number;
+                            /** Games */
+                            games: {
+                                /** Game Index */
+                                game_index: number;
+                                /**
+                                 * Id
+                                 * Format: uuid
+                                 */
+                                id: string;
+                                /**
+                                 * Module Id
+                                 * Format: uuid
+                                 */
+                                module_id: string;
+                                /** Occurrence Count */
+                                occurrence_count: number;
+                                /**
+                                 * Root Occurrence Id
+                                 * Format: uuid
+                                 */
+                                root_occurrence_id: string;
+                                /**
+                                 * Source Span Id
+                                 * Format: uuid
+                                 */
+                                source_span_id: string;
+                            }[];
+                            /**
+                             * Id
+                             * Format: uuid
+                             */
+                            id: string;
+                            /** Occurrence Count */
+                            occurrence_count: number;
+                            /**
+                             * Source File Id
+                             * Format: uuid
+                             */
+                            source_file_id: string;
+                            /**
+                             * Source Id
+                             * Format: uuid
+                             */
+                            source_id: string;
+                            /**
+                             * Source Version Id
+                             * Format: uuid
+                             */
+                            source_version_id: string;
+                        };
+                        /** Replayed */
+                        replayed: boolean;
+                    };
+                };
+            };
+            /** @description Import created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** PgnImportRead */
+                        import_receipt: {
+                            /**
+                             * Asset Id
+                             * Format: uuid
+                             */
+                            asset_id: string;
+                            /**
+                             * Course Id
+                             * Format: uuid
+                             */
+                            course_id: string;
+                            /** Course Version */
+                            course_version: number;
+                            /**
+                             * Created At
+                             * Format: date-time
+                             */
+                            created_at: string;
+                            /** Game Count */
+                            game_count: number;
+                            /** Games */
+                            games: {
+                                /** Game Index */
+                                game_index: number;
+                                /**
+                                 * Id
+                                 * Format: uuid
+                                 */
+                                id: string;
+                                /**
+                                 * Module Id
+                                 * Format: uuid
+                                 */
+                                module_id: string;
+                                /** Occurrence Count */
+                                occurrence_count: number;
+                                /**
+                                 * Root Occurrence Id
+                                 * Format: uuid
+                                 */
+                                root_occurrence_id: string;
+                                /**
+                                 * Source Span Id
+                                 * Format: uuid
+                                 */
+                                source_span_id: string;
+                            }[];
+                            /**
+                             * Id
+                             * Format: uuid
+                             */
+                            id: string;
+                            /** Occurrence Count */
+                            occurrence_count: number;
+                            /**
+                             * Source File Id
+                             * Format: uuid
+                             */
+                            source_file_id: string;
+                            /**
+                             * Source Id
+                             * Format: uuid
+                             */
+                            source_id: string;
+                            /**
+                             * Source Version Id
+                             * Format: uuid
+                             */
+                            source_version_id: string;
+                        };
+                        /** Replayed */
+                        replayed: boolean;
+                    };
+                };
+            };
+            /** @description Idempotency, Course mode, or version conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description PGN payload too large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description Unsupported media type */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description Invalid PGN or request */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description Source storage unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    getPgnImport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                import_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Import receipt */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Asset Id
+                         * Format: uuid
+                         */
+                        asset_id: string;
+                        /**
+                         * Course Id
+                         * Format: uuid
+                         */
+                        course_id: string;
+                        /** Course Version */
+                        course_version: number;
+                        /**
+                         * Created At
+                         * Format: date-time
+                         */
+                        created_at: string;
+                        /** Game Count */
+                        game_count: number;
+                        /** Games */
+                        games: {
+                            /** Game Index */
+                            game_index: number;
+                            /**
+                             * Id
+                             * Format: uuid
+                             */
+                            id: string;
+                            /**
+                             * Module Id
+                             * Format: uuid
+                             */
+                            module_id: string;
+                            /** Occurrence Count */
+                            occurrence_count: number;
+                            /**
+                             * Root Occurrence Id
+                             * Format: uuid
+                             */
+                            root_occurrence_id: string;
+                            /**
+                             * Source Span Id
+                             * Format: uuid
+                             */
+                            source_span_id: string;
+                        }[];
+                        /**
+                         * Id
+                         * Format: uuid
+                         */
+                        id: string;
+                        /** Occurrence Count */
+                        occurrence_count: number;
+                        /**
+                         * Source File Id
+                         * Format: uuid
+                         */
+                        source_file_id: string;
+                        /**
+                         * Source Id
+                         * Format: uuid
+                         */
+                        source_id: string;
+                        /**
+                         * Source Version Id
+                         * Format: uuid
+                         */
+                        source_version_id: string;
+                    };
+                };
+            };
+            /** @description Import receipt not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    downloadPgnImport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                import_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description PGN download */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/x-chess-pgn": string;
+                };
+            };
+            /** @description Import receipt not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description Imported occurrence structure is not exportable */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
                         /**
                          * Details
                          * @default null
@@ -2357,7 +6320,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
                         /**
                          * Details
                          * @default null
@@ -2431,7 +6394,2481 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    createSourceFile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Filename */
+                    filename: string;
+                    /** Media Type */
+                    media_type: string;
+                    /** Relative Path */
+                    relative_path: string;
+                    /** Sha256 */
+                    sha256: string;
+                    /** Size Bytes */
+                    size_bytes: number;
+                    /**
+                     * Source Version Id
+                     * Format: uuid
+                     */
+                    source_version_id: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Source file created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Archived At
+                         * Format: date-time
+                         * @default null
+                         */
+                        archived_at: string | null;
+                        /**
+                         * Created At
+                         * Format: date-time
+                         */
+                        created_at: string;
+                        /** Filename */
+                        filename: string;
+                        /**
+                         * Id
+                         * Format: uuid
+                         */
+                        id: string;
+                        /** Media Type */
+                        media_type: string;
+                        /** Relative Path */
+                        relative_path: string;
+                        /** Sha256 */
+                        sha256: string;
+                        /** Size Bytes */
+                        size_bytes: number;
+                        /**
+                         * Source Version Id
+                         * Format: uuid
+                         */
+                        source_version_id: string;
+                        /**
+                         * Updated At
+                         * Format: date-time
+                         */
+                        updated_at: string;
+                        /** Version */
+                        version: number;
+                    };
+                };
+            };
+            /** @description Source version not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description Source file conflicts with an existing resource */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description Request validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    getSourceFile: {
+        parameters: {
+            query?: {
+                include_archived?: boolean;
+            };
+            header?: never;
+            path: {
+                file_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Source file */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Archived At
+                         * Format: date-time
+                         * @default null
+                         */
+                        archived_at: string | null;
+                        /**
+                         * Created At
+                         * Format: date-time
+                         */
+                        created_at: string;
+                        /** Filename */
+                        filename: string;
+                        /**
+                         * Id
+                         * Format: uuid
+                         */
+                        id: string;
+                        /** Media Type */
+                        media_type: string;
+                        /** Relative Path */
+                        relative_path: string;
+                        /** Sha256 */
+                        sha256: string;
+                        /** Size Bytes */
+                        size_bytes: number;
+                        /**
+                         * Source Version Id
+                         * Format: uuid
+                         */
+                        source_version_id: string;
+                        /**
+                         * Updated At
+                         * Format: date-time
+                         */
+                        updated_at: string;
+                        /** Version */
+                        version: number;
+                    };
+                };
+            };
+            /** @description Source file not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    updateSourceFile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                file_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * Archived
+                     * @default null
+                     */
+                    archived?: boolean | null;
+                    /** Expected Version */
+                    expected_version: number;
+                };
+            };
+        };
+        responses: {
+            /** @description Updated source file */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Archived At
+                         * Format: date-time
+                         * @default null
+                         */
+                        archived_at: string | null;
+                        /**
+                         * Created At
+                         * Format: date-time
+                         */
+                        created_at: string;
+                        /** Filename */
+                        filename: string;
+                        /**
+                         * Id
+                         * Format: uuid
+                         */
+                        id: string;
+                        /** Media Type */
+                        media_type: string;
+                        /** Relative Path */
+                        relative_path: string;
+                        /** Sha256 */
+                        sha256: string;
+                        /** Size Bytes */
+                        size_bytes: number;
+                        /**
+                         * Source Version Id
+                         * Format: uuid
+                         */
+                        source_version_id: string;
+                        /**
+                         * Updated At
+                         * Format: date-time
+                         */
+                        updated_at: string;
+                        /** Version */
+                        version: number;
+                    };
+                };
+            };
+            /** @description Source file not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description Version is stale */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description Request validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    createSourceSpan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * Confidence
+                     * @default null
+                     */
+                    confidence?: number | null;
+                    /** Locator */
+                    locator: {
+                        /**
+                         * Kind
+                         * @default whole
+                         * @enum {string}
+                         */
+                        kind?: "whole";
+                    } | {
+                        /**
+                         * NormalizedBoundingBox
+                         * @default null
+                         */
+                        bbox?: {
+                            /** X0 */
+                            x0: number;
+                            /** X1 */
+                            x1: number;
+                            /** Y0 */
+                            y0: number;
+                            /** Y1 */
+                            y1: number;
+                        } | null;
+                        /**
+                         * Kind
+                         * @default page
+                         * @enum {string}
+                         */
+                        kind?: "page";
+                        /** Page Number */
+                        page_number: number;
+                    } | {
+                        /** End Ms */
+                        end_ms: number;
+                        /**
+                         * Kind
+                         * @default video
+                         * @enum {string}
+                         */
+                        kind?: "video";
+                        /** Start Ms */
+                        start_ms: number;
+                    } | {
+                        /** End Offset */
+                        end_offset: number;
+                        /**
+                         * Kind
+                         * @default text
+                         * @enum {string}
+                         */
+                        kind?: "text";
+                        /** Start Offset */
+                        start_offset: number;
+                    };
+                    /**
+                     * Ocr Text
+                     * @default null
+                     */
+                    ocr_text?: string | null;
+                    /**
+                     * Quote
+                     * @default null
+                     */
+                    quote?: string | null;
+                    /**
+                     * Source File Id
+                     * Format: uuid
+                     * @default null
+                     */
+                    source_file_id?: string | null;
+                    /**
+                     * Source Version Id
+                     * Format: uuid
+                     */
+                    source_version_id: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Source span created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Archived At
+                         * Format: date-time
+                         * @default null
+                         */
+                        archived_at: string | null;
+                        /**
+                         * Confidence
+                         * @default null
+                         */
+                        confidence: number | null;
+                        /**
+                         * Created At
+                         * Format: date-time
+                         */
+                        created_at: string;
+                        /**
+                         * Id
+                         * Format: uuid
+                         */
+                        id: string;
+                        /** Locator */
+                        locator: {
+                            /**
+                             * Kind
+                             * @default whole
+                             * @enum {string}
+                             */
+                            kind: "whole";
+                        } | {
+                            /**
+                             * NormalizedBoundingBox
+                             * @default null
+                             */
+                            bbox: {
+                                /** X0 */
+                                x0: number;
+                                /** X1 */
+                                x1: number;
+                                /** Y0 */
+                                y0: number;
+                                /** Y1 */
+                                y1: number;
+                            } | null;
+                            /**
+                             * Kind
+                             * @default page
+                             * @enum {string}
+                             */
+                            kind: "page";
+                            /** Page Number */
+                            page_number: number;
+                        } | {
+                            /** End Ms */
+                            end_ms: number;
+                            /**
+                             * Kind
+                             * @default video
+                             * @enum {string}
+                             */
+                            kind: "video";
+                            /** Start Ms */
+                            start_ms: number;
+                        } | {
+                            /** End Offset */
+                            end_offset: number;
+                            /**
+                             * Kind
+                             * @default text
+                             * @enum {string}
+                             */
+                            kind: "text";
+                            /** Start Offset */
+                            start_offset: number;
+                        };
+                        /**
+                         * Ocr Text
+                         * @default null
+                         */
+                        ocr_text: string | null;
+                        /**
+                         * Quote
+                         * @default null
+                         */
+                        quote: string | null;
+                        /**
+                         * Source File Id
+                         * Format: uuid
+                         * @default null
+                         */
+                        source_file_id: string | null;
+                        /**
+                         * Source Version Id
+                         * Format: uuid
+                         */
+                        source_version_id: string;
+                        /**
+                         * Updated At
+                         * Format: date-time
+                         */
+                        updated_at: string;
+                        /** Version */
+                        version: number;
+                    };
+                };
+            };
+            /** @description Source version or file not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description Source file belongs to another version */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description Request validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    getSourceSpan: {
+        parameters: {
+            query?: {
+                include_archived?: boolean;
+            };
+            header?: never;
+            path: {
+                span_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Source span */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Archived At
+                         * Format: date-time
+                         * @default null
+                         */
+                        archived_at: string | null;
+                        /**
+                         * Confidence
+                         * @default null
+                         */
+                        confidence: number | null;
+                        /**
+                         * Created At
+                         * Format: date-time
+                         */
+                        created_at: string;
+                        /**
+                         * Id
+                         * Format: uuid
+                         */
+                        id: string;
+                        /** Locator */
+                        locator: {
+                            /**
+                             * Kind
+                             * @default whole
+                             * @enum {string}
+                             */
+                            kind: "whole";
+                        } | {
+                            /**
+                             * NormalizedBoundingBox
+                             * @default null
+                             */
+                            bbox: {
+                                /** X0 */
+                                x0: number;
+                                /** X1 */
+                                x1: number;
+                                /** Y0 */
+                                y0: number;
+                                /** Y1 */
+                                y1: number;
+                            } | null;
+                            /**
+                             * Kind
+                             * @default page
+                             * @enum {string}
+                             */
+                            kind: "page";
+                            /** Page Number */
+                            page_number: number;
+                        } | {
+                            /** End Ms */
+                            end_ms: number;
+                            /**
+                             * Kind
+                             * @default video
+                             * @enum {string}
+                             */
+                            kind: "video";
+                            /** Start Ms */
+                            start_ms: number;
+                        } | {
+                            /** End Offset */
+                            end_offset: number;
+                            /**
+                             * Kind
+                             * @default text
+                             * @enum {string}
+                             */
+                            kind: "text";
+                            /** Start Offset */
+                            start_offset: number;
+                        };
+                        /**
+                         * Ocr Text
+                         * @default null
+                         */
+                        ocr_text: string | null;
+                        /**
+                         * Quote
+                         * @default null
+                         */
+                        quote: string | null;
+                        /**
+                         * Source File Id
+                         * Format: uuid
+                         * @default null
+                         */
+                        source_file_id: string | null;
+                        /**
+                         * Source Version Id
+                         * Format: uuid
+                         */
+                        source_version_id: string;
+                        /**
+                         * Updated At
+                         * Format: date-time
+                         */
+                        updated_at: string;
+                        /** Version */
+                        version: number;
+                    };
+                };
+            };
+            /** @description Source span not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    updateSourceSpan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                span_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * Archived
+                     * @default null
+                     */
+                    archived?: boolean | null;
+                    /**
+                     * Confidence
+                     * @default null
+                     */
+                    confidence?: number | null;
+                    /** Expected Version */
+                    expected_version: number;
+                    /**
+                     * Locator
+                     * @default null
+                     */
+                    locator?: ({
+                        /**
+                         * Kind
+                         * @default whole
+                         * @enum {string}
+                         */
+                        kind?: "whole";
+                    } | {
+                        /**
+                         * NormalizedBoundingBox
+                         * @default null
+                         */
+                        bbox?: {
+                            /** X0 */
+                            x0: number;
+                            /** X1 */
+                            x1: number;
+                            /** Y0 */
+                            y0: number;
+                            /** Y1 */
+                            y1: number;
+                        } | null;
+                        /**
+                         * Kind
+                         * @default page
+                         * @enum {string}
+                         */
+                        kind?: "page";
+                        /** Page Number */
+                        page_number: number;
+                    } | {
+                        /** End Ms */
+                        end_ms: number;
+                        /**
+                         * Kind
+                         * @default video
+                         * @enum {string}
+                         */
+                        kind?: "video";
+                        /** Start Ms */
+                        start_ms: number;
+                    } | {
+                        /** End Offset */
+                        end_offset: number;
+                        /**
+                         * Kind
+                         * @default text
+                         * @enum {string}
+                         */
+                        kind?: "text";
+                        /** Start Offset */
+                        start_offset: number;
+                    }) | null;
+                    /**
+                     * Ocr Text
+                     * @default null
+                     */
+                    ocr_text?: string | null;
+                    /**
+                     * Quote
+                     * @default null
+                     */
+                    quote?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description Updated source span */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Archived At
+                         * Format: date-time
+                         * @default null
+                         */
+                        archived_at: string | null;
+                        /**
+                         * Confidence
+                         * @default null
+                         */
+                        confidence: number | null;
+                        /**
+                         * Created At
+                         * Format: date-time
+                         */
+                        created_at: string;
+                        /**
+                         * Id
+                         * Format: uuid
+                         */
+                        id: string;
+                        /** Locator */
+                        locator: {
+                            /**
+                             * Kind
+                             * @default whole
+                             * @enum {string}
+                             */
+                            kind: "whole";
+                        } | {
+                            /**
+                             * NormalizedBoundingBox
+                             * @default null
+                             */
+                            bbox: {
+                                /** X0 */
+                                x0: number;
+                                /** X1 */
+                                x1: number;
+                                /** Y0 */
+                                y0: number;
+                                /** Y1 */
+                                y1: number;
+                            } | null;
+                            /**
+                             * Kind
+                             * @default page
+                             * @enum {string}
+                             */
+                            kind: "page";
+                            /** Page Number */
+                            page_number: number;
+                        } | {
+                            /** End Ms */
+                            end_ms: number;
+                            /**
+                             * Kind
+                             * @default video
+                             * @enum {string}
+                             */
+                            kind: "video";
+                            /** Start Ms */
+                            start_ms: number;
+                        } | {
+                            /** End Offset */
+                            end_offset: number;
+                            /**
+                             * Kind
+                             * @default text
+                             * @enum {string}
+                             */
+                            kind: "text";
+                            /** Start Offset */
+                            start_offset: number;
+                        };
+                        /**
+                         * Ocr Text
+                         * @default null
+                         */
+                        ocr_text: string | null;
+                        /**
+                         * Quote
+                         * @default null
+                         */
+                        quote: string | null;
+                        /**
+                         * Source File Id
+                         * Format: uuid
+                         * @default null
+                         */
+                        source_file_id: string | null;
+                        /**
+                         * Source Version Id
+                         * Format: uuid
+                         */
+                        source_version_id: string;
+                        /**
+                         * Updated At
+                         * Format: date-time
+                         */
+                        updated_at: string;
+                        /** Version */
+                        version: number;
+                    };
+                };
+            };
+            /** @description Source span not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description Version is stale */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description Request validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    createSourceVersion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * Edition
+                     * @default null
+                     */
+                    edition?: string | null;
+                    /**
+                     * External Url
+                     * Format: uri
+                     * @default null
+                     */
+                    external_url?: string | null;
+                    /** Label */
+                    label: string;
+                    /** Metadata */
+                    metadata?: {
+                        [key: string]: unknown;
+                    };
+                    /**
+                     * Published On
+                     * Format: date
+                     * @default null
+                     */
+                    published_on?: string | null;
+                    /**
+                     * Source Id
+                     * Format: uuid
+                     */
+                    source_id: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Source version created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Archived At
+                         * Format: date-time
+                         * @default null
+                         */
+                        archived_at: string | null;
+                        /**
+                         * Created At
+                         * Format: date-time
+                         */
+                        created_at: string;
+                        /**
+                         * Edition
+                         * @default null
+                         */
+                        edition: string | null;
+                        /**
+                         * External Url
+                         * Format: uri
+                         * @default null
+                         */
+                        external_url: string | null;
+                        /**
+                         * Id
+                         * Format: uuid
+                         */
+                        id: string;
+                        /** Label */
+                        label: string;
+                        /** Metadata */
+                        metadata: {
+                            [key: string]: unknown;
+                        };
+                        /**
+                         * Published On
+                         * Format: date
+                         * @default null
+                         */
+                        published_on: string | null;
+                        /**
+                         * Source Id
+                         * Format: uuid
+                         */
+                        source_id: string;
+                        /**
+                         * Updated At
+                         * Format: date-time
+                         */
+                        updated_at: string;
+                        /** Version */
+                        version: number;
+                    };
+                };
+            };
+            /** @description Source not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description Source version conflicts with an existing resource */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description Request validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    getSourceVersion: {
+        parameters: {
+            query?: {
+                include_archived?: boolean;
+            };
+            header?: never;
+            path: {
+                version_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Source version */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Archived At
+                         * Format: date-time
+                         * @default null
+                         */
+                        archived_at: string | null;
+                        /**
+                         * Created At
+                         * Format: date-time
+                         */
+                        created_at: string;
+                        /**
+                         * Edition
+                         * @default null
+                         */
+                        edition: string | null;
+                        /**
+                         * External Url
+                         * Format: uri
+                         * @default null
+                         */
+                        external_url: string | null;
+                        /**
+                         * Id
+                         * Format: uuid
+                         */
+                        id: string;
+                        /** Label */
+                        label: string;
+                        /** Metadata */
+                        metadata: {
+                            [key: string]: unknown;
+                        };
+                        /**
+                         * Published On
+                         * Format: date
+                         * @default null
+                         */
+                        published_on: string | null;
+                        /**
+                         * Source Id
+                         * Format: uuid
+                         */
+                        source_id: string;
+                        /**
+                         * Updated At
+                         * Format: date-time
+                         */
+                        updated_at: string;
+                        /** Version */
+                        version: number;
+                    };
+                };
+            };
+            /** @description Source version not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    updateSourceVersion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                version_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * Archived
+                     * @default null
+                     */
+                    archived?: boolean | null;
+                    /**
+                     * Edition
+                     * @default null
+                     */
+                    edition?: string | null;
+                    /** Expected Version */
+                    expected_version: number;
+                    /**
+                     * External Url
+                     * Format: uri
+                     * @default null
+                     */
+                    external_url?: string | null;
+                    /**
+                     * Label
+                     * @default null
+                     */
+                    label?: string | null;
+                    /**
+                     * Metadata
+                     * @default null
+                     */
+                    metadata?: {
+                        [key: string]: unknown;
+                    } | null;
+                    /**
+                     * Published On
+                     * Format: date
+                     * @default null
+                     */
+                    published_on?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description Updated source version */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Archived At
+                         * Format: date-time
+                         * @default null
+                         */
+                        archived_at: string | null;
+                        /**
+                         * Created At
+                         * Format: date-time
+                         */
+                        created_at: string;
+                        /**
+                         * Edition
+                         * @default null
+                         */
+                        edition: string | null;
+                        /**
+                         * External Url
+                         * Format: uri
+                         * @default null
+                         */
+                        external_url: string | null;
+                        /**
+                         * Id
+                         * Format: uuid
+                         */
+                        id: string;
+                        /** Label */
+                        label: string;
+                        /** Metadata */
+                        metadata: {
+                            [key: string]: unknown;
+                        };
+                        /**
+                         * Published On
+                         * Format: date
+                         * @default null
+                         */
+                        published_on: string | null;
+                        /**
+                         * Source Id
+                         * Format: uuid
+                         */
+                        source_id: string;
+                        /**
+                         * Updated At
+                         * Format: date-time
+                         */
+                        updated_at: string;
+                        /** Version */
+                        version: number;
+                    };
+                };
+            };
+            /** @description Source version not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description Version is stale */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description Request validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    listSourceFiles: {
+        parameters: {
+            query?: {
+                include_archived?: boolean;
+            };
+            header?: never;
+            path: {
+                version_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Source files */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Archived At
+                         * Format: date-time
+                         * @default null
+                         */
+                        archived_at: string | null;
+                        /**
+                         * Created At
+                         * Format: date-time
+                         */
+                        created_at: string;
+                        /** Filename */
+                        filename: string;
+                        /**
+                         * Id
+                         * Format: uuid
+                         */
+                        id: string;
+                        /** Media Type */
+                        media_type: string;
+                        /** Relative Path */
+                        relative_path: string;
+                        /** Sha256 */
+                        sha256: string;
+                        /** Size Bytes */
+                        size_bytes: number;
+                        /**
+                         * Source Version Id
+                         * Format: uuid
+                         */
+                        source_version_id: string;
+                        /**
+                         * Updated At
+                         * Format: date-time
+                         */
+                        updated_at: string;
+                        /** Version */
+                        version: number;
+                    }[];
+                };
+            };
+            /** @description Source version not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description Query validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    listSourceSpans: {
+        parameters: {
+            query?: {
+                include_archived?: boolean;
+            };
+            header?: never;
+            path: {
+                version_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Source spans */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Archived At
+                         * Format: date-time
+                         * @default null
+                         */
+                        archived_at: string | null;
+                        /**
+                         * Confidence
+                         * @default null
+                         */
+                        confidence: number | null;
+                        /**
+                         * Created At
+                         * Format: date-time
+                         */
+                        created_at: string;
+                        /**
+                         * Id
+                         * Format: uuid
+                         */
+                        id: string;
+                        /** Locator */
+                        locator: {
+                            /**
+                             * Kind
+                             * @default whole
+                             * @enum {string}
+                             */
+                            kind: "whole";
+                        } | {
+                            /**
+                             * NormalizedBoundingBox
+                             * @default null
+                             */
+                            bbox: {
+                                /** X0 */
+                                x0: number;
+                                /** X1 */
+                                x1: number;
+                                /** Y0 */
+                                y0: number;
+                                /** Y1 */
+                                y1: number;
+                            } | null;
+                            /**
+                             * Kind
+                             * @default page
+                             * @enum {string}
+                             */
+                            kind: "page";
+                            /** Page Number */
+                            page_number: number;
+                        } | {
+                            /** End Ms */
+                            end_ms: number;
+                            /**
+                             * Kind
+                             * @default video
+                             * @enum {string}
+                             */
+                            kind: "video";
+                            /** Start Ms */
+                            start_ms: number;
+                        } | {
+                            /** End Offset */
+                            end_offset: number;
+                            /**
+                             * Kind
+                             * @default text
+                             * @enum {string}
+                             */
+                            kind: "text";
+                            /** Start Offset */
+                            start_offset: number;
+                        };
+                        /**
+                         * Ocr Text
+                         * @default null
+                         */
+                        ocr_text: string | null;
+                        /**
+                         * Quote
+                         * @default null
+                         */
+                        quote: string | null;
+                        /**
+                         * Source File Id
+                         * Format: uuid
+                         * @default null
+                         */
+                        source_file_id: string | null;
+                        /**
+                         * Source Version Id
+                         * Format: uuid
+                         */
+                        source_version_id: string;
+                        /**
+                         * Updated At
+                         * Format: date-time
+                         */
+                        updated_at: string;
+                        /** Version */
+                        version: number;
+                    }[];
+                };
+            };
+            /** @description Source version not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description Query validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    listSources: {
+        parameters: {
+            query?: {
+                kind?: string;
+                q?: string;
+                include_archived?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Sources */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Archived At
+                         * Format: date-time
+                         * @default null
+                         */
+                        archived_at: string | null;
+                        /**
+                         * Author
+                         * @default null
+                         */
+                        author: string | null;
+                        /**
+                         * Created At
+                         * Format: date-time
+                         */
+                        created_at: string;
+                        /** Description */
+                        description: string;
+                        /**
+                         * External Url
+                         * Format: uri
+                         * @default null
+                         */
+                        external_url: string | null;
+                        /**
+                         * Id
+                         * Format: uuid
+                         */
+                        id: string;
+                        /**
+                         * Kind
+                         * @enum {string}
+                         */
+                        kind: "book" | "video" | "article" | "web" | "pgn" | "game" | "manual" | "other";
+                        /** Title */
+                        title: string;
+                        /**
+                         * Updated At
+                         * Format: date-time
+                         */
+                        updated_at: string;
+                        /** Version */
+                        version: number;
+                    }[];
+                };
+            };
+            /** @description Query validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    createSource: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * Author
+                     * @default null
+                     */
+                    author?: string | null;
+                    /**
+                     * Description
+                     * @default
+                     */
+                    description?: string;
+                    /**
+                     * External Url
+                     * Format: uri
+                     * @default null
+                     */
+                    external_url?: string | null;
+                    /**
+                     * Kind
+                     * @enum {string}
+                     */
+                    kind: "book" | "video" | "article" | "web" | "pgn" | "game" | "manual" | "other";
+                    /** Title */
+                    title: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Source created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Archived At
+                         * Format: date-time
+                         * @default null
+                         */
+                        archived_at: string | null;
+                        /**
+                         * Author
+                         * @default null
+                         */
+                        author: string | null;
+                        /**
+                         * Created At
+                         * Format: date-time
+                         */
+                        created_at: string;
+                        /** Description */
+                        description: string;
+                        /**
+                         * External Url
+                         * Format: uri
+                         * @default null
+                         */
+                        external_url: string | null;
+                        /**
+                         * Id
+                         * Format: uuid
+                         */
+                        id: string;
+                        /**
+                         * Kind
+                         * @enum {string}
+                         */
+                        kind: "book" | "video" | "article" | "web" | "pgn" | "game" | "manual" | "other";
+                        /** Title */
+                        title: string;
+                        /**
+                         * Updated At
+                         * Format: date-time
+                         */
+                        updated_at: string;
+                        /** Version */
+                        version: number;
+                    };
+                };
+            };
+            /** @description Source conflicts with an existing resource */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description Request validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    getSource: {
+        parameters: {
+            query?: {
+                include_archived?: boolean;
+            };
+            header?: never;
+            path: {
+                source_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Source */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Archived At
+                         * Format: date-time
+                         * @default null
+                         */
+                        archived_at: string | null;
+                        /**
+                         * Author
+                         * @default null
+                         */
+                        author: string | null;
+                        /**
+                         * Created At
+                         * Format: date-time
+                         */
+                        created_at: string;
+                        /** Description */
+                        description: string;
+                        /**
+                         * External Url
+                         * Format: uri
+                         * @default null
+                         */
+                        external_url: string | null;
+                        /**
+                         * Id
+                         * Format: uuid
+                         */
+                        id: string;
+                        /**
+                         * Kind
+                         * @enum {string}
+                         */
+                        kind: "book" | "video" | "article" | "web" | "pgn" | "game" | "manual" | "other";
+                        /** Title */
+                        title: string;
+                        /**
+                         * Updated At
+                         * Format: date-time
+                         */
+                        updated_at: string;
+                        /** Version */
+                        version: number;
+                    };
+                };
+            };
+            /** @description Source not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    updateSource: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                source_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * Archived
+                     * @default null
+                     */
+                    archived?: boolean | null;
+                    /**
+                     * Author
+                     * @default null
+                     */
+                    author?: string | null;
+                    /**
+                     * Description
+                     * @default null
+                     */
+                    description?: string | null;
+                    /** Expected Version */
+                    expected_version: number;
+                    /**
+                     * External Url
+                     * Format: uri
+                     * @default null
+                     */
+                    external_url?: string | null;
+                    /**
+                     * Kind
+                     * @default null
+                     * @enum {string|null}
+                     */
+                    kind?: "book" | "video" | "article" | "web" | "pgn" | "game" | "manual" | "other" | null;
+                    /**
+                     * Title
+                     * @default null
+                     */
+                    title?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description Updated source */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Archived At
+                         * Format: date-time
+                         * @default null
+                         */
+                        archived_at: string | null;
+                        /**
+                         * Author
+                         * @default null
+                         */
+                        author: string | null;
+                        /**
+                         * Created At
+                         * Format: date-time
+                         */
+                        created_at: string;
+                        /** Description */
+                        description: string;
+                        /**
+                         * External Url
+                         * Format: uri
+                         * @default null
+                         */
+                        external_url: string | null;
+                        /**
+                         * Id
+                         * Format: uuid
+                         */
+                        id: string;
+                        /**
+                         * Kind
+                         * @enum {string}
+                         */
+                        kind: "book" | "video" | "article" | "web" | "pgn" | "game" | "manual" | "other";
+                        /** Title */
+                        title: string;
+                        /**
+                         * Updated At
+                         * Format: date-time
+                         */
+                        updated_at: string;
+                        /** Version */
+                        version: number;
+                    };
+                };
+            };
+            /** @description Source not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description Version is stale */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description Request validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    listSourceVersions: {
+        parameters: {
+            query?: {
+                include_archived?: boolean;
+            };
+            header?: never;
+            path: {
+                source_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Source versions */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Archived At
+                         * Format: date-time
+                         * @default null
+                         */
+                        archived_at: string | null;
+                        /**
+                         * Created At
+                         * Format: date-time
+                         */
+                        created_at: string;
+                        /**
+                         * Edition
+                         * @default null
+                         */
+                        edition: string | null;
+                        /**
+                         * External Url
+                         * Format: uri
+                         * @default null
+                         */
+                        external_url: string | null;
+                        /**
+                         * Id
+                         * Format: uuid
+                         */
+                        id: string;
+                        /** Label */
+                        label: string;
+                        /** Metadata */
+                        metadata: {
+                            [key: string]: unknown;
+                        };
+                        /**
+                         * Published On
+                         * Format: date
+                         * @default null
+                         */
+                        published_on: string | null;
+                        /**
+                         * Source Id
+                         * Format: uuid
+                         */
+                        source_id: string;
+                        /**
+                         * Updated At
+                         * Format: date-time
+                         */
+                        updated_at: string;
+                        /** Version */
+                        version: number;
+                    }[];
+                };
+            };
+            /** @description Source not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description Query validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable";
                         /**
                          * Details
                          * @default null

@@ -1,5 +1,8 @@
+from chess_workbench.store.models.authoring import ContentRevision, ModulePublication
 from chess_workbench.store.models.content import (
     Course,
+    CourseContentBlock,
+    CourseContentBlockCitation,
     CourseModule,
     CourseOccurrence,
     KnowledgeNote,
@@ -19,16 +22,30 @@ from chess_workbench.store.models.mixins import (
     VersionMixin,
     utc_now,
 )
+from chess_workbench.store.models.pgn import (
+    PgnAsset,
+    PgnImport,
+    PgnImportGame,
+    PgnOccurrenceAnnotation,
+)
 
 __all__ = [
     "ArchiveMixin",
     "Course",
+    "CourseContentBlock",
+    "CourseContentBlockCitation",
     "CourseModule",
     "CourseOccurrence",
+    "ContentRevision",
     "KnowledgeNote",
     "KnowledgeNoteCitation",
     "MoveEdge",
+    "ModulePublication",
     "Position",
+    "PgnAsset",
+    "PgnImport",
+    "PgnImportGame",
+    "PgnOccurrenceAnnotation",
     "Source",
     "SourceFile",
     "SourceSpan",

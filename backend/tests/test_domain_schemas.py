@@ -4,7 +4,10 @@ from uuid import UUID
 import pytest
 from chess_workbench.api.contracts import openapi_schema
 from chess_workbench.schemas.domain import (
+    CourseContentBlockCreate,
+    CourseContentBlockUpdate,
     CourseCreate,
+    CourseKnowledgeNoteBlockCreate,
     CourseModuleCreate,
     CourseModuleRead,
     CourseModuleUpdate,
@@ -325,6 +328,58 @@ def test_notes_are_local_by_default_and_global_only_when_explicit() -> None:
     ):
         with pytest.raises(ValidationError):
             KnowledgeNoteCreate.model_validate(invalid)
+
+
+def test_content_block_source_lists_are_unique_and_kind_scoped() -> None:
+    narrative = CourseContentBlockCreate(
+        module_id=ID1,
+        kind="narrative",
+        sort_order=0,
+        markdown="Cited prose",
+        source_span_ids=[ID2],
+    )
+    assert narrative.source_span_ids == [ID2]
+    CourseContentBlockUpdate(expected_version=1, source_span_ids=[ID2])
+    CourseKnowledgeNoteBlockCreate(
+        occurrence_id=ID1,
+        markdown="Placed note",
+        source_span_ids=[ID2],
+    )
+
+    invalid_contracts = (
+        (
+            CourseContentBlockUpdate,
+            {"expected_version": 1, "heading": "Heading", "markdown": "Prose"},
+        ),
+        (
+            CourseContentBlockCreate,
+            {
+                "module_id": ID1,
+                "kind": "narrative",
+                "sort_order": 0,
+                "markdown": "Duplicate",
+                "source_span_ids": [ID2, ID2],
+            },
+        ),
+        (
+            CourseContentBlockUpdate,
+            {"expected_version": 1, "source_span_ids": [ID2, ID2]},
+        ),
+        (
+            CourseKnowledgeNoteBlockCreate,
+            {
+                "occurrence_id": ID1,
+                "markdown": "Duplicate",
+                "source_span_ids": [ID2, ID2],
+            },
+        ),
+    )
+    for contract, payload in invalid_contracts:
+        with pytest.raises(ValidationError):
+            contract.model_validate(payload)
+
+    with pytest.raises(ValidationError):
+        KnowledgeNoteCreate(occurrence_id=ID1)
 
 
 def test_updates_errors_and_timestamps_have_stable_shapes() -> None:

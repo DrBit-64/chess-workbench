@@ -5,12 +5,15 @@ from pathlib import Path
 import chess
 import pytest
 from chess_workbench.schemas.domain import (
+    CourseContentBlockCreate,
+    CourseContentBlockUpdate,
     CourseCreate,
     CourseModuleCreate,
     KnowledgeNoteCreate,
     KnowledgeNoteUpdate,
     OccurrenceMoveCreate,
     OccurrenceNoteTarget,
+    RootOccurrenceCreate,
     SourceCreate,
     SourceFileCreate,
     SourceSpanCreate,
@@ -203,5 +206,190 @@ async def test_sources_citations_optimistic_lock_and_archive_are_service_owned(
                     )
                 )
             assert cross_parent.value.code == "ambiguous_context"
+    finally:
+        await database.close()
+
+
+async def test_catalog_filters_cover_every_search_field_and_sort(tmp_path: Path) -> None:
+    database = Database(f"sqlite+aiosqlite:///{tmp_path / 'catalog-filters.db'}")
+    try:
+        await create_schema(database)
+        async with database.session() as session, session.begin():
+            service = ContentService(session)
+            alpha = await service.create_course(
+                CourseCreate(
+                    title="Alpha title",
+                    description="Quiet plans",
+                    category="Opening",
+                    tags=["Study", "White"],
+                    status="published",
+                    mode="traditional",
+                )
+            )
+            beta = await service.create_course(
+                CourseCreate(
+                    title="Beta",
+                    description="Dynamic candidate search",
+                    tags=["Black"],
+                    mode="opening_explorer",
+                )
+            )
+            gamma = await service.create_course(
+                CourseCreate(
+                    title="Gamma",
+                    category="Endgame laboratory",
+                    tags=[],
+                )
+            )
+
+            assert [row.id for row in await service.list_courses(query="alpha")] == [alpha.id]
+            assert [row.id for row in await service.list_courses(query="candidate")] == [beta.id]
+            assert [row.id for row in await service.list_courses(query="laboratory")] == [gamma.id]
+            assert await service.list_courses(query="absent") == []
+            assert [row.id for row in await service.list_courses(mode="opening_explorer")] == [
+                beta.id
+            ]
+            assert [row.id for row in await service.list_courses(status="published")] == [alpha.id]
+            assert [row.id for row in await service.list_courses(tag="study")] == [alpha.id]
+            assert [row.title for row in await service.list_courses(sort="title_asc")] == [
+                "Alpha title",
+                "Beta",
+                "Gamma",
+            ]
+            assert len(await service.list_courses(sort="created_desc")) == 3
+            assert len(await service.list_courses()) == 3
+
+            book = await service.create_source(
+                SourceCreate(
+                    kind="book",
+                    title="Positional Manual",
+                    author="Averbakh",
+                    description="Technique",
+                )
+            )
+            web = await service.create_source(
+                SourceCreate(
+                    kind="web",
+                    title="Chess article",
+                    description="Candidate move notes",
+                )
+            )
+            assert [row.id for row in await service.list_sources(query="manual")] == [book.id]
+            assert [row.id for row in await service.list_sources(query="averbakh")] == [book.id]
+            assert [row.id for row in await service.list_sources(query="candidate")] == [web.id]
+            assert await service.list_sources(query="absent") == []
+            assert [row.id for row in await service.list_sources(kind="web")] == [web.id]
+            assert len(await service.list_sources()) == 2
+    finally:
+        await database.close()
+
+
+async def test_content_block_update_rules_and_detached_root_are_service_owned(
+    tmp_path: Path,
+) -> None:
+    database = Database(f"sqlite+aiosqlite:///{tmp_path / 'block-rules.db'}")
+    try:
+        await create_schema(database)
+        async with database.session() as session, session.begin():
+            service = ContentService(session)
+            course = await service.create_course(CourseCreate(title="Authoring"))
+            module = await service.create_module(
+                CourseModuleCreate(
+                    course_id=course.id,
+                    title="Chapter",
+                    start_fen=chess.STARTING_FEN,
+                )
+            )
+            assert module.start_occurrence_id is not None
+            child = await service.create_move_occurrence(
+                OccurrenceMoveCreate(
+                    parent_occurrence_id=module.start_occurrence_id,
+                    uci="e2e4",
+                )
+            )
+            filtered_occurrences = await service.list_occurrences(
+                course.id,
+                module_id=module.id,
+                parent_id=module.start_occurrence_id,
+            )
+            assert [row.id for row in filtered_occurrences] == [child.id]
+            with pytest.raises(ServiceError) as duplicate_root:
+                await service.create_root_occurrence(
+                    RootOccurrenceCreate(
+                        course_id=course.id,
+                        module_id=module.id,
+                        fen=chess.STARTING_FEN,
+                    )
+                )
+            assert duplicate_root.value.code == "ambiguous_context"
+            move_block = (await service.list_content_blocks(module.id))[0]
+            section = await service.create_content_block(
+                CourseContentBlockCreate(
+                    module_id=module.id,
+                    kind="section_header",
+                    sort_order=1,
+                    heading="First heading",
+                )
+            )
+            narrative = await service.create_content_block(
+                CourseContentBlockCreate(
+                    module_id=module.id,
+                    kind="narrative",
+                    sort_order=2,
+                    markdown="First text",
+                )
+            )
+            section = await service.update_content_block(
+                section.id,
+                CourseContentBlockUpdate(
+                    expected_version=section.version,
+                    heading="Revised heading",
+                ),
+            )
+            narrative = await service.update_content_block(
+                narrative.id,
+                CourseContentBlockUpdate(
+                    expected_version=narrative.version,
+                    markdown="Revised text",
+                ),
+            )
+            assert section.heading == "Revised heading"
+            assert narrative.markdown == "Revised text"
+
+            with pytest.raises(ServiceError) as wrong_heading:
+                await service.update_content_block(
+                    narrative.id,
+                    CourseContentBlockUpdate(
+                        expected_version=narrative.version,
+                        heading="Not allowed",
+                    ),
+                )
+            assert wrong_heading.value.code == "ambiguous_context"
+            with pytest.raises(ServiceError) as wrong_markdown:
+                await service.update_content_block(
+                    section.id,
+                    CourseContentBlockUpdate(
+                        expected_version=section.version,
+                        markdown="Not allowed",
+                    ),
+                )
+            assert wrong_markdown.value.code == "ambiguous_context"
+            with pytest.raises(ServiceError) as protected_root:
+                await service.update_content_block(
+                    move_block.id,
+                    CourseContentBlockUpdate(
+                        expected_version=move_block.version,
+                        archived=True,
+                    ),
+                )
+            assert protected_root.value.code == "resource_referenced"
+
+            detached_root = await service.create_root_occurrence(
+                RootOccurrenceCreate(
+                    course_id=course.id,
+                    fen=chess.STARTING_FEN,
+                )
+            )
+            assert detached_root.module_id is None
     finally:
         await database.close()

@@ -8,6 +8,15 @@ web_port="${CHESS_WORKBENCH_SMOKE_WEB_PORT:-14173}"
 api_pid=""
 web_pid=""
 
+if command -v pnpm >/dev/null 2>&1; then
+  pnpm_command=(pnpm)
+elif command -v corepack >/dev/null 2>&1; then
+  pnpm_command=(corepack pnpm)
+else
+  echo "error: pnpm or corepack is required" >&2
+  exit 127
+fi
+
 cleanup() {
   for process_id in "$web_pid" "$api_pid"; do
     if [[ -n "$process_id" ]]; then
@@ -38,7 +47,7 @@ api_pid=$!
 
 setsid env \
   CHESS_WORKBENCH_API_PROXY_TARGET="http://127.0.0.1:$api_port" \
-  pnpm --dir frontend dev --host 127.0.0.1 --port "$web_port" --strictPort \
+  "${pnpm_command[@]}" --dir frontend dev --host 127.0.0.1 --port "$web_port" --strictPort \
   >"$smoke_directory/web.log" 2>&1 &
 web_pid=$!
 

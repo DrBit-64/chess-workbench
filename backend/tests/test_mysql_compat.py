@@ -9,6 +9,7 @@ state and business-table presence against the live database.
 from __future__ import annotations
 
 import os
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -38,6 +39,9 @@ _BUSINESS_TABLES = frozenset(
         "courses",
         "course_modules",
         "course_occurrences",
+        "course_content_blocks",
+        "course_content_block_citations",
+        "content_revisions",
         "knowledge_notes",
         "knowledge_note_citations",
         "sources",
@@ -46,6 +50,11 @@ _BUSINESS_TABLES = frozenset(
         "source_versions",
         "positions",
         "move_edges",
+        "module_publications",
+        "pgn_assets",
+        "pgn_imports",
+        "pgn_import_games",
+        "pgn_occurrence_annotations",
     }
 )
 
@@ -115,7 +124,7 @@ def _mysql_head_schema() -> None:
     cfg = _alembic_config()
     alembic.command.upgrade(cfg, "head")
 
-    assert _current_revision(cfg) == "20260806_0003", "session fixture did not reach head revision"
+    assert _current_revision(cfg) == "20260810_0008", "session fixture did not reach head revision"
     assert _present_tables(cfg) >= _BUSINESS_TABLES, "session fixture is missing business tables"
 
 
@@ -130,7 +139,7 @@ def test_migration_upgrade_check_downgrade_upgrade() -> None:
     cfg = _alembic_config()
 
     # Already at head via session fixture; assertions validate pre-state.
-    assert _current_revision(cfg) == "20260806_0003"
+    assert _current_revision(cfg) == "20260810_0008"
     assert _present_tables(cfg) >= _BUSINESS_TABLES
 
     # Real Alembic check (Codex verified: exits 0 on fresh MySQL 8.4).
@@ -143,7 +152,7 @@ def test_migration_upgrade_check_downgrade_upgrade() -> None:
 
     # Re-upgrade so sibling tests see head schema.
     alembic.command.upgrade(cfg, "head")
-    assert _current_revision(cfg) == "20260806_0003"
+    assert _current_revision(cfg) == "20260810_0008"
 
 
 @requires_mysql
@@ -183,5 +192,43 @@ async def test_mysql_position_key_uniqueness() -> None:
             stored1 = await get_or_create_position(session, state)
             stored2 = await get_or_create_position(session, state)
             assert stored1.position.id == stored2.position.id
+    finally:
+        await db.close()
+
+
+@requires_mysql
+async def test_mysql_pgn_import_replay_and_semantic_export(tmp_path: Path) -> None:
+    """The new PGN provenance/import/export path behaves on real MySQL."""
+    from chess_workbench.logic.pgn import parse_pgn_document
+    from chess_workbench.logic.pgn_compare import compare_documents
+    from chess_workbench.logic.pgn_export import export_import_pgn
+    from chess_workbench.schemas.pgn import NewCourseDestination
+    from chess_workbench.services.pgn import PgnImportService, prepare_pgn_import
+
+    raw = (Path(__file__).parent / "fixtures" / "pgn" / "02_one_variation.pgn").read_bytes()
+    prepared = prepare_pgn_import(
+        raw,
+        destination=NewCourseDestination(title="MySQL PGN"),
+        source_title="MySQL source",
+        game_titles=None,
+        idempotency_key="mysql-pgn-fixture",
+        storage_root=tmp_path / "data",
+    )
+    db = Database(MYSQL_URL)
+    try:
+        async with db.session() as session, session.begin():
+            service = PgnImportService(session)
+            created = await service.import_prepared(prepared)
+            replayed = await service.import_prepared(prepared)
+            exported = await export_import_pgn(session, created.receipt.id)
+            assert not created.replayed
+            assert replayed.replayed
+            assert replayed.receipt.id == created.receipt.id
+            assert replayed.receipt.course_id == created.receipt.course_id
+            comparison = compare_documents(
+                parse_pgn_document(raw.decode("utf-8")),
+                parse_pgn_document(exported),
+            )
+            assert comparison.equivalent, comparison.differences
     finally:
         await db.close()

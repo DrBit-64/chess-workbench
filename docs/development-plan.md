@@ -85,10 +85,9 @@ Position 等业务表、首个 migration、棋盘组件、Docker、Stockfish、�
 
 ## Stage 2：棋规内核、局面身份与最小领域模型
 
-状态：**独立验收未通过（2026-08-09）**。现有 `make acceptance-stage-2` 可以退出 0，
-但 2C 的 Source/Span/KnowledgeNote HTTP CRUD 缺失，2D 的双模课程与来源笔记约束未按
-ADR 0005 实现，且覆盖率门槛低于本计划的完成定义。2A 与 2B 的已测内核可保留；整改证据
-见 `docs/agent/stage-2-3-audit.md`。
+状态：**整改后已验收（2026-08-09）**。2A–2D 的领域、HTTP、双模课程与来源笔记约束均已
+实现；SQLite 累积门禁与固定 MySQL 8.4 镜像上的真实迁移/业务夹具通过。原始审计反例与整改
+记录保留在 `docs/agent/stage-2-3-audit.md` 和 `docs/agent/HANDOFF.md`。
 
 ### 目标
 
@@ -135,35 +134,36 @@ Stage 2 的单元门禁按依赖关系累积，不能用文档中的“已实现
 4. `make acceptance-stage-2d`：先验收 2C，再运行 `Course.mode` 与 `KnowledgeNote.source_note_id` 的 migration、Schema、模型约束与 API 测试；关键内容模块覆盖率门槛为 90%，并检查 ADR 0005 存在；
 5. `make acceptance-stage-2`：先验收 2D，再执行全仓 `verify` 与双服务 `smoke`，因此还覆盖全局覆盖率、OpenAPI/TypeScript 生成物漂移、前端类型/测试/生产构建和真实代理链路。
 
-前三个单元只需要 Python 工具链；最终聚合验收因为包含契约和前端检查，需要 Node.js 22 与 pnpm 10.14.0。若 pnpm 缺失，Make 会给出 Corepack 安装提示。CI 使用的稳定入口 `make acceptance` 当前是 `make acceptance-stage-2` 的薄别名；Stage 2 只有在最终聚合命令于 clean checkout 退出 0 后才能标记完成。
+前三个单元只需要 Python 工具链；最终聚合验收因为包含契约和前端检查，需要 Node.js 22 与 pnpm 10.14.0。若 pnpm 命令缺失但 Corepack 可用，Make 会自动使用 `corepack pnpm`。CI 的稳定入口 `make acceptance` 随当前已交付阶段推进，现累计到 Stage 4。
 
 ---
 
 ## Stage 3：PGN 语义 round-trip 与课程后端
 
-### 独立审计后的状态（2026-08-09）
+### 独立整改后的状态（2026-08-09）
 
-现有 happy-path 测试会通过，但不满足下列交付物和自动验收标准。完整反例、命令结果和
-整改顺序见 `docs/agent/stage-2-3-audit.md`。
+原审计反例已全部转换为自动测试并修复。`make acceptance-stage-3` 在 SQLite、固定镜像
+MySQL、运行时契约、前端构建和双路 smoke 上累计退出 0；历史反例保留在
+`docs/agent/stage-2-3-audit.md`。
 
 | 单元 | 现有测试情况 | 功能状态 |
 |------|-------------|----------|
-| 3A | 61 个现有测试通过 | 部分完成：基础解析可用，完整状态、无损语义与资源边界缺失 |
-| 3B | 9 个现有测试通过 | 未验收：无 API、幂等/Source、完整事务错误和限制 |
-| 3C | 10 个现有测试通过 | 未验收：全夹具 round-trip 失败，比较器有假阳性，导出边界不完整 |
-| 3D | 3 个现有断言可在 MySQL 通过 | 未验收：测试未跑 Alembic，真实 MySQL downgrade 失败 |
-| 聚合 | 依赖接线不完整 | 未验收 |
+| 3A | 71 个解析测试，97.43% 聚焦覆盖 | 已验收 |
+| 3B | 30 个导入/API 测试，96.68% 聚焦覆盖 | 已验收 |
+| 3C | 12 个导出/比较测试，91.69% 聚焦覆盖 | 已验收 |
+| 3D | MySQL 4/4 真实迁移与 PGN 业务链路 | 已验收 |
+| 聚合 | 后端 225 passed，93.22% line / 76.36% branch | 已验收 |
 
-### 已有实现模块（待按验收标准整改）
+### 已验收实现模块
 
 | 模块 | 职责 |
 |------|------|
-| `logic/pgn.py` | PGN 文本 → `PgnGame`/`PgnNode` 不可变语义树 |
-| `logic/pgn_import.py` | PgnGame 树 → 新 traditional Course + Occurrence 树；可复用全局 Position，但尚无完整事务/幂等契约 |
-| `logic/pgn_export.py` | 单根 Course occurrence 树 → 基础 PGN 文本；尚未覆盖完整 header/result/path 语义 |
-| `logic/pgn_compare.py` | 两个 PgnGame 树的部分字段比较器；尚不能作为完整语义等价证明 |
-| `scripts/check_mysql.py` | Docker MySQL 容器生命周期管理 |
-| `tests/test_mysql_compat.py` | 真实 MySQL 上的 metadata create/drop、基础 service CRUD 与顺序去重断言；未执行 Alembic |
+| `logic/pgn.py` | 有资源上限的 PGN 文本 → `PgnGame`/`PgnNode` 不可变语义树 |
+| `logic/pgn_import.py` | 原子、幂等的 PgnGame → Source/receipt/course/occurrence 图导入 |
+| `logic/pgn_export.py` | Module、路径和 receipt 范围的完整语义 PGN 导出 |
+| `logic/pgn_compare.py` | 覆盖 headers/result/FEN/变化顺序/comment/NAG 的结构化比较器 |
+| `scripts/check_mysql.py` | 固定 MySQL 8.4 容器生命周期与失败传播 |
+| `tests/test_mysql_compat.py` | 真实 Alembic 往返、CRUD、局面唯一性和 PGN 业务链路 |
 
 ### 目标交付物
 
@@ -207,6 +207,13 @@ ADR 0007–0008 是 Stage 3 实现的规范来源。若实现与旧代码或旧�
 
 ## Stage 4：三栏课程编辑器（编辑器 MVP）
 
+状态：**已实现并通过自动验收；两轮交互反馈已修正，等待继续产品验收（2026-08-10）**。
+
+`make acceptance-stage-4` 累计退出 0：后端 247 passed / 4 个仅在普通 SQLite 测试中条件
+跳过的 MySQL 用例，行覆盖率 92.47%、分支覆盖率 75.06%；固定 MySQL 8.4 门禁 4/4，前端
+26/26，生产构建、契约、迁移往返、direct/proxy smoke 以及全新临时数据库 Chromium 编辑器
+流程全部通过。Stage 4A–4D 必需项为 0 个剩余项；4E 仍按原决定留在非阻塞 backlog。
+
 ### 目标
 
 交付原项目说明 §16 的 15 条 MVP：用户可从起始局面/FEN 建课程（支持 traditional 和 opening_explorer 两种模式）、走合法棋、创建和导航分支、写说明、关联来源并导入导出 PGN。
@@ -216,7 +223,11 @@ ADR 0007–0008 是 Stage 3 实现的规范来源。若实现与旧代码或旧�
 - Dashboard 基础卡片、后台状态占位与快速入口；课程数据出现后展示真实统计，不用硬编码假数据；
 - Learn 课程列表、搜索和基础筛选；
 - 独立 Sources 一级页与网页笔记/手工来源入口；
-- 课程页：左侧章节/关键局面，中间 `react-chessboard`，右侧当前节点直接候选着；
+- 课程页：traditional 左侧展示章节，opening_explorer 左侧只展示合并后的入口局面；中间
+  `react-chessboard`，右侧展示当前节点直接候选着；
+- 发布到 opening_explorer 时按根 Position 和“父 occurrence + MoveEdge”合并共同前缀，
+  不把来源章节标题复制成探索器目录；
+- 棋盘选中/拖动棋子时显示合法空格圆点和吃子圆环，并使用 100 ms 快速移动动画；
 - 当前导航路径而非“唯一父节点”；
 - `chess.js` 前端预检 + 后端 `python-chess` 权威校验；
 - Markdown 编辑与经过白名单清理的预览；
@@ -241,14 +252,24 @@ Playwright 在全新临时数据库中自动完成：
 9. 模拟保存 500/断网，断言未保存状态明确、重试不重复写入；
 10. axe 扫描无 serious/critical 可访问性问题，核心操作可以键盘完成；
 11. 视口矩阵覆盖常见桌面宽度，关键控件没有遮挡；截图仅用于回归提示，不代替行为断言。
+12. 发布两个共享起点/前缀的 traditional 章节后，Explorer 只有合并后的候选路径且不显示
+    来源章节名；真实棋盘点击棋子后可见合法落点标记。
 
 完成后，将项目说明中的“第一版 MVP”称为**编辑器 MVP**，避免与真正训练闭环混淆。
 
 全局图视图作为 **Stage 4E 非 MVP backlog**：编辑器 MVP 稳定后再加入转置、孤立节点、深度/来源/错误筛选，不阻塞 Stage 5。
 
+第二轮产品验收把内容呈现收口为同一套 ADR 0006 block：传统课程默认在宽正文栏按顺序
+阅读 Narrative/MoveSequence/KnowledgeNote，narrative 可引用 SourceSpan，新局面说明与其
+block 原子创建；Explorer 的来源观点可打开原章节相邻正文。完成这些后 Stage 4A–4D 的
+**必需剩余项仍为 0**，只有可选的 Stage 4E 全局图一个执行单元。
+
 ---
 
 ## Stage 5：个人开局库、非引擎答案策略与开局库训练 MVP
+
+执行顺序：**因当前产品优先级后置**。其 Source/Knowledge/Repertoire/Exercise 分层契约
+不变；后置不会要求 Stage 4 或 Stage 8 改表重做。
 
 ### 目标
 
@@ -283,6 +304,11 @@ Playwright 在全新临时数据库中自动完成：
 
 ## Stage 6：Stockfish、Syzygy 与可靠后台任务
 
+执行顺序：**核心基础提前到 Stage 8 之前**。先交付不依赖个人库的 6A SQL job 基础，
+再按需要交付 6B 引擎分析和 Syzygy/对弈核心。`engine-threshold`、`tablebase` 判题以及
+“保存为 Exercise”属于 Stage 5 的集成尾项，在 Stage 5 模型存在后启用；提前阶段不得
+用占位表或跨层字段伪造这些依赖。
+
 ### 目标
 
 提供实时浅分析、后台深分析、缓存和指定局面对弈，同时建立可复用的 SQL worker 可靠性模型。
@@ -296,10 +322,12 @@ Playwright 在全新临时数据库中自动完成：
 - 实时浅分析与后台深分析；
 - 缓存 key 包含规范局面、完整相关状态、引擎版本和全部参数；
 - Syzygy 查询和残局优先路由；
-- 完成 Stage 5 预留的 `engine-threshold` 与 `tablebase` 策略，并复用相同答案分类契约；
+- 提供 `engine-threshold` 与 `tablebase` 的纯分析结果；与 Stage 5 答案分类协议的接线
+  作为后置集成尾项；
 - WebSocket 只发资源失效通知，SWR 随后重新拉正式数据；
 - 从任意局面与引擎继续下；
-- 指定局面对弈支持选颜色、强度/资源限制、赛后错误回顾，并把新发现保存为课程或练习草稿。
+- 指定局面对弈支持选颜色、强度/资源限制、赛后错误回顾，并把新发现保存为课程草稿；
+  Exercise 草稿目标在 Stage 5 存在后接入。
 
 ### 自动验收标准
 
@@ -311,13 +339,17 @@ Playwright 在全新临时数据库中自动完成：
 6. 取消在排队、运行中和完成后都有确定且幂等的状态转换；
 7. WebSocket 断开不影响任务完成和 SQL 数据，重连/普通轮询能取得相同结果；
 8. 使用小型 Syzygy fixture 验证 WDL/DTZ 路由；缺表时优雅回退；
-9. `engine-threshold` 与 `tablebase` 的答案边界有表驱动测试和一条完整 UI 作答流；
+9. `engine-threshold` 与 `tablebase` 的纯分析边界有表驱动测试；完整 UI 作答流在 Stage 5
+   集成尾项验收；
 10. 进程、线程、Hash 和耗时均受配置上限约束，测试后无孤儿 Stockfish 进程；
 11. 状态机使用性质测试验证不存在非法跃迁。
 
 ---
 
 ## Stage 7：Lichess 对局、偏离与错误训练闭环
+
+执行顺序：**整体后置**。7A 本身仍只依赖 4D，但当前不抢占 PDF/OCR/AI 主路径；7B–7D
+继续严格等待 Stage 5 训练流和 Stage 6 引擎分析。
 
 ### 目标
 
@@ -356,6 +388,10 @@ Playwright 在全新临时数据库中自动完成：
 
 ## Stage 8：PDF/OCR/AI 候选导入与人工审核
 
+执行顺序：**Stage 6A 之后优先实施**。Stage 4 的有序正文、局面说明和 SourceSpan 已经
+是正式发布目标，因此 8A–8D 不依赖个人开局库；AI 先产出 Course/Knowledge 候选，
+Repertoire/Exercise 发布 adapter 等 Stage 5 模型存在后再接入。
+
 ### 目标
 
 把 PDF 资料安全、幂等地转成可审核候选（默认进入 `mode="traditional"` 课程）；任何 AI 或 OCR 结果都不能绕过正式发布边界。
@@ -370,7 +406,8 @@ Playwright 在全新临时数据库中自动完成：
 - JSON Schema、python-chess、前后局面和置信度验证；
 - 三栏审核页：原文/页图、棋盘、候选变化/警告；
 - 批准、修改、拒绝、多来源合并和审计记录；
-- 批准时可以分别产出 Course、KnowledgeNote 与 Exercise 草稿；AI 合并历史可按版本查看；
+- 批准时可以产出 Course 与 KnowledgeNote 草稿；AI 合并历史可按版本查看；Exercise
+  草稿 adapter 在 Stage 5 完成后追加；
 - 未配置 API key 时核心应用完整可用。
 
 ### 自动验收标准
@@ -380,7 +417,8 @@ Playwright 在全新临时数据库中自动完成：
 3. mock OCR/AI 输出完全确定，契约不允许额外字段和错误类型；
 4. 非法 SAN、断裂变化、棋盘方向不确定和低置信度内容只能进入 warning/review，不能发布；
 5. 拒绝、修改、批准各自产生不可变审计记录，并能追溯 SourceSpan；
-6. 两个来源对同一局面的冲突推荐并存，由用户选择个人路线，不发生覆盖；
+6. 两个来源对同一局面的冲突推荐作为 Knowledge 并存且不覆盖；个人路线选择在 Stage 5
+   的 Repertoire 层完成；
 7. 任务重试和重复批准保持幂等；发布事务失败时正式知识零部分写入；
 8. 在无 OpenAI key、无 OCR 二进制的精简 CI job 中，除相应可选集成外所有测试仍绿；
 9. OpenAI adapter 只做 Schema 合约测试和显式手动/定时集成，不在 PR 中花费真实额度。
@@ -501,10 +539,11 @@ Playwright 在全新临时数据库中自动完成：
 | 5B | 5A | 六类策略协议与四类非引擎策略 | 答案分类表驱动向量 | `make acceptance-stage-5b` |
 | 5C | 5B | FSRS、ReviewCard、今日队列和版本化作答 | 官方参考向量、冻结时钟/时区 | `make acceptance-stage-5c` |
 | 5D | 5C | Practice UI、自定义集、备份/恢复与训练 MVP E2E | 临时完整个人库 | `make acceptance-stage-5` |
-| 6A | 5B | SQL job 状态机、worker、租约/取消/重试 | 双 worker、崩溃、过期租约 | `make acceptance-stage-6a` |
+| 6A | 4D | SQL job 状态机、worker、租约/取消/重试 | 双 worker、崩溃、过期租约 | `make acceptance-stage-6a` |
 | 6B | 6A | fake/真实 UCI、MultiPV、缓存和分析版本 | fake UCI transcript、固定局面 | `make acceptance-stage-6b` |
-| 6C | 6B | Syzygy 与 engine-threshold/tablebase 判题 | 小型表库、阈值边界 | `make acceptance-stage-6c` |
-| 6D | 6C | WS 失效通知、指定局面对弈、赛后回顾/保存 | 断连、选色、强度与结束局面 | `make acceptance-stage-6` |
+| 6C | 6B | Syzygy 与 engine-threshold/tablebase 纯分析 | 小型表库、阈值边界 | `make acceptance-stage-6c` |
+| 6D | 6C | WS 失效通知、指定局面对弈、赛后回顾/课程草稿 | 断连、选色、强度与结束局面 | `make acceptance-stage-6` |
+| 6E（后置集成） | 5B、6C | engine/tablebase 判题协议与 Exercise 草稿接线 | 答案边界和完整作答流 | `make acceptance-stage-6e` |
 | 7A | 4D | Lichess 筛选同步、幂等 Game 存储和基础 Games UI | 脱敏 API/PGN/429 分页 fixture | `make acceptance-stage-7a` |
 | 7B | 5D、6B、7A | 首次偏离、引擎损失与完整错误分类 | 个人库内错误/合理偏离对照棋局 | `make acceptance-stage-7b` |
 | 7C | 7B | 课程/残局匹配、聚类、价值排序和生成练习 | 多盘重复/非重复错误集合 | `make acceptance-stage-7c` |
@@ -512,7 +551,7 @@ Playwright 在全新临时数据库中自动完成：
 | 8A | 4D、6A | 内容哈希存储、Sources 页、PDF 页段与任务 | 文本/扫描/伪 MIME/重复 PDF | `make acceptance-stage-8a` |
 | 8B | 8A | 渲染/OCR adapter 与 SourceSpan 候选 | 三页合成 PDF、mock OCR | `make acceptance-stage-8b` |
 | 8C | 8B | mock/openai provider、Schema/棋规/一致性验证 | 合法、非法、冲突 AI JSON | `make acceptance-stage-8c` |
-| 8D | 8C | 三栏审核、审计、多来源合并与 Course/Exercise 草稿 | 批准/修改/拒绝/重复发布 | `make acceptance-stage-8` |
+| 8D | 8C | 三栏审核、审计、多来源合并与 Course/Knowledge 草稿 | 批准/修改/拒绝/重复发布 | `make acceptance-stage-8` |
 | 9A | 8D | FFmpeg 音频/关键帧与 mock 转录 | 固定短视频 | `make acceptance-stage-9a` |
 | 9B | 9A | 棋盘方向、连续局面和字幕对齐 | 翻转/遮挡/切镜/多解片段 | `make acceptance-stage-9b` |
 | 9C | 9B | 时间轴审核、草稿发布和文件生命周期 | 重试/取消/发布失败 fixture | `make acceptance-stage-9` |
@@ -545,7 +584,7 @@ Playwright 在全新临时数据库中自动完成：
 | 错误 → 练习 → 复习 → 趋势 | 7D | `game-error-learning-loop.spec` | 真正实战学习闭环 MVP |
 | PDF 页码范围、OCR、SourceSpan | 8A–8B | synthetic PDF fixtures | 重计算走 SQL job |
 | PDF AI 候选、审核、多来源冲突 | 8C–8D | mock structured outputs + publish transaction tests | AI 永不直写正式知识 |
-| PDF/视频生成 Course/Exercise 草稿 | 8D、9C | `publish-import-draft.spec` | 与审核发布共用边界 |
+| PDF/视频生成 Course/Knowledge 草稿；Exercise 后接 | 8D、9C；Stage 5 后 adapter | `publish-import-draft.spec` | 与审核发布共用边界，避免倒置分层 |
 | 视频关键帧、转录、局面对齐 | 9A–9C | fixed short-video fixtures | 复用 PDF 审核基础 |
 | 双模课程（traditional + opening_explorer） | 2D；API 4A；发布 4C | `course-mode.spec`、`note-source-link.spec` | 核心数据模型先行 |
 | 传统课程按来源组织（书籍/视频/PGN → 章节，默认主线阅读并保留作者变例） | 2D、3B、4A | `traditional-course-navigation.spec` + PGN RAV fixture | 依赖 Course.mode + 编辑器 UI |
@@ -574,7 +613,12 @@ Playwright 在全新临时数据库中自动完成：
 
 ## 6. 推荐执行节奏与验收方式
 
-严格按 Stage 1 → 2D → 5 完成编辑和开局库训练。2D 是 ADR 0005（双模课程）的代码落地，必须在 Stage 3 PGN 导入之前完成。Stage 5 稳定后，Stage 6 与 **Stage 7A** 可以局部并行；**Stage 7B–7D 必须等待 Stage 6B 的引擎分析和 Stage 5D 的训练流**。Stage 8 与 Stage 9 共用审核基础，必须顺序推进；Stage 11 不应为了“预留接口”提前侵入正式模型。
+当前 AI 棋书优先路线为：**完成 Stage 4 → Stage 6A（可靠任务基础）→ 视需要完成
+6B–6D 核心 → Stage 8 → Stage 9 → Stage 5 → 6E → Stage 7**。这只是交付顺序调整，
+不是层级倒置：Source → Knowledge 先完成，Repertoire → Exercise 后接。2D 作为 ADR 0005
+双模课程基础已经先于 Stage 3 落地；Stage 8 与 Stage 9 仍共用审核基础并顺序推进；
+Stage 7B–7D 仍必须等待 Stage 6B 引擎分析和 Stage 5D 训练流。Stage 11 不应为了预留
+接口提前侵入正式模型。
 
 每个阶段交付时给用户的验收材料固定为：
 

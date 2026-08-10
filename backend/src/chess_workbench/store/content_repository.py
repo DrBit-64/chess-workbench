@@ -17,11 +17,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.exc import StaleDataError
 
 from chess_workbench.store.models import (
+    ContentRevision,
     Course,
+    CourseContentBlock,
+    CourseContentBlockCitation,
     CourseModule,
     CourseOccurrence,
     KnowledgeNote,
     KnowledgeNoteCitation,
+    ModulePublication,
     Source,
     SourceFile,
     SourceSpan,
@@ -32,6 +36,7 @@ ModelT = TypeVar("ModelT")
 type MutableModel = (
     Course
     | CourseModule
+    | CourseContentBlock
     | CourseOccurrence
     | Source
     | SourceVersion
@@ -93,6 +98,17 @@ class ContentRepository:
             statement = statement.where(Course.archived_at.is_(None))
         return await self._scalars(statement.order_by(Course.created_at, Course.id))
 
+    async def course_has_content(self, course_id: UUID) -> bool:
+        module_id = await self.session.scalar(
+            select(CourseModule.id).where(CourseModule.course_id == course_id).limit(1)
+        )
+        if module_id is not None:
+            return True
+        occurrence_id = await self.session.scalar(
+            select(CourseOccurrence.id).where(CourseOccurrence.course_id == course_id).limit(1)
+        )
+        return occurrence_id is not None
+
     async def get_module(
         self,
         module_id: UUID,
@@ -119,6 +135,64 @@ class ContentRepository:
 
     async def get_occurrence(self, occurrence_id: UUID) -> CourseOccurrence | None:
         return await self.session.get(CourseOccurrence, occurrence_id)
+
+    async def get_content_block(self, block_id: UUID) -> CourseContentBlock | None:
+        return await self.session.get(CourseContentBlock, block_id)
+
+    async def list_content_blocks(
+        self,
+        module_id: UUID,
+        *,
+        include_archived: bool = False,
+    ) -> list[CourseContentBlock]:
+        statement = select(CourseContentBlock).where(CourseContentBlock.module_id == module_id)
+        if not include_archived:
+            statement = statement.where(CourseContentBlock.archived_at.is_(None))
+        return await self._scalars(
+            statement.order_by(
+                CourseContentBlock.sort_order,
+                CourseContentBlock.created_at,
+                CourseContentBlock.id,
+            )
+        )
+
+    async def content_block_for_root(self, root_id: UUID) -> CourseContentBlock | None:
+        return cast(
+            CourseContentBlock | None,
+            await self.session.scalar(
+                select(CourseContentBlock).where(CourseContentBlock.root_occurrence_id == root_id)
+            ),
+        )
+
+    async def replace_content_block_citations(
+        self,
+        block_id: UUID,
+        source_span_ids: list[UUID],
+    ) -> None:
+        await self.session.execute(
+            delete(CourseContentBlockCitation).where(
+                CourseContentBlockCitation.course_content_block_id == block_id
+            )
+        )
+        self.session.add_all(
+            CourseContentBlockCitation(
+                course_content_block_id=block_id,
+                source_span_id=span_id,
+            )
+            for span_id in source_span_ids
+        )
+        try:
+            await self.session.flush()
+        except IntegrityError as error:
+            raise RepositoryConflictError from error
+
+    async def list_content_block_citation_ids(self, block_id: UUID) -> list[UUID]:
+        result = await self.session.scalars(
+            select(CourseContentBlockCitation.source_span_id)
+            .where(CourseContentBlockCitation.course_content_block_id == block_id)
+            .order_by(CourseContentBlockCitation.source_span_id)
+        )
+        return list(result)
 
     async def list_occurrences(
         self,
@@ -166,6 +240,7 @@ class ContentRepository:
         self,
         parent_id: UUID,
         inbound_move_edge_id: UUID,
+        sort_order: int,
     ) -> CourseOccurrence | None:
         return cast(
             CourseOccurrence | None,
@@ -173,6 +248,7 @@ class ContentRepository:
                 select(CourseOccurrence).where(
                     CourseOccurrence.parent_id == parent_id,
                     CourseOccurrence.inbound_move_edge_id == inbound_move_edge_id,
+                    CourseOccurrence.sort_order == sort_order,
                 )
             ),
         )
@@ -230,6 +306,17 @@ class ContentRepository:
 
     async def get_knowledge_note(self, note_id: UUID) -> KnowledgeNote | None:
         return await self.session.get(KnowledgeNote, note_id)
+
+    async def note_has_active_references(self, note_id: UUID) -> bool:
+        reference_id = await self.session.scalar(
+            select(KnowledgeNote.id)
+            .where(
+                KnowledgeNote.source_note_id == note_id,
+                KnowledgeNote.archived_at.is_(None),
+            )
+            .limit(1)
+        )
+        return reference_id is not None
 
     async def list_knowledge_notes(
         self,
@@ -289,6 +376,52 @@ class ContentRepository:
                 return False
             current_id = parent.parent_id
         return False
+
+    async def add_revision(self, revision: ContentRevision) -> None:
+        """Persist an immutable pre-edit snapshot in the caller's transaction."""
+
+        self.session.add(revision)
+        try:
+            await self.session.flush()
+        except IntegrityError as error:
+            raise RepositoryConflictError from error
+
+    async def list_revisions(
+        self,
+        entity_type: str,
+        entity_id: UUID,
+    ) -> list[ContentRevision]:
+        statement = (
+            select(ContentRevision)
+            .where(
+                ContentRevision.entity_type == entity_type,
+                ContentRevision.entity_id == entity_id,
+            )
+            .order_by(ContentRevision.entity_version, ContentRevision.created_at)
+        )
+        return await self._scalars(statement)
+
+    async def get_module_publication(
+        self,
+        target_course_id: UUID,
+        source_module_id: UUID,
+    ) -> ModulePublication | None:
+        return cast(
+            ModulePublication | None,
+            await self.session.scalar(
+                select(ModulePublication).where(
+                    ModulePublication.target_course_id == target_course_id,
+                    ModulePublication.source_module_id == source_module_id,
+                )
+            ),
+        )
+
+    async def add_module_publication(self, publication: ModulePublication) -> None:
+        self.session.add(publication)
+        try:
+            await self.session.flush()
+        except IntegrityError as error:
+            raise RepositoryConflictError from error
 
     async def _scalars(self, statement: Select[tuple[ModelT]]) -> list[ModelT]:
         result = await self.session.scalars(statement)

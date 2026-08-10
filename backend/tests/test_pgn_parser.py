@@ -3,11 +3,18 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
+from dataclasses import replace
 from pathlib import Path
 from typing import NamedTuple
 
 import pytest
-from chess_workbench.logic.pgn import PgnNode, parse_pgn
+from chess_workbench.logic.pgn import (
+    PgnError,
+    PgnNode,
+    parse_pgn,
+    parse_pgn_document,
+    semantic_hash,
+)
 
 FIXTURE_DIR = Path(__file__).parent / "fixtures" / "pgn"
 
@@ -227,3 +234,116 @@ def _assert_ply_monotonic(node: PgnNode) -> None:
             f"child ply {child.ply} != parent ply {node.ply} + 1 (child san={child.san})"
         )
         _assert_ply_monotonic(child)
+
+
+def test_document_parser_preserves_all_games_and_source_order() -> None:
+    first = (FIXTURE_DIR / "01_mainline.pgn").read_text()
+    second = (FIXTURE_DIR / "07_unicode_comment.pgn").read_text()
+
+    document = parse_pgn_document(first + "\n" + second)
+
+    assert len(document.games) == 2
+    assert [game.header("event") for game in document.games] == [
+        "Simple mainline",
+        "Unicode comment — 中文",
+    ]
+    assert document.games[0].source_start < document.games[0].source_end
+    assert document.games[0].source_end <= document.games[1].source_start
+    with pytest.raises(PgnError, match="exactly one game"):
+        parse_pgn(first + "\n" + second)
+
+
+def test_parser_preserves_all_nags_starting_comments_and_full_fen() -> None:
+    game = parse_pgn(
+        '[Event "Semantics"]\n'
+        '[Result "*"]\n'
+        '[SetUp "1"]\n'
+        '[FEN "8/8/8/3pP3/8/8/8/K6k w - d6 7 42"]\n\n'
+        "{root} 42. exd6 $1 $3 {normal} ( {variation start} 42. Ka2 $2 ) *"
+    )
+
+    assert game.root.fen == "8/8/8/3pP3/8/8/8/K6k w - d6 7 42"
+    assert game.root.comment == "root"
+    assert game.root.children[0].nags == (1, 3)
+    assert game.root.children[0].comment == "normal"
+    assert game.root.children[1].starting_comment == "variation start"
+    assert game.root.children[1].nags == (2,)
+
+
+@pytest.mark.parametrize(
+    ("text", "reason"),
+    [
+        ('[Event "A"]\n[Event "B"]\n[Result "*"]\n\n*', "duplicate_tag"),
+        ('[Result "1-0"]\n\n1. e4 0-1', "result_conflict"),
+        ('[Result "*"]\n\n1. e4', "missing_result"),
+        ('[Result "*"]\n\n*\x00', "nul_byte"),
+    ],
+)
+def test_parser_rejects_lossy_or_ambiguous_inputs(text: str, reason: str) -> None:
+    with pytest.raises(PgnError) as captured:
+        parse_pgn_document(text)
+    assert captured.value.reason == reason
+
+
+def test_parser_reports_move_and_rav_limits_with_location() -> None:
+    nested = (FIXTURE_DIR / "03_nested_variations.pgn").read_text()
+    with pytest.raises(PgnError) as depth_error:
+        parse_pgn_document(nested, max_rav_depth=1)
+    assert depth_error.value.kind == "pgn_limit_exceeded"
+    assert depth_error.value.reason == "rav_depth"
+    assert depth_error.value.path is not None
+
+    mainline = (FIXTURE_DIR / "01_mainline.pgn").read_text()
+    with pytest.raises(PgnError) as count_error:
+        parse_pgn_document(mainline, max_move_nodes=3)
+    assert count_error.value.reason == "move_count"
+    assert count_error.value.ply == 4
+
+
+def test_parser_handles_5000_ply_without_python_recursion() -> None:
+    moves: list[str] = []
+    for fullmove in range(1, 2501):
+        if fullmove % 2:
+            moves.append(f"{fullmove}. Nf3 Nf6")
+        else:
+            moves.append(f"{fullmove}. Ng1 Ng8")
+    text = '[Event "Long"]\n[Result "*"]\n\n' + " ".join(moves) + " *"
+
+    document = parse_pgn_document(text, deadline_seconds=15)
+
+    assert document.move_count == 5_000
+    node = document.games[0].root
+    visited = 0
+    while node.children:
+        node = node.children[0]
+        visited += 1
+    assert visited == 5_000
+
+
+def test_semantic_hash_covers_headers_result_and_tree_fields() -> None:
+    game = parse_pgn((FIXTURE_DIR / "03_nested_variations.pgn").read_text())
+    original_hash = semantic_hash(game)
+    assert semantic_hash(game) == original_hash
+    assert semantic_hash(replace(game, result="1-0")) != original_hash
+    assert semantic_hash(replace(game, root=replace(game.root, comment="changed"))) != original_hash
+
+
+def test_structured_error_details_and_remaining_limits() -> None:
+    multi = (
+        (FIXTURE_DIR / "01_mainline.pgn").read_text()
+        + "\n"
+        + (FIXTURE_DIR / "02_one_variation.pgn").read_text()
+    )
+    with pytest.raises(PgnError) as game_limit:
+        parse_pgn_document(multi, max_games=1)
+    assert game_limit.value.reason == "game_count"
+    assert game_limit.value.details()["game_index"] == 1
+
+    with pytest.raises(ValueError, match="limits must be positive"):
+        parse_pgn_document("*", max_move_nodes=0)
+    with pytest.raises(PgnError) as deadline:
+        parse_pgn_document(
+            (FIXTURE_DIR / "01_mainline.pgn").read_text(),
+            deadline_seconds=1e-12,
+        )
+    assert deadline.value.reason == "deadline"

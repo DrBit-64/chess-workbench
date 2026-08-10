@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from typing import Any, cast
+from uuid import uuid4
 
 import chess
 from chess_workbench.api.app import ChessWorkbenchApp, create_app
@@ -63,6 +64,15 @@ async def test_position_and_move_endpoints_are_idempotent_and_authoritative(
     assert existing_move.status == 200
     assert created_move.json == existing_move.json
     assert created_move.json["san"] == "e4"
+
+    _, fetched_position = await client.get(f"/api/positions/{created_position.json['id']}")
+    _, missing_position = await client.get(f"/api/positions/{uuid4()}")
+    _, fetched_move = await client.get(f"/api/moves/{created_move.json['id']}")
+    _, missing_move = await client.get(f"/api/moves/{uuid4()}")
+    assert fetched_position.status == fetched_move.status == 200
+    assert fetched_position.json["id"] == created_position.json["id"]
+    assert fetched_move.json["id"] == created_move.json["id"]
+    assert missing_position.status == missing_move.status == 404
 
     async with app.ctx.database.session() as session:
         position_count = await session.scalar(select(func.count()).select_from(Position))

@@ -5,9 +5,12 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, cast
 
+import pytest
 from chess_workbench.api.app import ChessWorkbenchApp, create_app
 from chess_workbench.config import Settings
 from chess_workbench.store.base import Base
+from chess_workbench.store.models import Course
+from sqlalchemy.exc import IntegrityError
 
 
 def build_test_app(tmp_path: Path) -> ChessWorkbenchApp:
@@ -135,3 +138,38 @@ async def test_list_courses_includes_mode(tmp_path: Path) -> None:
     courses = cast(list[dict[str, Any]], list_resp.json)
     modes = {c["mode"] for c in courses}
     assert modes == {"traditional", "opening_explorer"}
+
+
+async def test_database_rejects_invalid_course_mode(tmp_path: Path) -> None:
+    """The database protects mode even when callers bypass Pydantic and HTTP."""
+    app = build_test_app(tmp_path)
+    await create_schema(app)
+
+    async with app.ctx.database.session() as session, session.begin():
+        session.add(Course(title="Invalid direct row", mode="not-a-real-mode"))
+        with pytest.raises(IntegrityError):
+            await session.flush()
+
+
+async def test_course_mode_is_immutable_after_content_exists(tmp_path: Path) -> None:
+    app = build_test_app(tmp_path)
+    await create_schema(app)
+    client = cast(Any, app.asgi_client)
+
+    _, create_response = await client.post(
+        "/api/courses",
+        json={"title": "Already populated"},
+    )
+    course = cast(dict[str, Any], create_response.json)
+    _, module_response = await client.post(
+        "/api/course-modules",
+        json={"course_id": course["id"], "title": "Chapter"},
+    )
+    assert module_response.status == 201
+
+    _, patch_response = await client.patch(
+        f"/api/courses/{course['id']}",
+        json={"expected_version": 1, "mode": "opening_explorer"},
+    )
+    assert patch_response.status == 409
+    assert patch_response.json["code"] == "resource_referenced"

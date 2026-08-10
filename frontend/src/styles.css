@@ -20,3 +20,85 @@ body {
   min-width: 320px;
   min-height: 100vh;
 }
+
+/* Ant Design's default secondary gray misses WCAG AA at normal text sizes. */
+.ant-typography-secondary {
+  color: #595959 !important;
+}
+
+.ant-select-placeholder,
+.ant-select-selection-placeholder {
+  color: #595959 !important;
+}
+
+.editor-grid {
+  display: grid;
+  grid-template-columns: minmax(190px, 0.45fr) minmax(440px, 1.1fr) minmax(
+      420px,
+      1.25fr
+    );
+  gap: 1rem;
+  align-items: start;
+}
+
+.editor-panel {
+  max-height: calc(100vh - 9rem);
+  overflow: auto;
+}
+
+.chapter-reader {
+  color: #292524;
+  font-size: 1rem;
+  line-height: 1.75;
+}
+
+.reader-block {
+  margin-bottom: 1rem;
+}
+
+.reader-block.narrative,
+.reader-block.knowledge_note,
+.source-context-prose {
+  max-width: 72ch;
+}
+
+.reader-block.narrative p,
+.reader-block.knowledge_note p,
+.source-context-prose p {
+  margin-bottom: 0.85em;
+}
+
+.reader-block.knowledge_note {
+  border-left: 3px solid #3f654d;
+  border-radius: 0 6px 6px 0;
+  background: #f3f8f4;
+  padding: 0.85rem 1rem;
+}
+
+.reader-position-link {
+  height: auto;
+  padding: 0.45rem 0.6rem;
+  color: #3f654d;
+  white-space: normal;
+}
+
+@media (max-width: 1280px) {
+  .editor-grid {
+    grid-template-columns: minmax(180px, 0.7fr) minmax(420px, 1.5fr);
+  }
+
+  .editor-grid > :last-child {
+    grid-column: 1 / -1;
+    max-height: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .editor-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .editor-grid > :last-child {
+    grid-column: auto;
+  }
+}

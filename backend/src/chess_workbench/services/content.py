@@ -14,28 +14,45 @@ from typing import Protocol, TypeVar, cast
 from uuid import UUID
 
 from pydantic import BaseModel, JsonValue
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from chess_workbench.domain import PositionError, PositionState
 from chess_workbench.schemas.domain import (
+    CitableSourceCreate,
+    CitableSourceRead,
+    ContentHistoryRead,
+    ContentRevisionRead,
+    CourseContentBlockCreate,
+    CourseContentBlockRead,
+    CourseContentBlockUpdate,
     CourseCreate,
+    CourseKnowledgeNoteBlockCreate,
+    CourseKnowledgeNoteBlockRead,
     CourseModuleCreate,
+    CourseModuleEditorRead,
     CourseModuleRead,
     CourseModuleUpdate,
     CourseRead,
     CourseUpdate,
+    DashboardSummary,
+    EditorKnowledgeNoteRead,
+    EditorOccurrenceRead,
     ErrorCode,
     GlobalMoveNoteTarget,
     GlobalPositionNoteTarget,
+    HistoryEntityType,
     KnowledgeNoteCreate,
     KnowledgeNoteRead,
     KnowledgeNoteUpdate,
+    ModulePublicationRead,
     NormalizedBoundingBox,
     OccurrenceMoveCreate,
     OccurrenceNoteTarget,
     OccurrenceRead,
     OccurrenceUpdate,
     PageSpan,
+    PublishModulesRead,
     RootOccurrenceCreate,
     SourceCreate,
     SourceFileCreate,
@@ -60,10 +77,13 @@ from chess_workbench.store.content_repository import (
 )
 from chess_workbench.store.graph_repository import get_or_create_move, get_or_create_position
 from chess_workbench.store.models import (
+    ContentRevision,
     Course,
+    CourseContentBlock,
     CourseModule,
     CourseOccurrence,
     KnowledgeNote,
+    ModulePublication,
     MoveEdge,
     Position,
     Source,
@@ -128,9 +148,100 @@ class ContentService:
         )
         return self._course_read(row)
 
-    async def list_courses(self, *, include_archived: bool = False) -> list[CourseRead]:
+    async def list_courses(
+        self,
+        *,
+        include_archived: bool = False,
+        query: str | None = None,
+        mode: str | None = None,
+        status: str | None = None,
+        tag: str | None = None,
+        sort: str = "updated_desc",
+    ) -> list[CourseRead]:
         rows = await self.repository.list_courses(include_archived=include_archived)
+        if query:
+            needle = query.casefold()
+            rows = [
+                row
+                for row in rows
+                if needle in row.title.casefold()
+                or needle in row.description.casefold()
+                or (row.category is not None and needle in row.category.casefold())
+            ]
+        if mode:
+            rows = [row for row in rows if row.mode == mode]
+        if status:
+            rows = [row for row in rows if row.status == status]
+        if tag:
+            tag_key = tag.casefold()
+            rows = [row for row in rows if any(value.casefold() == tag_key for value in row.tags)]
+        if sort == "title_asc":
+            rows.sort(key=lambda row: (row.title.casefold(), str(row.id)))
+        elif sort == "created_desc":
+            rows.sort(key=lambda row: (row.created_at, str(row.id)), reverse=True)
+        else:
+            rows.sort(key=lambda row: (row.updated_at, str(row.id)), reverse=True)
         return [self._course_read(row) for row in rows]
+
+    async def dashboard_summary(self) -> DashboardSummary:
+        active_course = Course.archived_at.is_(None)
+        course_count = int(
+            await self.session.scalar(select(func.count()).select_from(Course).where(active_course))
+            or 0
+        )
+        traditional_count = int(
+            await self.session.scalar(
+                select(func.count())
+                .select_from(Course)
+                .where(active_course, Course.mode == "traditional")
+            )
+            or 0
+        )
+        explorer_count = int(
+            await self.session.scalar(
+                select(func.count())
+                .select_from(Course)
+                .where(active_course, Course.mode == "opening_explorer")
+            )
+            or 0
+        )
+        module_count = int(
+            await self.session.scalar(
+                select(func.count())
+                .select_from(CourseModule)
+                .where(CourseModule.archived_at.is_(None))
+            )
+            or 0
+        )
+        source_count = int(
+            await self.session.scalar(
+                select(func.count()).select_from(Source).where(Source.archived_at.is_(None))
+            )
+            or 0
+        )
+        note_count = int(
+            await self.session.scalar(
+                select(func.count())
+                .select_from(KnowledgeNote)
+                .where(KnowledgeNote.archived_at.is_(None))
+            )
+            or 0
+        )
+        position_count = int(
+            await self.session.scalar(select(func.count()).select_from(Position)) or 0
+        )
+        recent = await self.repository.list_courses()
+        recent.sort(key=lambda row: (row.updated_at, str(row.id)), reverse=True)
+        return DashboardSummary(
+            course_count=course_count,
+            traditional_course_count=traditional_count,
+            explorer_course_count=explorer_count,
+            module_count=module_count,
+            source_count=source_count,
+            knowledge_note_count=note_count,
+            position_count=position_count,
+            recent_courses=[self._course_read(row) for row in recent[:5]],
+        )
 
     async def update_course(self, course_id: UUID, data: CourseUpdate) -> CourseRead:
         row = self._require(
@@ -139,7 +250,18 @@ class ContentService:
             course_id,
             include_archived=True,
         )
-        await self._update_changes(row, data.expected_version, self._changes(data), "course")
+        changes = self._changes(data)
+        if (
+            "mode" in changes
+            and changes["mode"] != row.mode
+            and await self.repository.course_has_content(course_id)
+        ):
+            raise self._referenced(
+                "course",
+                course_id,
+                "course mode cannot change after modules or occurrences exist",
+            )
+        await self._update_changes(row, data.expected_version, changes, "course")
         return self._course_read(row)
 
     async def create_module(self, data: CourseModuleCreate) -> CourseModuleRead:
@@ -159,13 +281,25 @@ class ContentService:
             )
             await self._add(row, "course_module")
             if start_state is not None:
-                await self._create_root_row(
+                root = await self._create_root_row(
                     course_id=data.course_id,
                     module_id=row.id,
                     state=start_state,
                     nag=None,
                     sort_order=0,
                     context={},
+                )
+                await self._add(
+                    CourseContentBlock(
+                        module_id=row.id,
+                        kind="move_sequence",
+                        sort_order=0,
+                        heading=None,
+                        markdown=None,
+                        root_occurrence_id=root.id,
+                        knowledge_note_id=None,
+                    ),
+                    "course_content_block",
                 )
         return await self._module_read(row)
 
@@ -228,9 +362,64 @@ class ContentService:
         await self._update_changes(row, data.expected_version, changes, "course_module")
         return await self._module_read(row)
 
+    async def get_module_editor(
+        self,
+        course_id: UUID,
+        module_id: UUID,
+    ) -> CourseModuleEditorRead:
+        await self._active_course(course_id)
+        module = await self._active_module(module_id)
+        self._same_parent("module", course_id, module.course_id, module_id)
+        occurrence_rows = await self.repository.list_occurrences(
+            course_id,
+            module_id=module_id,
+        )
+        edge_ids = {
+            row.inbound_move_edge_id
+            for row in occurrence_rows
+            if row.inbound_move_edge_id is not None
+        }
+        edges = {
+            edge.id: edge
+            for edge in await self.session.scalars(
+                select(MoveEdge).where(MoveEdge.id.in_(edge_ids))
+            )
+        }
+        editor_occurrences: list[EditorOccurrenceRead] = []
+        for row in occurrence_rows:
+            edge = edges.get(row.inbound_move_edge_id) if row.inbound_move_edge_id else None
+            editor_occurrences.append(
+                EditorOccurrenceRead.model_validate(
+                    {
+                        **self._occurrence_read(row).model_dump(mode="python"),
+                        "inbound_uci": edge.uci if edge else None,
+                        "inbound_san": edge.san if edge else None,
+                    }
+                )
+            )
+        block_rows = await self.repository.list_content_blocks(module_id)
+        note_rows = list(
+            await self.session.scalars(
+                select(KnowledgeNote)
+                .where(
+                    KnowledgeNote.occurrence_id.in_([row.id for row in occurrence_rows]),
+                    KnowledgeNote.archived_at.is_(None),
+                )
+                .order_by(KnowledgeNote.created_at, KnowledgeNote.id)
+            )
+        )
+        return CourseModuleEditorRead(
+            module=await self._module_read(module),
+            content_blocks=[await self._content_block_read(row) for row in block_rows],
+            occurrences=editor_occurrences,
+            notes=[await self._editor_knowledge_note_read(row) for row in note_rows],
+        )
+
     async def create_root_occurrence(self, data: RootOccurrenceCreate) -> OccurrenceRead:
         state = self._position_state(data.fen)
         await self._active_course(data.course_id)
+        reusable_block: CourseContentBlock | None = None
+        block_sort_order = 0
         if data.module_id is not None:
             module = self._require(
                 await self.repository.get_module(data.module_id, for_update=True),
@@ -245,6 +434,19 @@ class ContentService:
                     data.module_id,
                     "module already has a root occurrence",
                 )
+            all_blocks = await self.repository.list_content_blocks(
+                data.module_id,
+                include_archived=True,
+            )
+            reusable_block = next(
+                (
+                    block
+                    for block in all_blocks
+                    if block.kind == "move_sequence" and block.archived_at is not None
+                ),
+                None,
+            )
+            block_sort_order = max((block.sort_order for block in all_blocks), default=-1) + 1
 
         async with self.session.begin_nested():
             row = await self._create_root_row(
@@ -255,10 +457,197 @@ class ContentService:
                 sort_order=data.sort_order,
                 context=data.context,
             )
+            if data.module_id is not None:
+                if reusable_block is not None:
+                    await self._update_changes(
+                        reusable_block,
+                        reusable_block.version,
+                        {"root_occurrence_id": row.id, "archived_at": None},
+                        "course_content_block",
+                    )
+                else:
+                    await self._add(
+                        CourseContentBlock(
+                            module_id=data.module_id,
+                            kind="move_sequence",
+                            sort_order=block_sort_order,
+                            heading=None,
+                            markdown=None,
+                            root_occurrence_id=row.id,
+                            knowledge_note_id=None,
+                        ),
+                        "course_content_block",
+                    )
         return self._occurrence_read(row)
+
+    async def create_content_block(
+        self,
+        data: CourseContentBlockCreate,
+    ) -> CourseContentBlockRead:
+        module = await self._active_module(data.module_id)
+        if data.root_occurrence_id is not None:
+            root = await self._active_occurrence(data.root_occurrence_id)
+            if root.module_id != module.id or root.parent_id is not None:
+                raise self._ambiguous(
+                    "course_content_block",
+                    data.root_occurrence_id,
+                    "move_sequence root must be the active root of the same Module",
+                )
+        if data.knowledge_note_id is not None:
+            note = self._require(
+                await self.repository.get_knowledge_note(data.knowledge_note_id),
+                "knowledge_note",
+                data.knowledge_note_id,
+            )
+            if note.occurrence_id is None:
+                raise self._ambiguous(
+                    "course_content_block",
+                    data.knowledge_note_id,
+                    "knowledge_note block must target an occurrence in the same Module",
+                )
+            occurrence = await self._active_occurrence(note.occurrence_id)
+            if occurrence.module_id != module.id:
+                raise self._ambiguous(
+                    "course_content_block",
+                    data.knowledge_note_id,
+                    "knowledge_note block belongs to a different Module",
+                )
+        await self._active_spans(data.source_span_ids)
+        row = CourseContentBlock(
+            module_id=module.id,
+            kind=data.kind,
+            sort_order=data.sort_order,
+            heading=data.heading,
+            markdown=data.markdown,
+            root_occurrence_id=data.root_occurrence_id,
+            knowledge_note_id=data.knowledge_note_id,
+        )
+        async with self.session.begin_nested():
+            await self._add(row, "course_content_block")
+            await self.repository.replace_content_block_citations(row.id, data.source_span_ids)
+        return await self._content_block_read(row)
+
+    async def create_course_knowledge_note_block(
+        self,
+        module_id: UUID,
+        data: CourseKnowledgeNoteBlockCreate,
+    ) -> CourseKnowledgeNoteBlockRead:
+        """Create a local note and append its reading block as one transaction."""
+
+        module = await self._active_module(module_id)
+        occurrence = await self._active_occurrence(data.occurrence_id)
+        if occurrence.module_id != module.id:
+            raise self._ambiguous(
+                "course_content_block",
+                data.occurrence_id,
+                "knowledge note target belongs to a different Module",
+            )
+        all_blocks = await self.repository.list_content_blocks(
+            module.id,
+            include_archived=True,
+        )
+        sort_order = max((block.sort_order for block in all_blocks), default=-1) + 1
+        async with self.session.begin_nested():
+            note = await self.create_knowledge_note(
+                KnowledgeNoteCreate(
+                    occurrence_id=data.occurrence_id,
+                    note_type=data.note_type,
+                    markdown=data.markdown,
+                    source_span_ids=data.source_span_ids,
+                    review_status=data.review_status,
+                )
+            )
+            block = await self.create_content_block(
+                CourseContentBlockCreate(
+                    module_id=module.id,
+                    kind="knowledge_note",
+                    sort_order=sort_order,
+                    knowledge_note_id=note.id,
+                )
+            )
+        return CourseKnowledgeNoteBlockRead(note=note, block=block)
+
+    async def get_content_block(
+        self,
+        block_id: UUID,
+        *,
+        include_archived: bool = False,
+    ) -> CourseContentBlockRead:
+        row = self._require(
+            await self.repository.get_content_block(block_id),
+            "course_content_block",
+            block_id,
+            include_archived=include_archived,
+        )
+        return await self._content_block_read(row)
+
+    async def list_content_blocks(
+        self,
+        module_id: UUID,
+        *,
+        include_archived: bool = False,
+    ) -> list[CourseContentBlockRead]:
+        self._require(
+            await self.repository.get_module(module_id),
+            "course_module",
+            module_id,
+            include_archived=include_archived,
+        )
+        rows = await self.repository.list_content_blocks(
+            module_id,
+            include_archived=include_archived,
+        )
+        return [await self._content_block_read(row) for row in rows]
+
+    async def update_content_block(
+        self,
+        block_id: UUID,
+        data: CourseContentBlockUpdate,
+    ) -> CourseContentBlockRead:
+        row = self._require(
+            await self.repository.get_content_block(block_id),
+            "course_content_block",
+            block_id,
+            include_archived=True,
+        )
+        changes = self._changes(data)
+        if "heading" in changes and row.kind != "section_header":
+            raise self._ambiguous(
+                "course_content_block", row.id, "only section_header blocks have heading"
+            )
+        if "markdown" in changes and row.kind != "narrative":
+            raise self._ambiguous(
+                "course_content_block", row.id, "only narrative blocks have markdown"
+            )
+        citation_ids = cast(list[UUID] | None, changes.pop("source_span_ids", None))
+        if "source_span_ids" in data.model_fields_set:
+            if row.kind != "narrative":
+                raise self._ambiguous(
+                    "course_content_block",
+                    row.id,
+                    "only narrative blocks may cite source spans",
+                )
+            assert citation_ids is not None
+            await self._active_spans(citation_ids)
+            if not changes:
+                changes["updated_at"] = utc_now()
+        if changes.get("archived_at") is not None and row.kind == "move_sequence":
+            raise self._referenced(
+                "course_content_block",
+                row.id,
+                "an active Module root must retain its move_sequence block",
+            )
+        async with self.session.begin_nested():
+            await self._update_changes(row, data.expected_version, changes, "course_content_block")
+            if "source_span_ids" in data.model_fields_set:
+                await self.repository.replace_content_block_citations(row.id, citation_ids or [])
+        return await self._content_block_read(row)
 
     async def create_move_occurrence(self, data: OccurrenceMoveCreate) -> OccurrenceRead:
         parent = await self._active_occurrence(data.parent_occurrence_id)
+        await self._active_course(parent.course_id)
+        if parent.module_id is not None:
+            await self._active_module(parent.module_id)
         before = self._position_state(parent.full_fen)
 
         try:
@@ -267,6 +656,7 @@ class ContentService:
                 existing = await self.repository.find_child_occurrence(
                     parent.id,
                     stored_move.edge.id,
+                    data.sort_order,
                 )
                 if existing is not None:
                     if (
@@ -363,11 +753,82 @@ class ContentService:
             include_archived=True,
         )
         changes = self._changes(data)
-        if "module_id" in changes and changes["module_id"] is not None:
-            module_id = cast(UUID, changes["module_id"])
-            module = await self._active_module(module_id)
-            self._same_parent("module", row.course_id, module.course_id, module_id)
-        await self._update_changes(row, data.expected_version, changes, "course_occurrence")
+        linked_block = (
+            await self.repository.content_block_for_root(row.id)
+            if row.parent_id is None and row.module_id is not None
+            else None
+        )
+        if "module_id" in changes and changes["module_id"] != row.module_id:
+            raise self._referenced(
+                "course_occurrence",
+                occurrence_id,
+                "generic occurrence PATCH cannot move a node between modules",
+            )
+        if "archived_at" in changes and changes["archived_at"] is not None:
+            active_children = await self.repository.list_occurrences(
+                row.course_id,
+                parent_id=row.id,
+            )
+            if active_children:
+                raise self._referenced(
+                    "course_occurrence",
+                    occurrence_id,
+                    "an occurrence with active children cannot be archived",
+                )
+        if (
+            "archived_at" in changes
+            and changes["archived_at"] is None
+            and row.archived_at is not None
+        ):
+            if row.parent_id is not None:
+                parent = self._require(
+                    await self.repository.get_occurrence(row.parent_id),
+                    "course_occurrence",
+                    row.parent_id,
+                    include_archived=True,
+                )
+                if parent.archived_at is not None:
+                    raise self._referenced(
+                        "course_occurrence",
+                        occurrence_id,
+                        "an occurrence cannot be restored while its parent is archived",
+                    )
+            if row.module_id is not None:
+                module = self._require(
+                    await self.repository.get_module(row.module_id),
+                    "course_module",
+                    row.module_id,
+                    include_archived=True,
+                )
+                if module.archived_at is not None:
+                    raise self._referenced(
+                        "course_occurrence",
+                        occurrence_id,
+                        "an occurrence cannot be restored while its module is archived",
+                    )
+                active_roots = await self.repository.list_module_roots(row.module_id)
+                if row.parent_id is None and active_roots:
+                    raise self._ambiguous(
+                        "course_module",
+                        row.module_id,
+                        "restoring this occurrence would create multiple active module roots",
+                    )
+        linked_block_changes: dict[str, object] | None = None
+        if "archived_at" in changes and linked_block is not None:
+            requested_archive = changes["archived_at"]
+            if requested_archive is not None and linked_block.archived_at is None:
+                linked_block_changes = {"archived_at": requested_archive}
+            elif requested_archive is None and linked_block.archived_at is not None:
+                linked_block_changes = {"archived_at": None}
+        async with self.session.begin_nested():
+            await self._update_changes(row, data.expected_version, changes, "course_occurrence")
+            if linked_block_changes is not None and linked_block is not None:
+                await self._update_changes(
+                    linked_block,
+                    linked_block.version,
+                    linked_block_changes,
+                    "course_content_block",
+                )
         return self._occurrence_read(row)
 
     async def create_source(self, data: SourceCreate) -> SourceRead:
@@ -395,9 +856,77 @@ class ContentService:
         )
         return self._source_read(row)
 
-    async def list_sources(self, *, include_archived: bool = False) -> list[SourceRead]:
+    async def list_sources(
+        self,
+        *,
+        include_archived: bool = False,
+        query: str | None = None,
+        kind: str | None = None,
+    ) -> list[SourceRead]:
         rows = await self.repository.list_sources(include_archived=include_archived)
+        if query:
+            needle = query.casefold()
+            rows = [
+                row
+                for row in rows
+                if needle in row.title.casefold()
+                or (row.author is not None and needle in row.author.casefold())
+                or needle in row.description.casefold()
+            ]
+        if kind:
+            rows = [row for row in rows if row.kind == kind]
         return [self._source_read(row) for row in rows]
+
+    async def create_citable_source(self, data: CitableSourceCreate) -> CitableSourceRead:
+        """Create the complete minimum citation chain in one transaction."""
+
+        async with self.session.begin_nested():
+            source = await self.create_source(
+                SourceCreate(
+                    kind=data.kind,
+                    title=data.title,
+                    author=data.author,
+                    description=data.description,
+                    external_url=data.external_url,
+                )
+            )
+            version = await self.create_source_version(
+                SourceVersionCreate(
+                    source_id=source.id,
+                    label=data.version_label,
+                    external_url=data.external_url,
+                )
+            )
+            span = await self.create_source_span(
+                SourceSpanCreate(
+                    source_version_id=version.id,
+                    locator=WholeSpan(),
+                    quote=data.quote,
+                )
+            )
+        return CitableSourceRead(source=source, source_version=version, source_span=span)
+
+    async def list_citable_sources(self) -> list[CitableSourceRead]:
+        statement = (
+            select(Source, SourceVersion, SourceSpan)
+            .join(SourceVersion, SourceVersion.source_id == Source.id)
+            .join(SourceSpan, SourceSpan.source_version_id == SourceVersion.id)
+            .where(
+                Source.archived_at.is_(None),
+                SourceVersion.archived_at.is_(None),
+                SourceSpan.archived_at.is_(None),
+            )
+            .order_by(Source.title, Source.created_at, SourceSpan.created_at)
+        )
+        rows = (await self.session.execute(statement)).all()
+        return [
+            CitableSourceRead(
+                source=self._source_read(source),
+                source_version=self._source_version_read(version),
+                source_span=self._source_span_read(span),
+            )
+            for source, version, span in rows
+        ]
 
     async def update_source(self, source_id: UUID, data: SourceUpdate) -> SourceRead:
         row = self._require(
@@ -601,6 +1130,13 @@ class ContentService:
         if "locator" in changes:
             changes.pop("locator")
             assert data.locator is not None
+            if not isinstance(data.locator, WholeSpan) and row.source_file_id is None:
+                raise ServiceError(
+                    "validation_error",
+                    422,
+                    "page, video, and text locators require a source file",
+                    {"resource": "source_span", "id": str(span_id)},
+                )
             changes.update(self._locator_columns(data.locator))
         await self._update_changes(row, data.expected_version, changes, "source_span")
         return self._source_span_read(row)
@@ -609,10 +1145,11 @@ class ContentService:
         scope: str
         target_kind: str
         occurrence_id: UUID | None = None
+        occurrence: CourseOccurrence | None = None
         position_id: UUID | None = None
         move_edge_id: UUID | None = None
         if data.occurrence_id is not None:
-            await self._active_occurrence(data.occurrence_id)
+            occurrence = await self._active_occurrence(data.occurrence_id)
             scope = "course"
             target_kind = "occurrence"
             occurrence_id = data.occurrence_id
@@ -632,6 +1169,9 @@ class ContentService:
                 409,
                 "knowledge note target is missing or ambiguous",
             )
+        if data.source_note_id is not None:
+            assert occurrence is not None
+            await self._validate_reference_card(data.source_note_id, occurrence)
         await self._active_spans(data.source_span_ids)
 
         async with self.session.begin_nested():
@@ -710,6 +1250,23 @@ class ContentService:
             include_archived=True,
         )
         changes = self._changes(data)
+        if row.source_note_id is not None and (
+            "markdown" in data.model_fields_set or "source_span_ids" in data.model_fields_set
+        ):
+            raise self._ambiguous(
+                "knowledge_note",
+                note_id,
+                "a reference card renders markdown and citations from its source note",
+            )
+        if await self.repository.note_has_active_references(note_id):
+            archives_note = "archived_at" in changes and changes["archived_at"] is not None
+            rejects_note = "review_status" in changes and changes["review_status"] != "approved"
+            if archives_note or rejects_note:
+                raise self._referenced(
+                    "knowledge_note",
+                    note_id,
+                    "an active explorer reference card depends on this source note",
+                )
         citation_ids = cast(list[UUID] | None, changes.pop("source_span_ids", None))
         if "source_span_ids" in data.model_fields_set:
             assert citation_ids is not None
@@ -721,6 +1278,343 @@ class ContentService:
             if "source_span_ids" in data.model_fields_set:
                 await self.repository.replace_note_citations(row.id, citation_ids or [])
         return await self._knowledge_note_read(row)
+
+    async def get_content_history(
+        self,
+        entity_type: str,
+        entity_id: UUID,
+    ) -> ContentHistoryRead:
+        row: CourseModule | CourseContentBlock | CourseOccurrence | KnowledgeNote
+        if entity_type == "course_module":
+            row = self._require(
+                await self.repository.get_module(entity_id),
+                entity_type,
+                entity_id,
+                include_archived=True,
+            )
+        elif entity_type == "course_content_block":
+            row = self._require(
+                await self.repository.get_content_block(entity_id),
+                entity_type,
+                entity_id,
+                include_archived=True,
+            )
+        elif entity_type == "course_occurrence":
+            row = self._require(
+                await self.repository.get_occurrence(entity_id),
+                entity_type,
+                entity_id,
+                include_archived=True,
+            )
+        elif entity_type == "knowledge_note":
+            row = self._require(
+                await self.repository.get_knowledge_note(entity_id),
+                entity_type,
+                entity_id,
+                include_archived=True,
+            )
+        else:
+            raise ServiceError(
+                "validation_error",
+                422,
+                "history entity type is not supported",
+                {"field": "entity_type"},
+            )
+        typed_entity_type = cast(HistoryEntityType, entity_type)
+        revisions = await self.repository.list_revisions(entity_type, entity_id)
+        return ContentHistoryRead.model_validate(
+            {
+                "entity_type": typed_entity_type,
+                "entity_id": entity_id,
+                "current_version": row.version,
+                "revisions": [
+                    ContentRevisionRead(
+                        id=revision.id,
+                        created_at=revision.created_at,
+                        entity_type=typed_entity_type,
+                        entity_id=entity_id,
+                        entity_version=revision.entity_version,
+                        snapshot=revision.snapshot,
+                    )
+                    for revision in revisions
+                ],
+            }
+        )
+
+    async def publish_modules_to_explorer(
+        self,
+        target_course_id: UUID,
+        module_ids: list[UUID],
+    ) -> PublishModulesRead:
+        """Clone selected source paths and link their notes in one idempotent unit."""
+
+        target_course = await self._active_course(target_course_id)
+        if target_course.mode != "opening_explorer":
+            raise ServiceError(
+                "course_mode_conflict",
+                409,
+                "modules can only be published into an opening_explorer course",
+                {"resource": "course", "id": str(target_course_id)},
+            )
+
+        replayed: list[ModulePublication] = []
+        prepared: list[
+            tuple[
+                CourseModule,
+                list[CourseOccurrence],
+                dict[UUID, list[KnowledgeNote]],
+            ]
+        ] = []
+        for source_module_id in module_ids:
+            receipt = await self.repository.get_module_publication(
+                target_course_id, source_module_id
+            )
+            if receipt is not None:
+                replayed.append(receipt)
+                continue
+            source_module = await self._active_module(source_module_id)
+            source_course = await self._active_course(source_module.course_id)
+            if source_course.mode != "traditional":
+                raise ServiceError(
+                    "course_mode_conflict",
+                    409,
+                    "only traditional modules can be published into an explorer",
+                    {"resource": "course_module", "id": str(source_module_id)},
+                )
+            occurrences = await self.repository.list_occurrences(
+                source_course.id,
+                module_id=source_module.id,
+            )
+            roots = [row for row in occurrences if row.parent_id is None]
+            if len(roots) != 1:
+                raise self._ambiguous(
+                    "course_module",
+                    source_module.id,
+                    "a published Module must contain exactly one active root occurrence",
+                )
+            notes_by_occurrence: dict[UUID, list[KnowledgeNote]] = {}
+            for occurrence in occurrences:
+                notes = await self.repository.list_knowledge_notes(occurrence_id=occurrence.id)
+                self._ensure_publishable_notes(notes)
+                notes_by_occurrence[occurrence.id] = notes
+            prepared.append((source_module, occurrences, notes_by_occurrence))
+
+        existing_target_modules = await self.repository.list_modules(target_course_id)
+        target_modules = {row.id: row for row in existing_target_modules}
+        target_by_position: dict[UUID, list[CourseOccurrence]] = {}
+        target_child_by_edge: dict[tuple[UUID, UUID], CourseOccurrence] = {}
+        next_child_sort: dict[UUID, int] = {}
+        for existing_module in existing_target_modules:
+            target_occurrences = await self.repository.list_occurrences(
+                target_course_id,
+                module_id=existing_module.id,
+            )
+            for existing_occurrence in target_occurrences:
+                target_by_position.setdefault(existing_occurrence.position_id, []).append(
+                    existing_occurrence
+                )
+                if (
+                    existing_occurrence.parent_id is not None
+                    and existing_occurrence.inbound_move_edge_id is not None
+                ):
+                    target_child_by_edge.setdefault(
+                        (
+                            existing_occurrence.parent_id,
+                            existing_occurrence.inbound_move_edge_id,
+                        ),
+                        existing_occurrence,
+                    )
+                    next_child_sort[existing_occurrence.parent_id] = max(
+                        next_child_sort.get(existing_occurrence.parent_id, 0),
+                        existing_occurrence.sort_order + 1,
+                    )
+        next_module_sort = (
+            max(
+                (row.sort_order for row in existing_target_modules),
+                default=-1,
+            )
+            + 1
+        )
+        created: list[ModulePublication] = []
+        for source_module, occurrences, notes_by_occurrence in prepared:
+            async with self.session.begin_nested():
+                source_root = next(row for row in occurrences if row.parent_id is None)
+                matching_entries = target_by_position.get(source_root.position_id, [])
+                target_entry = matching_entries[0] if matching_entries else None
+                target_module = (
+                    target_modules.get(target_entry.module_id)
+                    if target_entry is not None and target_entry.module_id is not None
+                    else None
+                )
+                if target_module is None:
+                    target_module = CourseModule(
+                        course_id=target_course_id,
+                        parent_id=None,
+                        title=(
+                            "合并探索图"
+                            if not target_modules
+                            else f"入口局面 {len(target_modules) + 1}"
+                        ),
+                        description="Opening Explorer merged position graph.",
+                        sort_order=next_module_sort,
+                    )
+                    next_module_sort += 1
+                    await self._add(target_module, "course_module")
+                    target_modules[target_module.id] = target_module
+                    target_entry = CourseOccurrence(
+                        course_id=target_course_id,
+                        module_id=target_module.id,
+                        parent_id=None,
+                        position_id=source_root.position_id,
+                        inbound_move_edge_id=None,
+                        full_fen=source_root.full_fen,
+                        nag=None,
+                        sort_order=0,
+                        context={},
+                    )
+                    await self._add(target_entry, "course_occurrence")
+                    await self._add(
+                        CourseContentBlock(
+                            module_id=target_module.id,
+                            kind="move_sequence",
+                            sort_order=0,
+                            heading=None,
+                            markdown=None,
+                            root_occurrence_id=target_entry.id,
+                            knowledge_note_id=None,
+                        ),
+                        "course_content_block",
+                    )
+                    target_by_position.setdefault(target_entry.position_id, []).append(target_entry)
+
+                assert target_entry is not None
+                occurrence_map: dict[UUID, CourseOccurrence] = {source_root.id: target_entry}
+                pending = [row for row in occurrences if row.id != source_root.id]
+                while pending:
+                    progressed = False
+                    for source_occurrence in list(pending):
+                        if (
+                            source_occurrence.parent_id is not None
+                            and source_occurrence.parent_id not in occurrence_map
+                        ):
+                            continue
+                        assert source_occurrence.parent_id is not None
+                        assert source_occurrence.inbound_move_edge_id is not None
+                        target_parent = occurrence_map[source_occurrence.parent_id]
+                        edge_key = (
+                            target_parent.id,
+                            source_occurrence.inbound_move_edge_id,
+                        )
+                        target_occurrence = target_child_by_edge.get(edge_key)
+                        if target_occurrence is None:
+                            target_occurrence = CourseOccurrence(
+                                course_id=target_course_id,
+                                module_id=target_module.id,
+                                parent_id=target_parent.id,
+                                position_id=source_occurrence.position_id,
+                                inbound_move_edge_id=source_occurrence.inbound_move_edge_id,
+                                full_fen=source_occurrence.full_fen,
+                                nag=None,
+                                sort_order=next_child_sort.get(target_parent.id, 0),
+                                context={},
+                            )
+                            await self._add(target_occurrence, "course_occurrence")
+                            target_child_by_edge[edge_key] = target_occurrence
+                            next_child_sort[target_parent.id] = target_occurrence.sort_order + 1
+                            target_by_position.setdefault(target_occurrence.position_id, []).append(
+                                target_occurrence
+                            )
+                        occurrence_map[source_occurrence.id] = target_occurrence
+                        pending.remove(source_occurrence)
+                        progressed = True
+                    if not progressed:
+                        raise self._ambiguous(
+                            "course_module",
+                            source_module.id,
+                            "source occurrence paths contain a missing parent or cycle",
+                        )
+                note_count = 0
+                for source_occurrence in occurrences:
+                    target_occurrence = occurrence_map[source_occurrence.id]
+                    for source_note in notes_by_occurrence[source_occurrence.id]:
+                        await self.create_knowledge_note(
+                            KnowledgeNoteCreate(
+                                occurrence_id=target_occurrence.id,
+                                source_note_id=source_note.id,
+                            )
+                        )
+                        note_count += 1
+                receipt = ModulePublication(
+                    target_course_id=target_course_id,
+                    source_module_id=source_module.id,
+                    target_module_id=target_module.id,
+                    occurrence_count=len(occurrence_map),
+                    note_count=note_count,
+                )
+                try:
+                    await self.repository.add_module_publication(receipt)
+                except RepositoryConflictError as error:
+                    raise ServiceError(
+                        "idempotency_conflict",
+                        409,
+                        "a concurrent module publication already completed",
+                        {"resource": "course_module", "id": str(source_module.id)},
+                    ) from error
+                created.append(receipt)
+        by_source = {row.source_module_id: (row, True) for row in replayed}
+        by_source.update({row.source_module_id: (row, False) for row in created})
+        return PublishModulesRead(
+            publications=[
+                self._module_publication_read(*by_source[module_id]) for module_id in module_ids
+            ]
+        )
+
+    def _ensure_publishable_notes(self, notes: list[KnowledgeNote]) -> None:
+        """Reject notes whose meaning cannot be preserved as an Explorer reference card."""
+
+        for note in notes:
+            if (
+                note.source_note_id is not None
+                or note.review_status != "approved"
+                or note.markdown is None
+            ):
+                raise self._ambiguous(
+                    "knowledge_note",
+                    note.id,
+                    "publishing requires approved original Traditional occurrence notes",
+                )
+
+    async def _validate_reference_card(
+        self,
+        source_note_id: UUID,
+        target_occurrence: CourseOccurrence,
+    ) -> None:
+        source_note = self._require(
+            await self.repository.get_knowledge_note(source_note_id),
+            "knowledge_note",
+            source_note_id,
+        )
+        if source_note.source_note_id is not None or source_note.occurrence_id is None:
+            raise self._ambiguous(
+                "knowledge_note",
+                source_note_id,
+                "a reference card must point directly to an original occurrence note",
+            )
+        if source_note.review_status != "approved":
+            raise self._ambiguous(
+                "knowledge_note",
+                source_note_id,
+                "a reference card requires an approved source note",
+            )
+        source_occurrence = await self._active_occurrence(source_note.occurrence_id)
+        source_course = await self._active_course(source_occurrence.course_id)
+        target_course = await self._active_course(target_occurrence.course_id)
+        if source_course.mode != "traditional" or target_course.mode != "opening_explorer":
+            raise self._ambiguous(
+                "knowledge_note",
+                source_note_id,
+                "reference cards must link traditional source notes into an opening explorer",
+            )
 
     async def _create_root_row(
         self,
@@ -805,6 +1699,7 @@ class ContentService:
         self,
         row: Course
         | CourseModule
+        | CourseContentBlock
         | CourseOccurrence
         | Source
         | SourceVersion
@@ -827,6 +1722,7 @@ class ContentService:
         self,
         row: Course
         | CourseModule
+        | CourseContentBlock
         | CourseOccurrence
         | Source
         | SourceVersion
@@ -838,7 +1734,21 @@ class ContentService:
         resource: str,
     ) -> None:
         try:
-            await self.repository.update(row, expected_version, changes)
+            async with self.session.begin_nested():
+                if row.version != expected_version:
+                    raise RepositoryStaleVersionError
+                if resource in {
+                    "course_module",
+                    "course_content_block",
+                    "course_occurrence",
+                    "knowledge_note",
+                }:
+                    authoring_row = cast(
+                        CourseModule | CourseContentBlock | CourseOccurrence | KnowledgeNote,
+                        row,
+                    )
+                    await self._record_revision(authoring_row, resource)
+                await self.repository.update(row, expected_version, changes)
         except RepositoryStaleVersionError as error:
             raise ServiceError(
                 "stale_version",
@@ -857,6 +1767,95 @@ class ContentService:
                 409,
                 f"{resource} update conflicts with an existing resource or reference",
                 {"resource": resource, "id": str(row.id)},
+            ) from error
+
+    async def _record_revision(
+        self,
+        row: CourseModule | CourseContentBlock | CourseOccurrence | KnowledgeNote,
+        entity_type: str,
+    ) -> None:
+        """Capture the exact pre-edit authoring state once per entity version."""
+
+        archived_at = row.archived_at.isoformat() if row.archived_at is not None else None
+        snapshot: dict[str, JsonValue]
+        if isinstance(row, CourseModule):
+            snapshot = {
+                "course_id": str(row.course_id),
+                "parent_id": str(row.parent_id) if row.parent_id else None,
+                "title": row.title,
+                "description": row.description,
+                "sort_order": row.sort_order,
+                "archived_at": archived_at,
+            }
+        elif isinstance(row, CourseContentBlock):
+            snapshot = {
+                "module_id": str(row.module_id),
+                "kind": row.kind,
+                "sort_order": row.sort_order,
+                "heading": row.heading,
+                "markdown": row.markdown,
+                "root_occurrence_id": (
+                    str(row.root_occurrence_id) if row.root_occurrence_id else None
+                ),
+                "knowledge_note_id": (
+                    str(row.knowledge_note_id) if row.knowledge_note_id else None
+                ),
+                "source_span_ids": [
+                    str(span_id)
+                    for span_id in await self.repository.list_content_block_citation_ids(row.id)
+                ],
+                "archived_at": archived_at,
+            }
+        elif isinstance(row, CourseOccurrence):
+            snapshot = {
+                "course_id": str(row.course_id),
+                "module_id": str(row.module_id) if row.module_id else None,
+                "parent_id": str(row.parent_id) if row.parent_id else None,
+                "position_id": str(row.position_id),
+                "inbound_move_edge_id": (
+                    str(row.inbound_move_edge_id) if row.inbound_move_edge_id else None
+                ),
+                "full_fen": row.full_fen,
+                "nag": row.nag,
+                "sort_order": row.sort_order,
+                "context": row.context,
+                "archived_at": archived_at,
+            }
+        else:
+            snapshot = {
+                "scope": row.scope,
+                "target_kind": row.target_kind,
+                "occurrence_id": str(row.occurrence_id) if row.occurrence_id else None,
+                "position_id": str(row.position_id) if row.position_id else None,
+                "move_edge_id": str(row.move_edge_id) if row.move_edge_id else None,
+                "source_note_id": str(row.source_note_id) if row.source_note_id else None,
+                "note_type": row.note_type,
+                "markdown": row.markdown,
+                "source_span_ids": [
+                    str(span_id) for span_id in await self.repository.list_note_citation_ids(row.id)
+                ],
+                "review_status": row.review_status,
+                "archived_at": archived_at,
+            }
+        try:
+            await self.repository.add_revision(
+                ContentRevision(
+                    entity_type=entity_type,
+                    entity_id=row.id,
+                    entity_version=row.version,
+                    snapshot=snapshot,
+                )
+            )
+        except RepositoryConflictError as error:
+            raise ServiceError(
+                "ambiguous_context",
+                409,
+                "content history already contains this entity version",
+                {
+                    "resource": entity_type,
+                    "id": str(row.id),
+                    "version": row.version,
+                },
             ) from error
 
     @staticmethod
@@ -913,6 +1912,15 @@ class ContentService:
     def _ambiguous(resource: str, resource_id: UUID, message: str) -> ServiceError:
         return ServiceError(
             "ambiguous_context",
+            409,
+            message,
+            {"resource": resource, "id": str(resource_id)},
+        )
+
+    @staticmethod
+    def _referenced(resource: str, resource_id: UUID, message: str) -> ServiceError:
+        return ServiceError(
+            "resource_referenced",
             409,
             message,
             {"resource": resource, "id": str(resource_id)},
@@ -991,6 +1999,21 @@ class ContentService:
                 "nag": row.nag,
                 "sort_order": row.sort_order,
                 "context": row.context,
+            }
+        )
+
+    async def _content_block_read(self, row: CourseContentBlock) -> CourseContentBlockRead:
+        return CourseContentBlockRead.model_validate(
+            {
+                **self._lifecycle(row),
+                "module_id": row.module_id,
+                "kind": row.kind,
+                "sort_order": row.sort_order,
+                "heading": row.heading,
+                "markdown": row.markdown,
+                "root_occurrence_id": row.root_occurrence_id,
+                "knowledge_note_id": row.knowledge_note_id,
+                "source_span_ids": (await self.repository.list_content_block_citation_ids(row.id)),
             }
         )
 
@@ -1122,4 +2145,52 @@ class ContentService:
                 "source_span_ids": citation_ids,
                 "review_status": row.review_status,
             }
+        )
+
+    async def _editor_knowledge_note_read(
+        self,
+        row: KnowledgeNote,
+    ) -> EditorKnowledgeNoteRead:
+        rendered = row
+        if row.source_note_id is not None:
+            rendered = self._require(
+                await self.repository.get_knowledge_note(row.source_note_id),
+                "knowledge_note",
+                row.source_note_id,
+            )
+        if rendered.markdown is None or rendered.occurrence_id is None:
+            raise self._ambiguous(
+                "knowledge_note",
+                row.id,
+                "an editor note must resolve to an occurrence note with Markdown",
+            )
+        source_occurrence = await self._active_occurrence(rendered.occurrence_id)
+        base = await self._knowledge_note_read(row)
+        return EditorKnowledgeNoteRead.model_validate(
+            {
+                **base.model_dump(mode="python"),
+                "rendered_markdown": rendered.markdown,
+                "rendered_source_span_ids": await self.repository.list_note_citation_ids(
+                    rendered.id
+                ),
+                "source_course_id": source_occurrence.course_id,
+                "source_module_id": source_occurrence.module_id,
+                "source_occurrence_id": source_occurrence.id,
+            }
+        )
+
+    @staticmethod
+    def _module_publication_read(
+        row: ModulePublication,
+        replayed: bool,
+    ) -> ModulePublicationRead:
+        return ModulePublicationRead(
+            id=row.id,
+            created_at=row.created_at,
+            target_course_id=row.target_course_id,
+            source_module_id=row.source_module_id,
+            target_module_id=row.target_module_id,
+            occurrence_count=row.occurrence_count,
+            note_count=row.note_count,
+            replayed=replayed,
         )

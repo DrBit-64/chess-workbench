@@ -14,6 +14,9 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 BACKEND_DIR = PROJECT_ROOT / "backend"
+MYSQL_IMAGE = (
+    "mysql:8.4@sha256:b3b90af2a6552ae30c266fdb7d5dd55f3afb72404bb78d37fe8a23eb857fd3fb"
+)
 
 _CONTAINER_DATABASE = "chesstest"
 _CONTAINER_USER = "chesstest"
@@ -39,7 +42,7 @@ def _start_mysql_container(name: str, port: int) -> str:
             f"MYSQL_PASSWORD={_CONTAINER_PASSWORD}",
             "-p",
             f"{port}:3306",
-            "mysql:8.4",
+            MYSQL_IMAGE,
         ],
         check=True,
         capture_output=True,

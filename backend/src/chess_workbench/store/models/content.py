@@ -62,6 +62,7 @@ class Course(MutableEntityMixin, Base):
     __tablename__ = "courses"
     __table_args__ = (
         CheckConstraint("status IN ('draft', 'published')", name="status"),
+        CheckConstraint("mode IN ('traditional', 'opening_explorer')", name="mode"),
         CheckConstraint("length(title) > 0", name="title_nonempty"),
         {"mysql_engine": "InnoDB"},
     )
@@ -104,6 +105,7 @@ class CourseModule(MutableEntityMixin, Base):
     )
     children: Mapped[list[CourseModule]] = relationship(back_populates="parent")
     occurrences: Mapped[list[CourseOccurrence]] = relationship(back_populates="module")
+    content_blocks: Mapped[list[CourseContentBlock]] = relationship(back_populates="module")
 
 
 class CourseOccurrence(MutableEntityMixin, Base):
@@ -116,7 +118,7 @@ class CourseOccurrence(MutableEntityMixin, Base):
         ),
         CheckConstraint("sort_order >= 0", name="sort_order_nonnegative"),
         CheckConstraint("nag IS NULL OR (nag >= 0 AND nag <= 255)", name="nag_range"),
-        UniqueConstraint("parent_id", "inbound_move_edge_id", name="uq_occurrence_parent_edge"),
+        UniqueConstraint("parent_id", "sort_order", name="uq_occurrence_parent_sort"),
         Index("ix_occurrences_course_module", "course_id", "module_id"),
         Index("ix_occurrences_position_id", "position_id"),
         {"mysql_engine": "InnoDB"},
@@ -234,6 +236,10 @@ class SourceSpan(MutableEntityMixin, Base):
             "AND start_value >= 0 AND end_value > start_value)",
             name="locator_fields",
         ),
+        CheckConstraint(
+            "locator_kind = 'whole' OR source_file_id IS NOT NULL",
+            name="coordinate_file",
+        ),
         Index("ix_source_spans_source_version_id", "source_version_id"),
         {"mysql_engine": "InnoDB"},
     )
@@ -280,7 +286,16 @@ class KnowledgeNote(MutableEntityMixin, Base):
             "'common_error','memory_hint','source_quote')",
             name="note_type",
         ),
-        CheckConstraint("length(markdown) > 0", name="markdown_nonempty"),
+        CheckConstraint(
+            "(source_note_id IS NULL AND markdown IS NOT NULL AND length(markdown) > 0) OR "
+            "(source_note_id IS NOT NULL AND markdown IS NULL)",
+            name="markdown_source",
+        ),
+        UniqueConstraint(
+            "occurrence_id",
+            "source_note_id",
+            name="uq_knowledge_notes_occurrence_source",
+        ),
         Index("ix_knowledge_notes_occurrence_id", "occurrence_id"),
         Index("ix_knowledge_notes_position_id", "position_id"),
         Index("ix_knowledge_notes_move_edge_id", "move_edge_id"),
@@ -302,7 +317,7 @@ class KnowledgeNote(MutableEntityMixin, Base):
         ForeignKey("knowledge_notes.id", ondelete="RESTRICT"), nullable=True
     )
     note_type: Mapped[str] = mapped_column(String(32), default="general", nullable=False)
-    markdown: Mapped[str] = mapped_column(Text, nullable=False)
+    markdown: Mapped[str | None] = mapped_column(Text, nullable=True)
     review_status: Mapped[str] = mapped_column(String(16), default="approved", nullable=False)
 
     citations: Mapped[list[KnowledgeNoteCitation]] = relationship(
@@ -323,3 +338,77 @@ class KnowledgeNoteCitation(UTCCreatedAtMixin, Base):
 
     knowledge_note: Mapped[KnowledgeNote] = relationship(back_populates="citations")
     source_span: Mapped[SourceSpan] = relationship(back_populates="citations")
+
+
+class CourseContentBlockCitation(UTCCreatedAtMixin, Base):
+    """A source passage supporting one narrative content block."""
+
+    __tablename__ = "course_content_block_citations"
+    __table_args__ = ({"mysql_engine": "InnoDB"},)
+
+    course_content_block_id: Mapped[UUID] = mapped_column(
+        ForeignKey(
+            "course_content_blocks.id",
+            name="fk_block_citations_block_id_content_blocks",
+            ondelete="RESTRICT",
+        ),
+        primary_key=True,
+    )
+    source_span_id: Mapped[UUID] = mapped_column(
+        ForeignKey(
+            "source_spans.id",
+            name="fk_block_citations_source_span_id_source_spans",
+            ondelete="RESTRICT",
+        ),
+        primary_key=True,
+    )
+
+    course_content_block: Mapped[CourseContentBlock] = relationship(back_populates="citations")
+    source_span: Mapped[SourceSpan] = relationship()
+
+
+class CourseContentBlock(MutableEntityMixin, Base):
+    """One item in a Module's ADR 0006 ordered mixed-content sequence."""
+
+    __tablename__ = "course_content_blocks"
+    __table_args__ = (
+        CheckConstraint(
+            "(kind = 'section_header' AND heading IS NOT NULL AND length(heading) > 0 "
+            "AND markdown IS NULL AND root_occurrence_id IS NULL AND knowledge_note_id IS NULL) "
+            "OR (kind = 'narrative' AND heading IS NULL AND markdown IS NOT NULL "
+            "AND length(markdown) > 0 AND root_occurrence_id IS NULL "
+            "AND knowledge_note_id IS NULL) "
+            "OR (kind = 'move_sequence' AND heading IS NULL AND markdown IS NULL "
+            "AND root_occurrence_id IS NOT NULL AND knowledge_note_id IS NULL) "
+            "OR (kind = 'knowledge_note' AND heading IS NULL AND markdown IS NULL "
+            "AND root_occurrence_id IS NULL AND knowledge_note_id IS NOT NULL)",
+            name="kind_payload",
+        ),
+        CheckConstraint("sort_order >= 0", name="sort_order_nonnegative"),
+        UniqueConstraint("module_id", "sort_order", name="uq_content_blocks_module_sort"),
+        UniqueConstraint("root_occurrence_id", name="uq_content_blocks_root_occurrence"),
+        UniqueConstraint("knowledge_note_id", name="uq_content_blocks_knowledge_note"),
+        Index("ix_content_blocks_module_id", "module_id"),
+        {"mysql_engine": "InnoDB"},
+    )
+
+    module_id: Mapped[UUID] = mapped_column(
+        ForeignKey("course_modules.id", ondelete="RESTRICT"), nullable=False
+    )
+    kind: Mapped[str] = mapped_column(String(24), nullable=False)
+    sort_order: Mapped[int] = mapped_column(Integer, nullable=False)
+    heading: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    markdown: Mapped[str | None] = mapped_column(Text, nullable=True)
+    root_occurrence_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("course_occurrences.id", ondelete="RESTRICT"), nullable=True
+    )
+    knowledge_note_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("knowledge_notes.id", ondelete="RESTRICT"), nullable=True
+    )
+
+    module: Mapped[CourseModule] = relationship(back_populates="content_blocks")
+    root_occurrence: Mapped[CourseOccurrence | None] = relationship()
+    knowledge_note: Mapped[KnowledgeNote | None] = relationship()
+    citations: Mapped[list[CourseContentBlockCitation]] = relationship(
+        back_populates="course_content_block", cascade="all, delete-orphan"
+    )

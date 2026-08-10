@@ -9,6 +9,7 @@ from chess_workbench import __version__
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_DATABASE_PATH = PROJECT_ROOT / "data" / "database" / "chess-workbench.db"
 DEFAULT_DATABASE_URL = f"sqlite+aiosqlite:///{DEFAULT_DATABASE_PATH.as_posix()}"
+DEFAULT_SOURCE_STORAGE_ROOT = PROJECT_ROOT / "data"
 SUPPORTED_DATABASE_DRIVERS = frozenset({"mysql+asyncmy", "sqlite+aiosqlite"})
 
 
@@ -29,6 +30,7 @@ class Settings(BaseSettings):
     port: int = Field(default=8000, ge=1, le=65535)
     debug: bool = False
     database_url: str = DEFAULT_DATABASE_URL
+    source_storage_root: Path = DEFAULT_SOURCE_STORAGE_ROOT
 
     @field_validator("database_url")
     @classmethod

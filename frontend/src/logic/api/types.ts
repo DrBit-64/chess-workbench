@@ -2,3 +2,30 @@ import type { paths } from '../../types/api.generated';
 
 export type HealthResponse =
   paths['/api/health']['get']['responses'][200]['content']['application/json'];
+
+export type DashboardSummary =
+  paths['/api/dashboard/summary']['get']['responses'][200]['content']['application/json'];
+
+export type Course =
+  paths['/api/courses']['get']['responses'][200]['content']['application/json'][number];
+
+export type Source =
+  paths['/api/sources']['get']['responses'][200]['content']['application/json'][number];
+
+export type CourseModule =
+  paths['/api/courses/{course_id}/modules']['get']['responses'][200]['content']['application/json'][number];
+
+export type ModuleEditor =
+  paths['/api/courses/{course_id}/editor/{module_id}']['get']['responses'][200]['content']['application/json'];
+
+export type Occurrence =
+  paths['/api/occurrences']['post']['responses'][201]['content']['application/json'];
+
+export type KnowledgeNote =
+  paths['/api/knowledge-notes']['get']['responses'][200]['content']['application/json'][number];
+
+export type CitableSource =
+  paths['/api/citable-sources']['get']['responses'][200]['content']['application/json'][number];
+
+export type ContentHistory =
+  paths['/api/history/{entity_type}/{entity_id}']['get']['responses'][200]['content']['application/json'];

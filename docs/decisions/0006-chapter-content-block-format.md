@@ -3,6 +3,7 @@
 - 状态：Accepted
 - 提议日期：2026-08-07
 - 接受日期：2026-08-09
+- 补充接受日期：2026-08-10（来源引用、原子局面说明与阅读呈现）
 
 ## 背景
 
@@ -30,6 +31,25 @@ Block = SectionHeader | NarrativeParagraph | MoveSequence | KnowledgeNote
 | `NarrativeParagraph` | Markdown 文本 | 无 |
 | `MoveSequence` | 一棵有根、有序的来源着法树；第一个子节点是主线，其余是作者变例 | **是**——中心棋盘沿当前路径同步更新 |
 | `KnowledgeNote` | 对当前棋盘局面的评注（Markdown），可引用 SourceSpan | 停在当前局面 |
+
+### 来源引用与写入边界
+
+- `NarrativeParagraph` 可通过独立的多对多关联引用一个或多个 `SourceSpan`。引用属于
+  block，而不是复制进 Markdown；这样 PDF/视频提取和手工正文使用同一溯源结构。
+- `SectionHeader`、`MoveSequence` 不直接持有来源；局面相关来源仍属于其
+  `KnowledgeNote`。这避免同一来源在章节标题、棋谱容器和实际解释之间出现歧义。
+- 新建局面说明时，`KnowledgeNote` 与指向它的 `KnowledgeNote` block 必须在同一事务中
+  创建，并追加到 Module 的有序内容流。失败时两者一起回滚，不能留下“保存成功但正文
+  不可见”的孤儿说明。
+- 对已有 note 的修改只更新 note 本身；其 block 身份和顺序保持稳定。历史快照同时记录
+  narrative block 当时的 `source_span_ids`。
+
+### 阅读呈现
+
+传统课程默认按 block 顺序渲染为可阅读正文：叙述段落直接阅读，`KnowledgeNote` 显示在
+相邻内容中并可跳到关联局面，`MoveSequence` 是切换棋盘上下文的交互锚点。编辑控件按需
+展开，不与默认阅读流争夺版面。Opening Explorer 不复制整章正文；来源观点可打开原
+Module 的相邻 block 上下文，并保留到原 occurrence 的导航。
 
 ### 棋盘图不保留
 
@@ -60,6 +80,8 @@ Stage 3 的 PGN 导入可以先把“每局棋 → 一个 Module 根及 occurren
 
 - ✅ 一章的叙事结构（标题、段落、着法、评注）被完整保留
 - ✅ AI 提取结果可以直接导入，无需中间格式
+- ✅ 叙述和局面说明都能追溯 SourceSpan，且不会因两个独立写请求产生孤儿内容
+- ✅ 同一 block 序列既是存储格式，也是传统课程阅读和 Explorer 原文回看格式
 - ✅ 交互棋盘替代静态棋盘图，减少存储和 OCR 复杂度
 - ⚠ 需要新模型 `SectionHeader` / `NarrativeParagraph` + Block 有序序列的存储方式
 - ⚠ `MoveSequence` 和 `KnowledgeNote` 需要调整以嵌入 Block 序列（当前是独立的树形结构）
