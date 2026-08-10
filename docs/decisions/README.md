@@ -10,3 +10,6 @@ ADR 记录会长期影响数据兼容性、模块边界或运维方式的决定�
 - [0006：章节内容块格式](0006-chapter-content-block-format.md)
 - [0007：来源有序课程中的 PGN 变例树](0007-source-ordered-pgn-variation-trees.md)
 - [0008：PGN 语义、来源资产、幂等导入与 HTTP 边界](0008-pgn-import-export-contract.md)
+- [0009：SQL 任务与本地引擎运行时](0009-sql-jobs-and-local-engine-runtime.md)
+- [0010：可移植 AI 识别交换格式与双向适配边界](0010-portable-ai-extraction-contract.md)
+- [0011：Codex 主控的 DeepCode 有界任务委派](0011-codex-led-deepcode-delegation.md)

@@ -13,6 +13,7 @@
 *.local.*
 /.cache/
 /.venv/
+/.agent-sync/
 
 # Python.
 __pycache__/

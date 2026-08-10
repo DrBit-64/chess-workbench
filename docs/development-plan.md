@@ -397,16 +397,26 @@ Chromium 累计门禁仍需在允许网络和工作线程的正常主机环境�
 是正式发布目标，因此 8A–8D 不依赖个人开局库；AI 先产出 Course/Knowledge 候选，
 Repertoire/Exercise 发布 adapter 等 Stage 5 模型存在后再接入。
 
+在 8A 之前先完成 **8P 可移植识别协议**。ADR 0010 的 CCEF v1 是供应商无关、消费者无关
+的交换边界：识别核心输出版本化 JSON，ChessWorkbench 通过独立 ConsumerAdapter 映射为
+内部候选。它不是新的微服务，也不改变 Source → Knowledge 的人工审核边界。
+
 ### 目标
 
 把 PDF 资料安全、幂等地转成可审核候选（默认进入 `mode="traditional"` 课程）；任何 AI 或 OCR 结果都不能绕过正式发布边界。
 
 ### 交付物
 
+- `chess-content-extraction/1.0` Pydantic 契约、固定 JSON Schema 和兼容性夹具；
+- provider 接收调用者给定的 JSON Schema，默认 DeepSeek V4 Flash，并允许后续增加千问、
+  OpenAI 或本地实现；provider 不导入消费者领域模型；
+- ChessWorkbench ConsumerAdapter 单向映射 CCEF heading/prose/move tree/figure/unresolved，
+  识别核心不反向依赖 Course、KnowledgeNote、SQL 或 Sanic；
 - 内容哈希存储、MIME/大小/路径验证、原始与衍生文件分离；
 - Sources 一级页中的 PDF 上传、页码范围选择、任务状态和冲突筛选；
 - PyMuPDF 页面渲染、OCRmyPDF/PaddleOCR adapter；
-- `AI_PROVIDER=mock|openai` 抽象，Structured Output 使用 Pydantic Schema；
+- `AI_PROVIDER=mock|deepseek|dashscope|openai|local` adapter；测试只使用 mock transport，
+  默认生产配置为 DeepSeek V4 Flash 非思考模式；
 - 章节、正文、棋谱、棋盘图、说明和 SourceSpan 候选；
 - JSON Schema、python-chess、前后局面和置信度验证；
 - 三栏审核页：原文/页图、棋盘、候选变化/警告；
@@ -417,16 +427,21 @@ Repertoire/Exercise 发布 adapter 等 Stage 5 模型存在后再接入。
 
 ### 自动验收标准
 
-1. 小型合成 PDF fixture 覆盖文本页、扫描页、棋谱、页码和 bbox；
-2. 相同字节重复上传复用 Source/file hash，不重复存储；扩展名伪装、超限和路径穿越被拒绝；
-3. mock OCR/AI 输出完全确定，契约不允许额外字段和错误类型；
-4. 非法 SAN、断裂变化、棋盘方向不确定和低置信度内容只能进入 warning/review，不能发布；
-5. 拒绝、修改、批准各自产生不可变审计记录，并能追溯 SourceSpan；
-6. 两个来源对同一局面的冲突推荐作为 Knowledge 并存且不覆盖；个人路线选择在 Stage 5
+1. CCEF JSON Schema 与 Pydantic 生成结果确定性一致；同一 package 可由不含任何
+   ChessWorkbench 依赖的消费者解析，未知字段、悬空引用、非拓扑棋步树、重复 sibling
+   order 和不支持的 major 被拒绝；
+2. provider contract 使用相同输入和 Schema 时，mock/DeepSeek recorded fixture 产生同一
+   CCEF 语义；真实外部 API 不进入 PR 测试；
+3. 小型合成 PDF fixture 覆盖文本页、扫描页、棋谱、页码和 bbox；
+4. 相同字节重复上传复用 Source/file hash，不重复存储；扩展名伪装、超限和路径穿越被拒绝；
+5. mock OCR/AI 输出完全确定，契约不允许额外字段和错误类型；
+6. 非法 SAN、断裂变化、棋盘方向不确定和低置信度内容只能进入 warning/review，不能发布；
+7. 拒绝、修改、批准各自产生不可变审计记录，并能追溯 SourceSpan；
+8. 两个来源对同一局面的冲突推荐作为 Knowledge 并存且不覆盖；个人路线选择在 Stage 5
    的 Repertoire 层完成；
-7. 任务重试和重复批准保持幂等；发布事务失败时正式知识零部分写入；
-8. 在无 OpenAI key、无 OCR 二进制的精简 CI job 中，除相应可选集成外所有测试仍绿；
-9. OpenAI adapter 只做 Schema 合约测试和显式手动/定时集成，不在 PR 中花费真实额度。
+9. 任务重试和重复批准保持幂等；发布事务失败时正式知识零部分写入；
+10. 在无任意云模型 key、无 OCR 二进制的精简 CI job 中，除相应可选集成外所有测试仍绿；
+11. 云模型 adapter 只做 Schema 合约测试和显式手动/定时集成，不在 PR 中花费真实额度。
 
 ---
 
@@ -553,9 +568,10 @@ Repertoire/Exercise 发布 adapter 等 Stage 5 模型存在后再接入。
 | 7B | 5D、6B、7A | 首次偏离、引擎损失与完整错误分类 | 个人库内错误/合理偏离对照棋局 | `make acceptance-stage-7b` |
 | 7C | 7B | 课程/残局匹配、聚类、价值排序和生成练习 | 多盘重复/非重复错误集合 | `make acceptance-stage-7c` |
 | 7D | 7C | 复盘、趋势和“错误 → 练习 → 复习”E2E | 固定用户历史 | `make acceptance-stage-7` |
-| 8A | 4D、6A | 内容哈希存储、Sources 页、PDF 页段与任务 | 文本/扫描/伪 MIME/重复 PDF | `make acceptance-stage-8a` |
+| 8P | 4D、6A | CCEF v1、provider port、固定 Schema 与消费者边界 | 合法/非法/悬空/版本漂移 package | `make acceptance-stage-8p` |
+| 8A | 8P | 内容哈希存储、Sources 页、PDF 页段与任务 | 文本/扫描/伪 MIME/重复 PDF | `make acceptance-stage-8a` |
 | 8B | 8A | 渲染/OCR adapter 与 SourceSpan 候选 | 三页合成 PDF、mock OCR | `make acceptance-stage-8b` |
-| 8C | 8B | mock/openai provider、Schema/棋规/一致性验证 | 合法、非法、冲突 AI JSON | `make acceptance-stage-8c` |
+| 8C | 8B | mock/DeepSeek provider、CCEF/棋规/一致性验证 | 合法、非法、冲突 AI JSON | `make acceptance-stage-8c` |
 | 8D | 8C | 三栏审核、审计、多来源合并与 Course/Knowledge 草稿 | 批准/修改/拒绝/重复发布 | `make acceptance-stage-8` |
 | 9A | 8D | FFmpeg 音频/关键帧与 mock 转录 | 固定短视频 | `make acceptance-stage-9a` |
 | 9B | 9A | 棋盘方向、连续局面和字幕对齐 | 翻转/遮挡/切镜/多解片段 | `make acceptance-stage-9b` |

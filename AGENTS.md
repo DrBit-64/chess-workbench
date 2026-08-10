@@ -7,7 +7,7 @@ theory, interactive training, game review, and AI-assisted content import. The i
 model is a position graph (not a PGN tree), and the system enforces a strict four-layer
 separation: Source → Knowledge → Repertoire → Exercise.
 
-Current phase: Stage 2/3 remediation after independent acceptance audit.
+Current phase: Stage 8P portable AI-extraction contract after accepted Stage 6.
 See `PLANS.md` for current tasks and `docs/development-plan.md` for the full roadmap.
 
 ## Repository layout
@@ -169,3 +169,19 @@ to commit: no agent commits unless the user explicitly authorizes it.
 
 Work is coordinated through Git, `PLANS.md`, `docs/agent/HANDOFF.md`, and ADRs —
 not by sharing raw chat history.
+
+### Codex-led automatic delegation
+
+The user talks only to Codex. When a V4-Flash packet satisfies the rules above, Codex may invoke
+the project skill `$delegate-deepcode`; the skill starts DeepCode in a private PTY, waits for its
+completion notification and returns control to the same Codex turn. The user does not manually
+relay prompts or completion reports.
+
+Codex must inspect the actual diff and independently run the focused oracle before accepting a
+delegated result. A DeepCode completion message is evidence, never approval. Ambiguous failures,
+architecture or interface decisions, cross-module fixes and a repeated failed correction remain
+Codex work. Neither agent may auto-commit.
+
+Runtime transport under `.agent-sync/` is disposable and gitignored. Durable task state remains in
+`PLANS.md`, `docs/agent/HANDOFF.md` and Git. A delegated DeepCode process (identified by
+`DEEP_AGENT_RUN_ID`) must never invoke `$delegate-deepcode` recursively.

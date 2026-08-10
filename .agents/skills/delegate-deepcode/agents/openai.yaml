@@ -1,0 +1,4 @@
+interface:
+  display_name: "Delegate to DeepCode"
+  short_description: "Safely delegate bounded tasks to DeepCode"
+  default_prompt: "Use $delegate-deepcode to run and review the active bounded DeepCode task."

@@ -3,22 +3,22 @@
     "allow": [
       "read-in-cwd",
       "write-in-cwd",
-      "query-git-log",
-      "read-out-cwd",
-      "network"
+      "query-git-log"
     ],
     "deny": [
+      "read-out-cwd",
       "write-out-cwd",
-      "delete-out-cwd"
-    ],
-    "ask": [
       "delete-in-cwd",
+      "delete-out-cwd",
       "mutate-git-log",
+      "network",
       "mcp"
     ],
+    "ask": [],
     "defaultMode": "askAll"
   },
   "model": "deepseek-v4-flash",
   "thinkingEnabled": true,
-  "reasoningEffort": "high"
+  "reasoningEffort": "high",
+  "notify": "./.agents/skills/delegate-deepcode/scripts/notify.py"
 }

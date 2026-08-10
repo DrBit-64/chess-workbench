@@ -31,6 +31,8 @@ Stage 6 已加入 SQL 后台任务、Stockfish、Syzygy 和 WebSocket 失效通�
 - `backend/src/chess_workbench/api`：传输层与应用组装；
 - `backend/src/chess_workbench/schemas`：Pydantic API 契约；
 - `backend/src/chess_workbench/domain`：局面身份、FEN/棋步规则和稳定领域错误，不依赖 Sanic 请求对象；
+- `backend/src/chess_workbench/extraction`：可移植 CCEF 契约、供应商端口和确定性识别验证；
+  不依赖 API、store、课程 schema 或消费者；
 - `backend/src/chess_workbench/store/models`：持久化模型与数据库约束；
 - `backend/src/chess_workbench/store` 的 repository：事务内的数据访问与并发收敛；API 不直接拼装 SQL。
 
@@ -91,7 +93,10 @@ Block = SectionHeader | NarrativeParagraph | MoveSequence | KnowledgeNote
   随当前路径同步更新
 - `KnowledgeNote`：对当前局面的评注，可引用 `SourceSpan`
 
-棋盘图不单独存储——OCR 提取着法和 FEN 后丢弃，交互界面用可交互棋盘替代。AI 从棋书中提取一章时直接产出这个 Block 序列，经用户审核后写入数据库。
+棋盘图不作为正式课程内容单独存储——识别阶段可以在 CCEF 中把它保留为 `figure` 证据，
+棋步重建和审核完成后由交互棋盘替代。ADR 0010 补充了跨系统边界：AI 先产出与供应商、
+消费者无关的 CCEF package；ChessWorkbench ConsumerAdapter 再把审核通过的 heading、prose、
+move sequence 映射为上述 Block。识别核心不直接写课程数据库。
 
 Stage 3 先把每个 PGN game 的 Module occurrence 树视为一个隐式 MoveSequence；Stage 4
 编辑器开始前再用 migration 确定性回填显式 Block，不为 PGN 导入提前引入两套结构。
