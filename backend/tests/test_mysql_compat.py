@@ -51,6 +51,9 @@ _BUSINESS_TABLES = frozenset(
         "positions",
         "move_edges",
         "module_publications",
+        "pdf_assets",
+        "extraction_runs",
+        "extraction_artifacts",
         "pgn_assets",
         "pgn_imports",
         "pgn_import_games",
@@ -124,7 +127,7 @@ def _mysql_head_schema() -> None:
     cfg = _alembic_config()
     alembic.command.upgrade(cfg, "head")
 
-    assert _current_revision(cfg) == "20260810_0009", "session fixture did not reach head revision"
+    assert _current_revision(cfg) == "20260811_0010", "session fixture did not reach head revision"
     assert _present_tables(cfg) >= _BUSINESS_TABLES, "session fixture is missing business tables"
 
 
@@ -139,7 +142,7 @@ def test_migration_upgrade_check_downgrade_upgrade() -> None:
     cfg = _alembic_config()
 
     # Already at head via session fixture; assertions validate pre-state.
-    assert _current_revision(cfg) == "20260810_0009"
+    assert _current_revision(cfg) == "20260811_0010"
     assert _present_tables(cfg) >= _BUSINESS_TABLES
 
     # Real Alembic check (Codex verified: exits 0 on fresh MySQL 8.4).
@@ -152,7 +155,7 @@ def test_migration_upgrade_check_downgrade_upgrade() -> None:
 
     # Re-upgrade so sibling tests see head schema.
     alembic.command.upgrade(cfg, "head")
-    assert _current_revision(cfg) == "20260810_0009"
+    assert _current_revision(cfg) == "20260811_0010"
 
 
 @requires_mysql

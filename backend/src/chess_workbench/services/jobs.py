@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Collection
 from datetime import timedelta
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from sqlalchemy import Select, select, update
@@ -11,6 +12,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from chess_workbench.domain.jobs import JobStatus, failure_decision
+from chess_workbench.schemas.jobs import JobRead
 from chess_workbench.store.models import InvalidationEvent, Job, utc_now
 
 
@@ -25,6 +27,39 @@ def _clear_lease() -> dict[str, None]:
 
 def _affected_rows(result: Any) -> int:
     return int(result.rowcount)
+
+
+def _validated_allowed_kinds(allowed_kinds: Collection[str]) -> tuple[str, ...]:
+    if isinstance(allowed_kinds, (str, bytes)):
+        raise TypeError("allowed_kinds must be a collection of job kind strings")
+    supplied_kinds = tuple(allowed_kinds)
+    if not supplied_kinds:
+        raise ValueError("allowed_kinds must contain at least one job kind")
+    if any(not isinstance(kind, str) for kind in supplied_kinds):
+        raise TypeError("allowed_kinds must contain only strings")
+    kinds = tuple(dict.fromkeys(supplied_kinds))
+    if any(not kind or len(kind) > 64 for kind in kinds):
+        raise ValueError("job kinds must contain between 1 and 64 characters")
+    return kinds
+
+
+def job_read(row: Job) -> JobRead:
+    """Serialize the generic durable job without coupling callers to engine code."""
+
+    return JobRead(
+        id=row.id,
+        kind=row.kind,
+        status=cast(Any, row.status),
+        payload=row.payload,
+        result=row.result,
+        attempt_count=row.attempt_count,
+        max_attempts=row.max_attempts,
+        cancel_requested_at=row.cancel_requested_at,
+        last_error_code=row.last_error_code,
+        last_error_message=row.last_error_message,
+        created_at=row.created_at,
+        updated_at=row.updated_at,
+    )
 
 
 class JobService:
@@ -96,10 +131,12 @@ class JobService:
         await self.session.flush()
         return row
 
-    async def recover_expired(self) -> int:
+    async def recover_expired(self, *, allowed_kinds: Collection[str]) -> int:
+        kinds = _validated_allowed_kinds(allowed_kinds)
         now = utc_now()
         query = select(Job).where(
             Job.status == JobStatus.RUNNING.value,
+            Job.kind.in_(kinds),
             Job.lease_expires_at.is_not(None),
             Job.lease_expires_at <= now,
         )
@@ -127,13 +164,21 @@ class JobService:
         await self.session.flush()
         return len(rows)
 
-    async def claim(self, *, worker_id: str, lease_seconds: int = 30) -> Job | None:
-        await self.recover_expired()
+    async def claim(
+        self,
+        *,
+        worker_id: str,
+        allowed_kinds: Collection[str],
+        lease_seconds: int = 30,
+    ) -> Job | None:
+        kinds = _validated_allowed_kinds(allowed_kinds)
+        await self.recover_expired(allowed_kinds=kinds)
         now = utc_now()
         query: Select[tuple[Job]] = (
             select(Job)
             .where(
                 Job.status == JobStatus.QUEUED.value,
+                Job.kind.in_(kinds),
                 Job.available_at <= now,
                 Job.cancel_requested_at.is_(None),
             )

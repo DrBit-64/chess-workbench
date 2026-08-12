@@ -11668,6 +11668,2035 @@
         ]
       }
     },
+    "/api/pdf-assets": {
+      "get": {
+        "operationId": "listPdfAssets",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "items": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "author": {
+                            "default": null,
+                            "maxLength": 200,
+                            "minLength": 1,
+                            "nullable": true,
+                            "title": "Author",
+                            "type": "string"
+                          },
+                          "byte_size": {
+                            "exclusiveMinimum": 0,
+                            "title": "Byte Size",
+                            "type": "integer"
+                          },
+                          "content_sha256": {
+                            "pattern": "^[0-9a-f]{64}$",
+                            "title": "Content Sha256",
+                            "type": "string"
+                          },
+                          "created_at": {
+                            "format": "date-time",
+                            "title": "Created At",
+                            "type": "string"
+                          },
+                          "edition": {
+                            "default": null,
+                            "maxLength": 200,
+                            "minLength": 1,
+                            "nullable": true,
+                            "title": "Edition",
+                            "type": "string"
+                          },
+                          "filename": {
+                            "maxLength": 200,
+                            "minLength": 1,
+                            "title": "Filename",
+                            "type": "string"
+                          },
+                          "id": {
+                            "format": "uuid",
+                            "title": "Id",
+                            "type": "string"
+                          },
+                          "page_count": {
+                            "maximum": 20000,
+                            "minimum": 1,
+                            "title": "Page Count",
+                            "type": "integer"
+                          },
+                          "source_file_id": {
+                            "format": "uuid",
+                            "title": "Source File Id",
+                            "type": "string"
+                          },
+                          "source_id": {
+                            "format": "uuid",
+                            "title": "Source Id",
+                            "type": "string"
+                          },
+                          "source_version_id": {
+                            "format": "uuid",
+                            "title": "Source Version Id",
+                            "type": "string"
+                          },
+                          "title": {
+                            "maxLength": 200,
+                            "minLength": 1,
+                            "title": "Title",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "content_sha256",
+                          "byte_size",
+                          "page_count",
+                          "source_id",
+                          "source_version_id",
+                          "source_file_id",
+                          "filename",
+                          "title",
+                          "created_at"
+                        ],
+                        "title": "PdfAssetRead",
+                        "type": "object"
+                      },
+                      "title": "Items",
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ],
+                  "title": "PdfAssetList",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "PDF assets"
+          }
+        },
+        "summary": "List registered immutable PDF assets",
+        "tags": [
+          "pdf"
+        ]
+      },
+      "post": {
+        "operationId": "createPdfAsset",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "file": {
+                    "format": "binary",
+                    "type": "string"
+                  },
+                  "metadata": {
+                    "description": "JSON PdfAssetUploadMetadata",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "file"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "asset": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "author": {
+                          "default": null,
+                          "maxLength": 200,
+                          "minLength": 1,
+                          "nullable": true,
+                          "title": "Author",
+                          "type": "string"
+                        },
+                        "byte_size": {
+                          "exclusiveMinimum": 0,
+                          "title": "Byte Size",
+                          "type": "integer"
+                        },
+                        "content_sha256": {
+                          "pattern": "^[0-9a-f]{64}$",
+                          "title": "Content Sha256",
+                          "type": "string"
+                        },
+                        "created_at": {
+                          "format": "date-time",
+                          "title": "Created At",
+                          "type": "string"
+                        },
+                        "edition": {
+                          "default": null,
+                          "maxLength": 200,
+                          "minLength": 1,
+                          "nullable": true,
+                          "title": "Edition",
+                          "type": "string"
+                        },
+                        "filename": {
+                          "maxLength": 200,
+                          "minLength": 1,
+                          "title": "Filename",
+                          "type": "string"
+                        },
+                        "id": {
+                          "format": "uuid",
+                          "title": "Id",
+                          "type": "string"
+                        },
+                        "page_count": {
+                          "maximum": 20000,
+                          "minimum": 1,
+                          "title": "Page Count",
+                          "type": "integer"
+                        },
+                        "source_file_id": {
+                          "format": "uuid",
+                          "title": "Source File Id",
+                          "type": "string"
+                        },
+                        "source_id": {
+                          "format": "uuid",
+                          "title": "Source Id",
+                          "type": "string"
+                        },
+                        "source_version_id": {
+                          "format": "uuid",
+                          "title": "Source Version Id",
+                          "type": "string"
+                        },
+                        "title": {
+                          "maxLength": 200,
+                          "minLength": 1,
+                          "title": "Title",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "content_sha256",
+                        "byte_size",
+                        "page_count",
+                        "source_id",
+                        "source_version_id",
+                        "source_file_id",
+                        "filename",
+                        "title",
+                        "created_at"
+                      ],
+                      "title": "PdfAssetRead",
+                      "type": "object"
+                    },
+                    "replayed": {
+                      "title": "Replayed",
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "replayed",
+                    "asset"
+                  ],
+                  "title": "PdfAssetEnvelope",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Content-addressed replay"
+          },
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "asset": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "author": {
+                          "default": null,
+                          "maxLength": 200,
+                          "minLength": 1,
+                          "nullable": true,
+                          "title": "Author",
+                          "type": "string"
+                        },
+                        "byte_size": {
+                          "exclusiveMinimum": 0,
+                          "title": "Byte Size",
+                          "type": "integer"
+                        },
+                        "content_sha256": {
+                          "pattern": "^[0-9a-f]{64}$",
+                          "title": "Content Sha256",
+                          "type": "string"
+                        },
+                        "created_at": {
+                          "format": "date-time",
+                          "title": "Created At",
+                          "type": "string"
+                        },
+                        "edition": {
+                          "default": null,
+                          "maxLength": 200,
+                          "minLength": 1,
+                          "nullable": true,
+                          "title": "Edition",
+                          "type": "string"
+                        },
+                        "filename": {
+                          "maxLength": 200,
+                          "minLength": 1,
+                          "title": "Filename",
+                          "type": "string"
+                        },
+                        "id": {
+                          "format": "uuid",
+                          "title": "Id",
+                          "type": "string"
+                        },
+                        "page_count": {
+                          "maximum": 20000,
+                          "minimum": 1,
+                          "title": "Page Count",
+                          "type": "integer"
+                        },
+                        "source_file_id": {
+                          "format": "uuid",
+                          "title": "Source File Id",
+                          "type": "string"
+                        },
+                        "source_id": {
+                          "format": "uuid",
+                          "title": "Source Id",
+                          "type": "string"
+                        },
+                        "source_version_id": {
+                          "format": "uuid",
+                          "title": "Source Version Id",
+                          "type": "string"
+                        },
+                        "title": {
+                          "maxLength": 200,
+                          "minLength": 1,
+                          "title": "Title",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "content_sha256",
+                        "byte_size",
+                        "page_count",
+                        "source_id",
+                        "source_version_id",
+                        "source_file_id",
+                        "filename",
+                        "title",
+                        "created_at"
+                      ],
+                      "title": "PdfAssetRead",
+                      "type": "object"
+                    },
+                    "replayed": {
+                      "title": "Replayed",
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "replayed",
+                    "asset"
+                  ],
+                  "title": "PdfAssetEnvelope",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "PDF asset created"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error",
+                        "payload_too_large",
+                        "unsupported_media_type",
+                        "invalid_pgn",
+                        "pgn_limit_exceeded",
+                        "idempotency_conflict",
+                        "course_mode_conflict",
+                        "pgn_not_exportable",
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "PDF payload too large"
+          },
+          "415": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error",
+                        "payload_too_large",
+                        "unsupported_media_type",
+                        "invalid_pgn",
+                        "pgn_limit_exceeded",
+                        "idempotency_conflict",
+                        "course_mode_conflict",
+                        "pgn_not_exportable",
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Unsupported media type"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error",
+                        "payload_too_large",
+                        "unsupported_media_type",
+                        "invalid_pgn",
+                        "pgn_limit_exceeded",
+                        "idempotency_conflict",
+                        "course_mode_conflict",
+                        "pgn_not_exportable",
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Invalid PDF or multipart request"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error",
+                        "payload_too_large",
+                        "unsupported_media_type",
+                        "invalid_pgn",
+                        "pgn_limit_exceeded",
+                        "idempotency_conflict",
+                        "course_mode_conflict",
+                        "pgn_not_exportable",
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Source storage unavailable"
+          }
+        },
+        "summary": "Upload and register one immutable PDF asset",
+        "tags": [
+          "pdf"
+        ]
+      }
+    },
+    "/api/pdf-assets/{asset_id}": {
+      "get": {
+        "operationId": "getPdfAsset",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "asset_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "author": {
+                      "default": null,
+                      "maxLength": 200,
+                      "minLength": 1,
+                      "nullable": true,
+                      "title": "Author",
+                      "type": "string"
+                    },
+                    "byte_size": {
+                      "exclusiveMinimum": 0,
+                      "title": "Byte Size",
+                      "type": "integer"
+                    },
+                    "content_sha256": {
+                      "pattern": "^[0-9a-f]{64}$",
+                      "title": "Content Sha256",
+                      "type": "string"
+                    },
+                    "created_at": {
+                      "format": "date-time",
+                      "title": "Created At",
+                      "type": "string"
+                    },
+                    "edition": {
+                      "default": null,
+                      "maxLength": 200,
+                      "minLength": 1,
+                      "nullable": true,
+                      "title": "Edition",
+                      "type": "string"
+                    },
+                    "filename": {
+                      "maxLength": 200,
+                      "minLength": 1,
+                      "title": "Filename",
+                      "type": "string"
+                    },
+                    "id": {
+                      "format": "uuid",
+                      "title": "Id",
+                      "type": "string"
+                    },
+                    "page_count": {
+                      "maximum": 20000,
+                      "minimum": 1,
+                      "title": "Page Count",
+                      "type": "integer"
+                    },
+                    "source_file_id": {
+                      "format": "uuid",
+                      "title": "Source File Id",
+                      "type": "string"
+                    },
+                    "source_id": {
+                      "format": "uuid",
+                      "title": "Source Id",
+                      "type": "string"
+                    },
+                    "source_version_id": {
+                      "format": "uuid",
+                      "title": "Source Version Id",
+                      "type": "string"
+                    },
+                    "title": {
+                      "maxLength": 200,
+                      "minLength": 1,
+                      "title": "Title",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "content_sha256",
+                    "byte_size",
+                    "page_count",
+                    "source_id",
+                    "source_version_id",
+                    "source_file_id",
+                    "filename",
+                    "title",
+                    "created_at"
+                  ],
+                  "title": "PdfAssetRead",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "PDF asset"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error",
+                        "payload_too_large",
+                        "unsupported_media_type",
+                        "invalid_pgn",
+                        "pgn_limit_exceeded",
+                        "idempotency_conflict",
+                        "course_mode_conflict",
+                        "pgn_not_exportable",
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "PDF asset not found"
+          }
+        },
+        "summary": "Read one registered immutable PDF asset",
+        "tags": [
+          "pdf"
+        ]
+      }
+    },
+    "/api/pdf-extractions": {
+      "get": {
+        "operationId": "listPdfExtractions",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "has_conflicts",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "items": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "created_at": {
+                            "format": "date-time",
+                            "title": "Created At",
+                            "type": "string"
+                          },
+                          "evidence": {
+                            "additionalProperties": false,
+                            "default": null,
+                            "description": "Verified public summary of one fully committed Stage 8B artifact set.",
+                            "nullable": true,
+                            "properties": {
+                              "fragment_count": {
+                                "maximum": 200000,
+                                "minimum": 0,
+                                "title": "Fragment Count",
+                                "type": "integer"
+                              },
+                              "ocr_manifest_sha256": {
+                                "pattern": "^[0-9a-f]{64}$",
+                                "title": "Ocr Manifest Sha256",
+                                "type": "string"
+                              },
+                              "page_count": {
+                                "maximum": 20000,
+                                "minimum": 1,
+                                "title": "Page Count",
+                                "type": "integer"
+                              },
+                              "render_manifest_sha256": {
+                                "pattern": "^[0-9a-f]{64}$",
+                                "title": "Render Manifest Sha256",
+                                "type": "string"
+                              },
+                              "status": {
+                                "default": "committed",
+                                "enum": [
+                                  "committed"
+                                ],
+                                "title": "Status",
+                                "type": "string"
+                              },
+                              "warning_count": {
+                                "maximum": 20000,
+                                "minimum": 0,
+                                "title": "Warning Count",
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "page_count",
+                              "fragment_count",
+                              "warning_count",
+                              "render_manifest_sha256",
+                              "ocr_manifest_sha256"
+                            ],
+                            "title": "PdfEvidenceSummary",
+                            "type": "object"
+                          },
+                          "first_page": {
+                            "minimum": 1,
+                            "title": "First Page",
+                            "type": "integer"
+                          },
+                          "has_conflicts": {
+                            "default": false,
+                            "title": "Has Conflicts",
+                            "type": "boolean"
+                          },
+                          "id": {
+                            "format": "uuid",
+                            "title": "Id",
+                            "type": "string"
+                          },
+                          "job": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "attempt_count": {
+                                "title": "Attempt Count",
+                                "type": "integer"
+                              },
+                              "cancel_requested_at": {
+                                "format": "date-time",
+                                "nullable": true,
+                                "title": "Cancel Requested At",
+                                "type": "string"
+                              },
+                              "created_at": {
+                                "format": "date-time",
+                                "title": "Created At",
+                                "type": "string"
+                              },
+                              "id": {
+                                "format": "uuid",
+                                "title": "Id",
+                                "type": "string"
+                              },
+                              "kind": {
+                                "minLength": 1,
+                                "title": "Kind",
+                                "type": "string"
+                              },
+                              "last_error_code": {
+                                "nullable": true,
+                                "title": "Last Error Code",
+                                "type": "string"
+                              },
+                              "last_error_message": {
+                                "nullable": true,
+                                "title": "Last Error Message",
+                                "type": "string"
+                              },
+                              "max_attempts": {
+                                "title": "Max Attempts",
+                                "type": "integer"
+                              },
+                              "payload": {
+                                "additionalProperties": true,
+                                "title": "Payload",
+                                "type": "object"
+                              },
+                              "result": {
+                                "additionalProperties": true,
+                                "nullable": true,
+                                "title": "Result",
+                                "type": "object"
+                              },
+                              "status": {
+                                "enum": [
+                                  "queued",
+                                  "running",
+                                  "succeeded",
+                                  "failed",
+                                  "cancelled"
+                                ],
+                                "title": "Status",
+                                "type": "string"
+                              },
+                              "updated_at": {
+                                "format": "date-time",
+                                "title": "Updated At",
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "kind",
+                              "status",
+                              "payload",
+                              "result",
+                              "attempt_count",
+                              "max_attempts",
+                              "cancel_requested_at",
+                              "last_error_code",
+                              "last_error_message",
+                              "created_at",
+                              "updated_at"
+                            ],
+                            "title": "JobRead",
+                            "type": "object"
+                          },
+                          "last_page": {
+                            "minimum": 1,
+                            "title": "Last Page",
+                            "type": "integer"
+                          },
+                          "pdf_asset_id": {
+                            "format": "uuid",
+                            "title": "Pdf Asset Id",
+                            "type": "string"
+                          },
+                          "pipeline_version": {
+                            "minLength": 1,
+                            "title": "Pipeline Version",
+                            "type": "string"
+                          },
+                          "profile": {
+                            "additionalProperties": {},
+                            "title": "Profile",
+                            "type": "object"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "pdf_asset_id",
+                          "first_page",
+                          "last_page",
+                          "pipeline_version",
+                          "profile",
+                          "job",
+                          "created_at"
+                        ],
+                        "title": "PdfExtractionRead",
+                        "type": "object"
+                      },
+                      "title": "Items",
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ],
+                  "title": "PdfExtractionList",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "PDF extractions"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error",
+                        "payload_too_large",
+                        "unsupported_media_type",
+                        "invalid_pgn",
+                        "pgn_limit_exceeded",
+                        "idempotency_conflict",
+                        "course_mode_conflict",
+                        "pgn_not_exportable",
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Invalid query filter"
+          }
+        },
+        "summary": "List PDF extraction requests by real Job state",
+        "tags": [
+          "pdf"
+        ]
+      },
+      "post": {
+        "operationId": "createPdfExtraction",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "first_page": {
+                    "minimum": 1,
+                    "title": "First Page",
+                    "type": "integer"
+                  },
+                  "last_page": {
+                    "minimum": 1,
+                    "title": "Last Page",
+                    "type": "integer"
+                  },
+                  "pdf_asset_id": {
+                    "format": "uuid",
+                    "title": "Pdf Asset Id",
+                    "type": "string"
+                  },
+                  "profile": {
+                    "additionalProperties": {},
+                    "title": "Profile",
+                    "type": "object"
+                  }
+                },
+                "required": [
+                  "pdf_asset_id",
+                  "first_page",
+                  "last_page"
+                ],
+                "title": "PdfExtractionCreate",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "extraction": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "created_at": {
+                          "format": "date-time",
+                          "title": "Created At",
+                          "type": "string"
+                        },
+                        "evidence": {
+                          "additionalProperties": false,
+                          "default": null,
+                          "description": "Verified public summary of one fully committed Stage 8B artifact set.",
+                          "nullable": true,
+                          "properties": {
+                            "fragment_count": {
+                              "maximum": 200000,
+                              "minimum": 0,
+                              "title": "Fragment Count",
+                              "type": "integer"
+                            },
+                            "ocr_manifest_sha256": {
+                              "pattern": "^[0-9a-f]{64}$",
+                              "title": "Ocr Manifest Sha256",
+                              "type": "string"
+                            },
+                            "page_count": {
+                              "maximum": 20000,
+                              "minimum": 1,
+                              "title": "Page Count",
+                              "type": "integer"
+                            },
+                            "render_manifest_sha256": {
+                              "pattern": "^[0-9a-f]{64}$",
+                              "title": "Render Manifest Sha256",
+                              "type": "string"
+                            },
+                            "status": {
+                              "default": "committed",
+                              "enum": [
+                                "committed"
+                              ],
+                              "title": "Status",
+                              "type": "string"
+                            },
+                            "warning_count": {
+                              "maximum": 20000,
+                              "minimum": 0,
+                              "title": "Warning Count",
+                              "type": "integer"
+                            }
+                          },
+                          "required": [
+                            "page_count",
+                            "fragment_count",
+                            "warning_count",
+                            "render_manifest_sha256",
+                            "ocr_manifest_sha256"
+                          ],
+                          "title": "PdfEvidenceSummary",
+                          "type": "object"
+                        },
+                        "first_page": {
+                          "minimum": 1,
+                          "title": "First Page",
+                          "type": "integer"
+                        },
+                        "has_conflicts": {
+                          "default": false,
+                          "title": "Has Conflicts",
+                          "type": "boolean"
+                        },
+                        "id": {
+                          "format": "uuid",
+                          "title": "Id",
+                          "type": "string"
+                        },
+                        "job": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "attempt_count": {
+                              "title": "Attempt Count",
+                              "type": "integer"
+                            },
+                            "cancel_requested_at": {
+                              "format": "date-time",
+                              "nullable": true,
+                              "title": "Cancel Requested At",
+                              "type": "string"
+                            },
+                            "created_at": {
+                              "format": "date-time",
+                              "title": "Created At",
+                              "type": "string"
+                            },
+                            "id": {
+                              "format": "uuid",
+                              "title": "Id",
+                              "type": "string"
+                            },
+                            "kind": {
+                              "minLength": 1,
+                              "title": "Kind",
+                              "type": "string"
+                            },
+                            "last_error_code": {
+                              "nullable": true,
+                              "title": "Last Error Code",
+                              "type": "string"
+                            },
+                            "last_error_message": {
+                              "nullable": true,
+                              "title": "Last Error Message",
+                              "type": "string"
+                            },
+                            "max_attempts": {
+                              "title": "Max Attempts",
+                              "type": "integer"
+                            },
+                            "payload": {
+                              "additionalProperties": true,
+                              "title": "Payload",
+                              "type": "object"
+                            },
+                            "result": {
+                              "additionalProperties": true,
+                              "nullable": true,
+                              "title": "Result",
+                              "type": "object"
+                            },
+                            "status": {
+                              "enum": [
+                                "queued",
+                                "running",
+                                "succeeded",
+                                "failed",
+                                "cancelled"
+                              ],
+                              "title": "Status",
+                              "type": "string"
+                            },
+                            "updated_at": {
+                              "format": "date-time",
+                              "title": "Updated At",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "kind",
+                            "status",
+                            "payload",
+                            "result",
+                            "attempt_count",
+                            "max_attempts",
+                            "cancel_requested_at",
+                            "last_error_code",
+                            "last_error_message",
+                            "created_at",
+                            "updated_at"
+                          ],
+                          "title": "JobRead",
+                          "type": "object"
+                        },
+                        "last_page": {
+                          "minimum": 1,
+                          "title": "Last Page",
+                          "type": "integer"
+                        },
+                        "pdf_asset_id": {
+                          "format": "uuid",
+                          "title": "Pdf Asset Id",
+                          "type": "string"
+                        },
+                        "pipeline_version": {
+                          "minLength": 1,
+                          "title": "Pipeline Version",
+                          "type": "string"
+                        },
+                        "profile": {
+                          "additionalProperties": {},
+                          "title": "Profile",
+                          "type": "object"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "pdf_asset_id",
+                        "first_page",
+                        "last_page",
+                        "pipeline_version",
+                        "profile",
+                        "job",
+                        "created_at"
+                      ],
+                      "title": "PdfExtractionRead",
+                      "type": "object"
+                    },
+                    "replayed": {
+                      "title": "Replayed",
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "replayed",
+                    "extraction"
+                  ],
+                  "title": "PdfExtractionEnvelope",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Idempotent replay"
+          },
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "extraction": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "created_at": {
+                          "format": "date-time",
+                          "title": "Created At",
+                          "type": "string"
+                        },
+                        "evidence": {
+                          "additionalProperties": false,
+                          "default": null,
+                          "description": "Verified public summary of one fully committed Stage 8B artifact set.",
+                          "nullable": true,
+                          "properties": {
+                            "fragment_count": {
+                              "maximum": 200000,
+                              "minimum": 0,
+                              "title": "Fragment Count",
+                              "type": "integer"
+                            },
+                            "ocr_manifest_sha256": {
+                              "pattern": "^[0-9a-f]{64}$",
+                              "title": "Ocr Manifest Sha256",
+                              "type": "string"
+                            },
+                            "page_count": {
+                              "maximum": 20000,
+                              "minimum": 1,
+                              "title": "Page Count",
+                              "type": "integer"
+                            },
+                            "render_manifest_sha256": {
+                              "pattern": "^[0-9a-f]{64}$",
+                              "title": "Render Manifest Sha256",
+                              "type": "string"
+                            },
+                            "status": {
+                              "default": "committed",
+                              "enum": [
+                                "committed"
+                              ],
+                              "title": "Status",
+                              "type": "string"
+                            },
+                            "warning_count": {
+                              "maximum": 20000,
+                              "minimum": 0,
+                              "title": "Warning Count",
+                              "type": "integer"
+                            }
+                          },
+                          "required": [
+                            "page_count",
+                            "fragment_count",
+                            "warning_count",
+                            "render_manifest_sha256",
+                            "ocr_manifest_sha256"
+                          ],
+                          "title": "PdfEvidenceSummary",
+                          "type": "object"
+                        },
+                        "first_page": {
+                          "minimum": 1,
+                          "title": "First Page",
+                          "type": "integer"
+                        },
+                        "has_conflicts": {
+                          "default": false,
+                          "title": "Has Conflicts",
+                          "type": "boolean"
+                        },
+                        "id": {
+                          "format": "uuid",
+                          "title": "Id",
+                          "type": "string"
+                        },
+                        "job": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "attempt_count": {
+                              "title": "Attempt Count",
+                              "type": "integer"
+                            },
+                            "cancel_requested_at": {
+                              "format": "date-time",
+                              "nullable": true,
+                              "title": "Cancel Requested At",
+                              "type": "string"
+                            },
+                            "created_at": {
+                              "format": "date-time",
+                              "title": "Created At",
+                              "type": "string"
+                            },
+                            "id": {
+                              "format": "uuid",
+                              "title": "Id",
+                              "type": "string"
+                            },
+                            "kind": {
+                              "minLength": 1,
+                              "title": "Kind",
+                              "type": "string"
+                            },
+                            "last_error_code": {
+                              "nullable": true,
+                              "title": "Last Error Code",
+                              "type": "string"
+                            },
+                            "last_error_message": {
+                              "nullable": true,
+                              "title": "Last Error Message",
+                              "type": "string"
+                            },
+                            "max_attempts": {
+                              "title": "Max Attempts",
+                              "type": "integer"
+                            },
+                            "payload": {
+                              "additionalProperties": true,
+                              "title": "Payload",
+                              "type": "object"
+                            },
+                            "result": {
+                              "additionalProperties": true,
+                              "nullable": true,
+                              "title": "Result",
+                              "type": "object"
+                            },
+                            "status": {
+                              "enum": [
+                                "queued",
+                                "running",
+                                "succeeded",
+                                "failed",
+                                "cancelled"
+                              ],
+                              "title": "Status",
+                              "type": "string"
+                            },
+                            "updated_at": {
+                              "format": "date-time",
+                              "title": "Updated At",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "kind",
+                            "status",
+                            "payload",
+                            "result",
+                            "attempt_count",
+                            "max_attempts",
+                            "cancel_requested_at",
+                            "last_error_code",
+                            "last_error_message",
+                            "created_at",
+                            "updated_at"
+                          ],
+                          "title": "JobRead",
+                          "type": "object"
+                        },
+                        "last_page": {
+                          "minimum": 1,
+                          "title": "Last Page",
+                          "type": "integer"
+                        },
+                        "pdf_asset_id": {
+                          "format": "uuid",
+                          "title": "Pdf Asset Id",
+                          "type": "string"
+                        },
+                        "pipeline_version": {
+                          "minLength": 1,
+                          "title": "Pipeline Version",
+                          "type": "string"
+                        },
+                        "profile": {
+                          "additionalProperties": {},
+                          "title": "Profile",
+                          "type": "object"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "pdf_asset_id",
+                        "first_page",
+                        "last_page",
+                        "pipeline_version",
+                        "profile",
+                        "job",
+                        "created_at"
+                      ],
+                      "title": "PdfExtractionRead",
+                      "type": "object"
+                    },
+                    "replayed": {
+                      "title": "Replayed",
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "replayed",
+                    "extraction"
+                  ],
+                  "title": "PdfExtractionEnvelope",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "PDF extraction queued"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error",
+                        "payload_too_large",
+                        "unsupported_media_type",
+                        "invalid_pgn",
+                        "pgn_limit_exceeded",
+                        "idempotency_conflict",
+                        "course_mode_conflict",
+                        "pgn_not_exportable",
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "PDF asset not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error",
+                        "payload_too_large",
+                        "unsupported_media_type",
+                        "invalid_pgn",
+                        "pgn_limit_exceeded",
+                        "idempotency_conflict",
+                        "course_mode_conflict",
+                        "pgn_not_exportable",
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Idempotency conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error",
+                        "payload_too_large",
+                        "unsupported_media_type",
+                        "invalid_pgn",
+                        "pgn_limit_exceeded",
+                        "idempotency_conflict",
+                        "course_mode_conflict",
+                        "pgn_not_exportable",
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Invalid extraction request"
+          }
+        },
+        "summary": "Queue an immutable physical-page extraction request",
+        "tags": [
+          "pdf"
+        ]
+      }
+    },
+    "/api/pdf-extractions/{run_id}": {
+      "get": {
+        "operationId": "getPdfExtraction",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "created_at": {
+                      "format": "date-time",
+                      "title": "Created At",
+                      "type": "string"
+                    },
+                    "evidence": {
+                      "additionalProperties": false,
+                      "default": null,
+                      "description": "Verified public summary of one fully committed Stage 8B artifact set.",
+                      "nullable": true,
+                      "properties": {
+                        "fragment_count": {
+                          "maximum": 200000,
+                          "minimum": 0,
+                          "title": "Fragment Count",
+                          "type": "integer"
+                        },
+                        "ocr_manifest_sha256": {
+                          "pattern": "^[0-9a-f]{64}$",
+                          "title": "Ocr Manifest Sha256",
+                          "type": "string"
+                        },
+                        "page_count": {
+                          "maximum": 20000,
+                          "minimum": 1,
+                          "title": "Page Count",
+                          "type": "integer"
+                        },
+                        "render_manifest_sha256": {
+                          "pattern": "^[0-9a-f]{64}$",
+                          "title": "Render Manifest Sha256",
+                          "type": "string"
+                        },
+                        "status": {
+                          "default": "committed",
+                          "enum": [
+                            "committed"
+                          ],
+                          "title": "Status",
+                          "type": "string"
+                        },
+                        "warning_count": {
+                          "maximum": 20000,
+                          "minimum": 0,
+                          "title": "Warning Count",
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "page_count",
+                        "fragment_count",
+                        "warning_count",
+                        "render_manifest_sha256",
+                        "ocr_manifest_sha256"
+                      ],
+                      "title": "PdfEvidenceSummary",
+                      "type": "object"
+                    },
+                    "first_page": {
+                      "minimum": 1,
+                      "title": "First Page",
+                      "type": "integer"
+                    },
+                    "has_conflicts": {
+                      "default": false,
+                      "title": "Has Conflicts",
+                      "type": "boolean"
+                    },
+                    "id": {
+                      "format": "uuid",
+                      "title": "Id",
+                      "type": "string"
+                    },
+                    "job": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "attempt_count": {
+                          "title": "Attempt Count",
+                          "type": "integer"
+                        },
+                        "cancel_requested_at": {
+                          "format": "date-time",
+                          "nullable": true,
+                          "title": "Cancel Requested At",
+                          "type": "string"
+                        },
+                        "created_at": {
+                          "format": "date-time",
+                          "title": "Created At",
+                          "type": "string"
+                        },
+                        "id": {
+                          "format": "uuid",
+                          "title": "Id",
+                          "type": "string"
+                        },
+                        "kind": {
+                          "minLength": 1,
+                          "title": "Kind",
+                          "type": "string"
+                        },
+                        "last_error_code": {
+                          "nullable": true,
+                          "title": "Last Error Code",
+                          "type": "string"
+                        },
+                        "last_error_message": {
+                          "nullable": true,
+                          "title": "Last Error Message",
+                          "type": "string"
+                        },
+                        "max_attempts": {
+                          "title": "Max Attempts",
+                          "type": "integer"
+                        },
+                        "payload": {
+                          "additionalProperties": true,
+                          "title": "Payload",
+                          "type": "object"
+                        },
+                        "result": {
+                          "additionalProperties": true,
+                          "nullable": true,
+                          "title": "Result",
+                          "type": "object"
+                        },
+                        "status": {
+                          "enum": [
+                            "queued",
+                            "running",
+                            "succeeded",
+                            "failed",
+                            "cancelled"
+                          ],
+                          "title": "Status",
+                          "type": "string"
+                        },
+                        "updated_at": {
+                          "format": "date-time",
+                          "title": "Updated At",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "kind",
+                        "status",
+                        "payload",
+                        "result",
+                        "attempt_count",
+                        "max_attempts",
+                        "cancel_requested_at",
+                        "last_error_code",
+                        "last_error_message",
+                        "created_at",
+                        "updated_at"
+                      ],
+                      "title": "JobRead",
+                      "type": "object"
+                    },
+                    "last_page": {
+                      "minimum": 1,
+                      "title": "Last Page",
+                      "type": "integer"
+                    },
+                    "pdf_asset_id": {
+                      "format": "uuid",
+                      "title": "Pdf Asset Id",
+                      "type": "string"
+                    },
+                    "pipeline_version": {
+                      "minLength": 1,
+                      "title": "Pipeline Version",
+                      "type": "string"
+                    },
+                    "profile": {
+                      "additionalProperties": {},
+                      "title": "Profile",
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "pdf_asset_id",
+                    "first_page",
+                    "last_page",
+                    "pipeline_version",
+                    "profile",
+                    "job",
+                    "created_at"
+                  ],
+                  "title": "PdfExtractionRead",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "PDF extraction"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error",
+                        "payload_too_large",
+                        "unsupported_media_type",
+                        "invalid_pgn",
+                        "pgn_limit_exceeded",
+                        "idempotency_conflict",
+                        "course_mode_conflict",
+                        "pgn_not_exportable",
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "PDF extraction not found"
+          }
+        },
+        "summary": "Read one immutable extraction request and its Job state",
+        "tags": [
+          "pdf"
+        ]
+      }
+    },
     "/api/pgn/imports": {
       "post": {
         "operationId": "createPgnImport",
@@ -18285,6 +20314,9 @@
     },
     {
       "name": "knowledge-notes"
+    },
+    {
+      "name": "pdf"
     },
     {
       "name": "pgn"

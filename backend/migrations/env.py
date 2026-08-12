@@ -14,20 +14,23 @@ from chess_workbench.store.models import (
     Course,
     CourseModule,
     CourseOccurrence,
+    EngineAnalysis,
+    EngineGame,
+    EngineGameMove,
+    EngineGameReview,
+    ExtractionArtifact,
+    ExtractionRun,
+    InvalidationEvent,
+    Job,
     KnowledgeNote,
     KnowledgeNoteCitation,
     MoveEdge,
+    PdfAsset,
     Position,
     Source,
     SourceFile,
     SourceSpan,
     SourceVersion,
-    EngineAnalysis,
-    EngineGame,
-    EngineGameMove,
-    EngineGameReview,
-    InvalidationEvent,
-    Job,
 )
 
 _REGISTERED_MODELS = (
@@ -46,8 +49,11 @@ _REGISTERED_MODELS = (
     EngineGame,
     EngineGameMove,
     EngineGameReview,
+    ExtractionArtifact,
+    ExtractionRun,
     InvalidationEvent,
     Job,
+    PdfAsset,
 )
 
 config = context.config

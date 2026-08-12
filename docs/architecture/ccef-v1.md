@@ -11,8 +11,9 @@ This document is the field-level specification for ADR 0010. Keywords **MUST**, 
 - Checked-in artifact: `contracts/chess-content-extraction-v1.schema.json`.
 - Canonical Schema bytes are produced by
   `json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n"`.
-- Every object rejects unknown fields. Defaults MAY be omitted on input and MUST appear after a
-  Pydantic `model_dump(mode="json", exclude_none=False)` round trip.
+- Every object rejects unknown fields. Non-discriminator defaults MAY be omitted on input and MUST
+  appear after a Pydantic `model_dump(mode="json", exclude_none=False)` round trip. Every `kind`
+  discriminator is required in portable JSON.
 
 Local IDs MUST match `^[A-Za-z][A-Za-z0-9._:-]{0,127}$`. Diagnostic codes MUST match
 `^[a-z][a-z0-9_]{0,63}$`. Extension keys MUST match
@@ -135,11 +136,13 @@ caption nor alt text because its mandatory evidence preserves the source locatio
 ## Prose anchors
 
 ```text
-MoveNodeAnchor(kind="move_node")
+MoveNodeAnchor
+  kind: Literal["move_node"]
   sequence_id: LocalId
   node_id: LocalId
 
-PositionAnchor(kind="position")
+PositionAnchor
+  kind: Literal["position"]
   fen: str, 1..200 chars                       # exactly six fields, legality later
 ```
 
@@ -148,9 +151,11 @@ An absent prose anchor means narrative content. Anchor objects reject all cross-
 ## Initial position and move tree
 
 ```text
-StartPosition(kind="startpos")
+StartPosition
+  kind: Literal["startpos"]
 
-FenPosition(kind="fen")
+FenPosition
+  kind: Literal["fen"]
   fen: str, 1..200 chars                       # exactly six fields, legality later
 
 MoveNode

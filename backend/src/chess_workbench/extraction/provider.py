@@ -37,6 +37,7 @@ ProviderErrorCode = Literal[
     "invalid_response",
     "unknown",
 ]
+GenerationFinishReason = Literal["stop", "length"]
 
 # Single maintained source: derived from the literal union so the runtime
 # constructor check can never drift from the declared public codes.
@@ -107,10 +108,10 @@ class StructuredGenerationResponse(_StrictModel):
     content: Annotated[str, AfterValidator(_reject_whitespace_only)]
     provider: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=255)]
     model: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=255)]
-    finish_reason: Annotated[
-        str | None,
-        StringConstraints(strip_whitespace=True, min_length=1, max_length=255),
-    ] = None
+    # Provider adapters normalize a complete generation to ``stop`` and an
+    # output-limit truncation to ``length``. Other vendor stop conditions are
+    # mapped to provider errors instead of leaking vendor-private semantics.
+    finish_reason: GenerationFinishReason | None = None
     usage: TokenUsage = Field(default_factory=TokenUsage)
 
 
@@ -198,6 +199,7 @@ class ScriptedStructuredGenerationProvider:
 
 __all__ = [
     "FiniteJsonValue",
+    "GenerationFinishReason",
     "ProviderErrorCode",
     "ScriptedStructuredGenerationProvider",
     "StructuredGenerationProvider",

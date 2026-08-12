@@ -1,0 +1,352 @@
+{
+  "schema_version": "chess-content-extraction/1.0",
+  "package_id": "7c3f6b2a-9d14-4e8f-a5c0-2b8f7d6e4a31",
+  "source": {
+    "source_ref": "sample://opening-book/chapter-8",
+    "media_type": "application/pdf",
+    "language": "en",
+    "page_range": {
+      "start_page": 319,
+      "end_page": 399
+    }
+  },
+  "items": [
+    {
+      "kind": "heading",
+      "id": "h1",
+      "level": 1,
+      "text": "Chapter 8: A Compact Opening Repertoire",
+      "evidence": [
+        {
+          "page": 319,
+          "bbox": [0.05, 0.06, 0.9, 0.1]
+        }
+      ],
+      "confidence": 0.99,
+      "extensions": {
+        "com.example.reader": {
+          "kind": "section"
+        }
+      }
+    },
+    {
+      "kind": "prose",
+      "id": "p1",
+      "text": "This chapter records two simple replies to the first move and the notes attached to them.",
+      "evidence": [
+        {
+          "page": 320,
+          "start_offset": 0,
+          "end_offset": 96
+        }
+      ],
+      "confidence": 0.97
+    },
+    {
+      "kind": "move_sequence",
+      "id": "seq1",
+      "title": "Open Game with Two Replies",
+      "initial_position": {
+        "kind": "startpos"
+      },
+      "evidence": [
+        {
+          "page": 321,
+          "bbox": [0.1, 0.15, 0.9, 0.85]
+        }
+      ],
+      "confidence": 0.95,
+      "extensions": {
+        "com.example.reader": {
+          "source_line": 12
+        }
+      },
+      "nodes": [
+        {
+          "id": "n1",
+          "parent_id": null,
+          "sibling_order": 0,
+          "move_text": "e4",
+          "move_number": 1,
+          "side_to_move": "w",
+          "san_candidate": "e4",
+          "uci_candidate": "e2e4",
+          "validation_status": "valid",
+          "fen_before": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+          "fen_after": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1",
+          "evidence": [
+            {
+              "page": 322,
+              "bbox": [0.2, 0.3, 0.5, 0.6]
+            }
+          ],
+          "confidence": 0.96,
+          "extensions": {
+            "com.example.reader": {
+              "bookmark": "main"
+            }
+          }
+        },
+        {
+          "id": "n2",
+          "parent_id": "n1",
+          "sibling_order": 0,
+          "move_text": "e5",
+          "move_number": 1,
+          "side_to_move": "b",
+          "san_candidate": "e5",
+          "uci_candidate": "e7e5",
+          "nags": [40],
+          "validation_status": "valid",
+          "fen_before": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1",
+          "fen_after": "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq e6 0 2",
+          "evidence": [
+            {
+              "page": 323,
+              "start_offset": 10,
+              "end_offset": 24
+            }
+          ],
+          "confidence": 0.9
+        },
+        {
+          "id": "n3",
+          "parent_id": "n2",
+          "sibling_order": 0,
+          "move_text": "Nf3",
+          "move_number": 2,
+          "side_to_move": "w",
+          "san_candidate": "Nf3",
+          "uci_candidate": "g1f3",
+          "validation_status": "valid",
+          "fen_before": "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq e6 0 2",
+          "fen_after": "rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2",
+          "evidence": [
+            {
+              "page": 324,
+              "bbox": [0.3, 0.4, 0.6, 0.7],
+              "fragment_sha256": "a52a165a297d54aa3a93149f7ba66f00b6a200b599da12ca9b8cfc8a8954bdbf"
+            }
+          ]
+        },
+        {
+          "id": "n4",
+          "parent_id": "n3",
+          "sibling_order": 0,
+          "move_text": "Nf6",
+          "move_number": 2,
+          "side_to_move": "b",
+          "san_candidate": "Nf6",
+          "uci_candidate": "g8f6",
+          "validation_status": "valid",
+          "fen_before": "rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2",
+          "fen_after": "rnbqkb1r/pppp1ppp/5n2/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3",
+          "evidence": [
+            {
+              "page": 325,
+              "bbox": [0.1, 0.2, 0.3, 0.4],
+              "start_offset": 30,
+              "end_offset": 45,
+              "fragment_sha256": "9f7b12aebcf0a3b504fc2912261643af1e3238760b98c1c6018ac45b791284ab"
+            }
+          ],
+          "confidence": 0.92,
+          "extensions": {
+            "com.example.reader": {
+              "note": "anchor-target"
+            }
+          }
+        },
+        {
+          "id": "n5",
+          "parent_id": null,
+          "sibling_order": 1,
+          "move_text": "d4",
+          "move_number": 1,
+          "side_to_move": "w",
+          "san_candidate": "d4",
+          "uci_candidate": "d2d4",
+          "validation_status": "valid",
+          "fen_before": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+          "fen_after": "rnbqkbnr/pppppppp/8/8/3P4/8/PPP1PPPP/RNBQKBNR b KQkq d3 0 1",
+          "evidence": [
+            {
+              "page": 326
+            }
+          ]
+        },
+        {
+          "id": "n6",
+          "parent_id": "n5",
+          "sibling_order": 0,
+          "move_text": "Nf6",
+          "move_number": 1,
+          "side_to_move": "b",
+          "san_candidate": "Nf6",
+          "uci_candidate": "g8f6",
+          "validation_status": "valid",
+          "fen_before": "rnbqkbnr/pppppppp/8/8/3P4/8/PPP1PPPP/RNBQKBNR b KQkq d3 0 1",
+          "fen_after": "rnbqkb1r/pppppppp/5n2/8/3P4/8/PPP1PPPP/RNBQKBNR w KQkq - 1 2",
+          "evidence": [
+            {
+              "page": 327,
+              "fragment_sha256": "2295a07e6811bb0df88b71a4dd6eefadb3a810072ddc6e4a901239121d9ae8ac"
+            }
+          ],
+          "confidence": 0.9
+        },
+        {
+          "id": "n7",
+          "parent_id": "n1",
+          "sibling_order": 1,
+          "move_text": "Nf3",
+          "move_number": 1,
+          "side_to_move": "b",
+          "validation_status": "invalid",
+          "evidence": [
+            {
+              "page": 328,
+              "bbox": [0.2, 0.25, 0.4, 0.45],
+              "fragment_sha256": "b13551e866dc558f838b3989cbd66a65dadfbe2674e6065a47b1924771777673"
+            }
+          ],
+          "confidence": 0.3,
+          "warnings": [
+            {
+              "code": "ccef_chess_invalid_move",
+              "message": "The move text is not legal in the reconstructed position.",
+              "evidence": [
+                {
+                  "page": 328,
+                  "bbox": [0.2, 0.25, 0.4, 0.45],
+                  "fragment_sha256": "b13551e866dc558f838b3989cbd66a65dadfbe2674e6065a47b1924771777673"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "prose",
+      "id": "p2",
+      "text": "The knight shields the king's wing before the pawn thrust.",
+      "text_format": "markdown",
+      "anchor": {
+        "kind": "move_node",
+        "sequence_id": "seq1",
+        "node_id": "n4"
+      },
+      "evidence": [
+        {
+          "page": 329,
+          "bbox": [0.1, 0.1, 0.9, 0.2],
+          "start_offset": 5,
+          "end_offset": 61,
+          "fragment_sha256": "1171cd01faac55cad96004da164ce5488245dbbf4b6cd5c0433b5cf0eba4953f"
+        }
+      ],
+      "confidence": 0.87
+    },
+    {
+      "kind": "prose",
+      "id": "p3",
+      "text": "White can also start on the d-file.",
+      "anchor": {
+        "kind": "position",
+        "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+      },
+      "evidence": [
+        {
+          "page": 330,
+          "fragment_sha256": "ecc02b2885ef369a9151d68b9005b3eb431ebd7c407f9ea6725558f47f75b22a"
+        }
+      ]
+    },
+    {
+      "kind": "figure",
+      "id": "f1",
+      "figure_type": "chessboard",
+      "caption": "Position after 2.Nf3 Nf6",
+      "alt_text": "A chessboard diagram showing the knight on f6.",
+      "position_fen_candidate": "rnbqkb1r/pppp1ppp/5n2/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3",
+      "evidence": [
+        {
+          "page": 331,
+          "bbox": [0.4, 0.5, 0.7, 0.8]
+        }
+      ],
+      "confidence": 0.7,
+      "warnings": [
+        {
+          "code": "figure_fen_candidate_unchecked",
+          "message": "The board diagram FEN was not machine-verified."
+        }
+      ]
+    },
+    {
+      "kind": "unresolved",
+      "id": "u1",
+      "unresolved_type": "text",
+      "reason_code": "ocr_unclear",
+      "raw_text": "Diagram caption with a stray glyph.",
+      "evidence": [
+        {
+          "page": 332,
+          "start_offset": 3,
+          "end_offset": 41,
+          "fragment_sha256": "b13551e866dc558f838b3989cbd66a65dadfbe2674e6065a47b1924771777673"
+        }
+      ],
+      "confidence": 0.0,
+      "warnings": [
+        {
+          "code": "ocr_text_missing_context",
+          "message": "The OCR text lacks surrounding context.",
+          "evidence": [
+            {
+              "page": 332
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "diagnostics": [
+    {
+      "severity": "info",
+      "code": "normalization_done",
+      "message": "Chess normalization completed for the sequence.",
+      "item_id": "seq1",
+      "evidence": [
+        {
+          "page": 333
+        }
+      ]
+    },
+    {
+      "severity": "warning",
+      "code": "invalid_branch_retained",
+      "message": "An illegal move branch was retained for review.",
+      "item_id": "seq1",
+      "node_id": "n7",
+      "evidence": [
+        {
+          "page": 334
+        }
+      ]
+    }
+  ],
+  "provenance": {
+    "created_at": "2026-08-11T10:00:00Z",
+    "adapter_name": "sample-adapter",
+    "adapter_version": "1.0.0",
+    "provider": "scripted-fake",
+    "model": "deterministic-sample"
+  },
+  "extensions": {
+    "com.example.reader": {
+      "build": "sample-1"
+    }
+  }
+}

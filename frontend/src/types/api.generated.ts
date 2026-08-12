@@ -624,6 +624,76 @@ export interface paths {
         patch: operations["updateCourseOccurrence"];
         trace?: never;
     };
+    "/api/pdf-assets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List registered immutable PDF assets */
+        get: operations["listPdfAssets"];
+        put?: never;
+        /** Upload and register one immutable PDF asset */
+        post: operations["createPdfAsset"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/pdf-assets/{asset_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read one registered immutable PDF asset */
+        get: operations["getPdfAsset"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/pdf-extractions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List PDF extraction requests by real Job state */
+        get: operations["listPdfExtractions"];
+        put?: never;
+        /** Queue an immutable physical-page extraction request */
+        post: operations["createPdfExtraction"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/pdf-extractions/{run_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read one immutable extraction request and its Job state */
+        get: operations["getPdfExtraction"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/pgn/imports": {
         parameters: {
             query?: never;
@@ -6917,6 +6987,1030 @@ export interface operations {
             };
             /** @description Request validation failed */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    listPdfAssets: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description PDF assets */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Items */
+                        items: {
+                            /**
+                             * Author
+                             * @default null
+                             */
+                            author: string | null;
+                            /** Byte Size */
+                            byte_size: number;
+                            /** Content Sha256 */
+                            content_sha256: string;
+                            /**
+                             * Created At
+                             * Format: date-time
+                             */
+                            created_at: string;
+                            /**
+                             * Edition
+                             * @default null
+                             */
+                            edition: string | null;
+                            /** Filename */
+                            filename: string;
+                            /**
+                             * Id
+                             * Format: uuid
+                             */
+                            id: string;
+                            /** Page Count */
+                            page_count: number;
+                            /**
+                             * Source File Id
+                             * Format: uuid
+                             */
+                            source_file_id: string;
+                            /**
+                             * Source Id
+                             * Format: uuid
+                             */
+                            source_id: string;
+                            /**
+                             * Source Version Id
+                             * Format: uuid
+                             */
+                            source_version_id: string;
+                            /** Title */
+                            title: string;
+                        }[];
+                    };
+                };
+            };
+        };
+    };
+    createPdfAsset: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                    /** @description JSON PdfAssetUploadMetadata */
+                    metadata?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Content-addressed replay */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** PdfAssetRead */
+                        asset: {
+                            /**
+                             * Author
+                             * @default null
+                             */
+                            author: string | null;
+                            /** Byte Size */
+                            byte_size: number;
+                            /** Content Sha256 */
+                            content_sha256: string;
+                            /**
+                             * Created At
+                             * Format: date-time
+                             */
+                            created_at: string;
+                            /**
+                             * Edition
+                             * @default null
+                             */
+                            edition: string | null;
+                            /** Filename */
+                            filename: string;
+                            /**
+                             * Id
+                             * Format: uuid
+                             */
+                            id: string;
+                            /** Page Count */
+                            page_count: number;
+                            /**
+                             * Source File Id
+                             * Format: uuid
+                             */
+                            source_file_id: string;
+                            /**
+                             * Source Id
+                             * Format: uuid
+                             */
+                            source_id: string;
+                            /**
+                             * Source Version Id
+                             * Format: uuid
+                             */
+                            source_version_id: string;
+                            /** Title */
+                            title: string;
+                        };
+                        /** Replayed */
+                        replayed: boolean;
+                    };
+                };
+            };
+            /** @description PDF asset created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** PdfAssetRead */
+                        asset: {
+                            /**
+                             * Author
+                             * @default null
+                             */
+                            author: string | null;
+                            /** Byte Size */
+                            byte_size: number;
+                            /** Content Sha256 */
+                            content_sha256: string;
+                            /**
+                             * Created At
+                             * Format: date-time
+                             */
+                            created_at: string;
+                            /**
+                             * Edition
+                             * @default null
+                             */
+                            edition: string | null;
+                            /** Filename */
+                            filename: string;
+                            /**
+                             * Id
+                             * Format: uuid
+                             */
+                            id: string;
+                            /** Page Count */
+                            page_count: number;
+                            /**
+                             * Source File Id
+                             * Format: uuid
+                             */
+                            source_file_id: string;
+                            /**
+                             * Source Id
+                             * Format: uuid
+                             */
+                            source_id: string;
+                            /**
+                             * Source Version Id
+                             * Format: uuid
+                             */
+                            source_version_id: string;
+                            /** Title */
+                            title: string;
+                        };
+                        /** Replayed */
+                        replayed: boolean;
+                    };
+                };
+            };
+            /** @description PDF payload too large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description Unsupported media type */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description Invalid PDF or multipart request */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description Source storage unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    getPdfAsset: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                asset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description PDF asset */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Author
+                         * @default null
+                         */
+                        author: string | null;
+                        /** Byte Size */
+                        byte_size: number;
+                        /** Content Sha256 */
+                        content_sha256: string;
+                        /**
+                         * Created At
+                         * Format: date-time
+                         */
+                        created_at: string;
+                        /**
+                         * Edition
+                         * @default null
+                         */
+                        edition: string | null;
+                        /** Filename */
+                        filename: string;
+                        /**
+                         * Id
+                         * Format: uuid
+                         */
+                        id: string;
+                        /** Page Count */
+                        page_count: number;
+                        /**
+                         * Source File Id
+                         * Format: uuid
+                         */
+                        source_file_id: string;
+                        /**
+                         * Source Id
+                         * Format: uuid
+                         */
+                        source_id: string;
+                        /**
+                         * Source Version Id
+                         * Format: uuid
+                         */
+                        source_version_id: string;
+                        /** Title */
+                        title: string;
+                    };
+                };
+            };
+            /** @description PDF asset not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    listPdfExtractions: {
+        parameters: {
+            query?: {
+                has_conflicts?: boolean;
+                status?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description PDF extractions */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Items */
+                        items: {
+                            /**
+                             * Created At
+                             * Format: date-time
+                             */
+                            created_at: string;
+                            /**
+                             * PdfEvidenceSummary
+                             * @description Verified public summary of one fully committed Stage 8B artifact set.
+                             * @default null
+                             */
+                            evidence: {
+                                /** Fragment Count */
+                                fragment_count: number;
+                                /** Ocr Manifest Sha256 */
+                                ocr_manifest_sha256: string;
+                                /** Page Count */
+                                page_count: number;
+                                /** Render Manifest Sha256 */
+                                render_manifest_sha256: string;
+                                /**
+                                 * Status
+                                 * @default committed
+                                 * @enum {string}
+                                 */
+                                status: "committed";
+                                /** Warning Count */
+                                warning_count: number;
+                            } | null;
+                            /** First Page */
+                            first_page: number;
+                            /**
+                             * Has Conflicts
+                             * @default false
+                             */
+                            has_conflicts: boolean;
+                            /**
+                             * Id
+                             * Format: uuid
+                             */
+                            id: string;
+                            /** JobRead */
+                            job: {
+                                /** Attempt Count */
+                                attempt_count: number;
+                                /**
+                                 * Cancel Requested At
+                                 * Format: date-time
+                                 */
+                                cancel_requested_at: string | null;
+                                /**
+                                 * Created At
+                                 * Format: date-time
+                                 */
+                                created_at: string;
+                                /**
+                                 * Id
+                                 * Format: uuid
+                                 */
+                                id: string;
+                                /** Kind */
+                                kind: string;
+                                /** Last Error Code */
+                                last_error_code: string | null;
+                                /** Last Error Message */
+                                last_error_message: string | null;
+                                /** Max Attempts */
+                                max_attempts: number;
+                                /** Payload */
+                                payload: {
+                                    [key: string]: unknown;
+                                };
+                                /** Result */
+                                result: {
+                                    [key: string]: unknown;
+                                } | null;
+                                /**
+                                 * Status
+                                 * @enum {string}
+                                 */
+                                status: "queued" | "running" | "succeeded" | "failed" | "cancelled";
+                                /**
+                                 * Updated At
+                                 * Format: date-time
+                                 */
+                                updated_at: string;
+                            };
+                            /** Last Page */
+                            last_page: number;
+                            /**
+                             * Pdf Asset Id
+                             * Format: uuid
+                             */
+                            pdf_asset_id: string;
+                            /** Pipeline Version */
+                            pipeline_version: string;
+                            /** Profile */
+                            profile: {
+                                [key: string]: unknown;
+                            };
+                        }[];
+                    };
+                };
+            };
+            /** @description Invalid query filter */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    createPdfExtraction: {
+        parameters: {
+            query?: never;
+            header?: {
+                "Idempotency-Key"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** First Page */
+                    first_page: number;
+                    /** Last Page */
+                    last_page: number;
+                    /**
+                     * Pdf Asset Id
+                     * Format: uuid
+                     */
+                    pdf_asset_id: string;
+                    /** Profile */
+                    profile?: {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+        responses: {
+            /** @description Idempotent replay */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** PdfExtractionRead */
+                        extraction: {
+                            /**
+                             * Created At
+                             * Format: date-time
+                             */
+                            created_at: string;
+                            /**
+                             * PdfEvidenceSummary
+                             * @description Verified public summary of one fully committed Stage 8B artifact set.
+                             * @default null
+                             */
+                            evidence: {
+                                /** Fragment Count */
+                                fragment_count: number;
+                                /** Ocr Manifest Sha256 */
+                                ocr_manifest_sha256: string;
+                                /** Page Count */
+                                page_count: number;
+                                /** Render Manifest Sha256 */
+                                render_manifest_sha256: string;
+                                /**
+                                 * Status
+                                 * @default committed
+                                 * @enum {string}
+                                 */
+                                status: "committed";
+                                /** Warning Count */
+                                warning_count: number;
+                            } | null;
+                            /** First Page */
+                            first_page: number;
+                            /**
+                             * Has Conflicts
+                             * @default false
+                             */
+                            has_conflicts: boolean;
+                            /**
+                             * Id
+                             * Format: uuid
+                             */
+                            id: string;
+                            /** JobRead */
+                            job: {
+                                /** Attempt Count */
+                                attempt_count: number;
+                                /**
+                                 * Cancel Requested At
+                                 * Format: date-time
+                                 */
+                                cancel_requested_at: string | null;
+                                /**
+                                 * Created At
+                                 * Format: date-time
+                                 */
+                                created_at: string;
+                                /**
+                                 * Id
+                                 * Format: uuid
+                                 */
+                                id: string;
+                                /** Kind */
+                                kind: string;
+                                /** Last Error Code */
+                                last_error_code: string | null;
+                                /** Last Error Message */
+                                last_error_message: string | null;
+                                /** Max Attempts */
+                                max_attempts: number;
+                                /** Payload */
+                                payload: {
+                                    [key: string]: unknown;
+                                };
+                                /** Result */
+                                result: {
+                                    [key: string]: unknown;
+                                } | null;
+                                /**
+                                 * Status
+                                 * @enum {string}
+                                 */
+                                status: "queued" | "running" | "succeeded" | "failed" | "cancelled";
+                                /**
+                                 * Updated At
+                                 * Format: date-time
+                                 */
+                                updated_at: string;
+                            };
+                            /** Last Page */
+                            last_page: number;
+                            /**
+                             * Pdf Asset Id
+                             * Format: uuid
+                             */
+                            pdf_asset_id: string;
+                            /** Pipeline Version */
+                            pipeline_version: string;
+                            /** Profile */
+                            profile: {
+                                [key: string]: unknown;
+                            };
+                        };
+                        /** Replayed */
+                        replayed: boolean;
+                    };
+                };
+            };
+            /** @description PDF extraction queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** PdfExtractionRead */
+                        extraction: {
+                            /**
+                             * Created At
+                             * Format: date-time
+                             */
+                            created_at: string;
+                            /**
+                             * PdfEvidenceSummary
+                             * @description Verified public summary of one fully committed Stage 8B artifact set.
+                             * @default null
+                             */
+                            evidence: {
+                                /** Fragment Count */
+                                fragment_count: number;
+                                /** Ocr Manifest Sha256 */
+                                ocr_manifest_sha256: string;
+                                /** Page Count */
+                                page_count: number;
+                                /** Render Manifest Sha256 */
+                                render_manifest_sha256: string;
+                                /**
+                                 * Status
+                                 * @default committed
+                                 * @enum {string}
+                                 */
+                                status: "committed";
+                                /** Warning Count */
+                                warning_count: number;
+                            } | null;
+                            /** First Page */
+                            first_page: number;
+                            /**
+                             * Has Conflicts
+                             * @default false
+                             */
+                            has_conflicts: boolean;
+                            /**
+                             * Id
+                             * Format: uuid
+                             */
+                            id: string;
+                            /** JobRead */
+                            job: {
+                                /** Attempt Count */
+                                attempt_count: number;
+                                /**
+                                 * Cancel Requested At
+                                 * Format: date-time
+                                 */
+                                cancel_requested_at: string | null;
+                                /**
+                                 * Created At
+                                 * Format: date-time
+                                 */
+                                created_at: string;
+                                /**
+                                 * Id
+                                 * Format: uuid
+                                 */
+                                id: string;
+                                /** Kind */
+                                kind: string;
+                                /** Last Error Code */
+                                last_error_code: string | null;
+                                /** Last Error Message */
+                                last_error_message: string | null;
+                                /** Max Attempts */
+                                max_attempts: number;
+                                /** Payload */
+                                payload: {
+                                    [key: string]: unknown;
+                                };
+                                /** Result */
+                                result: {
+                                    [key: string]: unknown;
+                                } | null;
+                                /**
+                                 * Status
+                                 * @enum {string}
+                                 */
+                                status: "queued" | "running" | "succeeded" | "failed" | "cancelled";
+                                /**
+                                 * Updated At
+                                 * Format: date-time
+                                 */
+                                updated_at: string;
+                            };
+                            /** Last Page */
+                            last_page: number;
+                            /**
+                             * Pdf Asset Id
+                             * Format: uuid
+                             */
+                            pdf_asset_id: string;
+                            /** Pipeline Version */
+                            pipeline_version: string;
+                            /** Profile */
+                            profile: {
+                                [key: string]: unknown;
+                            };
+                        };
+                        /** Replayed */
+                        replayed: boolean;
+                    };
+                };
+            };
+            /** @description PDF asset not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description Idempotency conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description Invalid extraction request */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    getPdfExtraction: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description PDF extraction */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Created At
+                         * Format: date-time
+                         */
+                        created_at: string;
+                        /**
+                         * PdfEvidenceSummary
+                         * @description Verified public summary of one fully committed Stage 8B artifact set.
+                         * @default null
+                         */
+                        evidence: {
+                            /** Fragment Count */
+                            fragment_count: number;
+                            /** Ocr Manifest Sha256 */
+                            ocr_manifest_sha256: string;
+                            /** Page Count */
+                            page_count: number;
+                            /** Render Manifest Sha256 */
+                            render_manifest_sha256: string;
+                            /**
+                             * Status
+                             * @default committed
+                             * @enum {string}
+                             */
+                            status: "committed";
+                            /** Warning Count */
+                            warning_count: number;
+                        } | null;
+                        /** First Page */
+                        first_page: number;
+                        /**
+                         * Has Conflicts
+                         * @default false
+                         */
+                        has_conflicts: boolean;
+                        /**
+                         * Id
+                         * Format: uuid
+                         */
+                        id: string;
+                        /** JobRead */
+                        job: {
+                            /** Attempt Count */
+                            attempt_count: number;
+                            /**
+                             * Cancel Requested At
+                             * Format: date-time
+                             */
+                            cancel_requested_at: string | null;
+                            /**
+                             * Created At
+                             * Format: date-time
+                             */
+                            created_at: string;
+                            /**
+                             * Id
+                             * Format: uuid
+                             */
+                            id: string;
+                            /** Kind */
+                            kind: string;
+                            /** Last Error Code */
+                            last_error_code: string | null;
+                            /** Last Error Message */
+                            last_error_message: string | null;
+                            /** Max Attempts */
+                            max_attempts: number;
+                            /** Payload */
+                            payload: {
+                                [key: string]: unknown;
+                            };
+                            /** Result */
+                            result: {
+                                [key: string]: unknown;
+                            } | null;
+                            /**
+                             * Status
+                             * @enum {string}
+                             */
+                            status: "queued" | "running" | "succeeded" | "failed" | "cancelled";
+                            /**
+                             * Updated At
+                             * Format: date-time
+                             */
+                            updated_at: string;
+                        };
+                        /** Last Page */
+                        last_page: number;
+                        /**
+                         * Pdf Asset Id
+                         * Format: uuid
+                         */
+                        pdf_asset_id: string;
+                        /** Pipeline Version */
+                        pipeline_version: string;
+                        /** Profile */
+                        profile: {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+            };
+            /** @description PDF extraction not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

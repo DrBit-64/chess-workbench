@@ -27,5 +27,21 @@ export type KnowledgeNote =
 export type CitableSource =
   paths['/api/citable-sources']['get']['responses'][200]['content']['application/json'][number];
 
+export type PdfAssetListResponse =
+  paths['/api/pdf-assets']['get']['responses'][200]['content']['application/json'];
+
+export type PdfAsset = PdfAssetListResponse['items'][number];
+
+export type PdfAssetEnvelope =
+  paths['/api/pdf-assets']['post']['responses'][201]['content']['application/json'];
+
+export type PdfExtractionListResponse =
+  paths['/api/pdf-extractions']['get']['responses'][200]['content']['application/json'];
+
+export type PdfExtraction = PdfExtractionListResponse['items'][number];
+
+export type PdfExtractionEnvelope =
+  paths['/api/pdf-extractions']['post']['responses'][202]['content']['application/json'];
+
 export type ContentHistory =
   paths['/api/history/{entity_type}/{entity_id}']['get']['responses'][200]['content']['application/json'];

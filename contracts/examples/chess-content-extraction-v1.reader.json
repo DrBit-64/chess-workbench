@@ -1,0 +1,465 @@
+{
+  "consumer_format": "example-ccef-reader/1",
+  "diagnostics": [
+    {
+      "code": "normalization_done",
+      "evidence": [
+        {
+          "page": 333
+        }
+      ],
+      "item_id": "seq1",
+      "message": "Chess normalization completed for the sequence.",
+      "severity": "info"
+    },
+    {
+      "code": "invalid_branch_retained",
+      "evidence": [
+        {
+          "page": 334
+        }
+      ],
+      "item_id": "seq1",
+      "message": "An illegal move branch was retained for review.",
+      "node_id": "n7",
+      "severity": "warning"
+    }
+  ],
+  "entries": [
+    {
+      "confidence": 0.99,
+      "evidence": [
+        {
+          "bbox": [
+            0.05,
+            0.06,
+            0.9,
+            0.1
+          ],
+          "page": 319
+        }
+      ],
+      "extensions": {
+        "com.example.reader": {
+          "kind": "section"
+        }
+      },
+      "level": 1,
+      "source_id": "h1",
+      "text": "Chapter 8: A Compact Opening Repertoire",
+      "type": "heading",
+      "warnings": []
+    },
+    {
+      "anchor": null,
+      "confidence": 0.97,
+      "evidence": [
+        {
+          "end_offset": 96,
+          "page": 320,
+          "start_offset": 0
+        }
+      ],
+      "extensions": {},
+      "source_id": "p1",
+      "text": "This chapter records two simple replies to the first move and the notes attached to them.",
+      "text_format": "plain",
+      "type": "prose",
+      "warnings": []
+    },
+    {
+      "confidence": 0.95,
+      "evidence": [
+        {
+          "bbox": [
+            0.1,
+            0.15,
+            0.9,
+            0.85
+          ],
+          "page": 321
+        }
+      ],
+      "extensions": {
+        "com.example.reader": {
+          "source_line": 12
+        }
+      },
+      "initial_position": {
+        "kind": "startpos"
+      },
+      "nodes": [
+        {
+          "confidence": 0.96,
+          "evidence": [
+            {
+              "bbox": [
+                0.2,
+                0.3,
+                0.5,
+                0.6
+              ],
+              "page": 322
+            }
+          ],
+          "extensions": {
+            "com.example.reader": {
+              "bookmark": "main"
+            }
+          },
+          "fen_after": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1",
+          "fen_before": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+          "move_number": 1,
+          "move_text": "e4",
+          "nags": [],
+          "order": 0,
+          "parent_source_id": null,
+          "san": "e4",
+          "side_to_move": "w",
+          "source_id": "n1",
+          "status": "valid",
+          "uci": "e2e4",
+          "warnings": []
+        },
+        {
+          "confidence": 0.9,
+          "evidence": [
+            {
+              "end_offset": 24,
+              "page": 323,
+              "start_offset": 10
+            }
+          ],
+          "extensions": {},
+          "fen_after": "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq e6 0 2",
+          "fen_before": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1",
+          "move_number": 1,
+          "move_text": "e5",
+          "nags": [
+            40
+          ],
+          "order": 0,
+          "parent_source_id": "n1",
+          "san": "e5",
+          "side_to_move": "b",
+          "source_id": "n2",
+          "status": "valid",
+          "uci": "e7e5",
+          "warnings": []
+        },
+        {
+          "confidence": null,
+          "evidence": [
+            {
+              "bbox": [
+                0.3,
+                0.4,
+                0.6,
+                0.7
+              ],
+              "fragment_sha256": "a52a165a297d54aa3a93149f7ba66f00b6a200b599da12ca9b8cfc8a8954bdbf",
+              "page": 324
+            }
+          ],
+          "extensions": {},
+          "fen_after": "rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2",
+          "fen_before": "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq e6 0 2",
+          "move_number": 2,
+          "move_text": "Nf3",
+          "nags": [],
+          "order": 0,
+          "parent_source_id": "n2",
+          "san": "Nf3",
+          "side_to_move": "w",
+          "source_id": "n3",
+          "status": "valid",
+          "uci": "g1f3",
+          "warnings": []
+        },
+        {
+          "confidence": 0.92,
+          "evidence": [
+            {
+              "bbox": [
+                0.1,
+                0.2,
+                0.3,
+                0.4
+              ],
+              "end_offset": 45,
+              "fragment_sha256": "9f7b12aebcf0a3b504fc2912261643af1e3238760b98c1c6018ac45b791284ab",
+              "page": 325,
+              "start_offset": 30
+            }
+          ],
+          "extensions": {
+            "com.example.reader": {
+              "note": "anchor-target"
+            }
+          },
+          "fen_after": "rnbqkb1r/pppp1ppp/5n2/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3",
+          "fen_before": "rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2",
+          "move_number": 2,
+          "move_text": "Nf6",
+          "nags": [],
+          "order": 0,
+          "parent_source_id": "n3",
+          "san": "Nf6",
+          "side_to_move": "b",
+          "source_id": "n4",
+          "status": "valid",
+          "uci": "g8f6",
+          "warnings": []
+        },
+        {
+          "confidence": null,
+          "evidence": [
+            {
+              "page": 326
+            }
+          ],
+          "extensions": {},
+          "fen_after": "rnbqkbnr/pppppppp/8/8/3P4/8/PPP1PPPP/RNBQKBNR b KQkq d3 0 1",
+          "fen_before": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+          "move_number": 1,
+          "move_text": "d4",
+          "nags": [],
+          "order": 1,
+          "parent_source_id": null,
+          "san": "d4",
+          "side_to_move": "w",
+          "source_id": "n5",
+          "status": "valid",
+          "uci": "d2d4",
+          "warnings": []
+        },
+        {
+          "confidence": 0.9,
+          "evidence": [
+            {
+              "fragment_sha256": "2295a07e6811bb0df88b71a4dd6eefadb3a810072ddc6e4a901239121d9ae8ac",
+              "page": 327
+            }
+          ],
+          "extensions": {},
+          "fen_after": "rnbqkb1r/pppppppp/5n2/8/3P4/8/PPP1PPPP/RNBQKBNR w KQkq - 1 2",
+          "fen_before": "rnbqkbnr/pppppppp/8/8/3P4/8/PPP1PPPP/RNBQKBNR b KQkq d3 0 1",
+          "move_number": 1,
+          "move_text": "Nf6",
+          "nags": [],
+          "order": 0,
+          "parent_source_id": "n5",
+          "san": "Nf6",
+          "side_to_move": "b",
+          "source_id": "n6",
+          "status": "valid",
+          "uci": "g8f6",
+          "warnings": []
+        },
+        {
+          "confidence": 0.3,
+          "evidence": [
+            {
+              "bbox": [
+                0.2,
+                0.25,
+                0.4,
+                0.45
+              ],
+              "fragment_sha256": "b13551e866dc558f838b3989cbd66a65dadfbe2674e6065a47b1924771777673",
+              "page": 328
+            }
+          ],
+          "extensions": {},
+          "fen_after": null,
+          "fen_before": null,
+          "move_number": 1,
+          "move_text": "Nf3",
+          "nags": [],
+          "order": 1,
+          "parent_source_id": "n1",
+          "san": null,
+          "side_to_move": "b",
+          "source_id": "n7",
+          "status": "invalid",
+          "uci": null,
+          "warnings": [
+            {
+              "code": "ccef_chess_invalid_move",
+              "evidence": [
+                {
+                  "bbox": [
+                    0.2,
+                    0.25,
+                    0.4,
+                    0.45
+                  ],
+                  "fragment_sha256": "b13551e866dc558f838b3989cbd66a65dadfbe2674e6065a47b1924771777673",
+                  "page": 328
+                }
+              ],
+              "message": "The move text is not legal in the reconstructed position."
+            }
+          ]
+        }
+      ],
+      "source_id": "seq1",
+      "title": "Open Game with Two Replies",
+      "type": "move_sequence",
+      "warnings": []
+    },
+    {
+      "anchor": {
+        "kind": "move_node",
+        "node_id": "n4",
+        "sequence_id": "seq1"
+      },
+      "confidence": 0.87,
+      "evidence": [
+        {
+          "bbox": [
+            0.1,
+            0.1,
+            0.9,
+            0.2
+          ],
+          "end_offset": 61,
+          "fragment_sha256": "1171cd01faac55cad96004da164ce5488245dbbf4b6cd5c0433b5cf0eba4953f",
+          "page": 329,
+          "start_offset": 5
+        }
+      ],
+      "extensions": {},
+      "source_id": "p2",
+      "text": "The knight shields the king's wing before the pawn thrust.",
+      "text_format": "markdown",
+      "type": "prose",
+      "warnings": []
+    },
+    {
+      "anchor": {
+        "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+        "kind": "position"
+      },
+      "confidence": null,
+      "evidence": [
+        {
+          "fragment_sha256": "ecc02b2885ef369a9151d68b9005b3eb431ebd7c407f9ea6725558f47f75b22a",
+          "page": 330
+        }
+      ],
+      "extensions": {},
+      "source_id": "p3",
+      "text": "White can also start on the d-file.",
+      "text_format": "plain",
+      "type": "prose",
+      "warnings": []
+    },
+    {
+      "alt_text": "A chessboard diagram showing the knight on f6.",
+      "caption": "Position after 2.Nf3 Nf6",
+      "confidence": 0.7,
+      "evidence": [
+        {
+          "bbox": [
+            0.4,
+            0.5,
+            0.7,
+            0.8
+          ],
+          "page": 331
+        }
+      ],
+      "extensions": {},
+      "figure_type": "chessboard",
+      "position_fen_candidate": "rnbqkb1r/pppp1ppp/5n2/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3",
+      "source_id": "f1",
+      "type": "figure",
+      "warnings": [
+        {
+          "code": "figure_fen_candidate_unchecked",
+          "message": "The board diagram FEN was not machine-verified."
+        }
+      ]
+    },
+    {
+      "confidence": 0.0,
+      "details": null,
+      "evidence": [
+        {
+          "end_offset": 41,
+          "fragment_sha256": "b13551e866dc558f838b3989cbd66a65dadfbe2674e6065a47b1924771777673",
+          "page": 332,
+          "start_offset": 3
+        }
+      ],
+      "extensions": {},
+      "raw_text": "Diagram caption with a stray glyph.",
+      "reason_code": "ocr_unclear",
+      "source_id": "u1",
+      "type": "unresolved",
+      "unresolved_type": "text",
+      "warnings": [
+        {
+          "code": "ocr_text_missing_context",
+          "evidence": [
+            {
+              "page": 332
+            }
+          ],
+          "message": "The OCR text lacks surrounding context."
+        }
+      ]
+    }
+  ],
+  "package_id": "7c3f6b2a-9d14-4e8f-a5c0-2b8f7d6e4a31",
+  "provenance": {
+    "adapter_name": "sample-adapter",
+    "adapter_version": "1.0.0",
+    "created_at": "2026-08-11T10:00:00Z",
+    "model": "deterministic-sample",
+    "provider": "scripted-fake"
+  },
+  "review_queue": [
+    {
+      "item_id": "seq1",
+      "node_id": "n7",
+      "reasons": [
+        "move_invalid",
+        "ccef_chess_invalid_move"
+      ]
+    },
+    {
+      "item_id": "f1",
+      "node_id": null,
+      "reasons": [
+        "figure_fen_candidate_unchecked"
+      ]
+    },
+    {
+      "item_id": "u1",
+      "node_id": null,
+      "reasons": [
+        "ocr_unclear",
+        "ocr_text_missing_context"
+      ]
+    },
+    {
+      "item_id": "seq1",
+      "node_id": "n7",
+      "reasons": [
+        "diagnostic_invalid_branch_retained"
+      ]
+    }
+  ],
+  "schema_version": "chess-content-extraction/1.0",
+  "source": {
+    "language": "en",
+    "media_type": "application/pdf",
+    "page_range": {
+      "end_page": 399,
+      "start_page": 319
+    },
+    "source_ref": "sample://opening-book/chapter-8"
+  }
+}

@@ -22,8 +22,9 @@
 
 1. `PLANS.md` 是任务输入。每个可委派任务必须先成为具名 packet，明确文件边界、行为、不变量、
    验收命令和停止条件。
-2. 项目技能 `$delegate-deepcode` 是唯一自动委派入口。启动器为 DeepCode 分配私有 PTY，持有单实例
-   文件锁，并注入不可猜测的 run ID 和专用结果目录。
+2. 项目技能 `$delegate-deepcode` 是唯一自动委派入口。启动器通过项目专用 tmux socket 为
+   DeepCode 分配私有 PTY，持有单实例文件锁，并注入不可猜测的 run ID 和专用结果目录。选择 tmux
+   是因为 DeepCode 0.1.34 的 `--prompt` 在直接 PTY 中不能可靠提交大段初始任务。
 3. `.deepcode/settings.json` 的 `notify` 只在启动器提供 run ID 时原子写入该 run 的 `result.json`；
    用户手工开启的 DeepCode 会话不会写入委派结果。
 4. 运行 prompt、基线 Git 状态、终端记录和通知位于 gitignored 的
@@ -49,7 +50,7 @@
 
 代价与限制：
 
-- 启动器依赖 Linux/WSL 的 PTY 和 `fcntl`，当前不承诺原生 Windows 支持。
+- 启动器依赖 Linux/WSL 的 tmux 和 `fcntl`，当前不承诺原生 Windows 支持。
 - DeepCode CLI 没有稳定的机器可读无头协议；升级 CLI 后需要重新验证 PTY 与 `notify` 行为。
 - 文件锁只能约束通过启动器发起的任务。委派期间仍不应手工启动另一个 DeepCode 实例编辑同一仓库。
 - Codex 的独立复审仍会消耗一定额度；这是保证复杂缺陷由 Codex 保底所需的成本。

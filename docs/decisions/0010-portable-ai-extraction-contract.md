@@ -129,6 +129,8 @@ Source/OCR fragments
 - `extraction` 不得导入 Sanic、SQLAlchemy、store、HTTP domain schema 或课程 service；
 - provider 实现只负责鉴权、超时、重试、结构化生成和用量元数据，不写数据库；
 - provider 接口接收调用者提供的 JSON Schema，不能硬编码 CCEF 或某个网站的输出格式；
+- provider 端口只暴露供应商无关的完成原因：完整输出为 `stop`，达到输出限制为 `length`；
+  内容过滤、资源中断、工具调用等供应商状态必须由 adapter 转换为 provider error；
 - ChessWorkbench consumer adapter 可以依赖 CCEF 和内部服务，反向依赖禁止；
 - 原始供应商响应与规范化 CCEF 分开保存，供应商私有字段不能混入核心 item。
 

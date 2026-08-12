@@ -241,13 +241,13 @@ class HeadingItem(_ItemBase):
 
 
 class MoveNodeAnchor(_StrictModel):
-    kind: Literal["move_node"] = "move_node"
+    kind: Literal["move_node"]
     sequence_id: LocalId
     node_id: LocalId
 
 
 class PositionAnchor(_StrictModel):
-    kind: Literal["position"] = "position"
+    kind: Literal["position"]
     fen: Fen
 
 
@@ -262,11 +262,11 @@ class ProseItem(_ItemBase):
 
 
 class StartPosition(_StrictModel):
-    kind: Literal["startpos"] = "startpos"
+    kind: Literal["startpos"]
 
 
 class FenPosition(_StrictModel):
-    kind: Literal["fen"] = "fen"
+    kind: Literal["fen"]
     fen: Fen
 
 
@@ -468,6 +468,7 @@ class ExtractionPackage(_StrictModel):
 def ccef_schema_document() -> dict[str, Any]:
     """Return the portable Draft 2020-12 schema as a plain dict."""
     schema = ExtractionPackage.model_json_schema()
+    _close_extension_maps(schema)
     # Expose the same UTC-only restriction on the created_at property that
     # the runtime validator enforces; format: date-time is retained.
     created_at = schema["$defs"]["Provenance"]["properties"]["created_at"]
@@ -476,6 +477,19 @@ def ccef_schema_document() -> dict[str, Any]:
     schema["$id"] = SCHEMA_ID
     schema["title"] = "Chess Content Extraction Format v1"
     return schema
+
+
+def _close_extension_maps(value: Any) -> None:
+    """Make the key constraint on every namespaced extension map exhaustive."""
+    if isinstance(value, dict):
+        pattern_properties = value.get("patternProperties")
+        if isinstance(pattern_properties, dict) and set(pattern_properties) == {_EXTENSION_KEY}:
+            value["additionalProperties"] = False
+        for child in value.values():
+            _close_extension_maps(child)
+    elif isinstance(value, list):
+        for child in value:
+            _close_extension_maps(child)
 
 
 def ccef_schema_canonical_json() -> str:

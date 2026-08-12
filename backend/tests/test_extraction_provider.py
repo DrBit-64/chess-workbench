@@ -106,6 +106,15 @@ def test_rejects_empty_or_whitespace_only_text() -> None:
         _response(model="  ")
 
 
+def test_finish_reason_is_provider_neutral_and_normalized() -> None:
+    assert _response(finish_reason=None).finish_reason is None
+    assert _response(finish_reason="stop").finish_reason == "stop"
+    assert _response(finish_reason="length").finish_reason == "length"
+    for bad in ("content_filter", "max_tokens", " stop ", ""):
+        with pytest.raises(ValidationError):
+            _response(finish_reason=bad)
+
+
 def test_message_content_is_preserved_verbatim() -> None:
     message = _message(content="  keep  me  ")
     assert message.content == "  keep  me  "

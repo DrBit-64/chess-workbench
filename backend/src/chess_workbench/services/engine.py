@@ -31,13 +31,13 @@ from chess_workbench.schemas.engine import (
     EngineGameRead,
     EngineGameReviewRead,
     EngineParameters,
-    JobRead,
     ReviewFinding,
     SaveReviewDraftRead,
     TablebaseRead,
 )
 from chess_workbench.services.content import ContentService
 from chess_workbench.services.jobs import JobService
+from chess_workbench.services.jobs import job_read as job_read
 from chess_workbench.services.tablebase import TablebaseService
 from chess_workbench.services.uci import EngineError, EngineIdentity, EngineResult, UciEngine
 from chess_workbench.store.database import Database
@@ -46,7 +46,6 @@ from chess_workbench.store.models import (
     EngineGame,
     EngineGameMove,
     EngineGameReview,
-    Job,
 )
 
 
@@ -85,23 +84,6 @@ def _analysis_read(row: EngineAnalysis, *, from_cache: bool) -> AnalysisRead:
         elapsed_ms=row.elapsed_ms,
         from_cache=from_cache,
         created_at=row.created_at,
-    )
-
-
-def job_read(row: Job) -> JobRead:
-    return JobRead(
-        id=row.id,
-        kind=row.kind,
-        status=cast(Any, row.status),
-        payload=row.payload,
-        result=row.result,
-        attempt_count=row.attempt_count,
-        max_attempts=row.max_attempts,
-        cancel_requested_at=row.cancel_requested_at,
-        last_error_code=row.last_error_code,
-        last_error_message=row.last_error_message,
-        created_at=row.created_at,
-        updated_at=row.updated_at,
     )
 
 

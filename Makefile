@@ -29,7 +29,8 @@ STAGE_2D_CONTENT_TESTS := $(wildcard \
 	acceptance-stage-2b acceptance-stage-2c acceptance-stage-2d acceptance-stage-2 \
 	acceptance-stage-3a acceptance-stage-3b acceptance-stage-3c acceptance-stage-3d acceptance-stage-3 \
 	acceptance-stage-4a acceptance-stage-4b acceptance-stage-4c acceptance-stage-4 \
-	acceptance-stage-6a acceptance-stage-6b acceptance-stage-6c acceptance-stage-6d acceptance-stage-6
+	acceptance-stage-6a acceptance-stage-6b acceptance-stage-6c acceptance-stage-6d acceptance-stage-6 \
+	acceptance-stage-8p acceptance-stage-8a acceptance-stage-8b
 
 install-stockfish:
 	uv run --project backend --locked python scripts/install_stockfish.py
@@ -200,6 +201,40 @@ acceptance-stage-6: acceptance-stage-6d
 	$(MAKE) verify
 	$(MAKE) smoke
 	bash scripts/stage6_e2e.sh
+
+# Stage 8P portable AI-extraction boundary: the accepted 8P suites run as one
+# no-coverage pytest invocation, then the frozen architecture documents are
+# asserted non-empty. Stage 8A inherits this whole gate instead of re-running
+# the portable suites itself.
+acceptance-stage-8p: acceptance-stage-6a
+	uv run --project backend --locked pytest -c backend/pyproject.toml -o addopts='' backend/tests/test_extraction_contract.py backend/tests/test_extraction_provider.py backend/tests/test_extraction_deepseek.py backend/tests/test_extraction_decoder.py backend/tests/test_extraction_validation.py backend/tests/test_ccef_consumer_proof.py
+	@test -s docs/decisions/0010-portable-ai-extraction-contract.md
+	@test -s docs/architecture/ccef-v1.md
+	@test -s contracts/chess-content-extraction-v1.schema.json
+
+acceptance-stage-8a: acceptance-stage-8p bootstrap-frontend
+	$(MAKE) backend-static
+	uv run --project backend --locked pytest -c backend/pyproject.toml -o addopts='' backend/tests/test_source_storage.py backend/tests/test_pdf_prepare.py backend/tests/test_pdf_inspection.py backend/tests/test_stage8_models.py backend/tests/test_pdf_persistence.py backend/tests/test_pdf_schemas.py backend/tests/test_pdf_api.py backend/tests/test_stage6_jobs.py
+	$(MAKE) backend-migration-check
+	@test -s docs/decisions/0012-stage-8a-pdf-assets-and-extraction-runs.md
+	$(MAKE) check-contracts
+	$(MAKE) frontend-format frontend-lint frontend-typecheck
+	$(PNPM) --dir frontend exec vitest run src/app/WorkbenchPages.test.tsx --coverage=false
+
+# Stage 8B remains a focused interaction gate until the extraction UX is
+# accepted. It deliberately does not inherit the cumulative 8A/8P/Stage 6
+# gates and does not call a real book, OCR model, provider or network service.
+acceptance-stage-8b: bootstrap-backend bootstrap-frontend
+	uv run --project backend --locked pytest -c backend/pyproject.toml -o addopts='' backend/tests/test_extraction_evidence.py backend/tests/test_pdfium_renderer.py backend/tests/test_paddleocr_adapter.py backend/tests/test_source_storage.py backend/tests/test_stage8_models.py backend/tests/test_stage8_pdf_extraction.py backend/tests/test_pdf_schemas.py backend/tests/test_pdf_api.py
+	uv run --project backend --locked ruff format --check --config backend/pyproject.toml backend/src/chess_workbench/extraction/evidence.py backend/src/chess_workbench/extraction/pdfium.py backend/src/chess_workbench/extraction/paddleocr.py backend/src/chess_workbench/services/source_storage.py backend/src/chess_workbench/services/pdf_extraction.py backend/src/chess_workbench/services/pdf_persistence.py backend/src/chess_workbench/schemas/pdf.py backend/src/chess_workbench/api/pdf.py
+	uv run --project backend --locked ruff check --config backend/pyproject.toml backend/src/chess_workbench/extraction/evidence.py backend/src/chess_workbench/extraction/pdfium.py backend/src/chess_workbench/extraction/paddleocr.py backend/src/chess_workbench/services/source_storage.py backend/src/chess_workbench/services/pdf_extraction.py backend/src/chess_workbench/services/pdf_persistence.py backend/src/chess_workbench/schemas/pdf.py backend/src/chess_workbench/api/pdf.py
+	uv run --project backend --locked mypy --config-file backend/pyproject.toml backend/src/chess_workbench/extraction/evidence.py backend/src/chess_workbench/extraction/pdfium.py backend/src/chess_workbench/extraction/paddleocr.py backend/src/chess_workbench/services/source_storage.py backend/src/chess_workbench/services/pdf_extraction.py backend/src/chess_workbench/services/pdf_persistence.py backend/src/chess_workbench/schemas/pdf.py backend/src/chess_workbench/api/pdf.py
+	@test -s docs/decisions/0013-stage-8b-rendering-ocr-and-source-evidence.md
+	$(MAKE) check-contracts
+	$(PNPM) --dir frontend exec prettier --check src/app/SourcesPage.tsx src/app/WorkbenchPages.test.tsx
+	$(PNPM) --dir frontend exec eslint src/app/SourcesPage.tsx src/app/WorkbenchPages.test.tsx
+	$(PNPM) --dir frontend exec tsc --noEmit
+	$(PNPM) --dir frontend exec vitest run src/app/WorkbenchPages.test.tsx --coverage=false
 
 # CI keeps one stable entry point while inheriting the current stage gate.
 acceptance: acceptance-stage-6

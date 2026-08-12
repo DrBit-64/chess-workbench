@@ -26,11 +26,18 @@ class SqlWorker:
         self.database = database
         self.settings = settings
         self.worker_id = worker_id
-        self.handlers = handlers or {"engine_analysis": process_analysis_job}
+        self.handlers = dict(
+            handlers if handlers is not None else {"engine_analysis": process_analysis_job}
+        )
+        if not self.handlers:
+            raise ValueError("worker requires at least one registered job handler")
 
     async def run_once(self) -> bool:
         async with self.database.session() as session, session.begin():
-            job = await JobService(session).claim(worker_id=self.worker_id)
+            job = await JobService(session).claim(
+                worker_id=self.worker_id,
+                allowed_kinds=self.handlers.keys(),
+            )
             if job is None:
                 return False
             job_id = job.id

@@ -7,9 +7,10 @@ import chess
 from pydantic import Field, field_validator
 
 from chess_workbench.schemas.domain import NonEmptyText, StrictContract, UciMove, UtcDateTime
+from chess_workbench.schemas.jobs import JobRead as JobRead
+from chess_workbench.schemas.jobs import JobStatusValue as JobStatusValue
 
 EngineSource = Literal["engine", "tablebase"]
-JobStatusValue = Literal["queued", "running", "succeeded", "failed", "cancelled"]
 
 
 def _legal_fen(value: str) -> str:
@@ -65,21 +66,6 @@ class AnalysisRead(StrictContract):
     elapsed_ms: int = Field(ge=0)
     from_cache: bool
     created_at: UtcDateTime
-
-
-class JobRead(StrictContract):
-    id: UUID
-    kind: NonEmptyText
-    status: JobStatusValue
-    payload: dict[str, object]
-    result: dict[str, object] | None
-    attempt_count: int
-    max_attempts: int
-    cancel_requested_at: UtcDateTime | None
-    last_error_code: str | None
-    last_error_message: str | None
-    created_at: UtcDateTime
-    updated_at: UtcDateTime
 
 
 class EngineCapabilities(StrictContract):

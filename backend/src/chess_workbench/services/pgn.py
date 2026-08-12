@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 import json
-import os
-import tempfile
 from collections.abc import Callable
 from dataclasses import dataclass
 from hashlib import sha256
@@ -43,6 +41,7 @@ from chess_workbench.schemas.pgn import (
     PgnImportRead,
 )
 from chess_workbench.services.content import ContentService, ServiceError
+from chess_workbench.services.source_storage import store_content_addressed_bytes
 from chess_workbench.store.models import (
     Course,
     CourseModule,
@@ -158,8 +157,22 @@ def prepare_pgn_import(
             )
         effective_key = sha256(key_bytes).hexdigest()
 
-    relative_path = f"sources/pgn/{content_hash[:2]}/{content_hash}.pgn"
-    _store_cas(storage_root, relative_path, raw_bytes, content_hash)
+    try:
+        stored = store_content_addressed_bytes(
+            storage_root,
+            namespace="sources/pgn",
+            suffix=".pgn",
+            raw_bytes=raw_bytes,
+        )
+    except ServiceError as error:
+        # Keep the PGN error contract byte-for-byte identical (packet 8A-1).
+        raise ServiceError(
+            error.code,
+            error.status,
+            "PGN source storage is unavailable",
+            error.details,
+        ) from None
+    relative_path = stored.relative_path
     return PreparedPgnImport(
         raw_bytes=raw_bytes,
         document=document,
@@ -497,41 +510,3 @@ class PgnImportService:
     def _fault(self, phase: str, details: dict[str, object]) -> None:
         if self._fault_injector is not None:
             self._fault_injector(phase, details)
-
-
-def _store_cas(
-    storage_root: Path, relative_path: str, raw_bytes: bytes, expected_hash: str
-) -> None:
-    destination = storage_root / relative_path
-    try:
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        if destination.exists():
-            existing = destination.read_bytes()
-            if len(existing) != len(raw_bytes) or sha256(existing).hexdigest() != expected_hash:
-                raise OSError("existing PGN CAS blob failed size/hash verification")
-            return
-        file_descriptor, temporary_name = tempfile.mkstemp(
-            prefix=f".{expected_hash}.",
-            suffix=".tmp",
-            dir=destination.parent,
-        )
-        temporary_path = Path(temporary_name)
-        try:
-            with os.fdopen(file_descriptor, "wb") as handle:
-                handle.write(raw_bytes)
-                handle.flush()
-                os.fsync(handle.fileno())
-            os.chmod(temporary_path, 0o600)
-            if temporary_path.stat().st_size != len(raw_bytes):
-                raise OSError("temporary PGN CAS blob size mismatch")
-            if sha256(temporary_path.read_bytes()).hexdigest() != expected_hash:
-                raise OSError("temporary PGN CAS blob hash mismatch")
-            os.replace(temporary_path, destination)
-        finally:
-            temporary_path.unlink(missing_ok=True)
-    except OSError as error:
-        raise ServiceError(
-            "source_storage_unavailable",
-            503,
-            "PGN source storage is unavailable",
-        ) from error

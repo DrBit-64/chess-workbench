@@ -63,10 +63,12 @@ async def test_two_workers_claim_one_job_once(tmp_path: Path) -> None:
             job_id = queued.id
 
         async with database.session() as first, first.begin():
-            claimed = await JobService(first).claim(worker_id="worker-a")
+            claimed = await JobService(first).claim(worker_id="worker-a", allowed_kinds={"test"})
             assert claimed is not None and claimed.id == job_id
         async with database.session() as second, second.begin():
-            assert await JobService(second).claim(worker_id="worker-b") is None
+            assert (
+                await JobService(second).claim(worker_id="worker-b", allowed_kinds={"test"}) is None
+            )
 
         async with database.session() as session:
             row = await session.get(Job, job_id)
@@ -86,22 +88,76 @@ async def test_expired_lease_recovers_then_preserves_final_error(tmp_path: Path)
             )
             job_id = row.id
         async with database.session() as session, session.begin():
-            first_claim = await JobService(session).claim(worker_id="dead")
+            first_claim = await JobService(session).claim(worker_id="dead", allowed_kinds={"test"})
             assert first_claim is not None
             first_claim.lease_expires_at = utc_now() - timedelta(seconds=1)
         async with database.session() as session, session.begin():
-            recovered = await JobService(session).claim(worker_id="replacement")
+            recovered = await JobService(session).claim(
+                worker_id="replacement", allowed_kinds={"test"}
+            )
             assert recovered is not None
             assert recovered.attempt_count == 2
             recovered.lease_expires_at = utc_now() - timedelta(seconds=1)
         async with database.session() as session, session.begin():
-            assert await JobService(session).claim(worker_id="third") is None
+            assert (
+                await JobService(session).claim(worker_id="third", allowed_kinds={"test"}) is None
+            )
         async with database.session() as session:
             final = await session.get(Job, job_id)
             assert final is not None
             assert final.status == "failed"
             assert final.last_error_code == "lease_expired"
             assert final.last_error_message
+    finally:
+        await database.close()
+
+
+async def test_claim_and_lease_recovery_are_isolated_by_registered_kind(
+    tmp_path: Path,
+) -> None:
+    database = await _database(tmp_path)
+    try:
+        async with database.session() as session, session.begin():
+            pdf_job = await JobService(session).enqueue(
+                kind="pdf_extraction",
+                payload={},
+                idempotency_key="pdf",
+            )
+            engine_job = await JobService(session).enqueue(
+                kind="engine_analysis",
+                payload={},
+                idempotency_key="engine",
+            )
+            pdf_job_id = pdf_job.id
+            engine_job_id = engine_job.id
+
+        async with database.session() as session, session.begin():
+            with pytest.raises(ValueError, match="at least one"):
+                await JobService(session).claim(
+                    worker_id="invalid",
+                    allowed_kinds=set(),
+                )
+            claimed_pdf = await JobService(session).claim(
+                worker_id="pdf-worker",
+                allowed_kinds={"pdf_extraction"},
+            )
+            assert claimed_pdf is not None and claimed_pdf.id == pdf_job_id
+            claimed_pdf.lease_expires_at = utc_now() - timedelta(seconds=1)
+
+        async with database.session() as session, session.begin():
+            claimed_engine = await JobService(session).claim(
+                worker_id="engine-worker",
+                allowed_kinds={"engine_analysis"},
+            )
+            assert claimed_engine is not None and claimed_engine.id == engine_job_id
+
+        async with database.session() as session:
+            untouched_pdf = await session.get(Job, pdf_job_id)
+            assert untouched_pdf is not None
+            assert untouched_pdf.status == "running"
+            assert untouched_pdf.attempt_count == 1
+            assert untouched_pdf.lease_owner == "pdf-worker"
+            assert untouched_pdf.last_error_code is None
     finally:
         await database.close()
 
@@ -124,7 +180,7 @@ async def test_cancellation_is_deterministic_and_idempotent(tmp_path: Path) -> N
             assert first is second
             assert second is not None and second.status == "cancelled"
         async with database.session() as session, session.begin():
-            claimed = await JobService(session).claim(worker_id="worker")
+            claimed = await JobService(session).claim(worker_id="worker", allowed_kinds={"test"})
             assert claimed is not None and claimed.id == running_id
         async with database.session() as session, session.begin():
             requested = await JobService(session).cancel(running_id)
@@ -164,7 +220,7 @@ async def test_heartbeat_retry_success_and_terminal_cancel_are_owner_safe(
             )
             job_id = queued.id
         async with database.session() as session, session.begin():
-            claimed = await JobService(session).claim(worker_id="owner")
+            claimed = await JobService(session).claim(worker_id="owner", allowed_kinds={"test"})
             assert claimed is not None
             service = JobService(session)
             assert await service.heartbeat(job_id, worker_id="intruder") is False
@@ -178,7 +234,7 @@ async def test_heartbeat_retry_success_and_terminal_cancel_are_owner_safe(
                 retry_delay_seconds=0,
             )
         async with database.session() as session, session.begin():
-            claimed = await JobService(session).claim(worker_id="owner-2")
+            claimed = await JobService(session).claim(worker_id="owner-2", allowed_kinds={"test"})
             assert claimed is not None and claimed.attempt_count == 2
             assert await JobService(session).succeed(
                 job_id, worker_id="owner-2", result={"ok": True}
@@ -201,7 +257,7 @@ async def test_non_retryable_failure_keeps_last_error(tmp_path: Path) -> None:
             )
             job_id = row.id
         async with database.session() as session, session.begin():
-            claimed = await JobService(session).claim(worker_id="owner")
+            claimed = await JobService(session).claim(worker_id="owner", allowed_kinds={"test"})
             assert claimed is not None
             assert await JobService(session).fail(
                 job_id,
@@ -239,7 +295,7 @@ async def test_missing_and_cancel_requested_jobs_use_terminal_guard_paths(tmp_pa
             )
             job_id = queued.id
         async with database.session() as session, session.begin():
-            claimed = await JobService(session).claim(worker_id="owner")
+            claimed = await JobService(session).claim(worker_id="owner", allowed_kinds={"test"})
             assert claimed is not None
             requested = await JobService(session).cancel(job_id)
             assert requested is not None and requested.cancel_requested_at is not None
@@ -314,13 +370,15 @@ async def test_worker_handles_empty_unknown_and_handler_failure_paths(tmp_path: 
         )
         assert await worker.run_once()
         assert await worker.run_once()
-        assert await worker.run_once()
+        assert not await worker.run_once()
 
         async with database.session() as session:
             finished = [await session.get(Job, job_id) for job_id in job_ids]
-        assert all(job is not None and job.status == "failed" for job in finished)
-        assert [job.last_error_code for job in finished if job is not None] == [
-            "unknown_job_kind",
+        assert finished[0] is not None
+        assert finished[0].status == "queued"
+        assert finished[0].attempt_count == 0
+        assert finished[0].last_error_code is None
+        assert [job.last_error_code for job in finished[1:] if job is not None] == [
             "test_engine_failure",
             "worker_error",
         ]
@@ -426,7 +484,9 @@ async def test_worker_shutdown_leaves_job_recoverable(tmp_path: Path) -> None:
             assert still_running.cancel_requested_at is None
             still_running.lease_expires_at = utc_now() - timedelta(seconds=1)
         async with database.session() as session, session.begin():
-            recovered = await JobService(session).claim(worker_id="replacement")
+            recovered = await JobService(session).claim(
+                worker_id="replacement", allowed_kinds={"blocking"}
+            )
             assert recovered is not None and recovered.id == job_id
             assert recovered.attempt_count == 2
     finally:

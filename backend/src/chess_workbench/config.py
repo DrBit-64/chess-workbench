@@ -10,6 +10,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_DATABASE_PATH = PROJECT_ROOT / "data" / "database" / "chess-workbench.db"
 DEFAULT_DATABASE_URL = f"sqlite+aiosqlite:///{DEFAULT_DATABASE_PATH.as_posix()}"
 DEFAULT_SOURCE_STORAGE_ROOT = PROJECT_ROOT / "data"
+DEFAULT_PDF_MAX_BYTES = 256 * 1024 * 1024
 SUPPORTED_DATABASE_DRIVERS = frozenset({"mysql+asyncmy", "sqlite+aiosqlite"})
 
 
@@ -31,6 +32,8 @@ class Settings(BaseSettings):
     debug: bool = False
     database_url: str = DEFAULT_DATABASE_URL
     source_storage_root: Path = DEFAULT_SOURCE_STORAGE_ROOT
+    pdf_max_bytes: int = Field(default=DEFAULT_PDF_MAX_BYTES, ge=1, le=2_147_483_647)
+    paddle_ocr_runner_path: Path | None = None
     stockfish_path: Path = PROJECT_ROOT / "data" / "engines" / "stockfish-18" / "stockfish"
     syzygy_path: Path = PROJECT_ROOT / "data" / "tablebases" / "syzygy"
     engine_max_threads: int = Field(default=4, ge=1, le=64)

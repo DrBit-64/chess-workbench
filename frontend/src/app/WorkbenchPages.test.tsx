@@ -58,6 +58,57 @@ const source = {
   updated_at: '2026-08-09T00:00:00Z',
 };
 
+const pdfAsset = {
+  id: 'asset-1',
+  content_sha256: 'a'.repeat(64),
+  byte_size: 1024,
+  page_count: 400,
+  source_id: 'source-1',
+  source_version_id: 'source-version-1',
+  source_file_id: 'source-file-1',
+  filename: 'opening.pdf',
+  title: 'My Opening Book',
+  author: null,
+  edition: null,
+  created_at: '2026-08-09T00:00:00Z',
+};
+
+const pdfAsset2 = {
+  ...pdfAsset,
+  id: 'asset-2',
+  filename: 'endgame.pdf',
+  title: 'Endgame Manual',
+  page_count: 350,
+};
+
+const baseJob = {
+  id: 'job-1',
+  kind: 'pdf_extraction',
+  status: 'queued',
+  payload: {},
+  result: null,
+  attempt_count: 0,
+  max_attempts: 3,
+  cancel_requested_at: null,
+  last_error_code: null,
+  last_error_message: null,
+  created_at: '2026-08-09T00:00:00Z',
+  updated_at: '2026-08-09T00:00:00Z',
+};
+
+const extractionRun = (overrides: Record<string, unknown> = {}) => ({
+  id: 'run-1',
+  pdf_asset_id: 'asset-1',
+  first_page: 319,
+  last_page: 399,
+  pipeline_version: 'pdf-extraction:v1',
+  profile: {},
+  has_conflicts: false,
+  created_at: '2026-08-09T00:00:00Z',
+  job: { ...baseJob },
+  ...overrides,
+});
+
 describe('Stage 4A workbench pages', () => {
   it('renders real dashboard statistics and recent-course navigation', async () => {
     vi.stubGlobal(
@@ -158,8 +209,11 @@ describe('Stage 4A workbench pages', () => {
   });
 
   it('queries and creates manual sources', async () => {
-    const fetchMock = vi.fn((_input: RequestInfo | URL, init?: RequestInit) => {
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
       if (init?.method === 'POST') return json(source, 201);
+      if (url === '/api/pdf-assets') return json({ items: [] });
+      if (url.startsWith('/api/pdf-extractions')) return json({ items: [] });
       return json([source]);
     });
     vi.stubGlobal('fetch', fetchMock);
@@ -202,9 +256,379 @@ describe('Stage 4A workbench pages', () => {
   it('shows an explicit empty source state', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn(() => json([])),
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url === '/api/pdf-assets') return json({ items: [] });
+        if (url.startsWith('/api/pdf-extractions')) return json({ items: [] });
+        return json([]);
+      }),
     );
     renderPage(<SourcesPage />);
     expect(await screen.findByText('还没有资料')).toBeTruthy();
+  });
+
+  it('renders the PDF book-recognition card with assets and real job states', async () => {
+    const runs = [
+      extractionRun({
+        id: 'run-1',
+        pdf_asset_id: 'asset-1',
+        first_page: 319,
+        last_page: 399,
+        has_conflicts: false,
+      }),
+      extractionRun({
+        id: 'run-2',
+        pdf_asset_id: 'asset-2',
+        first_page: 1,
+        last_page: 350,
+        has_conflicts: true,
+        job: {
+          ...baseJob,
+          id: 'job-2',
+          status: 'failed',
+          last_error_message: 'OCR 服务不可用',
+        },
+      }),
+      extractionRun({
+        id: 'run-3',
+        pdf_asset_id: 'missing-asset',
+        first_page: 1,
+        last_page: 10,
+        job: { ...baseJob, id: 'job-3', status: 'succeeded' },
+      }),
+    ];
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url === '/api/pdf-assets')
+        return json({ items: [pdfAsset, pdfAsset2] });
+      if (url.startsWith('/api/pdf-extractions')) return json({ items: runs });
+      return json([source]);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderPage(<SourcesPage />);
+
+    expect(await screen.findByText('AI 棋书识别')).toBeTruthy();
+    expect(screen.getByLabelText('PDF 文件')).toBeTruthy();
+    expect(screen.getByLabelText('选择 PDF')).toBeTruthy();
+    expect(screen.getByRole('button', { name: '上传 PDF' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: '创建识别任务' })).toBeTruthy();
+
+    expect(await screen.findByText('My Opening Book')).toBeTruthy();
+    expect(screen.getByText('Endgame Manual')).toBeTruthy();
+    expect(screen.getByText('missing-asset')).toBeTruthy();
+    expect(screen.getByText('第 319–399 页')).toBeTruthy();
+    expect(screen.getByText('排队中')).toBeTruthy();
+    expect(screen.getByText('已失败')).toBeTruthy();
+    expect(screen.getByText('已完成')).toBeTruthy();
+    expect(screen.getByText('有冲突')).toBeTruthy();
+    expect(screen.getAllByText('无冲突').length).toBe(2);
+    expect(screen.getByText('OCR 服务不可用')).toBeTruthy();
+    expect(
+      screen.getByText('本页面仅展示后端任务的真实状态，不估算识别进度。'),
+    ).toBeTruthy();
+    expect(screen.getByText('My System')).toBeTruthy();
+  });
+
+  it('uploads a PDF file with trimmed metadata and refreshes asset data', async () => {
+    let uploaded = false;
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (init?.method === 'POST' && url === '/api/pdf-assets') {
+        uploaded = true;
+        return json({ replayed: false, asset: pdfAsset });
+      }
+      if (url === '/api/pdf-assets') {
+        return json({ items: uploaded ? [pdfAsset] : [] });
+      }
+      if (url.startsWith('/api/pdf-extractions')) return json({ items: [] });
+      return json([source]);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderPage(<SourcesPage />);
+
+    const file = new File(['%PDF-1.4'], 'opening.pdf', {
+      type: 'application/pdf',
+    });
+    fireEvent.change(screen.getByLabelText('PDF 文件'), {
+      target: { files: [file] },
+    });
+    fireEvent.change(screen.getByLabelText('标题（可选）'), {
+      target: { value: '  棋书标题  ' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: '上传 PDF' }));
+
+    await waitFor(() =>
+      expect(
+        fetchMock.mock.calls.some(
+          ([url, init]) => url === '/api/pdf-assets' && init?.method === 'POST',
+        ),
+      ).toBe(true),
+    );
+    const post = fetchMock.mock.calls.find(
+      ([, init]) => init?.method === 'POST',
+    );
+    const body = post?.[1]?.body as FormData;
+    expect(body.get('file')).toBe(file);
+    expect(body.get('metadata')).toBe('{"title":"棋书标题"}');
+
+    await waitFor(() =>
+      expect(
+        fetchMock.mock.calls.filter(
+          ([url, init]) => url === '/api/pdf-assets' && !init?.method,
+        ).length,
+      ).toBeGreaterThanOrEqual(2),
+    );
+    expect(await screen.findByText('My Opening Book（400 页）')).toBeTruthy();
+  });
+
+  it('creates an extraction run for physical pages 319..399 of a selected PDF', async () => {
+    let created = false;
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (init?.method === 'POST' && url === '/api/pdf-extractions') {
+        created = true;
+        return json({ replayed: false, extraction: extractionRun() }, 202);
+      }
+      if (url === '/api/pdf-assets') return json({ items: [pdfAsset] });
+      if (url.startsWith('/api/pdf-extractions')) {
+        return json({ items: created ? [extractionRun()] : [] });
+      }
+      return json([source]);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderPage(<SourcesPage />);
+
+    fireEvent.mouseDown(await screen.findByLabelText('选择 PDF'));
+    fireEvent.click(await screen.findByText('My Opening Book（400 页）'));
+    fireEvent.change(screen.getByLabelText('起始物理页'), {
+      target: { value: '319' },
+    });
+    fireEvent.change(screen.getByLabelText('结束物理页'), {
+      target: { value: '399' },
+    });
+    fireEvent.click(
+      await screen.findByRole('button', { name: '创建识别任务' }),
+    );
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/pdf-extractions',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({
+            pdf_asset_id: 'asset-1',
+            first_page: 319,
+            last_page: 399,
+          }),
+        }),
+      ),
+    );
+    expect(await screen.findByText('排队中')).toBeTruthy();
+  });
+
+  it('requests the expected URLs when status and conflict filters change', async () => {
+    const runs = [
+      extractionRun({
+        id: 'run-1',
+        first_page: 1,
+        last_page: 100,
+        job: { ...baseJob, id: 'job-1', status: 'succeeded' },
+      }),
+      extractionRun({
+        id: 'run-2',
+        first_page: 1,
+        last_page: 50,
+        job: { ...baseJob, id: 'job-2', status: 'cancelled' },
+      }),
+    ];
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url === '/api/pdf-assets') return json({ items: [pdfAsset] });
+      if (url.startsWith('/api/pdf-extractions')) return json({ items: runs });
+      return json([source]);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderPage(<SourcesPage />);
+
+    expect(await screen.findByText('已完成')).toBeTruthy();
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/pdf-extractions',
+        expect.anything(),
+      ),
+    );
+
+    fireEvent.mouseDown(screen.getByLabelText('任务状态'));
+    fireEvent.click(await screen.findByText('排队中'));
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        expect.stringContaining('status=queued'),
+        expect.anything(),
+      ),
+    );
+
+    fireEvent.mouseDown(screen.getByLabelText('冲突状态'));
+    fireEvent.click(await screen.findByText('有冲突'));
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        expect.stringContaining('has_conflicts=true'),
+        expect.anything(),
+      ),
+    );
+
+    fireEvent.mouseDown(screen.getByLabelText('任务状态'));
+    fireEvent.click(await screen.findByText('全部状态'));
+    fireEvent.mouseDown(screen.getByLabelText('冲突状态'));
+    fireEvent.click(await screen.findByText('全部冲突'));
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/pdf-extractions',
+        expect.anything(),
+      ),
+    );
+  });
+
+  it('labels invalid ranges before posting an extraction request', async () => {
+    let postRequested = false;
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (init?.method === 'POST') postRequested = true;
+      if (url === '/api/pdf-assets') return json({ items: [pdfAsset] });
+      if (url.startsWith('/api/pdf-extractions')) return json({ items: [] });
+      return json([source]);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderPage(<SourcesPage />);
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: '创建识别任务' }),
+    );
+    expect(await screen.findByText('请先选择 PDF 资料')).toBeTruthy();
+
+    fireEvent.mouseDown(await screen.findByLabelText('选择 PDF'));
+    fireEvent.click(await screen.findByText('My Opening Book（400 页）'));
+    fireEvent.change(screen.getByLabelText('起始物理页'), {
+      target: { value: '399' },
+    });
+    fireEvent.change(screen.getByLabelText('结束物理页'), {
+      target: { value: '319' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: '创建识别任务' }));
+    expect(
+      await screen.findByText('结束物理页不能小于起始物理页'),
+    ).toBeTruthy();
+
+    expect(postRequested).toBe(false);
+  });
+
+  it('shows explicit empty states for PDF assets and runs', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url === '/api/pdf-assets') return json({ items: [] });
+        if (url.startsWith('/api/pdf-extractions')) return json({ items: [] });
+        return json([]);
+      }),
+    );
+    renderPage(<SourcesPage />);
+
+    expect(await screen.findByText('还没有 PDF 资料')).toBeTruthy();
+    expect(screen.getByText('还没有识别任务')).toBeTruthy();
+    expect(
+      screen.getByText('本页面仅展示后端任务的真实状态，不估算识别进度。'),
+    ).toBeTruthy();
+    expect(screen.getByText('还没有资料')).toBeTruthy();
+  });
+
+  it('shows the committed evidence summary with shortened manifest hashes', async () => {
+    const runs = [
+      extractionRun({
+        id: 'run-1',
+        first_page: 319,
+        last_page: 399,
+        job: { ...baseJob, id: 'job-1', status: 'succeeded' },
+        evidence: {
+          status: 'committed',
+          page_count: 5,
+          fragment_count: 12,
+          warning_count: 1,
+          render_manifest_sha256: 'a'.repeat(64),
+          ocr_manifest_sha256: 'b'.repeat(64),
+        },
+      }),
+    ];
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url === '/api/pdf-assets') return json({ items: [pdfAsset] });
+      if (url.startsWith('/api/pdf-extractions')) return json({ items: runs });
+      return json([source]);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderPage(<SourcesPage />);
+
+    expect(
+      await screen.findByText('已提交证据：5 页 · 12 个文本片段 · 1 个警告'),
+    ).toBeTruthy();
+    expect(screen.getByText('Manifest 已提交')).toBeTruthy();
+    expect(screen.getByText(`渲染 ${'a'.repeat(12)}…`)).toBeTruthy();
+    expect(screen.getByText(`OCR ${'b'.repeat(12)}…`)).toBeTruthy();
+    // The summary uses the committed evidence counts, never the requested range.
+    expect(screen.queryByText(/已提交证据：81 页/)).toBeNull();
+  });
+
+  it('warns when a succeeded run has no committed evidence', async () => {
+    const runs = [
+      extractionRun({
+        id: 'run-1',
+        job: { ...baseJob, id: 'job-1', status: 'succeeded' },
+        evidence: null,
+      }),
+    ];
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url === '/api/pdf-assets') return json({ items: [pdfAsset] });
+      if (url.startsWith('/api/pdf-extractions')) return json({ items: runs });
+      return json([source]);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderPage(<SourcesPage />);
+
+    expect(await screen.findByText('证据索引尚未完整提交')).toBeTruthy();
+    expect(screen.queryByText(/已提交证据：/)).toBeNull();
+    expect(screen.queryByText('Manifest 已提交')).toBeNull();
+  });
+
+  it('does not claim evidence completion for queued or failed runs', async () => {
+    const runs = [
+      extractionRun({
+        id: 'run-1',
+        job: { ...baseJob, id: 'job-1', status: 'queued' },
+      }),
+      extractionRun({
+        id: 'run-2',
+        job: {
+          ...baseJob,
+          id: 'job-2',
+          status: 'failed',
+          last_error_message: 'OCR 服务不可用',
+        },
+      }),
+    ];
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url === '/api/pdf-assets') return json({ items: [pdfAsset] });
+      if (url.startsWith('/api/pdf-extractions')) return json({ items: runs });
+      return json([source]);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderPage(<SourcesPage />);
+
+    expect(await screen.findByText('排队中')).toBeTruthy();
+    expect(screen.getByText('已失败')).toBeTruthy();
+    expect(screen.getByText('OCR 服务不可用')).toBeTruthy();
+    expect(screen.queryByText(/已提交证据：/)).toBeNull();
+    expect(screen.queryByText('Manifest 已提交')).toBeNull();
+    expect(screen.queryByText('证据索引尚未完整提交')).toBeNull();
   });
 });

@@ -444,6 +444,21 @@ def test_fen_position_requires_six_fields() -> None:
         PositionAnchor(kind="position", fen="incomplete")
 
 
+def test_discriminator_fields_are_required_in_runtime_and_schema() -> None:
+    with pytest.raises(ValidationError):
+        MoveNodeAnchor.model_validate({"sequence_id": "seq1", "node_id": "n1"})
+    with pytest.raises(ValidationError):
+        PositionAnchor.model_validate({"fen": START_FEN})
+    with pytest.raises(ValidationError):
+        StartPosition.model_validate({})
+    with pytest.raises(ValidationError):
+        FenPosition.model_validate({"fen": START_FEN})
+
+    definitions = ccef_schema_document()["$defs"]
+    for name in ("MoveNodeAnchor", "PositionAnchor", "StartPosition", "FenPosition"):
+        assert "kind" in definitions[name]["required"]
+
+
 # ---------------------------------------------------------------------------
 # Import purity
 # ---------------------------------------------------------------------------
@@ -455,7 +470,9 @@ def test_extraction_package_imports_without_forbidden_modules() -> None:
         "import chess_workbench.extraction.contracts; "
         "forbidden = ('chess_workbench.store', 'chess_workbench.services', "
         "'chess_workbench.api', 'chess_workbench.schemas.domain', "
-        "'sqlalchemy', 'sanic'); "
+        "'chess_workbench.extraction.deepseek', "
+        "'chess_workbench.extraction.validation', "
+        "'sqlalchemy', 'sanic', 'httpx', 'chess'); "
         "bad = [m for m in forbidden if m in sys.modules]; "
         "print('bad=', bad); sys.exit(1 if bad else 0)"
     )
@@ -706,3 +723,23 @@ def test_schema_created_at_carries_utc_pattern_and_format() -> None:
     assert not _re.match(pattern, "2026-08-11T10:00:00-00:00")
     assert not _re.match(pattern, "2026-08-11T10:00:00+02:00")
     assert not _re.match(pattern, " 2026-08-11T10:00:00Z")
+
+
+def test_schema_rejects_non_namespaced_extension_keys_at_every_location() -> None:
+    document = ccef_schema_document()
+    extension_maps: list[dict[str, Any]] = []
+
+    def visit(value: Any) -> None:
+        if isinstance(value, dict):
+            pattern_properties = value.get("patternProperties")
+            if isinstance(pattern_properties, dict) and pattern_properties:
+                extension_maps.append(value)
+            for child in value.values():
+                visit(child)
+        elif isinstance(value, list):
+            for child in value:
+                visit(child)
+
+    visit(document)
+    assert len(extension_maps) == 7
+    assert all(extension_map["additionalProperties"] is False for extension_map in extension_maps)

@@ -20,6 +20,11 @@ from chess_workbench.store.models.engine import (
     InvalidationEvent,
     Job,
 )
+from chess_workbench.store.models.extraction import (
+    ExtractionArtifact,
+    ExtractionRun,
+    PdfAsset,
+)
 from chess_workbench.store.models.graph import MoveEdge, Position
 from chess_workbench.store.models.mixins import (
     ArchiveMixin,
@@ -49,12 +54,15 @@ __all__ = [
     "EngineGame",
     "EngineGameMove",
     "EngineGameReview",
+    "ExtractionArtifact",
+    "ExtractionRun",
     "InvalidationEvent",
     "Job",
     "KnowledgeNote",
     "KnowledgeNoteCitation",
     "MoveEdge",
     "ModulePublication",
+    "PdfAsset",
     "Position",
     "PgnAsset",
     "PgnImport",

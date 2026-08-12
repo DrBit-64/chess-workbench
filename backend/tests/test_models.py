@@ -13,6 +13,11 @@ from alembic.config import Config
 from alembic.migration import MigrationContext
 from alembic.operations import Operations
 from alembic.script import ScriptDirectory
+from sqlalchemy.dialects import mysql, sqlite
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.schema import CreateTable
+
 from chess_workbench.domain import PositionState
 from chess_workbench.store.base import Base
 from chess_workbench.store.database import Database
@@ -33,10 +38,6 @@ from chess_workbench.store.models import (
     UUIDPrimaryKeyMixin,
     VersionMixin,
 )
-from sqlalchemy.dialects import mysql, sqlite
-from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from sqlalchemy.schema import CreateTable
 
 START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
@@ -440,7 +441,7 @@ def test_sync_sqlite_migrations_match_metadata_enforce_checks_and_downgrade() ->
 
 
 def test_migrations_render_mysql_specific_ddl() -> None:
-    assert len(_revision_modules()) == 9
+    assert len(_revision_modules()) == 11
     output = StringIO()
     context = MigrationContext.configure(
         dialect=mysql.dialect(),
@@ -482,6 +483,32 @@ def test_migrations_render_mysql_specific_ddl() -> None:
         "downgrade DDL explicitly drops an ordinary/FK-supporting index; "
         "DROP TABLE on InnoDB handles those indexes (error 1553 otherwise)"
     )
+
+
+def test_stage8_models_are_registered_and_exported() -> None:
+    """The Stage 8A persistence models import and register their exact tables."""
+
+    from chess_workbench.store.models import (
+        ExtractionArtifact,
+        ExtractionRun,
+        PdfAsset,
+    )
+
+    assert {
+        PdfAsset.__tablename__,
+        ExtractionRun.__tablename__,
+        ExtractionArtifact.__tablename__,
+    } <= (set(Base.metadata.tables))
+    assert set(Base.metadata.tables["pdf_assets"].columns.keys()) == {
+        "id",
+        "created_at",
+        "content_sha256",
+        "byte_size",
+        "page_count",
+        "source_id",
+        "source_version_id",
+        "source_file_id",
+    }
 
 
 def test_stage2d_migration_removes_legacy_reference_markdown_cache() -> None:

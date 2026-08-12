@@ -40,8 +40,8 @@ The launcher:
 
 1. verifies that the packet exists in `PLANS.md`;
 2. takes an exclusive project lock so two delegated workers cannot edit the worktree together;
-3. starts the installed DeepCode CLI in a private PTY because DeepCode 0.1.34 rejects non-TTY
-   stdin even when `--prompt` is used;
+3. starts the installed DeepCode CLI inside a project-scoped tmux private PTY because DeepCode
+   0.1.34 rejects non-TTY stdin and its advertised `--prompt` launch path is unreliable;
 4. stores the prompt, baseline Git state, terminal transcript and result under the ignored
    `.agent-sync/runs/<run-id>/` directory;
 5. waits for `.deepcode/settings.json` to invoke `notify.py` at completion;
@@ -50,6 +50,11 @@ The launcher:
 Use an execution call that yields within ten seconds. If it is still running, poll its session at
 intervals shorter than sixty seconds so the user continues to receive progress updates. Do not
 launch another DeepCode instance while the delegated run holds the lock.
+
+The managed execution environment may require an escalated command because tmux creates a Unix
+socket and the DeepCode model process needs network access. This does not broaden the worker's
+project permissions in `.deepcode/settings.json`: destructive actions, Git-history mutation,
+out-of-workspace access, tool network and MCP remain denied.
 
 ## Interpret completion
 
