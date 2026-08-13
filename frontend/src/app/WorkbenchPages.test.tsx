@@ -3,6 +3,8 @@ import { MemoryRouter } from 'react-router-dom';
 import { SWRConfig } from 'swr';
 import { describe, expect, it, vi } from 'vitest';
 
+import type { PdfExtraction } from '../logic/api/types';
+
 import { CourseCatalog } from './CourseCatalog';
 import { Dashboard } from './Dashboard';
 import { SourcesPage } from './SourcesPage';
@@ -108,6 +110,24 @@ const extractionRun = (overrides: Record<string, unknown> = {}) => ({
   job: { ...baseJob },
   ...overrides,
 });
+
+const candidate: NonNullable<PdfExtraction['candidate']> = {
+  status: 'committed',
+  item_count: 5,
+  move_node_count: 12,
+  figure_count: 1,
+  unresolved_item_count: 2,
+  warning_count: 3,
+  error_count: 0,
+  invalid_move_count: 2,
+  ambiguous_move_count: 1,
+  has_conflicts: true,
+  request_sha256: 'c'.repeat(64),
+  response_sha256: 'd'.repeat(64),
+  provider_response_sha256: 'e'.repeat(64),
+  raw_ccef_sha256: 'f'.repeat(64),
+  normalized_ccef_sha256: '0'.repeat(64),
+};
 
 describe('Stage 4A workbench pages', () => {
   it('renders real dashboard statistics and recent-course navigation', async () => {
@@ -630,5 +650,170 @@ describe('Stage 4A workbench pages', () => {
     expect(screen.queryByText(/已提交证据：/)).toBeNull();
     expect(screen.queryByText('Manifest 已提交')).toBeNull();
     expect(screen.queryByText('证据索引尚未完整提交')).toBeNull();
+  });
+
+  it('renders the committed Stage 8C candidate summary with short hashes', async () => {
+    const runs = [
+      extractionRun({
+        id: 'run-1',
+        pipeline_version: 'pdf-extraction:v2',
+        has_conflicts: true,
+        job: {
+          ...baseJob,
+          id: 'job-1',
+          status: 'succeeded',
+          last_error_message: '上一次模型输出不是合法 JSON',
+        },
+        candidate,
+      }),
+    ];
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url === '/api/pdf-assets') return json({ items: [pdfAsset] });
+      if (url.startsWith('/api/pdf-extractions')) return json({ items: runs });
+      return json([source]);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderPage(<SourcesPage />);
+
+    expect(await screen.findByText('已生成 CCEF 候选')).toBeTruthy();
+    expect(
+      screen.getByText(
+        '内容项 5 · 棋步 12 · 未解决 2 · 警告 3 · 错误 0 · 非法棋步 2 · 歧义棋步 1',
+      ),
+    ).toBeTruthy();
+    expect(screen.getByText(`原始 CCEF ${'f'.repeat(12)}…`)).toBeTruthy();
+    expect(screen.getByText(`规范 CCEF ${'0'.repeat(12)}…`)).toBeTruthy();
+    expect(screen.queryByText('上一次模型输出不是合法 JSON')).toBeNull();
+
+    // The review entry link stays available even when the run has conflicts.
+    expect(
+      screen.getByRole('link', { name: '打开审核页面' }).getAttribute('href'),
+    ).toBe('/sources/pdf-extractions/run-1/review');
+    expect(screen.getByText('有冲突')).toBeTruthy();
+  });
+
+  it('uses only run.has_conflicts for the conflict tag, not the candidate summary', async () => {
+    const runs = [
+      extractionRun({
+        id: 'run-1',
+        pipeline_version: 'pdf-extraction:v2',
+        has_conflicts: false,
+        job: { ...baseJob, id: 'job-1', status: 'succeeded' },
+        candidate: { ...candidate, has_conflicts: true },
+      }),
+    ];
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url === '/api/pdf-assets') return json({ items: [pdfAsset] });
+      if (url.startsWith('/api/pdf-extractions')) return json({ items: runs });
+      return json([source]);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderPage(<SourcesPage />);
+
+    expect(await screen.findByText('已生成 CCEF 候选')).toBeTruthy();
+    expect(screen.getByText('无冲突')).toBeTruthy();
+    expect(screen.queryByText('有冲突')).toBeNull();
+
+    // The review entry link remains available with has_conflicts=false.
+    expect(
+      screen.getByRole('link', { name: '打开审核页面' }).getAttribute('href'),
+    ).toBe('/sources/pdf-extractions/run-1/review');
+  });
+
+  it('warns when a succeeded v2 run has no committed candidate', async () => {
+    const runs = [
+      extractionRun({
+        id: 'run-1',
+        pipeline_version: 'pdf-extraction:v2',
+        job: { ...baseJob, id: 'job-1', status: 'succeeded' },
+        candidate: null,
+      }),
+    ];
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url === '/api/pdf-assets') return json({ items: [pdfAsset] });
+      if (url.startsWith('/api/pdf-extractions')) return json({ items: runs });
+      return json([source]);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderPage(<SourcesPage />);
+
+    expect(await screen.findByText('候选索引尚未完整提交')).toBeTruthy();
+    expect(screen.queryByText('已生成 CCEF 候选')).toBeNull();
+    expect(screen.queryByRole('link', { name: '打开审核页面' })).toBeNull();
+  });
+
+  it('does not warn for a historical v1 run without a candidate', async () => {
+    const runs = [
+      extractionRun({
+        id: 'run-1',
+        pipeline_version: 'pdf-extraction:v1',
+        job: { ...baseJob, id: 'job-1', status: 'succeeded' },
+        candidate: null,
+      }),
+    ];
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url === '/api/pdf-assets') return json({ items: [pdfAsset] });
+      if (url.startsWith('/api/pdf-extractions')) return json({ items: runs });
+      return json([source]);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderPage(<SourcesPage />);
+
+    expect(await screen.findByText('已完成')).toBeTruthy();
+    expect(screen.queryByText('候选索引尚未完整提交')).toBeNull();
+    expect(screen.queryByText('已生成 CCEF 候选')).toBeNull();
+    expect(screen.queryByRole('link', { name: '打开审核页面' })).toBeNull();
+  });
+
+  it('never shows the review link for queued, running, failed, or cancelled runs', async () => {
+    const runs = ['queued', 'running', 'failed', 'cancelled'].map(
+      (status, index) =>
+        extractionRun({
+          id: `run-${index}`,
+          pipeline_version: 'pdf-extraction:v2',
+          job: { ...baseJob, id: `job-${index}`, status },
+          candidate: null,
+        }),
+    );
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url === '/api/pdf-assets') return json({ items: [pdfAsset] });
+      if (url.startsWith('/api/pdf-extractions')) return json({ items: runs });
+      return json([source]);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderPage(<SourcesPage />);
+
+    expect(await screen.findByText('排队中')).toBeTruthy();
+    expect(screen.queryByRole('link', { name: '打开审核页面' })).toBeNull();
+  });
+
+  it('never renders full hashes, paths, or raw candidate content', async () => {
+    const runs = [
+      extractionRun({
+        id: 'run-1',
+        pipeline_version: 'pdf-extraction:v2',
+        job: { ...baseJob, id: 'job-1', status: 'succeeded' },
+        candidate,
+      }),
+    ];
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url === '/api/pdf-assets') return json({ items: [pdfAsset] });
+      if (url.startsWith('/api/pdf-extractions')) return json({ items: runs });
+      return json([source]);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderPage(<SourcesPage />);
+
+    expect(await screen.findByText('已生成 CCEF 候选')).toBeTruthy();
+    expect(screen.queryByText('f'.repeat(64))).toBeNull();
+    expect(screen.queryByText('0'.repeat(64))).toBeNull();
+    expect(screen.queryByText(/\/api\/pdf-extractions/)).toBeNull();
+    expect(screen.queryByText(/secret|api[_-]?key/i)).toBeNull();
   });
 });

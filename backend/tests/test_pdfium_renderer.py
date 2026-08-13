@@ -55,6 +55,11 @@ def _content(text: str, gray: float = 0.5) -> bytes:
     ).encode("ascii")
 
 
+def _separate_character_content(text: str) -> bytes:
+    operators = " ".join(f"({character}) Tj" for character in text)
+    return f"0 0 0 rg BT /F1 12 Tf 10 100 Td {operators} ET\n".encode("ascii")
+
+
 def test_renders_exact_dimensions_rgb_and_white_background() -> None:
     renderer = PdfiumPageRenderer()
     at_72 = renderer.render_page(_pdf(None), 1, RenderProfile(dpi=72))
@@ -106,6 +111,14 @@ def test_extracts_ordered_embedded_text_with_bounded_boxes() -> None:
         assert fragment.confidence is None
         assert 0 <= fragment.box.x0 < fragment.box.x1 <= page.width
         assert 0 <= fragment.box.y0 < fragment.box.y1 <= page.height
+
+
+def test_coalesces_separate_pdf_text_objects_into_one_logical_line() -> None:
+    page = PdfiumPageRenderer().render_page(
+        _pdf(_separate_character_content("1 e4 d5")), 1, RenderProfile(dpi=72)
+    )
+
+    assert [fragment.text for fragment in page.embedded_fragments] == ["1 e4 d5"]
 
 
 def test_blank_page_has_no_embedded_fragments() -> None:

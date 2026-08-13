@@ -8,6 +8,8 @@ from typing import Any, cast
 from uuid import UUID
 
 import pytest
+from pydantic import ValidationError
+
 from chess_workbench.extraction.contracts import CCEF_VERSION, ccef_schema_document
 from chess_workbench.extraction.evidence import (
     NormalizedBox,
@@ -22,7 +24,6 @@ from chess_workbench.extraction.prompting import (
     PromptEvidencePage,
     build_ccef_generation_request,
 )
-from pydantic import ValidationError
 
 MODULE = Path(__file__).parents[1] / "src/chess_workbench/extraction/prompting.py"
 PACKAGE_ID = UUID("11111111-1111-4111-8111-111111111111")
@@ -77,6 +78,15 @@ def user_document(request: object) -> dict[str, Any]:
     return cast(dict[str, Any], json.loads(messages[1].content.split("\n", 1)[1]))
 
 
+def schema_without_fen_initial_position() -> dict[str, Any]:
+    schema = ccef_schema_document()
+    schema["$defs"]["MoveSequenceItem"]["properties"]["initial_position"] = {
+        "$ref": "#/$defs/StartPosition",
+        "title": "Initial Position",
+    }
+    return schema
+
+
 def test_builds_one_deterministic_request_for_an_81_page_chapter() -> None:
     candidate = context(last_page=399)
     first = build_ccef_generation_request(candidate)
@@ -97,10 +107,15 @@ def test_builds_one_deterministic_request_for_an_81_page_chapter() -> None:
     assert len(first.messages) == 2
     assert [message.role for message in first.messages] == ["system", "user"]
     assert first.response_schema_name == "chess_content_extraction_v1"
-    assert first.response_schema == ccef_schema_document()
+    assert first.response_schema == schema_without_fen_initial_position()
     assert first.max_output_tokens == 128_000
     document = user_document(first)
     assert document["prompt_version"] == CCEF_PROMPT_VERSION
+    assert CCEF_PROMPT_VERSION == "chess-workbench/ccef-prompt/1.3"
+    assert "only the first move has parent_id null" in first.messages[0].content
+    assert "sibling_order values must be contiguous 0, 1, 2" in first.messages[0].content
+    assert "Never derive or invent a FEN" in first.messages[0].content
+    assert "crosses a page, paragraph, or evidence fragment" in first.messages[0].content
     assert [page["physical_page"] for page in document["evidence_pages"]] == list(range(319, 400))
 
 
@@ -169,8 +184,24 @@ def test_schema_and_request_are_caller_independent_snapshots() -> None:
     first = build_ccef_generation_request(candidate)
     first.response_schema.clear()
     second = build_ccef_generation_request(candidate)
-    assert second.response_schema == ccef_schema_document()
+    assert second.response_schema == schema_without_fen_initial_position()
     assert len(second.messages) == 2
+
+
+def test_explicit_six_field_fen_keeps_fen_initial_position_in_response_schema() -> None:
+    page = PromptEvidencePage(
+        physical_page=1,
+        fragments=[
+            PromptEvidenceFragment(
+                order=0,
+                fragment=fragment(1, "Position: 8/8/8/8/8/8/4K3/7k w - - 0 1"),
+            )
+        ],
+    )
+
+    request = build_ccef_generation_request(context(first_page=1, last_page=1, pages=[page]))
+
+    assert request.response_schema == ccef_schema_document()
 
 
 @pytest.mark.parametrize(

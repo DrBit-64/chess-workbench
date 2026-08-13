@@ -62,9 +62,13 @@ class RetryDecision:
     should_retry: bool
 
 
-def failure_decision(*, attempt_count: int, max_attempts: int) -> RetryDecision:
+def failure_decision(
+    *, attempt_count: int, max_attempts: int, retryable: bool = True
+) -> RetryDecision:
     if attempt_count < 1 or max_attempts < 1:
         raise ValueError("attempt counts must be positive after a claim")
-    should_retry = attempt_count < max_attempts
+    if not isinstance(retryable, bool):
+        raise TypeError("retryable must be bool")
+    should_retry = retryable and attempt_count < max_attempts
     event = JobEvent.FAIL_RETRYABLE if should_retry else JobEvent.FAIL_FINAL
     return RetryDecision(transition_job(JobStatus.RUNNING, event), should_retry)

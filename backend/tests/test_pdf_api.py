@@ -26,6 +26,9 @@ from pathlib import Path
 from typing import Any, cast
 from uuid import NAMESPACE_URL, UUID, uuid5
 
+from pypdf import PdfWriter
+from sqlalchemy import func, select
+
 from chess_workbench.api.app import ChessWorkbenchApp, create_app
 from chess_workbench.config import Settings
 from chess_workbench.services.worker import SqlWorker
@@ -42,10 +45,8 @@ from chess_workbench.store.models import (
     SourceFile,
     SourceVersion,
 )
-from pypdf import PdfWriter
-from sqlalchemy import func, select
 
-PDF_EXTRACTION_PIPELINE_VERSION = "pdf-extraction:v1"
+PDF_EXTRACTION_PIPELINE_VERSION = "pdf-extraction:v2"
 MISSING_UUID = "00000000-0000-0000-0000-000000000000"
 
 ASSET_TABLES = (PdfAsset, Source, SourceVersion, SourceFile)
@@ -679,12 +680,33 @@ async def test_extraction_read_exposes_only_a_complete_committed_evidence_summar
             job.status = "succeeded"
             job.attempt_count = 1
             job.result = {
+                "result_schema": "chess-workbench/pdf-extraction-result/2.0",
                 "run_id": str(run_id),
-                "render_manifest_sha256": "a" * 64,
-                "ocr_manifest_sha256": "b" * 64,
-                "page_count": 2,
-                "fragment_count": 37,
-                "warning_count": 1,
+                "evidence": {
+                    "render_manifest_sha256": "a" * 64,
+                    "ocr_manifest_sha256": "b" * 64,
+                    "page_count": 2,
+                    "fragment_count": 37,
+                    "warning_count": 1,
+                },
+                "candidate": {
+                    "provider_response_sha256": "1" * 64,
+                    "request_sha256": "2" * 64,
+                    "response_sha256": "3" * 64,
+                    "raw_ccef_sha256": "4" * 64,
+                    "normalized_ccef_sha256": "5" * 64,
+                    "summary": {
+                        "item_count": 9,
+                        "move_node_count": 12,
+                        "figure_count": 0,
+                        "unresolved_item_count": 1,
+                        "warning_count": 2,
+                        "error_count": 0,
+                        "invalid_move_count": 1,
+                        "ambiguous_move_count": 0,
+                        "has_conflicts": True,
+                    },
+                },
             }
             for kind, page_number, digest, media_type in (
                 ("rendered_page", 1, "c" * 64, "image/png"),
@@ -693,6 +715,9 @@ async def test_extraction_read_exposes_only_a_complete_committed_evidence_summar
                 ("ocr_fragment", 2, "f" * 64, "application/json"),
                 ("render_manifest", None, "a" * 64, "application/json"),
                 ("ocr_manifest", None, "b" * 64, "application/json"),
+                ("provider_response", None, "1" * 64, "application/json"),
+                ("raw_ccef", None, "4" * 64, "application/json"),
+                ("normalized_ccef", None, "5" * 64, "application/json"),
             ):
                 session.add(
                     ExtractionArtifact(
@@ -716,12 +741,35 @@ async def test_extraction_read_exposes_only_a_complete_committed_evidence_summar
             "render_manifest_sha256": "a" * 64,
             "ocr_manifest_sha256": "b" * 64,
         }
+        assert got.json["candidate"] == {
+            "status": "committed",
+            "provider_response_sha256": "1" * 64,
+            "request_sha256": "2" * 64,
+            "response_sha256": "3" * 64,
+            "raw_ccef_sha256": "4" * 64,
+            "normalized_ccef_sha256": "5" * 64,
+            "item_count": 9,
+            "move_node_count": 12,
+            "figure_count": 0,
+            "unresolved_item_count": 1,
+            "warning_count": 2,
+            "error_count": 0,
+            "invalid_move_count": 1,
+            "ambiguous_move_count": 0,
+            "has_conflicts": True,
+        }
+        assert got.json["has_conflicts"] is True
         assert "relative_path" not in got.text
         assert "derived/extraction" not in got.text
 
         _, listing = await client.get("/api/pdf-extractions")
         assert listing.status == 200
         assert listing.json["items"][0]["evidence"] == got.json["evidence"]
+        assert listing.json["items"][0]["candidate"] == got.json["candidate"]
+        _, conflicted = await client.get("/api/pdf-extractions?has_conflicts=true")
+        assert [item["id"] for item in conflicted.json["items"]] == [str(run_id)]
+        _, clean = await client.get("/api/pdf-extractions?has_conflicts=false")
+        assert clean.json["items"] == []
 
         async with app.ctx.database.session() as session, session.begin():
             artifact = await session.scalar(
@@ -738,6 +786,8 @@ async def test_extraction_read_exposes_only_a_complete_committed_evidence_summar
         assert incomplete.status == 200
         assert incomplete.json["job"]["status"] == "succeeded"
         assert incomplete.json["evidence"] is None
+        assert incomplete.json["candidate"] is None
+        assert incomplete.json["has_conflicts"] is False
     finally:
         await app.ctx.database.close()
 

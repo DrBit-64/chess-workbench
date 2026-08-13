@@ -16,6 +16,8 @@ from typing import Any, get_args
 from uuid import UUID
 
 import pytest
+from pydantic import ValidationError
+
 from chess_workbench.api.contracts import openapi_schema
 from chess_workbench.schemas.jobs import JobRead as JobsJobRead
 from chess_workbench.schemas.jobs import JobStatusValue as JobsJobStatus
@@ -24,13 +26,13 @@ from chess_workbench.schemas.pdf import (
     PdfAssetList,
     PdfAssetRead,
     PdfAssetUploadMetadata,
+    PdfCandidateSummary,
     PdfEvidenceSummary,
     PdfExtractionCreate,
     PdfExtractionEnvelope,
     PdfExtractionList,
     PdfExtractionRead,
 )
-from pydantic import ValidationError
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -236,11 +238,13 @@ def test_extraction_read_exact_fields_and_defaults() -> None:
         "profile",
         "job",
         "evidence",
+        "candidate",
         "has_conflicts",
         "created_at",
     }
     assert read.has_conflicts is False
     assert read.evidence is None
+    assert read.candidate is None
     assert read.job.id == UUID(JOB_ID)
     assert read.pipeline_version == "pdf-extraction:v1"
     conflicting = PdfExtractionRead.model_validate({**_extraction_payload(), "has_conflicts": True})
@@ -566,6 +570,40 @@ def test_committed_evidence_summary_is_strict_bounded_and_path_free() -> None:
             PdfEvidenceSummary.model_validate({**payload, field: value})
     with pytest.raises(ValidationError):
         PdfEvidenceSummary.model_validate({**payload, "relative_path": "derived/secret.json"})
+
+
+def test_committed_candidate_summary_is_strict_and_path_free() -> None:
+    payload = {
+        "status": "committed",
+        "provider_response_sha256": "a" * 64,
+        "request_sha256": "b" * 64,
+        "response_sha256": "c" * 64,
+        "raw_ccef_sha256": "d" * 64,
+        "normalized_ccef_sha256": "e" * 64,
+        "item_count": 3,
+        "move_node_count": 8,
+        "figure_count": 0,
+        "unresolved_item_count": 1,
+        "warning_count": 2,
+        "error_count": 0,
+        "invalid_move_count": 1,
+        "ambiguous_move_count": 0,
+        "has_conflicts": True,
+    }
+    summary = PdfCandidateSummary.model_validate(payload)
+    assert summary.model_dump(mode="json") == payload
+    assert summary.model_config.get("frozen") is True
+    assert not any("path" in field for field in PdfCandidateSummary.model_fields)
+    for field, value in (
+        ("status", "ready"),
+        ("raw_ccef_sha256", "not-a-digest"),
+        ("item_count", -1),
+        ("has_conflicts", "maybe"),
+    ):
+        with pytest.raises(ValidationError):
+            PdfCandidateSummary.model_validate({**payload, field: value})
+    with pytest.raises(ValidationError):
+        PdfCandidateSummary.model_validate({**payload, "relative_path": "derived/secret.json"})
 
 
 def test_schema_modules_import_only_domain_and_jobs() -> None:

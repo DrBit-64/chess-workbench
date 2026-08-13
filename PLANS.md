@@ -2,9 +2,9 @@
 
 ## Goal
 
-Implement Stage **8C** on top of accepted Stage 8B: deterministic whole-range prompt input,
-provider execution, strict/trusted CCEF candidate normalization and immutable candidate artifacts.
-ADR 0014 is authoritative. Stage 5/6E and Stage 7 remain deferred.
+Implement Stage **8D** on top of accepted Stage 8C: a safe human-review read surface, immutable
+review ledger and commands, followed by atomic publication into a traditional draft course.
+ADR 0016 is authoritative. Stage 5/6E and Stage 7 remain deferred.
 
 ## Delivery order
 
@@ -28,11 +28,1446 @@ one cross-module implementation.
 1. [x] **8C architecture:** ADR 0014 freezes pipeline v2, whole-range text input, trusted metadata,
    artifact/transaction ownership, retry policy and the text-only DeepSeek boundary.
 2. [x] **8C-1 prompt input:** strict evidence pages and deterministic CCEF request builder.
-3. [ ] **8C-2 trusted candidates:** binder, canonical raw/normalized codec and conflict summary.
-4. [ ] **8C-3 execution:** v2 handler, configuration, retry policy and atomic candidate artifacts.
-5. [ ] **8C-4 API/UI/acceptance:** typed summary, Sources display and focused gate.
+3. [x] **8C-2 trusted candidates:** binder, canonical raw/normalized codec and conflict summary.
+4. [x] **8C-3 execution:** v2 handler, configuration, retry policy and atomic candidate artifacts.
+5. [x] **8C-4 API/UI/acceptance:** typed summary, Sources display and focused gate.
 
 Do not start 8D review/publishing or run the repository-wide cumulative gate during 8C.
+
+## Stage 8C closeout
+
+Stage 8C is accepted. Codex reviewed the final Sources-page packet and independently reproduced
+20/20 focused UI tests plus clean Prettier, ESLint and TypeScript checks. The new focused
+`acceptance-stage-8c` target passed with 219 backend tests, focused Ruff/MyPy, contract-drift
+checking and the same 20 UI tests. The gate uses only scripted providers and recorded fixtures;
+it does not read user books, access the network or consume provider credit. Stage 8D remains
+unstarted.
+
+## Stage 8C quality gate before Stage 8D
+
+1. [x] Reproduce the five-page inflation and trace move nodes back to exact evidence.
+2. [x] Freeze deterministic candidate consolidation in ADR 0015.
+3. [x] Implement heading-scoped UCI-path deduplication, shared-prefix merging and NAG normalization.
+4. [x] Isolate illegal/disconnected source fragments from playable trees without losing prose or
+   evidence.
+5. [x] Reprocess the stored pages 319–323 raw CCEF offline and inspect a pretty JSON/report.
+6. [x] The JSON gate passes. Stage 8D may start as a separate task; it was not used to debug or
+   repair extraction data.
+
+### Local E2E follow-up
+
+The physical-page 319–323 failure is reproduced and the v2 path now completes end to end. The root
+causes were character-level PDFium extraction (4,914 tiny/duplicated fragments), stochastic
+DeepSeek JSON/CCEF shape errors, and model-invented initial FENs. Line-level PDFium extraction now
+produces 110 ordered fragments; invalid JSON/package responses use the existing three-attempt Job
+budget; prompt 1.3 supplies a startpos-only response schema unless the evidence contains an exact
+six-field FEN. A real run succeeded on attempt 2 and committed all three CCEF artifacts.
+
+The real result also defines the next quality task: five pages consumed 22,379 input and 93,400
+output tokens, produced 16 heavily duplicated lines/362 move nodes, and retained 36 locally found
+illegal-move warnings at misattached branches. Evidence tracing confirmed that the introductory
+natural-language plan discussion remained a prose item; the inflation came from duplicate copies
+of later numbered variations and repeated common prefixes. Exact-line deduplication leaves seven
+lines/142 nodes; normalizing NAG spelling and merging shared prefixes leaves six routes/about 60
+graph edges. Do not solve this by sending 81 pages in one larger
+request or by returning to isolated single pages. Before the full chapter run, design a versioned
+two-pass protocol: semantic chunks aligned to complete subsections/games (initial working range
+5–15 pages, with explicit boundary context), independently validated chunk candidates, then a
+deterministic chapter merge/deduplication pass with stable cross-chunk IDs and evidence ownership.
+This requires a superseding ADR before implementation. Inline `.env` keys remain forbidden in
+favor of the repository-external permission-checked secret file.
+
+The Stage 8C consolidation gate is now implemented and passed against those same stored artifacts
+without another provider call. A conservative evidence-aware pass accepts only standalone,
+move-numbered, all-notation fragments into playable timelines; prose containing isolated move
+tokens remains prose. The inspected result contains two sequences and 40 locally valid nodes,
+zero duplicate UCI paths and no invalid/ambiguous/unvalidated nodes, while prose character count
+increases from 5,060 to 5,112 because an uncovered mixed fragment is retained as prose. All 101
+raw-referenced evidence fragment hashes and every original non-move item remain present. These
+figures are an observed report, not production thresholds. The production implementation contains
+no source title, page-range, chapter, move, hash or expected-count special cases.
+
+## Stage 8D delivery order
+
+ADR 0016 is authoritative. Stage 8D proceeds in reviewable increments; never combine persistence,
+publication and UI into one delegated task.
+
+1. [x] **8D-1 review inspection:** pure deterministic issue/blocker projection from normalized
+   CCEF; no I/O or persistence.
+2. [x] **8D-2 read surface:** verified normalized document and rendered-page API with no raw
+   provider/path disclosure.
+   - [x] **8D-2A contracts:** strict review document/page descriptor response models.
+   - [x] **8D-2B1 loader:** verified CAS/index read service, with no HTTP behavior.
+   - [x] **8D-2B2 HTTP:** document and PNG routes plus generated contracts.
+3. [ ] **8D-3 read-only review UI:** source page, board, ordered content/moves and issues.
+   - [x] **8D-3A page:** self-contained typed read-only review component.
+   - [x] **8D-3B integration:** application route and eligible Sources-run entry point.
+   - [x] **8D-3C interaction correction:** independent scrolling and conventional move rows.
+4. [ ] **8D-4 review ledger:** review session/revision/event persistence, evidence fidelity and
+   optimistic concurrency.
+5. [ ] **8D-5 review commands:** edit/acknowledge/approve/reject/reopen with immutable audit.
+6. [ ] **8D-6 draft publication:** atomic idempotent Course/Knowledge draft mapping.
+7. [ ] **8D-7 interactive completion:** editing, explicit conflict resolution, multi-source merge
+   and focused `make acceptance-stage-8` closeout.
+
+## Accepted packet: DS-STAGE8D-REVIEW-INSPECTION-01 (8D-1)
+
+### Goal
+
+Implement the pure consumer-side inspection that turns one already validated, locally normalized
+CCEF package into a deterministic ordered list of review issues. This packet does not load an
+artifact, create a review session, expose HTTP, write SQL or render UI.
+
+### Permitted edit boundary
+
+- `backend/src/chess_workbench/review/__init__.py` (new; exports only)
+- `backend/src/chess_workbench/review/inspection.py` (new)
+- `backend/tests/test_stage8d_review_inspection.py` (new)
+- `docs/agent/HANDOFF.md` (append completion evidence only)
+
+Everything else is read-only, including extraction contracts/normalization/consolidation,
+schemas/services/API, store/models/migrations, dependencies/lockfiles, frontend, Makefile, ADRs and
+this plan. Preserve every existing dirty/untracked change. Do not commit, stage, unstage, reset,
+delete or create probe files.
+
+### Frozen public interface
+
+In `review/inspection.py`, define and export:
+
+```python
+REVIEW_INSPECTION_VERSION: Literal["ccef-review-inspection/1.0"]
+ReviewIssueScope = Literal["item", "node", "diagnostic"]
+ReviewIssueSeverity = Literal["warning", "error"]
+
+class ReviewIssue(BaseModel): ...
+class ReviewInspection(BaseModel): ...
+def inspect_review_candidate(package: ExtractionPackage) -> ReviewInspection: ...
+```
+
+Both models use `ConfigDict(extra="forbid", strict=True, frozen=True)`. `ReviewIssue` fields are
+exactly: `issue_id: Annotated[str, StringConstraints(pattern=r"^[A-Za-z][A-Za-z0-9._:-]{0,511}$")]`,
+`scope`, `severity`, `blocking: bool`, `item_id: LocalId | None`,
+`node_id: LocalId | None`, `code: DiagnosticCode`, `message: str` stripped/nonempty/max 4000, and
+`evidence: tuple[EvidenceRef, ...] = ()`. `ReviewInspection` fields are exactly:
+`inspection_version` defaulting to the constant, strict nonnegative `item_count`,
+`move_node_count`, `issue_count`, `blocking_issue_count`, and
+`issues: tuple[ReviewIssue, ...] = ()`. Export these six public names from the package `__init__`;
+do not add them to extraction package exports.
+
+Require `type(package) is ExtractionPackage`; misuse raises `TypeError` with no input value. If
+any move node is still `unvalidated`, raise exactly
+`ValueError("review candidate must be locally normalized")` before producing any result. Deep-copy
+all issue evidence so neither the input nor returned inspection shares mutable evidence objects.
+
+### Exact deterministic issue order and semantics
+
+Walk `package.items` in source order. For each item:
+
+1. Emit one non-blocking warning issue per item warning, original warning order, preserving its
+   code/message/evidence. ID: `item:<item_id>:warning:<zero_based_index>`.
+2. Then emit applicable derived item issues in this order:
+   - heading text length > 200: blocking error `heading_too_long`, message
+     `Heading exceeds the publishable 200-character limit`, item evidence, ID
+     `item:<item_id>:heading-too-long`;
+   - position-anchored prose: canonicalize its standard FEN with `python-chess` and compare it to
+     every candidate occurrence position (each sequence root plus every valid node `fen_after`).
+     Zero matches emits blocking `position_anchor_no_match`; more than one emits blocking
+     `position_anchor_ambiguous`; exactly one emits nothing. Messages respectively:
+     `Position anchor has no candidate occurrence` and
+     `Position anchor matches multiple candidate occurrences`. Invalid/non-standard anchor FEN is
+     zero matches. IDs end `:position-anchor-no-match` / `:position-anchor-ambiguous`.
+   - non-chess figure: blocking error `unsupported_figure`, message
+     `Non-chess figures require an explicit rejection before publication`, ID ending
+     `:unsupported-figure`;
+   - chessboard figure whose `position_fen_candidate` is absent, invalid or non-standard: blocking
+     error `chessboard_position_unresolved`, message
+     `Chessboard figure does not contain a valid standard position`, ID ending
+     `:chessboard-position-unresolved`;
+   - unresolved item: blocking error using the item's own `reason_code`, message equal to
+     `details`, else `raw_text`, else (defensive only) `Unresolved content requires review`, ID
+     `item:<item_id>:unresolved`.
+3. For a move sequence, walk nodes in topology/source order and emit for each node:
+   - when status is `invalid` or `ambiguous`, one blocking error first with code
+     `move_invalid` / `move_ambiguous`, message
+     `Move is not publishable in its current state`, node evidence and ID
+     `node:<sequence_id>:<node_id>:status`;
+   - then one non-blocking warning for each node warning, original order, preserving fields, ID
+     `node:<sequence_id>:<node_id>:warning:<zero_based_index>`;
+   - then, when `len(nags) > 1`, blocking error `multiple_nags`, message
+     `Multiple NAGs require an explicit reviewer choice`, node evidence and ID ending
+     `:multiple-nags`.
+
+After all items, walk diagnostics in original order. Ignore `info`. Each warning/error diagnostic
+becomes one issue with scope `diagnostic`, its original severity/code/message/evidence,
+`blocking=True` only for error, original nullable item/node IDs, and ID
+`diagnostic:<zero_based_package_diagnostic_index>`. Do not merge or deduplicate issues.
+
+Candidate occurrence position comparison is package-wide and exact after canonical standard-FEN
+normalization (`board.fen(en_passant="fen")`). Roots use startpos or their declared FEN; invalid
+roots are skipped. Valid nodes use their required `fen_after`; malformed/non-standard values are
+skipped defensively. Duplicate positions count as multiple occurrences even when their FEN text is
+identical. Do not guess a target or compare only the first four FEN fields.
+
+Counts are derived from the package/result: all items; all move nodes; emitted issues; emitted
+issues where `blocking` is true. The function is deterministic and never mutates its input.
+
+### Focused oracle
+
+Use only synthetic, non-copyrighted packages. Cover at least:
+
+1. clean normalized package produces exact zero-issue counts;
+2. exact issue ordering across item warning, heading, node status/warning/multi-NAG, unresolved and
+   warning/error diagnostics; info diagnostic exclusion;
+3. position anchors with zero, exactly one and multiple canonical full-FEN matches, including two
+   occurrences at the same position;
+4. valid/invalid chessboard and non-chess figure behavior;
+5. unvalidated node and exact-type misuse rejection;
+6. deterministic repeated output, input non-mutation, deep-copied evidence, frozen/strict/unknown
+   field model behavior, and unique stable issue IDs.
+
+Run exactly:
+
+```bash
+backend/.venv/bin/pytest -c backend/pyproject.toml -o addopts='' \
+  backend/tests/test_stage8d_review_inspection.py
+backend/.venv/bin/ruff format --check \
+  backend/src/chess_workbench/review/__init__.py \
+  backend/src/chess_workbench/review/inspection.py \
+  backend/tests/test_stage8d_review_inspection.py
+backend/.venv/bin/ruff check \
+  backend/src/chess_workbench/review/__init__.py \
+  backend/src/chess_workbench/review/inspection.py \
+  backend/tests/test_stage8d_review_inspection.py
+backend/.venv/bin/mypy --config-file backend/pyproject.toml \
+  backend/src/chess_workbench/review/__init__.py \
+  backend/src/chess_workbench/review/inspection.py \
+  backend/tests/test_stage8d_review_inspection.py
+git diff --check
+```
+
+### Stop conditions
+
+Stop and report evidence without guessing if the exact interface cannot be implemented inside the
+boundary, an extraction contract/normalizer change appears necessary, existing behavior conflicts
+with this oracle, a new dependency is needed, or SQL/API/frontend/publication work is required.
+Report `pending Codex review`; do not begin 8D-2 and do not commit.
+
+### Codex review blocker and R1 correction
+
+The first implementation is **not accepted**. Its 18 packet tests pass, but independent
+adversarial review proves that `_canonical_fen` accepts a parseable yet illegal empty-board FEN
+(`8/8/8/8/8/8/8/8 w - - 0 1`). Consequently an invalid chessboard figure produces zero issues,
+and invalid explicit-FEN sequence roots can incorrectly participate in position-anchor matching.
+
+Apply only these corrections inside the original permitted boundary:
+
+1. `_canonical_fen` must implement the same standard-position validity boundary as the extraction
+   normalizer: exactly six fields; no `~` promoted-piece marker; castling field matches only
+   ordered standard `K?Q?k?q?` or `-`; construct `chess.Board(fen, chess960=False)`; require
+   `board.is_valid()`; only then return `board.fen(en_passant="fen")`. Every failure returns
+   `None`. Do not import a private extraction helper or accept Chess960 castling notation.
+2. Add regression tests proving: an empty-board chessboard figure is
+   `chessboard_position_unresolved`; an invalid explicit-FEN sequence root is skipped and cannot
+   satisfy a position anchor; promoted-marker and/or Chess960-castling FEN is rejected as
+   non-standard. Keep the existing valid standard-FEN tests.
+3. Fix the misleading node-position test: it currently anchors `START_FEN` and therefore only
+   retests the root. Change/add an oracle whose anchor equals the canonical `fen_after` of a valid
+   non-root node and prove exactly one match emits no issue.
+4. The original packet was internally inconsistent: `ReviewIssue.message` is capped at 4,000 but
+   unresolved `details`/`raw_text` can be much longer. Do **not** silently truncate source content.
+   For every derived unresolved issue, set message exactly to the fixed
+   `Unresolved content requires review`; the full `details` and `raw_text` remain available on the
+   immutable package item shown by the future review API/UI. Remove truncation code and update the
+   two unresolved-message tests accordingly. Warning/diagnostic messages remain preserved exactly.
+
+Run the same packet-verbatim focused commands, append R1 evidence to HANDOFF and report
+`pending Codex re-review`. Do not start 8D-2 and do not commit.
+
+### Final Codex R1 review
+
+**Accepted.** Codex independently reran 24/24 focused tests, Ruff format/check and MyPy. Additional
+adversarial checks confirm that empty-board, unordered standard castling, Chess960 castling and
+promoted-marker FENs are all blocked, while unresolved source text remains intact behind the fixed
+issue summary. The real five-page normalized package produces 16 items, 40 move nodes and exactly
+one blocking issue for its non-chess figure; no UI or persistence is involved. 8D-1 is complete.
+
+## Accepted packet: DS-STAGE8D-READ-CONTRACTS-01 (8D-2A)
+
+### Goal
+
+Define only the strict server-owned HTTP response contract for the future read-only review
+document endpoint. It composes the immutable normalized CCEF package, the accepted 8D-1
+inspection, and verified rendered-page descriptors. This packet adds no route, storage read,
+content serving, SQL, frontend or generated OpenAPI artifact.
+
+### Permitted edit boundary
+
+- `backend/src/chess_workbench/schemas/review.py` (new)
+- `backend/tests/test_stage8d_review_schemas.py` (new)
+- `docs/agent/HANDOFF.md` (append completion evidence only)
+
+Everything else is read-only, including `review/inspection.py`, extraction, services/API,
+store/models/migrations, existing schemas/tests, generated OpenAPI/TypeScript, frontend, Makefile,
+dependencies, ADRs and this plan. Preserve all existing dirty/untracked changes. Do not commit,
+stage, unstage, reset, delete or create probe files.
+
+### Frozen public contract
+
+In `schemas/review.py`, define and export exactly:
+
+```python
+ReviewPageContentPath = Annotated[
+    str,
+    StringConstraints(
+        pattern=(
+            r"^/api/pdf-extractions/"
+            r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+            r"/review/pages/[1-9][0-9]*$"
+        ),
+        max_length=128,
+    ),
+]
+
+class PdfReviewPageRead(StrictContract): ...
+class PdfReviewDocumentRead(StrictContract): ...
+```
+
+`PdfReviewPageRead` fields are exactly, in this order:
+
+- `physical_page: Annotated[int, Field(ge=1, le=20_000)]`
+- `media_type: Literal["image/png"] = "image/png"`
+- `byte_size: Annotated[int, Field(gt=0)]`
+- `content_sha256: Sha256`
+- `content_url: ReviewPageContentPath`
+
+`PdfReviewDocumentRead` fields are exactly, in this order:
+
+- `run_id: EntityId`
+- `normalized_ccef_sha256: Sha256`
+- `package: ExtractionPackage`
+- `inspection: ReviewInspection`
+- `pages: list[PdfReviewPageRead]`
+
+Use existing `StrictContract`, `EntityId` and `Sha256`; do not create parallel aliases. Export only
+the path alias and two models from this module. Do not edit a package `__init__`.
+
+### Exact cross-field validation
+
+`PdfReviewDocumentRead` has one `mode="after"` validator enforcing all of these:
+
+1. `package.package_id == run_id`;
+2. `package.source.page_range` is not null;
+3. page descriptors are exactly the complete ascending physical range from `start_page` through
+   `end_page`, with no gaps, duplicates or extras;
+4. every descriptor `content_url` equals exactly
+   `/api/pdf-extractions/{run_id}/review/pages/{physical_page}` using Python's canonical lowercase
+   UUID string;
+5. `inspection == inspect_review_candidate(package)`; propagate the accepted inspection's
+   normalized-candidate error rather than hiding it.
+
+Raise concise `ValueError` messages that name only the violated relationship, never package data,
+paths or hashes. Do not attempt to recompute `normalized_ccef_sha256` in this schema; the future
+artifact-loading service owns byte/hash verification.
+
+The response deliberately contains no provider response, raw CCEF, CAS path, filesystem path,
+API key, OCR text/index or mutable review state. Do not add convenience/derived fields.
+
+### Focused oracle
+
+Use a small synthetic normalized package with a two-page source range. Cover at least:
+
+1. valid construction, exact field order, JSON round trip and frozen/unknown-field rejection;
+2. package ID/run ID mismatch and null source page range rejection;
+3. missing, duplicate, unordered and extra page descriptors;
+4. wrong run/page in `content_url`, uppercase/noncanonical UUID path and non-PNG/zero-size/bad hash
+   rejection;
+5. stale/tampered inspection rejection and propagation of an unvalidated package error;
+6. `model_dump(mode="json")` contains the normalized package, inspection and public page metadata,
+   but none of these keys anywhere: `provider_response`, `raw_ccef`, `relative_path`,
+   `absolute_path`, `api_key`, `ocr_text`;
+7. `openapi_schema(PdfReviewDocumentRead)` is standalone OpenAPI 3.0-compatible output: recursively
+   contains no `$defs`, `$ref`, `const`, or schema node with `type == "null"`; the nested CCEF item
+   discriminator remains present.
+
+Run exactly:
+
+```bash
+backend/.venv/bin/pytest -c backend/pyproject.toml -o addopts='' \
+  backend/tests/test_stage8d_review_schemas.py
+backend/.venv/bin/ruff format --check \
+  backend/src/chess_workbench/schemas/review.py \
+  backend/tests/test_stage8d_review_schemas.py
+backend/.venv/bin/ruff check \
+  backend/src/chess_workbench/schemas/review.py \
+  backend/tests/test_stage8d_review_schemas.py
+backend/.venv/bin/mypy --config-file backend/pyproject.toml \
+  backend/src/chess_workbench/schemas/review.py \
+  backend/tests/test_stage8d_review_schemas.py
+git diff --check
+```
+
+### Stop conditions
+
+Stop and report evidence without guessing if the nested CCEF/review models cannot produce a valid
+standalone OpenAPI 3.0 schema, any existing contract must change, a route/service/storage read is
+needed, a new dependency is required, or another file must be edited. Report
+`pending Codex review`; do not begin 8D-2B, regenerate contracts or commit.
+
+### Codex review blocker and R1 correction
+
+The first 8D-2A implementation is **not accepted yet**. Its 19 focused tests, Ruff and MyPy pass,
+and the public fields/cross-field relationships otherwise match the packet, but final review found
+two defects in the defensive oracle:
+
+1. `_validate_review_document` materializes `list(range(start_page, end_page + 1))`. CCEF's
+   `PageRange.end_page` has no upper bound, so a corrupt/untrusted normalized artifact can allocate
+   unbounded memory before the schema returns the expected page-descriptor error. Replace this
+   with constant-extra-memory validation: compare the descriptor count to
+   `end_page - start_page + 1`, then compare each descriptor to `start_page + zero_based_index`.
+   Preserve the existing error message and all other validator ordering/behavior.
+2. `test_openapi_schema_keeps_the_nested_ccef_discriminator` currently accepts any nested
+   discriminator whose `propertyName` is `kind`. Anchor and initial-position unions also have that
+   discriminator, so the test can pass after the required top-level CCEF item discriminator is
+   lost. Assert the exact path
+   `schema["properties"]["package"]["properties"]["items"]["items"]["discriminator"]`
+   has `propertyName == "kind"`.
+
+Add a regression using a synthetic normalized package with a very large valid page range (for
+example `1..1_000_000_000`) and an empty descriptor list. It must promptly raise the existing
+page-descriptor relationship error without building or iterating that range. Do not add a public
+page-range limit or change an extraction contract. Run the same packet-verbatim focused commands,
+append R1 evidence to HANDOFF and report `pending Codex re-review`. Do not start 8D-2B and do not
+commit.
+
+### Final Codex R1 review
+
+**Accepted.** Codex inspected the actual correction and independently reproduced 20/20 focused
+tests plus clean Ruff format/check, MyPy and `git diff --check`. Page-range validation now uses
+constant extra memory, the billion-page regression returns promptly, and the OpenAPI oracle points
+to the exact top-level CCEF item union. 8D-2A is complete.
+
+## Accepted packet: DS-STAGE8D-REVIEW-LOADER-01 (8D-2B1)
+
+### Goal
+
+Implement the server-side, read-only application service that loads one completed v2 extraction's
+normalized CCEF and rendered-page registry from immutable CAS, verifies their bindings, and returns
+the accepted 8D-2A document/page values. This packet adds no HTTP route, schema, SQL model,
+migration, frontend or generated contract.
+
+### Permitted edit boundary
+
+- `backend/src/chess_workbench/services/pdf_review.py` (new)
+- `backend/tests/test_stage8d_review_read_service.py` (new)
+- `docs/agent/HANDOFF.md` (append completion evidence only)
+
+Everything else is read-only, including existing extraction/review/schema/service/API/store code,
+tests, generated OpenAPI/TypeScript, frontend, dependencies, Makefile, ADRs and this plan. Preserve
+all dirty/untracked work. Do not commit, stage, unstage, reset, delete or create probe files.
+
+### Frozen public interface
+
+Define and export exactly:
+
+```python
+@dataclass(frozen=True, slots=True)
+class PdfReviewPageContent:
+    body: bytes
+    media_type: Literal["image/png"]
+    byte_size: int
+    content_sha256: str
+
+class PdfReviewReadService:
+    def __init__(self, session: AsyncSession, settings: Settings) -> None: ...
+    async def read_document(self, run_id: UUID) -> PdfReviewDocumentRead: ...
+    async def read_page(self, run_id: UUID, physical_page: int) -> PdfReviewPageContent: ...
+```
+
+`body` is the exact verified immutable PNG bytes. Export only these two public names. Do not add a
+package `__init__` export. Exact-type misuse of `run_id` and bool/non-int `physical_page` raises a
+concise `TypeError` without including the rejected value.
+
+### Stable service outcomes
+
+- Missing run: `ServiceError("not_found", 404, "PDF extraction review was not found")`.
+- Existing run but non-v2/non-succeeded/incomplete/inconsistent result or artifact metadata,
+  invalid manifest/CCEF/bindings, or non-PNG content: one sanitized
+  `ServiceError("ambiguous_context", 409, "PDF extraction review is not available")`, with no
+  details and no exception cause.
+- A requested physical page outside the run's declared range:
+  `ServiceError("not_found", 404, "PDF review page was not found")`.
+- `source_storage_unavailable` from the accepted verified CAS reader propagates unchanged. Raw OS,
+  Pydantic, JSON, path, hash, provider and package values never enter public errors.
+
+### Required verification and behavior
+
+Use `PdfPersistenceService(session).get_extraction(run_id)` as the database read boundary; do not
+add SQL or mutate/commit the session. A review is available only when all of these hold:
+
+1. pipeline is exactly `PDF_EXTRACTION_PIPELINE_VERSION`, Job status is `succeeded`, and the Job
+   result has the existing exact v2 outer shape/schema/run binding;
+2. its candidate object has the existing exact six fields plus exact summary field set, and its
+   `normalized_ccef_sha256` is lowercase 64-hex;
+3. relevant artifact slots contain exactly one page-null `normalized_ccef`, exactly one page-null
+   `render_manifest`, and one unique `rendered_page` for every physical page from the run's
+   `first_page` through `last_page`, with no missing/duplicate/extra relevant slots;
+4. normalized/manifest media types are `application/json`; rendered media types are `image/png`;
+   all sizes are positive, normalized/manifest sizes are at most 64 MiB, and rendered sizes are at
+   most the public `MAX_PNG_BYTES`;
+5. candidate and normalized-artifact hashes match; the Job evidence render-manifest hash and
+   manifest-artifact hash match;
+6. read the manifest and normalized CCEF with
+   `read_verified_content_addressed_bytes` via `asyncio.to_thread`, using each registered path,
+   size and hash plus the limits above;
+7. the render manifest is a JSON object with the exact produced render-manifest top-level keys,
+   correct evidence schema/run/PDF asset/hash/run page-range bindings, and an exact ascending page
+   list whose physical page/hash/size/media metadata match every registered rendered-page row;
+8. parse normalized bytes directly with `ExtractionPackage.model_validate_json`; require
+   package ID == run ID and source page range == the run range; compute
+   `inspect_review_candidate(package)` and construct `PdfReviewDocumentRead` with canonical
+   `/api/pdf-extractions/{run_id}/review/pages/{physical_page}` URLs. Do not decode raw/provider/OCR
+   artifacts and do not recompute or rewrite CCEF.
+
+`read_page` must first resolve the same available registered review and exact requested page, then
+read that single page with the verified CAS reader and `MAX_PNG_BYTES`. Require the standard eight
+byte PNG signature before returning `PdfReviewPageContent`. It must not read a caller-supplied path
+or any artifact outside the resolved run/page slot. It may share private loader helpers with
+`read_document`; neither public method writes state.
+
+### Focused oracle
+
+Use a temporary SQLite database and temporary CAS with a synthetic two-page normalized package,
+manifest and small PNG-signature payloads. Cover at least:
+
+1. valid document fields/inspection/two canonical URLs and valid exact page bytes/metadata;
+2. missing run, queued/failed Job and historical v1 pipeline outcomes;
+3. malformed/wrong-run v2 result, candidate/artifact hash mismatch, missing/duplicate/extra
+   relevant slots and wrong media/size metadata;
+4. malformed or misbound render manifest, malformed/unvalidated CCEF, package/run and page-range
+   mismatch;
+5. missing/corrupt normalized, manifest and requested-page CAS bytes propagate only the stable
+   storage error;
+6. out-of-range page is the stable page 404; wrong PNG signature is sanitized 409;
+7. exact-type misuse, no session writes, deterministic repeated reads, and public errors contain
+   none of: relative/absolute paths, hashes, provider content, CCEF content, API key or OS text.
+
+Run exactly:
+
+```bash
+backend/.venv/bin/pytest -c backend/pyproject.toml -o addopts='' \
+  backend/tests/test_stage8d_review_read_service.py
+backend/.venv/bin/ruff format --check \
+  backend/src/chess_workbench/services/pdf_review.py \
+  backend/tests/test_stage8d_review_read_service.py
+backend/.venv/bin/ruff check \
+  backend/src/chess_workbench/services/pdf_review.py \
+  backend/tests/test_stage8d_review_read_service.py
+backend/.venv/bin/mypy --config-file backend/pyproject.toml \
+  backend/src/chess_workbench/services/pdf_review.py \
+  backend/tests/test_stage8d_review_read_service.py
+git diff --check
+```
+
+### Stop conditions
+
+Stop and report evidence without guessing if any existing public contract/model must change, the
+accepted CAS reader cannot satisfy the behavior, an API route/schema/database/dependency edit is
+needed, or another file must be modified. If balance/credit/quota is exhausted, stop immediately.
+Report `pending Codex review`; do not begin 8D-2B2, regenerate contracts or commit.
+
+### Codex review blocker and R1 correction
+
+The first 8D-2B1 implementation is **not accepted yet**. Its 20 focused tests, Ruff and MyPy pass,
+but an independent temporary-DB replay added a valid page-null `normalized_ccef` plus a second
+`normalized_ccef(page_number=5)` row; `read_document` returned successfully. The implementation
+filters run-level rows before counting them, so malformed extra relevant slots are silently
+ignored despite the frozen exact-slot invariant.
+
+Apply only these corrections inside the original boundary:
+
+1. After the run/pipeline/Job/result checks, load its `PdfAssetView` before constructing any page
+   list. Require exact-int `first_page`/`last_page` with `1 <= first_page <= last_page <=
+   asset.page_count <= 20_000`; otherwise return the sanitized 409. This bounds all later range
+   materialization even when the DB row is corrupt. Reuse this already-loaded asset for manifest
+   PDF-hash binding.
+2. Build one slot map from **every** artifact whose kind is in `_RELEVANT_KINDS`, keyed by
+   `(kind, page_number)`. Reject duplicate keys. Its key set must equal exactly one
+   `("normalized_ccef", None)`, one `("render_manifest", None)`, and one
+   `("rendered_page", physical_page)` for each bounded run page. Thus any normalized/manifest row
+   with a non-null page, or any other extra relevant slot, is rejected. Do not filter malformed
+   run-level rows out before this equality check.
+3. Before returning descriptors, require every relevant artifact `content_sha256` to match the
+   lowercase 64-hex pattern. In render-manifest page entries, require exact-int `byte_size` before
+   comparing it (so JSON `true` cannot equal database integer `1`). Preserve all existing media,
+   size, hash and manifest checks.
+4. Honor the frozen exact-type boundary: use `type(run_id) is UUID` in both public methods, not
+   `isinstance`; retain the bool/non-int page rejection.
+
+Add focused regressions proving: a valid run plus an extra non-null-page normalized slot is 409; a
+valid run plus an extra non-null-page render-manifest slot is 409; corrupt run `last_page =
+1_000_000_000` is promptly 409 before page-range allocation; an uppercase rendered artifact hash
+is 409 on `read_document`; a manifest entry with `byte_size=True` cannot bind to size 1; and a UUID
+subclass is rejected by both public methods. Keep the original 20 tests.
+
+Run the original packet-verbatim focused commands. If sandboxed aiosqlite hangs before the first
+test, rerun only this focused pytest outside that sandbox and record the environment fact; do not
+weaken or skip tests. Append R1 evidence to HANDOFF and report `pending Codex re-review`. Do not
+start 8D-2B2 and do not commit.
+
+### Final Codex R1 review
+
+**Accepted.** Codex inspected the exact slot-map and early asset-bound range validation,
+independently reproduced 26/26 focused tests outside the tool sandbox, and reran clean Ruff
+format/check, MyPy and `git diff --check`. The previously accepted extra non-null normalized slot
+now returns 409, corrupt huge ranges are bounded before allocation, hashes/manifest sizes are
+strict, and UUID subclasses are rejected. 8D-2B1 is complete.
+
+## Accepted packet: DS-STAGE8D-REVIEW-HTTP-01 (8D-2B2)
+
+### Goal
+
+Expose the accepted read service through one JSON review-document GET and one immutable PNG GET,
+then regenerate the existing OpenAPI/TypeScript artifacts. This is transport wiring only: do not
+change loader, schemas, persistence, review rules, storage or frontend behavior.
+
+### Permitted edit boundary
+
+- `backend/src/chess_workbench/api/pdf.py`
+- `backend/tests/test_stage8d_review_api.py` (new)
+- `backend/openapi.json` (generated only by the accepted contract script)
+- `frontend/src/types/api.generated.ts` (generated only by the accepted contract script)
+- `docs/agent/HANDOFF.md` (append completion evidence only)
+
+Everything else is read-only, including `services/pdf_review.py`, `schemas/review.py`, extraction,
+store/migrations, app/error middleware, other tests, handwritten frontend/API types, Makefile,
+dependencies, ADRs and this plan. Preserve every dirty/untracked change. Do not commit, stage,
+unstage, reset, delete or create probe files.
+
+### Frozen HTTP interface
+
+Add exactly these routes to the existing `pdf_blueprint`:
+
+1. `GET /api/pdf-extractions/<run_id:uuid>/review`
+   - Sanic route name: `get_pdf_extraction_review`
+   - OpenAPI operation ID: `getPdfExtractionReview`
+   - summary: `Read one verified PDF extraction review document`
+   - tag: `pdf`
+   - 200 JSON schema: `PdfReviewDocumentRead`
+   - documented errors: 404 `PDF extraction review not found`, 409 `PDF extraction review is not
+     available`, 503 `Source storage unavailable`, all using existing `ERROR_SCHEMA`.
+   - Open one ordinary `database.session()`, call
+     `PdfReviewReadService(session, request.app.ctx.settings).read_document(run_id)`, and return
+     `model_dump(mode="json")`. Do not begin/commit a transaction and do not catch `ServiceError`.
+
+2. `GET /api/pdf-extractions/<run_id:uuid>/review/pages/<physical_page:int>`
+   - route name: `get_pdf_extraction_review_page`
+   - operation ID: `getPdfExtractionReviewPage`
+   - summary: `Read one verified rendered PDF review page`
+   - tag: `pdf`
+   - 200 media only `image/png`, OpenAPI schema `{type: string, format: binary}`
+   - same documented 404/409/503 errors.
+   - Open one ordinary session and call `read_page(run_id, physical_page)`.
+   - Return the exact `body` with Sanic `raw`, status 200 and `content_type=content.media_type`.
+     Headers are exactly these server-owned values:
+     - `Content-Length: str(content.byte_size)`
+     - `ETag: "<lowercase-content-sha256>"` including the HTTP double quotes
+     - `Cache-Control: private, max-age=31536000, immutable`
+     - `X-Content-Type-Options: nosniff`
+   - No Content-Disposition, range handling, caller path, redirect or JSON wrapper.
+
+Import only the accepted schema/service and Sanic `raw`. Let the existing global `ServiceError`
+adapter produce stable JSON errors; do not duplicate error mapping or expose details.
+
+### Focused oracle
+
+Use `build_app` with a temporary SQLite URL and monkeypatch only the imported
+`PdfReviewReadService` symbol with a small scripted async fake; the accepted loader already owns
+real DB/CAS integration tests. Use a synthetic normalized package/document, never a user book.
+Cover at least:
+
+1. document GET returns exact 200 JSON and records the exact UUID passed to `read_document`;
+2. every returned `content_url` is routable through the page GET; page GET passes exact UUID/int,
+   returns byte-identical PNG data, `image/png`, exact length/ETag/cache/nosniff headers and no
+   content-disposition;
+3. `not_found` 404, unavailable 409 and storage 503 raised by the fake propagate through the
+   existing JSON error handler on both route families without leaking fake details;
+4. malformed UUID, missing/non-integer page paths do not call the service and do not become 200;
+5. `/docs/openapi.json` contains both exact operation IDs; document 200 uses the standalone review
+   schema with the nested CCEF item discriminator; page 200 exposes only binary `image/png`; all
+   three error statuses reference the existing error schema;
+6. response JSON/OpenAPI contain none of: `provider_response`, `raw_ccef`, `relative_path`,
+   `absolute_path`, `api_key`, `ocr_text`.
+
+After focused Python tests pass, run the repository's accepted contract generator; do not hand-edit
+generated files. Verify the generated TypeScript contains both new path operations and the two
+review read schemas.
+
+Run exactly:
+
+```bash
+backend/.venv/bin/pytest -c backend/pyproject.toml -o addopts='' \
+  backend/tests/test_stage8d_review_api.py
+backend/.venv/bin/ruff format --check \
+  backend/src/chess_workbench/api/pdf.py \
+  backend/tests/test_stage8d_review_api.py
+backend/.venv/bin/ruff check \
+  backend/src/chess_workbench/api/pdf.py \
+  backend/tests/test_stage8d_review_api.py
+backend/.venv/bin/mypy --config-file backend/pyproject.toml \
+  backend/src/chess_workbench/api/pdf.py \
+  backend/tests/test_stage8d_review_api.py
+make contracts
+make check-contracts
+git diff --check
+```
+
+### Stop conditions
+
+Stop and report evidence without guessing if the accepted loader/schema must change, Sanic cannot
+represent the frozen binary response, contract generation changes any file outside the two named
+generated artifacts, a handwritten frontend/API type is required, or another implementation file
+must be edited. If balance/credit/quota is exhausted, stop immediately. Report
+`pending Codex review`; do not begin 8D-3 and do not commit.
+
+### Final Codex review
+
+Accepted on 2026-08-13 after inspection of the actual route/test/generated-contract diff and an
+independent focused rerun: 7 API tests passed; Ruff format/check and MyPy passed for the two owned
+Python files; `make check-contracts` reported no drift; `git diff --check` was clean. The document
+route delegates through an ordinary read session, the PNG route emits byte-identical content and
+the frozen cache/integrity headers, the OpenAPI response is exactly binary `image/png`, and both
+error families remain owned by the global adapter. No broad suite or commit was run.
+
+## Accepted packet: DS-STAGE8D-REVIEW-PAGE-01 R2 (8D-3A)
+
+### Goal
+
+Build the self-contained, read-only review page component against the accepted generated API. It
+must make one normalized CCEF candidate readable as three synchronized areas: rendered source
+page, read-only chessboard, and ordered candidate content plus backend issues. This packet does not
+wire the application route or add the Sources-page link; that is the following 8D-3B packet.
+
+### Permitted edit boundary
+
+- `frontend/src/logic/api/types.ts`
+- `frontend/src/app/PdfReviewPage.tsx` (new)
+- `frontend/src/app/PdfReviewPage.test.tsx` (new)
+- `docs/agent/HANDOFF.md` (append completion evidence only)
+
+Everything else is read-only, including `App.tsx`, `SourcesPage.tsx`, `styles.css`, generated API
+types, backend/OpenAPI, extraction/review rules, dependencies and this plan. Preserve all dirty and
+untracked work. Do not commit, stage, unstage, reset, delete or create probe files.
+
+### Frozen typed boundary
+
+In `logic/api/types.ts`, add only:
+
+```ts
+export type PdfReviewDocument =
+  paths['/api/pdf-extractions/{run_id}/review']['get']['responses'][200]['content']['application/json'];
+```
+
+`PdfReviewPage` takes exactly one prop, `{ runId: string }`. Fetch
+`/api/pdf-extractions/${encodeURIComponent(runId)}/review` with the existing `useSWR` +
+`fetchJson<PdfReviewDocument>` path. Do not hand-copy CCEF interfaces, cast the response to a
+looser shape, fetch raw/provider artifacts, or recompute inspection counts/conflicts in React.
+
+### Frozen read-only behavior
+
+1. Loading shows an accessible busy state. A failed request shows an `Alert`; choose the public
+   Chinese message only from `ApiError.status`: 404 `审核资料不存在`、409 `审核资料尚不可用`、503
+   `来源页暂时不可用`, otherwise `加载审核资料失败`. Do not display a response body, path, hash,
+   provider text or raw error details.
+2. After load, select the first `document.pages` entry. Render page controls in server order and
+   one `<img>` whose `src` is exactly the selected descriptor's `content_url`, whose alt text names
+   the physical page, and whose visible caption shows `物理页 N`. Never construct an asset path in
+   the browser. Clicking any item/node/issue evidence page selects the matching descriptor; an
+   absent or out-of-document evidence page changes nothing.
+3. Render a non-draggable `react-chessboard` board. React must not use `chess.js` or calculate move
+   legality. Initial board position is the first move sequence's declared initial FEN, or standard
+   start FEN for `startpos`/no sequence. A valid node button with `fen_after` sets the board to that
+   exact backend FEN; invalid/ambiguous nodes never change the board. A prose `position` anchor can
+   set its exact FEN; a prose `move_node` anchor can locate the referenced valid node. Use the
+   existing fast animation constant and established board visual style, but add no engine analysis.
+4. Render `package.items` strictly in source order without merge, sort or deduplication:
+   - headings as semantic headings at the declared level;
+   - plain prose as readable whitespace-preserving text; markdown prose through the already
+     installed `react-markdown` + `rehype-sanitize` only (raw HTML must not execute);
+   - move sequences with optional title, a start-position button, and every node in source order.
+     Show its move label, validation status and NAG values; derive indentation only from already
+     ordered `parent_id` links. Valid nodes are board-navigation buttons; other nodes remain visible
+     disabled for board navigation;
+   - figures with type/caption/alt text and the candidate FEN as text only; do not invent an image;
+   - unresolved items with a clearly visible warning treatment, reason code, and complete
+     `raw_text`/`details` as plain text.
+   Evidence page buttons must remain visible beside their owning item/node.
+5. Render `inspection.issues` strictly in backend order. Show severity, blocking/non-blocking,
+   scope, code and message, plus evidence page buttons. Display the exact backend `issue_count`,
+   `blocking_issue_count`, `item_count` and `move_node_count`; do not infer any of them. Zero issues
+   has an explicit `没有发现自动检查问题，但仍需人工批准` empty state.
+6. Use a responsive Tailwind-only three-area layout: wide screens source page | board | candidate
+   and issues; narrow screens stack source page → board → candidate/issues. Reading text should be
+   at most about 72 characters wide, preserve paragraphs, and avoid horizontal scrolling. Do not
+   add edit/approve/reject/publish controls or mutate any server state.
+
+### Focused oracle
+
+Mock `react-chessboard` as a small observable element and provide typed synthetic review documents;
+mock `fetch` only, with no backend, book, provider, timer or snapshots. Cover at least:
+
+1. exact review URL, loading, and the four sanitized error-message branches;
+2. first rendered page, server-ordered page buttons, exact `content_url`, page switching, and
+   evidence-driven page selection including an unavailable evidence page no-op;
+3. source-order rendering for all five item kinds, safe markdown (script/raw HTML cannot execute),
+   complete unresolved text and no hidden/deduplicated items;
+4. initial start/FEN board states; valid node and both prose-anchor navigation; invalid/ambiguous
+   nodes cannot change the board; no draggable board behavior;
+5. source-ordered branching move nodes, visible status/NAG/evidence, and indentation derived from
+   parent links without chess-rule computation;
+6. backend issue order/counts/blocking labels/evidence navigation and the exact zero-issue empty
+   state;
+7. no edit/approve/reject/publish controls and no POST/PUT/PATCH/DELETE request.
+
+Run only the focused task gates:
+
+```bash
+pnpm --dir frontend exec vitest run src/app/PdfReviewPage.test.tsx
+pnpm --dir frontend exec prettier --check \
+  src/logic/api/types.ts src/app/PdfReviewPage.tsx src/app/PdfReviewPage.test.tsx
+pnpm --dir frontend exec eslint \
+  src/logic/api/types.ts src/app/PdfReviewPage.tsx src/app/PdfReviewPage.test.tsx \
+  --max-warnings=0
+pnpm --dir frontend typecheck
+git diff --check
+```
+
+### Stop conditions
+
+Stop and report evidence instead of guessing if the generated review type is insufficient, the
+accepted API/contract must change, a new dependency or global CSS is needed, sanitized markdown
+cannot be expressed with the installed packages, or any implementation file outside the two
+named frontend modules is required. If balance/credit/quota is exhausted, stop immediately. Report
+`pending Codex review`; do not begin 8D-3B/8D-4 and do not commit.
+
+### Codex review findings — R1 required
+
+The first implementation passes its focused commands, and the read-only architecture is sound,
+but it is not accepted yet. Keep every original requirement and make only these corrections inside
+the same permitted boundary:
+
+1. **Reset on a changed run identity without resetting on SWR revalidation.** The current single
+   boolean `boardInitialized` leaks the previous run's board when the same mounted component
+   receives a different `runId`. Track the initialized run identity instead. On the first verified
+   document for each distinct `runId`, set both the board to that document's first-sequence initial
+   FEN and the selected page to that document's first page. A same-run SWR revalidation must still
+   preserve user board/page navigation. Add a test that changes the prop without unmounting the
+   component and proves the second document resets both board and source page; also prove a same-run
+   rerender/revalidation does not reset navigation.
+2. **Derive every local contract type from `PdfReviewDocument`.** Remove the handwritten
+   `type EvidenceRef = { page: number }`. Derive `EvidenceRef`, review item/node/sequence/issue types
+   from the generated alias. In tests, make `baseItems`, `baseIssues` and override parameters use
+   those derived types. Remove `items?: unknown[]` and the
+   `items as PdfReviewDocument['package']['items']` escape hatch. Do not replace them with `any`,
+   `unknown`, double assertions or a second handwritten CCEF interface.
+3. **Make the synthetic document genuinely normalized.** Valid fixture nodes must carry coherent
+   `side_to_move`, `fen_before`, `fen_after`, SAN and UCI values: e4 is White from startpos; e5/c5
+   are Black from the e4 position. A node issue must use `item_id='seq1'` and its node ID separately.
+   Keep all fixtures synthetic and copyright-free.
+4. **Display an unambiguous conventional move-number prefix.** Keep source `move_text`, but when
+   `move_number` exists render White as `N. move` and Black as `N... move`, using the accepted
+   backend `side_to_move`; update the source-order/branch oracle accordingly. Do not calculate turn
+   or legality in React.
+5. **Make the issue-evidence oracle click the issue.** Locate the issue row containing
+   `棋步非法`, click its own page-6 evidence button with `within`, and assert the source image changes
+   from page 5 to page 6. A global `getAllByRole(...)[0]` is not an acceptable oracle because the
+   first matching button currently belongs to candidate content. Preserve the other 15 tests and
+   add the run-identity lifecycle regression; do not weaken the XSS/no-mutation tests.
+
+Run the same five focused commands. Report `pending Codex re-review`, do not begin 8D-3B/8D-4 and
+do not commit.
+
+### Codex R1 re-review findings — R2 required
+
+R1 fixed the run-identity lifecycle, derived types and scoped issue oracle, but its chess-context
+assumption is disproven by the authoritative normalizer. Make only these semantic fixture/display
+corrections; do not redesign the component:
+
+1. `backend/src/chess_workbench/extraction/validation.py::_normalize_node` compares
+   `node.side_to_move` with `board.turn` **before** `board.push(move)`. Existing backend regression
+   `test_context_matches_including_black_to_move` therefore establishes: e4 carries `w`; e5/c5
+   carry `b`. Fix the fixtures, component comment and move-prefix condition so `w -> N.` and
+   `b -> N...`. Do not infer the side from FEN in React and do not edit backend files.
+2. Use the exact normalized `fen(en_passant="fen")` values:
+   - after e4: `rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1`
+   - after e4 e5: `rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq e6 0 2`
+   - after e4 c5: `rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq c6 0 2`
+   Keep each child's `fen_before` equal to the corrected e4 `fen_after`.
+3. Do not test a custom initial FEN by mutating only `initial_position` while retaining the startpos
+   move tree. Create a dedicated typed, internally coherent custom-FEN item fixture. The following
+   one-node sequence is frozen for this test:
+   - initial: `8/8/8/4k3/8/8/8/4K3 w - - 0 1`
+   - move: `Kd2`, `side_to_move='w'`, `move_number=1`, SAN `Kd2`, UCI `e1d2`
+   - after: `8/8/8/4k3/8/8/3K4/8 b - - 1 1`
+   Its package inspection fixture must have coherent item/move/issue counts.
+4. In the run-identity regression, make the second document internally coherent as well. Reuse the
+   dedicated custom-FEN item fixture and keep its rendered pages within its declared page range and
+   evidence pages (pages 5 and 6 are sufficient). Prove reset from selected page 6 to the second
+   run's page-5 URL, including `RUN_ID_2`, rather than introducing pages 7/8 while retaining a 5..6
+   source/evidence range.
+5. Preserve all R1 lifecycle/type/issue fixes and all 16 tests. Update the move-label expectations
+   to remain `1. e4`, `1... e5`, `1... c5` for the corrected pre-move sides. The focused test must
+   contain no statement claiming that `side_to_move` is the post-move side.
+
+Run the same five focused commands. Report `pending Codex final re-review`; do not begin
+8D-3B/8D-4 and do not commit.
+
+### Final Codex review
+
+Accepted on 2026-08-14 after inspecting the complete component/test diff against the generated
+contract and authoritative backend normalizer. Independent focused results: 16 component tests
+passed; Prettier, ESLint and TypeScript passed for the owned frontend files; `git diff --check` was
+clean. R2 correctly uses pre-move `side_to_move`, the exact `fen(en_passant="fen")` values, a legal
+custom-FEN sequence and coherent cross-run page/evidence ranges. The R1 run-identity lifecycle,
+derived-type fixtures, scoped issue navigation, sanitized Markdown and read-only boundary remain
+intact. No broad suite or commit was run.
+
+## Accepted packet: DS-STAGE8D-REVIEW-INTEGRATION-01 (8D-3B)
+
+### Goal
+
+Make the accepted 8D-3A page reachable in the browser and expose one deliberate entry point from
+an eligible extraction-run card. This is route/navigation wiring only; do not change review page
+behavior, contracts, backend, extraction status semantics or add review mutations.
+
+### Permitted edit boundary
+
+- `frontend/src/app/App.tsx`
+- `frontend/src/app/App.test.tsx`
+- `frontend/src/app/SourcesPage.tsx`
+- `frontend/src/app/WorkbenchPages.test.tsx`
+- `docs/agent/HANDOFF.md` (append completion evidence only)
+
+Everything else is read-only, including `PdfReviewPage.tsx` and its tests, API types/generated
+contracts, backend, styles, dependencies, Makefile, ADRs and this plan. Preserve every dirty and
+untracked change. Do not commit, stage, unstage, reset, delete or create probe files.
+
+### Frozen route behavior
+
+1. Lazy-load the named `PdfReviewPage` export in `App.tsx`, consistently with the existing lazy
+   pages. Register exactly:
+   `/sources/pdf-extractions/:runId/review`.
+2. Add a small route adapter in `App.tsx` that reads `runId` with `useParams`. A missing value must
+   render the existing `NotFound`; otherwise pass the exact decoded string to
+   `<PdfReviewPage runId={runId} />`. Do not validate UUIDs or fetch data in the adapter—the backend
+   route owns validation and the accepted page owns loading/errors.
+3. The route adapter renders a compact page header above the component with semantic h1 text
+   `AI 棋书审核` and a React Router link `← 返回资料` to `/sources`. Keep the existing global app
+   header and Sources navigation selection behavior. Add no approval/edit/publish actions.
+
+### Frozen Sources entry behavior
+
+1. In each extraction run card, render exactly one React Router link labelled `打开审核页面` only
+   when `run.candidate` is non-null. Its href is exactly
+   `/sources/pdf-extractions/${encodeURIComponent(run.id)}/review`.
+2. Place the link inside the existing committed-candidate section, after its count/hash summary.
+   It must remain available whether `run.has_conflicts` is true or false: conflicts are a reason to
+   review, not a reason to hide review.
+3. No link for queued/running/failed/cancelled runs, historical v1 runs, or successful v2 runs with
+   `candidate === null`. Do not issue a review GET from Sources, probe availability, infer candidate
+   readiness from hashes, change polling, or display raw/provider/path values.
+
+### Focused oracle
+
+1. In `App.test.tsx`, mock the lazy `PdfReviewPage` module with a typed observable component. Prove
+   the exact route renders the `AI 棋书审核` heading and back link and passes the exact path `runId`
+   once. Prove an unrelated path still renders `NotFound`. Do not make a review API request in this
+   route-wiring test.
+2. In the existing Sources candidate test, assert one `打开审核页面` link with the exact href. Prove
+   the link is still present when `run.has_conflicts=true` and when false.
+3. Extend the existing no-candidate/v1 cases to assert the link is absent. Add focused cases if
+   necessary proving active/failed/cancelled runs cannot show it; use typed `PdfExtraction`
+   fixtures rather than `any` or new handwritten API interfaces.
+4. Preserve existing candidate counts, short hashes, conflict tag, polling and no-secret oracles.
+   Do not weaken or snapshot the tests.
+
+Run only:
+
+```bash
+pnpm --dir frontend exec vitest run \
+  src/app/App.test.tsx src/app/WorkbenchPages.test.tsx src/app/PdfReviewPage.test.tsx
+pnpm --dir frontend exec prettier --check \
+  src/app/App.tsx src/app/App.test.tsx \
+  src/app/SourcesPage.tsx src/app/WorkbenchPages.test.tsx
+pnpm --dir frontend exec eslint \
+  src/app/App.tsx src/app/App.test.tsx \
+  src/app/SourcesPage.tsx src/app/WorkbenchPages.test.tsx --max-warnings=0
+pnpm --dir frontend typecheck
+git diff --check
+```
+
+### Stop conditions
+
+Stop and report evidence instead of guessing if routing requires changing `PdfReviewPage`, an API
+or generated type must change, availability cannot be determined solely from the accepted
+`run.candidate` contract, a new dependency/global style is needed, or another implementation file
+is required. If balance/credit/quota is exhausted, stop immediately. Report
+`pending Codex review`; do not begin 8D-4 and do not commit.
+
+### Final Codex review
+
+Accepted on 2026-08-14 after inspection of the actual route, Sources entry and focused test diff.
+Independent rerun: 41 tests passed across `App.test.tsx`, `WorkbenchPages.test.tsx` and the accepted
+`PdfReviewPage.test.tsx`; Prettier, ESLint and TypeScript passed; `git diff --check` was clean. The
+adapter only passes React Router's decoded parameter, the Sources link uses the public committed
+candidate as its sole availability fact, conflicts do not hide review, and no review request or
+mutation originates from Sources. No broad suite, live browser assumption or commit was made.
+
+## Interaction checkpoint before 8D-4
+
+Stage 8D-3 now exposes the real read-only review chain in the browser. Before designing the
+persistent review ledger, exercise one existing committed five-page run from `/sources` and record
+layout/content/navigation feedback. In particular verify source-page readability, evidence page
+navigation, board navigation from valid nodes and prose anchors, move/prose classification, issue
+ordering and narrow/wide layout. Do not start 8D-4 until this checkpoint has either been accepted
+or produced concrete UI/read-model corrections.
+
+The first real-data interaction on 2026-08-14 found two blocking presentation defects: scrolling
+the long candidate column moves the source page and board out of view, and the source-ordered flat
+move tree renders every ply on a separately, progressively indented line. The following bounded UI
+correction must be accepted before 8D-4.
+
+## Accepted packet: DS-STAGE8D-REVIEW-LAYOUT-01 (8D-3C)
+
+### Goal
+
+Turn the accepted review page into a fixed-height wide-screen workbench with independent source and
+candidate scrolling, and present move sequences as conventional two-ply score rows. Preserve every
+normalized node and its source order; indentation represents only actual alternative branches, not
+ordinary mainline depth.
+
+### Permitted edit boundary
+
+- `frontend/src/app/reviewMoveLayout.ts` (new)
+- `frontend/src/app/reviewMoveLayout.test.ts` (new)
+- `frontend/src/app/PdfReviewPage.tsx`
+- `frontend/src/app/PdfReviewPage.test.tsx`
+- `docs/agent/HANDOFF.md` (append completion evidence only)
+
+Everything else is read-only, including App/Sources routing, backend/contracts/generated types,
+global CSS, dependencies, Makefile, ADRs and this plan. Preserve all dirty/untracked work. Do not
+commit, stage, unstage, reset, delete or create probe files.
+
+### Frozen wide-screen scrolling behavior
+
+1. Keep the existing source | board | candidate/issues order. At `lg` and wider, the review-page
+   grid must occupy one viewport work area (`height: calc(100vh - 9rem)`) and hide page-level
+   overflow. The source column and candidate/issues column each fill that height and have their own
+   `overflow-y-auto` + `overscroll-contain`; the board column remains fixed at the top and visible.
+   Scrolling the candidate pane therefore cannot move the page image or board.
+2. Give the candidate/issues scroll pane `aria-label="候选内容与自动检查"` and `tabIndex={0}` so
+   keyboard users can focus and scroll it. Give the source pane `aria-label="原书页面"`. Keep the
+   page controls, exact page image URL and all existing evidence navigation.
+3. Below `lg`, remove the fixed height and independent-overflow constraints so the existing stack
+   remains ordinary document flow: source → board → candidate/issues. Use Tailwind utility classes
+   in the component only; do not add global CSS or viewport JavaScript.
+
+### Frozen move-row projection
+
+Create a pure `buildReviewMoveRows(nodes)` helper in `reviewMoveLayout.ts`. Derive its node type
+from the accepted `PdfReviewDocument` alias; do not hand-copy CCEF fields. Its returned immutable
+row projection must retain references to the original nodes and contain enough explicit data for
+the component to render: stable row key, `variationDepth`, `moveNumber`, white node or null, black
+node or null, fallback node or null, and ordered unique evidence pages.
+
+Process nodes exactly once in their existing array order; do not sort, tree-walk into a different
+order, deduplicate or mutate them:
+
+1. Compute each node's variation depth in topological order. A root with `sibling_order=0` has depth
+   0; a later root has depth 1. A child inherits its known parent's depth and adds 1 only when its
+   own `sibling_order>0`. A defensive missing parent uses depth 0. Thus an arbitrarily long primary
+   line never indents, the first alternative indents once, and its primary descendants keep that
+   same depth; nested alternatives add one more level.
+2. A node with non-null `move_number` and `side_to_move='w'` starts a white row. A following node may
+   fill that row's black cell only when all are true: it has the same move number, pre-move
+   `side_to_move='b'`, its `parent_id` equals the white node ID, its `sibling_order=0`, and its
+   variation depth equals the row's depth. Otherwise it starts a new black-only row.
+3. A black-only row has a null white cell and renders its move number as `N...`. A white-only row
+   leaves its black cell empty. A node whose side or move number is null becomes one full-width
+   fallback row; it is never hidden.
+4. Each row's evidence pages are the ordered first-seen union of the contained node evidence. Two
+   moves sourced from page 319 therefore show exactly one page-319 control; pages 319 then 320 show
+   exactly those two controls in that order. Do not include sequence-level evidence in a move row.
+5. Flattening every row's white/black/fallback nodes in visual order must reproduce the exact input
+   node array by object identity. This is the conservation oracle.
+
+### Frozen move-row rendering
+
+Replace the per-node `<ol>` in `MoveSequenceView` with rows from the helper:
+
+- Use a compact three-column grid: move-number gutter, white cell, black cell. Evidence controls
+  appear once below/across the move cells for the whole row, never once per ply.
+- A paired row shows `N.` in the gutter, White's source `move_text` in the white cell and Black's
+  source `move_text` in the black cell. A black-only row shows `N...`, an explicitly empty white
+  cell and the move in the black cell. Do not repeat the move number inside the move button.
+- Each present node still shows its own backend validation label and NAGs and retains the existing
+  board-navigation behavior: only `valid` with `fen_after` is a button; invalid/ambiguous remains
+  visible and non-navigable.
+- Apply horizontal indentation only from `row.variationDepth`, capped visually at 4 levels while
+  retaining the uncapped depth in a `data-variation-depth` attribute. Linear primary rows always
+  have zero padding regardless of ply count. Use a subtle left border/background for depth > 0 so
+  a variation is visually distinct without crushing the move cells.
+- A fallback row spans both move cells, shows the unchanged source `move_text`, validation/NAG and
+  row evidence. Preserve sequence title/start/evidence controls and all other item/issue behavior.
+
+### Focused oracle
+
+Add pure helper tests with typed, synthetic nodes and update the component tests. Cover at least:
+
+1. a 12-ply linear line becomes 6 paired rows, every depth is 0, every input node is conserved by
+   identity and a same-page pair exposes only one evidence page;
+2. a pair spanning two pages exposes both once in first-seen order;
+3. after a mainline `1. e4 e5`, alternative black `1... c5` is a black-only depth-1 row; its primary
+   descendants do not deepen, while a nested alternative becomes depth 2;
+4. incompatible/nonconsecutive nodes never pair; missing side/move-number nodes survive as fallback
+   rows; input is not mutated;
+5. UI renders a linear white/black pair on one visual row with one page control and no indentation;
+   the black variation has an empty white cell, `1...`, depth 1 and preserves board navigation,
+   status and NAG display;
+6. a long linear fixture proves later fullmoves remain unindented and do not become one node per
+   row; update old per-node indentation/number-label assertions rather than retaining contradictory
+   expectations;
+7. the wide root/source/candidate elements carry the frozen responsive height/overflow/overscroll
+   classes and accessible labels/tab index; the board remains outside both scroll panes;
+8. all accepted page switching, anchors, XSS sanitization, issues, run-identity reset and no-mutation
+   tests continue to pass.
+
+Run only:
+
+```bash
+pnpm --dir frontend exec vitest run \
+  src/app/reviewMoveLayout.test.ts src/app/PdfReviewPage.test.tsx
+pnpm --dir frontend exec prettier --check \
+  src/app/reviewMoveLayout.ts src/app/reviewMoveLayout.test.ts \
+  src/app/PdfReviewPage.tsx src/app/PdfReviewPage.test.tsx
+pnpm --dir frontend exec eslint \
+  src/app/reviewMoveLayout.ts src/app/reviewMoveLayout.test.ts \
+  src/app/PdfReviewPage.tsx src/app/PdfReviewPage.test.tsx --max-warnings=0
+pnpm --dir frontend typecheck
+git diff --check
+```
+
+### Stop conditions
+
+Stop and report evidence instead of guessing if input nodes are not topologically ordered as the
+accepted CCEF contract states, the projection cannot conserve exact source order, the generated
+type is insufficient, layout requires global CSS/JavaScript or a dependency, or another
+implementation file is needed. Do not change backend data to simplify rendering. If
+balance/credit/quota is exhausted, stop immediately. Report `pending Codex review`; do not begin
+8D-4 and do not commit.
+
+### Final Codex review
+
+Accepted on 2026-08-14 after inspecting the pure projection, row rendering, responsive scroll
+containers and focused tests. Independent rerun: 5 helper tests plus 18 component tests passed;
+Prettier, ESLint and TypeScript passed for the four owned files; `git diff --check` was clean. The
+projection conserves node identity and source order, pairs only compatible adjacent white/black
+plies, increments depth only at alternative sibling edges and deduplicates row evidence. Source
+and candidate panes own their wide-screen overflow while the board remains outside both. Real
+scrollbar geometry and reading density still require the pending browser recheck; no broad suite or
+commit was run.
+
+## Accepted packet: DS-STAGE8C-SOURCES-CANDIDATE-01
+
+### Goal
+
+Finish the already-designed Stage 8C Sources-page presentation using the generated typed
+`PdfExtraction.candidate` contract. Show a concise committed candidate summary and distinguish a
+successful v2 run whose candidate indexes are incomplete. This packet contains no backend,
+pipeline, provider, review or publishing work.
+
+### Permitted edit boundary
+
+- `frontend/src/app/SourcesPage.tsx`
+- `frontend/src/app/WorkbenchPages.test.tsx`
+- `docs/agent/HANDOFF.md` (append completion evidence only)
+
+Everything else is read-only, including generated types/OpenAPI, backend, API client types,
+dependencies, config, Makefile, other frontend components/tests and this plan. Preserve every
+existing dirty/untracked change; do not commit, add/stage, unstage, reset, delete or create probes.
+
+### Frozen UI behavior
+
+- Keep the existing run card, evidence summary, status tags, polling and query filters.
+- When `run.candidate` is non-null, add a section headed exactly `已生成 CCEF 候选` and show:
+  `item_count` as `内容项`, `move_node_count` as `棋步`, `unresolved_item_count` as `未解决`,
+  `warning_count` as `警告`, `error_count` as `错误`, `invalid_move_count` as `非法棋步`, and
+  `ambiguous_move_count` as `歧义棋步`. Zero counts remain visible so the summary is auditable.
+- In that section show the first 12 hex characters plus `…` for both `raw_ccef_sha256` labelled
+  `原始 CCEF` and `normalized_ccef_sha256` labelled `规范 CCEF`. Do not show paths, provider
+  response content, prompt content, API keys or full CCEF JSON.
+- Existing conflict tag continues to use only `run.has_conflicts`; do not recompute it in React.
+- If `run.pipeline_version === 'pdf-extraction:v2'`, Job status is `succeeded`, and
+  `run.candidate` is null, show exactly `候选索引尚未完整提交`. A successful historical v1 run
+  without a candidate must not show that warning.
+- This remains a status/summary page: do not add approval, editing, publishing, navigation or raw
+  artifact download behavior; Stage 8D owns review.
+
+### Focused oracle
+
+Extend only the existing Sources-page cases in `WorkbenchPages.test.tsx`. Use typed fixture JSON
+and prove: all candidate counts and both short hashes render; backend `has_conflicts=true` drives
+the conflict tag; v2 succeeded + null candidate shows the incomplete warning; v1 succeeded + null
+candidate does not; no secret/path/raw content is rendered. Preserve all existing Sources tests.
+
+Run exactly:
+
+```bash
+pnpm --dir frontend exec vitest run src/app/WorkbenchPages.test.tsx
+pnpm --dir frontend exec prettier --check src/app/SourcesPage.tsx src/app/WorkbenchPages.test.tsx
+pnpm --dir frontend exec eslint src/app/SourcesPage.tsx src/app/WorkbenchPages.test.tsx
+pnpm --dir frontend exec tsc --noEmit
+git diff --check
+```
+
+Stop and report evidence if the generated candidate type is absent/inconsistent, another component
+or backend change is needed, existing tests contradict the frozen behavior, or any navigation/
+review/publishing design is required. If the model/API reports exhausted balance, credit or quota,
+stop immediately. Do not run all frontend/backend tests or start Stage 8D.
+
+## Codex completion: 8C-3 execution and 8C-4 backend boundary
+
+Codex accepted the runtime-config R1, then implemented the architecture-sensitive v2 lifecycle.
+New runs use `pdf-extraction:v2`; historical v1 remains executable without provider config. The v2
+handler verifies committed evidence, makes one whole-range provider request, binds/normalizes CCEF,
+writes three CAS blobs and atomically registers the three run-level slots. Provider retryability is
+explicit in the Job transition; retries reuse committed evidence rather than rerender/OCR, while
+cancel/failure creates no CCEF rows. The typed API exposes evidence/candidate only when result and
+artifact hashes agree and derives/filter `has_conflicts` from the candidate summary. OpenAPI and
+TypeScript contracts were regenerated. Focused Stage 8C plus adjacent regression: 375 tests pass;
+typed schema/API/handler: 50 tests pass; focused Ruff/MyPy/contract generation are clean. No real
+provider call, repository-wide gate or commit was performed.
+
+## Accepted packet: DS-STAGE8C-RUNTIME-CONFIG-01
+
+### Goal
+
+Add only the server-owned, secret-safe Stage 8C runtime settings that the later Codex-owned v2
+handler will consume. This packet does not construct a provider, change the extraction pipeline,
+call a model, or implement retry/worker behavior.
+
+### Permitted edit boundary
+
+- `backend/src/chess_workbench/config.py`
+- `backend/tests/test_config.py`
+- `docs/agent/HANDOFF.md` (append completion evidence only)
+
+Everything else is read-only, including extraction modules, services, jobs/worker, API/frontend,
+dependencies, ADRs, Makefile, existing Stage 8 tests and this plan. Preserve all existing dirty and
+untracked work exactly. Do not commit, add/stage, unstage, reset, delete or create probe files.
+
+### Frozen behavior
+
+Add these four fields to `Settings`:
+
+- `deepseek_api_key: SecretStr | None = Field(default=None, repr=False)`; it is loaded from
+  `CHESS_WORKBENCH_DEEPSEEK_API_KEY`, absent by default, rejects empty/whitespace-only values, and
+  remains a `SecretStr` without trimming or converting the secret to an ordinary string.
+- `ccef_provider_timeout_seconds: float = Field(default=600.0, ge=1.0, le=1800.0,
+  allow_inf_nan=False, strict=True)`.
+- `ccef_max_output_tokens: int = Field(default=128_000, ge=1, le=384_000, strict=True)`.
+- `ccef_max_prompt_chars: int = Field(default=2_000_000, ge=1, le=2_000_000, strict=True)`.
+
+Preserve the existing frozen settings model and all existing settings/defaults. Do not add a model
+or provider selector: the accepted DeepSeek adapter already fixes its model, and alternative
+providers remain injectable through the provider-neutral port. Do not read environment variables
+outside Pydantic Settings and do not add custom `repr`, logging or serialization code.
+
+### Focused oracle
+
+Extend `backend/tests/test_config.py` only. Prove:
+
+- exact defaults and field runtime types;
+- the documented `CHESS_WORKBENCH_*` environment variables load all four values;
+- whitespace-only secret, non-finite/out-of-range timeout, bool/coerced-string/out-of-range integer
+  limits fail validation;
+- the exact configured secret is absent from `repr(settings)`, `str(settings)` and
+  `settings.model_dump_json()` while `get_secret_value()` returns it to trusted server code;
+- existing database-driver and frozen-settings behavior remains green.
+
+Run exactly:
+
+```bash
+uv run --project backend --locked pytest -c backend/pyproject.toml -o addopts='' \
+  backend/tests/test_config.py
+uv run --project backend --locked ruff format --check \
+  backend/src/chess_workbench/config.py backend/tests/test_config.py
+uv run --project backend --locked ruff check \
+  backend/src/chess_workbench/config.py backend/tests/test_config.py
+uv run --project backend --locked mypy --config-file backend/pyproject.toml \
+  backend/src/chess_workbench/config.py backend/tests/test_config.py
+git diff --check
+```
+
+Stop and report evidence without guessing if another module or dependency is needed, existing
+configuration behavior conflicts with these fields, the secret cannot remain masked with standard
+`SecretStr`, or any provider construction/job/API behavior becomes necessary. If the model/API
+reports exhausted balance, credit or quota, stop immediately and report it. Do not start the v2
+handler or 8C-4.
+
+### Codex review blocker and R1 oracle
+
+The first implementation is not accepted. Adding global `SettingsConfigDict(strict=True)` made the
+new strict scalar fields load correctly from environment strings, but it also changed every
+pre-existing setting to strict programmatic validation. Codex reproduced regressions including
+`Settings(port="8123")`, `Settings(debug="false")` and
+`Settings(source_storage_root="/tmp/chess-workbench")`, all of which the previous non-strict model
+accepted and normalized.
+
+Keep the global `strict=True` mechanism for environment-source coercion, but explicitly preserve
+the former non-strict behavior of **every pre-existing Settings field** with field-level
+`strict=False`; keep every existing default and numeric bound unchanged. The four new Stage 8C
+fields retain exactly their packet-frozen strict behavior. Do not introduce a custom settings
+source or validator that guesses whether a value came from init versus environment.
+
+Extend the focused tests with one parameterized compatibility oracle covering all pre-existing
+non-string scalar/path inputs: programmatic string forms for port, debug, source storage root, PDF
+limit, optional Paddle runner path, Stockfish/Syzygy paths, the three engine limits, worker enabled
+and worker poll interval must normalize exactly as before. Also retain the existing test proving
+the four new fields load from environment and the two new integer fields reject programmatic
+strings. Run the same packet-verbatim focused commands. Update HANDOFF with R1 evidence; do not
+claim the packet accepted and do not start the v2 handler or 8C-4.
+
+## Accepted packet: DS-STAGE8C-TRUSTED-CANDIDATES-01
+
+Codex independently reviewed the implementation and reran the packet-verbatim focused oracle:
+152 tests pass; focused Ruff format/check, MyPy and `git diff --check` are clean. Trusted metadata
+matching, exact request/response hashing, canonical wrapper/raw/normalized bytes, one local chess
+normalization pass, summary/conflict accounting, sanitized errors and lazy package exports match
+the frozen packet. No correction round is required.
+
+### Goal
+
+Add the pure Stage 8C boundary that accepts one already-built trusted request and one provider
+response, strictly decodes CCEF, verifies provider-supplied metadata against the trusted prompt
+context, locally binds provenance, runs the accepted python-chess normalization and returns
+deterministic immutable artifact bytes/hashes plus a conflict summary. It performs no I/O and does
+not call a provider.
+
+### Permitted edit boundary
+
+- `backend/src/chess_workbench/extraction/candidates.py` (new)
+- `backend/src/chess_workbench/extraction/__init__.py` (new exports only)
+- `backend/tests/test_extraction_candidates.py` (new)
+- `docs/agent/HANDOFF.md` (append completion evidence only)
+
+Everything else is read-only, including contracts/provider/prompting/decoder/validation, DeepSeek,
+config, services/worker/SQL/API/frontend, dependencies, schema/examples, ADRs, Makefile, existing
+tests and this plan. Preserve the staged/dirty worktree exactly; do not commit, unstage, reset,
+delete or create probes.
+
+### Frozen public values and models
+
+- `CCEF_PROVIDER_RESPONSE_ARTIFACT_SCHEMA =
+  "chess-workbench/provider-response/1.0"`.
+- Public sanitized error `CcefCandidateError(code, message)` with the sole code
+  `binding_mismatch` and exact message
+  `CCEF package metadata does not match the trusted request`. It retains no rejected values or
+  nested exception context.
+- Strict frozen `CcefCandidateSummary` fields exactly:
+  `item_count`, `move_node_count`, `figure_count`, `unresolved_item_count`, `warning_count`,
+  `error_count`, `invalid_move_count`, `ambiguous_move_count` (strict ints >= 0), and
+  `has_conflicts` (strict bool).
+- Strict frozen `CcefCandidateArtifacts` fields exactly:
+  `provider_response_bytes`, `raw_ccef_bytes`, `normalized_ccef_bytes` (nonempty bytes),
+  `request_sha256`, `response_sha256`, `raw_ccef_sha256`, `normalized_ccef_sha256` (lowercase
+  64-hex), and `summary: CcefCandidateSummary`.
+- Export function
+  `assemble_ccef_candidate_artifacts(context: CcefPromptContext,
+  request: StructuredGenerationRequest, response: StructuredGenerationResponse) ->
+  CcefCandidateArtifacts` and all values/models/error above.
+
+### Exact trusted binding and codec behavior
+
+- Require exact public input instance types (`type(value) is ...`); programmer misuse raises
+  TypeError before decoding.
+- Rebuild the expected request with `build_ccef_generation_request(context)` and require exact
+  Pydantic value equality with `request`. Any mismatch is `CcefCandidateError`.
+- Call `decode_extraction_response(response)` unchanged. Propagate its sanitized `CcefDecodeError`
+  (`truncated`, `invalid_json`, `invalid_package`, `untrusted_validation`) unchanged.
+- The decoded provider package must exactly match trusted fields:
+  `package_id=context.package_id`; source ref/media type/language and page range equal context;
+  provenance created_at equals context.created_at; adapter name/version equal
+  `chess-workbench-ccef-prompt` / `1.0`; provider/model/request_sha256/response_sha256 are all null;
+  package-level extensions is exactly empty. Any mismatch is the same sanitized binding error.
+- Compute `request_sha256` over compact sorted-key ensure_ascii=False allow_nan=False UTF-8 JSON
+  of `request.model_dump(mode="json")`, with no trailing newline. Compute `response_sha256` over
+  exact `response.content.encode("utf-8")` bytes.
+- Deep-copy the decoded package and locally set provenance provider/model from the response and
+  request/response hashes computed above. Revalidate through `ExtractionPackage`; this is the
+  canonical raw package and all move nodes remain `unvalidated`.
+- Run accepted `normalize_chess_moves(raw_package)` once to create the canonical normalized
+  package. Never mutate context/request/response/decoded/raw package through aliasing.
+- Canonical CCEF bytes for raw and normalized are compact sorted-key ensure_ascii=False
+  allow_nan=False JSON of `model_dump(mode="json")` plus exactly one final `\n`.
+- Provider-response bytes are canonical JSON plus one final `\n` with exact object fields:
+  `artifact_schema`, `request_sha256`, `response_sha256`, `provider`, `model`, `finish_reason`,
+  `usage`, `content`. `content` is the exact assistant string; `usage` is
+  `response.usage.model_dump(mode="json")`. No request body/schema, API key, header, URL, raw HTTP
+  body or exception text is included.
+- Artifact digest fields are SHA-256 of their exact returned bytes. Repeated assembly is byte-for-
+  byte stable. A response content change changes response/provider/raw/normalized hashes as
+  applicable; caller inputs remain unchanged.
+
+### Exact summary behavior
+
+- Compute summary only from the normalized package.
+- `item_count=len(items)`; move nodes are all nodes under move-sequence items; figure and
+  unresolved counts are their item variants.
+- `warning_count` is package warning diagnostics plus every item warning plus every move-node
+  warning. `error_count` is package diagnostics with severity `error`. Info diagnostics do not
+  enter either count.
+- invalid/ambiguous counts use normalized move-node `validation_status`.
+- `has_conflicts` is true iff any figure, unresolved item, counted warning/error, invalid move or
+  ambiguous move exists. Valid-only heading/prose/move packages have false.
+
+### Focused oracle
+
+Tests use fixed UUID/timestamp and scripted provider values only. Prove: valid heading/prose and
+branched legal move package; exact trusted provenance replacement; exact three canonical
+documents/hashes/newlines; response content preservation including Unicode/outer whitespace;
+determinism/no mutation/no aliases; each request/package/source/provenance/extensions mismatch;
+every decoder error propagation; legal, illegal, ambiguous and disconnected normalization;
+summary counts/conflict truth table including figures, unresolved, warnings and errors; strict
+models/error sanitization; exact input types; AST import purity. No filesystem/network/clock/
+randomness/SQL/provider call.
+
+Run exactly:
+
+```bash
+uv run --project backend --locked pytest -c backend/pyproject.toml -o addopts='' \
+  backend/tests/test_extraction_candidates.py \
+  backend/tests/test_extraction_prompting.py \
+  backend/tests/test_extraction_decoder.py \
+  backend/tests/test_extraction_validation.py
+uv run --project backend --locked ruff format --check \
+  backend/src/chess_workbench/extraction/candidates.py \
+  backend/src/chess_workbench/extraction/__init__.py \
+  backend/tests/test_extraction_candidates.py
+uv run --project backend --locked ruff check \
+  backend/src/chess_workbench/extraction/candidates.py \
+  backend/src/chess_workbench/extraction/__init__.py \
+  backend/tests/test_extraction_candidates.py
+uv run --project backend --locked mypy --config-file backend/pyproject.toml \
+  backend/src/chess_workbench/extraction/candidates.py \
+  backend/src/chess_workbench/extraction/__init__.py \
+  backend/tests/test_extraction_candidates.py
+git diff --check
+```
+
+Stop and report evidence without guessing if accepted modules must change, metadata equality is
+ambiguous, normalization mutates trusted inputs, another dependency/module is needed, or any I/O,
+provider call, retry, SQL, worker, API or UI behavior becomes necessary. Do not start 8C-3. If the
+model/API reports exhausted balance, credit or quota, stop immediately and report it.
 
 ## Accepted packet: DS-STAGE8C-PROMPT-BUILDER-01 (Codex completion)
 

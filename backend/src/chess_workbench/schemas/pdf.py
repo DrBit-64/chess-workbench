@@ -99,6 +99,26 @@ class PdfEvidenceSummary(StrictContract):
     ocr_manifest_sha256: Sha256
 
 
+class PdfCandidateSummary(StrictContract):
+    """Verified public summary of one fully committed Stage 8C candidate set."""
+
+    status: Literal["committed"] = "committed"
+    provider_response_sha256: Sha256
+    request_sha256: Sha256
+    response_sha256: Sha256
+    raw_ccef_sha256: Sha256
+    normalized_ccef_sha256: Sha256
+    item_count: Annotated[int, Field(ge=0)]
+    move_node_count: Annotated[int, Field(ge=0)]
+    figure_count: Annotated[int, Field(ge=0)]
+    unresolved_item_count: Annotated[int, Field(ge=0)]
+    warning_count: Annotated[int, Field(ge=0)]
+    error_count: Annotated[int, Field(ge=0)]
+    invalid_move_count: Annotated[int, Field(ge=0)]
+    ambiguous_move_count: Annotated[int, Field(ge=0)]
+    has_conflicts: bool
+
+
 class PdfExtractionRead(StrictContract):
     id: EntityId
     pdf_asset_id: EntityId
@@ -108,6 +128,7 @@ class PdfExtractionRead(StrictContract):
     profile: dict[str, JsonValue]
     job: JobRead
     evidence: PdfEvidenceSummary | None = None
+    candidate: PdfCandidateSummary | None = None
     has_conflicts: bool = False
     created_at: UtcDateTime
 

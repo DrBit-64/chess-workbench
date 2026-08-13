@@ -49,6 +49,12 @@ Dashboard、Learn、Sources、三栏课程编辑器与“引擎”工作台均�
 课程草稿。Syzygy 表可选放入 `data/tablebases/syzygy/`。API 文档的机器可读契约位于
 `http://127.0.0.1:8000/docs/openapi.json`。
 
+要运行 Stage 8C PDF AI 候选提取，把密钥保存到仓库外的普通 UTF-8 文件（建议
+`~/.config/chess-workbench/deepseek-api-key`），将文件权限设为 `600`，然后只在本地 `.env`
+中设置 `CHESS_WORKBENCH_DEEPSEEK_API_KEY_FILE` 为它的绝对路径。程序拒绝从 `.env` 直接读取
+`CHESS_WORKBENCH_DEEPSEEK_API_KEY`，也会拒绝组或其他用户可读的密钥文件。未配置密钥文件时
+其他功能仍可用，但新的 v2 提取任务会以 `provider_unconfigured` 明确失败。
+
 ## 自动验收
 
 ```bash

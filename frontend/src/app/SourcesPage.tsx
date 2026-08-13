@@ -13,6 +13,7 @@ import {
   message,
 } from 'antd';
 import { useMemo, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import useSWR from 'swr';
 
 import {
@@ -437,7 +438,8 @@ export function SourcesPage() {
                           </Tag>
                         </Space>
                       </div>
-                      {run.job.last_error_message ? (
+                      {run.job.status !== 'succeeded' &&
+                      run.job.last_error_message ? (
                         <Typography.Text type="danger">
                           {run.job.last_error_message}
                         </Typography.Text>
@@ -467,6 +469,49 @@ export function SourcesPage() {
                       ) : run.job.status === 'succeeded' ? (
                         <Typography.Text type="warning">
                           证据索引尚未完整提交
+                        </Typography.Text>
+                      ) : null}
+                      {run.candidate ? (
+                        <div className="flex flex-col gap-0.5">
+                          <Typography.Text strong>
+                            已生成 CCEF 候选
+                          </Typography.Text>
+                          <Typography.Text>
+                            内容项 {run.candidate.item_count} · 棋步{' '}
+                            {run.candidate.move_node_count} · 未解决{' '}
+                            {run.candidate.unresolved_item_count} · 警告{' '}
+                            {run.candidate.warning_count} · 错误{' '}
+                            {run.candidate.error_count} · 非法棋步{' '}
+                            {run.candidate.invalid_move_count} · 歧义棋步{' '}
+                            {run.candidate.ambiguous_move_count}
+                          </Typography.Text>
+                          <div className="flex flex-wrap gap-x-4">
+                            <Typography.Text type="secondary">
+                              原始 CCEF{' '}
+                              {run.candidate.raw_ccef_sha256.slice(0, 12)}…
+                            </Typography.Text>
+                            <Typography.Text type="secondary">
+                              规范 CCEF{' '}
+                              {run.candidate.normalized_ccef_sha256.slice(
+                                0,
+                                12,
+                              )}
+                              …
+                            </Typography.Text>
+                          </div>
+                          <Link
+                            to={`/sources/pdf-extractions/${encodeURIComponent(
+                              run.id,
+                            )}/review`}
+                            className="text-sm text-blue-600 hover:underline"
+                          >
+                            打开审核页面
+                          </Link>
+                        </div>
+                      ) : run.pipeline_version === 'pdf-extraction:v2' &&
+                        run.job.status === 'succeeded' ? (
+                        <Typography.Text type="warning">
+                          候选索引尚未完整提交
                         </Typography.Text>
                       ) : null}
                     </div>

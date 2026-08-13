@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Any, cast
 from uuid import UUID
 
@@ -12,7 +13,13 @@ from pydantic import JsonValue, ValidationError
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
-from chess_workbench.config import Settings
+from chess_workbench.config import SecretFileError, Settings, load_deepseek_api_key
+from chess_workbench.extraction.candidates import (
+    CcefCandidateError,
+    assemble_ccef_candidate_artifacts,
+)
+from chess_workbench.extraction.decoder import CcefDecodeError
+from chess_workbench.extraction.deepseek import DeepSeekV4FlashProvider
 from chess_workbench.extraction.evidence import (
     EvidenceOrigin,
     NormalizedBox,
@@ -28,7 +35,22 @@ from chess_workbench.extraction.evidence import (
 )
 from chess_workbench.extraction.paddleocr import PaddleOcrJsonAdapter
 from chess_workbench.extraction.pdfium import PdfiumPageRenderer
+from chess_workbench.extraction.prompting import (
+    CcefPromptContext,
+    CcefPromptError,
+    PromptEvidenceFragment,
+    PromptEvidencePage,
+    build_ccef_generation_request,
+)
+from chess_workbench.extraction.provider import (
+    StructuredGenerationProvider,
+    StructuredGenerationProviderError,
+)
 from chess_workbench.services.content import ServiceError
+from chess_workbench.services.pdf_persistence import (
+    PDF_EVIDENCE_PIPELINE_VERSION,
+    PDF_EXTRACTION_PIPELINE_VERSION,
+)
 from chess_workbench.services.source_storage import (
     StoredSourceBlob,
     read_verified_content_addressed_bytes,
@@ -45,8 +67,14 @@ from chess_workbench.store.models import (
 )
 
 PDF_EVIDENCE_ARTIFACT_SCHEMA = "chess-workbench/pdf-evidence/1.0"
-_ARTIFACT_KINDS = frozenset({"rendered_page", "ocr_fragment", "render_manifest", "ocr_manifest"})
+PDF_EXTRACTION_RESULT_SCHEMA = "chess-workbench/pdf-extraction-result/2.0"
+_EVIDENCE_ARTIFACT_KINDS = frozenset(
+    {"rendered_page", "ocr_fragment", "render_manifest", "ocr_manifest"}
+)
+_CCEF_ARTIFACT_KINDS = frozenset({"provider_response", "raw_ccef", "normalized_ccef"})
+_SUPPORTED_PIPELINES = frozenset({PDF_EVIDENCE_PIPELINE_VERSION, PDF_EXTRACTION_PIPELINE_VERSION})
 _MAX_RUN_FRAGMENTS = 200_000
+_MAX_EVIDENCE_ARTIFACT_BYTES = 64 * 1024 * 1024
 
 
 @dataclass(frozen=True, slots=True)
@@ -54,12 +82,14 @@ class _ExtractionInput:
     run_id: UUID
     job_id: UUID
     pdf_asset_id: UUID
+    source_file_id: UUID
     first_page: int
     last_page: int
     pdf_sha256: str
     pdf_size: int
     relative_path: str
     profile: dict[str, JsonValue]
+    created_at: datetime
 
 
 @dataclass(frozen=True, slots=True)
@@ -72,6 +102,12 @@ class _ArtifactCandidate:
     @property
     def slot(self) -> tuple[str, int | None]:
         return self.kind, self.page_number
+
+
+@dataclass(frozen=True, slots=True)
+class _CommittedEvidence:
+    context: CcefPromptContext
+    result: dict[str, Any]
 
 
 def _json_bytes(document: dict[str, object]) -> bytes:
@@ -171,6 +207,7 @@ async def _load_input(database: Database, payload: dict[str, Any]) -> _Extractio
         or run.first_page != first_page
         or run.last_page != last_page
         or run.pipeline_version != pipeline_version
+        or pipeline_version not in _SUPPORTED_PIPELINES
         or job.kind != "pdf_extraction"
         or job.payload != payload
         or source_file.sha256 != asset.content_sha256
@@ -181,12 +218,14 @@ async def _load_input(database: Database, payload: dict[str, Any]) -> _Extractio
         run_id=run.id,
         job_id=job.id,
         pdf_asset_id=asset.id,
+        source_file_id=source_file.id,
         first_page=run.first_page,
         last_page=run.last_page,
         pdf_sha256=asset.content_sha256,
         pdf_size=asset.byte_size,
         relative_path=source_file.relative_path,
         profile=profile,
+        created_at=run.created_at,
     )
 
 
@@ -323,10 +362,22 @@ async def _register_artifacts(
     database: Database,
     source: _ExtractionInput,
     candidates: list[_ArtifactCandidate],
+    *,
+    artifact_kinds: frozenset[str],
 ) -> None:
+    if any(candidate.kind not in artifact_kinds for candidate in candidates):
+        raise EngineError(
+            "artifact_conflict",
+            "Extraction artifact kind is not allowed in this registration",
+            retryable=False,
+        )
     expected = {candidate.slot: candidate for candidate in candidates}
     if len(expected) != len(candidates):
-        raise EngineError("artifact_conflict", "Extraction artifact slots are not unique")
+        raise EngineError(
+            "artifact_conflict",
+            "Extraction artifact slots are not unique",
+            retryable=False,
+        )
     try:
         async with database.session() as session, session.begin():
             locked_run = await session.scalar(
@@ -338,7 +389,7 @@ async def _register_artifacts(
                 await session.scalars(
                     select(ExtractionArtifact).where(
                         ExtractionArtifact.run_id == source.run_id,
-                        ExtractionArtifact.kind.in_(_ARTIFACT_KINDS),
+                        ExtractionArtifact.kind.in_(artifact_kinds),
                     )
                 )
             )
@@ -350,6 +401,7 @@ async def _register_artifacts(
                     raise EngineError(
                         "artifact_conflict",
                         "Extraction artifact conflicts with an existing immutable artifact",
+                        retryable=False,
                     )
                 seen.add(slot)
                 if (
@@ -361,6 +413,7 @@ async def _register_artifacts(
                     raise EngineError(
                         "artifact_conflict",
                         "Extraction artifact conflicts with an existing immutable artifact",
+                        retryable=False,
                     )
             for slot, candidate in expected.items():
                 if slot in seen:
@@ -381,7 +434,355 @@ async def _register_artifacts(
         raise EngineError(
             "artifact_conflict",
             "Extraction artifact conflicts with an existing immutable artifact",
+            retryable=False,
         ) from None
+
+
+def _invalid_evidence() -> EngineError:
+    return EngineError(
+        "ccef_invalid_evidence",
+        "Committed PDF evidence is invalid",
+        retryable=False,
+    )
+
+
+def _parse_artifact_document(raw_bytes: bytes) -> dict[str, Any]:
+    try:
+        document = json.loads(raw_bytes)
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        raise _invalid_evidence() from None
+    if not isinstance(document, dict):
+        raise _invalid_evidence()
+    return cast(dict[str, Any], document)
+
+
+async def _read_artifact_bytes(
+    settings: Settings,
+    artifact: ExtractionArtifact,
+) -> bytes:
+    storage_error: ServiceError | None = None
+    raw_bytes: bytes | None = None
+    try:
+        raw_bytes = await asyncio.to_thread(
+            read_verified_content_addressed_bytes,
+            settings.source_storage_root,
+            relative_path=artifact.relative_path,
+            expected_sha256=artifact.content_sha256,
+            expected_size=artifact.byte_size,
+            max_bytes=_MAX_EVIDENCE_ARTIFACT_BYTES,
+        )
+    except ServiceError as error:
+        storage_error = error
+    if storage_error is not None or raw_bytes is None:
+        raise EngineError(
+            "source_storage_unavailable",
+            "source storage is unavailable",
+            retryable=True,
+        ) from None
+    return raw_bytes
+
+
+def _artifact_slots(
+    artifacts: list[ExtractionArtifact],
+) -> dict[tuple[str, int | None], ExtractionArtifact]:
+    slots: dict[tuple[str, int | None], ExtractionArtifact] = {}
+    for artifact in artifacts:
+        slot = (artifact.kind, artifact.page_number)
+        if slot in slots:
+            raise _invalid_evidence()
+        slots[slot] = artifact
+    return slots
+
+
+def _manifest_common_matches(document: dict[str, Any], source: _ExtractionInput) -> bool:
+    return (
+        document.get("artifact_schema") == PDF_EVIDENCE_ARTIFACT_SCHEMA
+        and document.get("run_id") == str(source.run_id)
+        and document.get("pdf_asset_id") == str(source.pdf_asset_id)
+        and document.get("pdf_content_sha256") == source.pdf_sha256
+        and document.get("first_page") == source.first_page
+        and document.get("last_page") == source.last_page
+    )
+
+
+def _manifest_page_map(
+    document: dict[str, Any],
+    *,
+    expected_pages: list[int],
+) -> dict[int, dict[str, Any]]:
+    pages = document.get("pages")
+    if not isinstance(pages, list):
+        raise _invalid_evidence()
+    mapped: dict[int, dict[str, Any]] = {}
+    for page in pages:
+        if not isinstance(page, dict) or type(page.get("physical_page")) is not int:
+            raise _invalid_evidence()
+        physical_page = page["physical_page"]
+        if physical_page in mapped:
+            raise _invalid_evidence()
+        mapped[physical_page] = cast(dict[str, Any], page)
+    if list(mapped) != expected_pages:
+        raise _invalid_evidence()
+    return mapped
+
+
+def _evidence_fragment(
+    value: object,
+    *,
+    physical_page: int,
+    expected_order: int,
+) -> PromptEvidenceFragment:
+    if not isinstance(value, dict) or set(value) != {
+        "order",
+        "physical_page",
+        "bbox",
+        "text",
+        "origin",
+        "confidence",
+        "engine_name",
+        "engine_version",
+        "fragment_sha256",
+    }:
+        raise _invalid_evidence()
+    if value.get("order") != expected_order or value.get("physical_page") != physical_page:
+        raise _invalid_evidence()
+    bbox = value.get("bbox")
+    if not isinstance(bbox, list) or len(bbox) != 4:
+        raise _invalid_evidence()
+    try:
+        box = NormalizedBox(x0=bbox[0], y0=bbox[1], x1=bbox[2], y1=bbox[3])
+        fragment = SourceEvidenceFragment(
+            physical_page=physical_page,
+            box=box,
+            text=value["text"],
+            origin=value["origin"],
+            confidence=value["confidence"],
+            engine_name=value["engine_name"],
+            engine_version=value["engine_version"],
+            fragment_sha256=value["fragment_sha256"],
+        )
+    except (ValidationError, KeyError, TypeError):
+        raise _invalid_evidence() from None
+    expected_hash = source_fragment_sha256(
+        physical_page,
+        fragment.box,
+        fragment.text,
+        fragment.origin,
+        fragment.engine_name,
+        fragment.engine_version,
+    )
+    if fragment.fragment_sha256 != expected_hash:
+        raise _invalid_evidence()
+    return PromptEvidenceFragment(order=expected_order, fragment=fragment)
+
+
+async def _load_committed_evidence(
+    database: Database,
+    settings: Settings,
+    source: _ExtractionInput,
+) -> _CommittedEvidence | None:
+    async with database.session() as session:
+        artifacts = list(
+            await session.scalars(
+                select(ExtractionArtifact).where(
+                    ExtractionArtifact.run_id == source.run_id,
+                    ExtractionArtifact.kind.in_(_EVIDENCE_ARTIFACT_KINDS),
+                )
+            )
+        )
+    if not artifacts:
+        return None
+    slots = _artifact_slots(artifacts)
+    expected_pages = list(range(source.first_page, source.last_page + 1))
+    expected_slots = {
+        *(("rendered_page", page) for page in expected_pages),
+        *(("ocr_fragment", page) for page in expected_pages),
+        ("render_manifest", None),
+        ("ocr_manifest", None),
+    }
+    if set(slots) != expected_slots:
+        raise _invalid_evidence()
+
+    render_manifest = _parse_artifact_document(
+        await _read_artifact_bytes(settings, slots[("render_manifest", None)])
+    )
+    ocr_manifest = _parse_artifact_document(
+        await _read_artifact_bytes(settings, slots[("ocr_manifest", None)])
+    )
+    if not _manifest_common_matches(render_manifest, source) or not _manifest_common_matches(
+        ocr_manifest, source
+    ):
+        raise _invalid_evidence()
+    render_pages = _manifest_page_map(render_manifest, expected_pages=expected_pages)
+    ocr_pages = _manifest_page_map(ocr_manifest, expected_pages=expected_pages)
+
+    prompt_pages: list[PromptEvidencePage] = []
+    total_fragments = 0
+    for physical_page in expected_pages:
+        rendered_artifact = slots[("rendered_page", physical_page)]
+        evidence_artifact = slots[("ocr_fragment", physical_page)]
+        render_entry = render_pages[physical_page]
+        evidence_entry = ocr_pages[physical_page]
+        if (
+            render_entry.get("content_sha256") != rendered_artifact.content_sha256
+            or render_entry.get("byte_size") != rendered_artifact.byte_size
+            or render_entry.get("media_type") != rendered_artifact.media_type
+            or evidence_entry.get("content_sha256") != evidence_artifact.content_sha256
+            or evidence_entry.get("byte_size") != evidence_artifact.byte_size
+            or evidence_entry.get("media_type") != evidence_artifact.media_type
+        ):
+            raise _invalid_evidence()
+        document = _parse_artifact_document(await _read_artifact_bytes(settings, evidence_artifact))
+        fragments = document.get("fragments")
+        if (
+            set(document)
+            != {
+                "artifact_schema",
+                "run_id",
+                "pdf_asset_id",
+                "physical_page",
+                "width",
+                "height",
+                "origin",
+                "engine_name",
+                "engine_version",
+                "fragments",
+            }
+            or document.get("artifact_schema") != PDF_EVIDENCE_ARTIFACT_SCHEMA
+            or document.get("run_id") != str(source.run_id)
+            or document.get("pdf_asset_id") != str(source.pdf_asset_id)
+            or document.get("physical_page") != physical_page
+            or not isinstance(fragments, list)
+            or evidence_entry.get("fragment_count") != len(fragments)
+        ):
+            raise _invalid_evidence()
+        entries = [
+            _evidence_fragment(value, physical_page=physical_page, expected_order=order)
+            for order, value in enumerate(fragments)
+        ]
+        total_fragments += len(entries)
+        prompt_pages.append(PromptEvidencePage(physical_page=physical_page, fragments=entries))
+    if ocr_manifest.get("fragment_count") != total_fragments:
+        raise _invalid_evidence()
+    language = ocr_manifest.get("ocr_language")
+    if type(language) is not str:
+        raise _invalid_evidence()
+    warnings = ocr_manifest.get("warnings")
+    if not isinstance(warnings, list):
+        raise _invalid_evidence()
+    try:
+        context = CcefPromptContext(
+            package_id=source.run_id,
+            created_at=source.created_at,
+            source_ref=f"source-file:{source.source_file_id}",
+            media_type="application/pdf",
+            language=language or None,
+            first_page=source.first_page,
+            last_page=source.last_page,
+            pages=prompt_pages,
+            max_output_tokens=settings.ccef_max_output_tokens,
+            max_prompt_chars=settings.ccef_max_prompt_chars,
+        )
+    except ValidationError:
+        raise _invalid_evidence() from None
+    return _CommittedEvidence(
+        context=context,
+        result={
+            "run_id": str(source.run_id),
+            "render_manifest_sha256": slots[("render_manifest", None)].content_sha256,
+            "ocr_manifest_sha256": slots[("ocr_manifest", None)].content_sha256,
+            "page_count": len(expected_pages),
+            "fragment_count": total_fragments,
+            "warning_count": len(warnings),
+        },
+    )
+
+
+def _active_provider(
+    settings: Settings,
+    provider: StructuredGenerationProvider | None,
+) -> StructuredGenerationProvider:
+    if provider is not None:
+        return provider
+    try:
+        api_key = load_deepseek_api_key(settings)
+    except SecretFileError:
+        raise EngineError(
+            "provider_secret_invalid",
+            "AI extraction provider secret file is unavailable or insecure",
+            retryable=False,
+        ) from None
+    if api_key is None:
+        raise EngineError(
+            "provider_unconfigured",
+            "AI extraction provider is not configured",
+            retryable=False,
+        )
+    return DeepSeekV4FlashProvider(
+        api_key=api_key.get_secret_value(),
+        timeout_seconds=settings.ccef_provider_timeout_seconds,
+        max_output_tokens_limit=settings.ccef_max_output_tokens,
+    )
+
+
+async def _process_ccef_candidate(
+    database: Database,
+    settings: Settings,
+    source: _ExtractionInput,
+    committed: _CommittedEvidence,
+    *,
+    provider: StructuredGenerationProvider | None,
+) -> dict[str, Any]:
+    try:
+        request = build_ccef_generation_request(committed.context)
+    except CcefPromptError as error:
+        raise EngineError(f"ccef_{error.code}", str(error), retryable=False) from None
+    active_provider = _active_provider(settings, provider)
+    try:
+        response = await active_provider.generate(request)
+    except StructuredGenerationProviderError as error:
+        raise EngineError(error.code, str(error), retryable=error.retryable) from None
+    try:
+        artifacts = assemble_ccef_candidate_artifacts(committed.context, request, response)
+    except CcefDecodeError as error:
+        raise EngineError(
+            f"ccef_{error.code}",
+            str(error),
+            retryable=error.code in {"invalid_json", "invalid_package"},
+        ) from None
+    except CcefCandidateError as error:
+        raise EngineError(f"ccef_{error.code}", str(error), retryable=False) from None
+
+    provider_blob = await _store_blob(
+        settings, suffix=".json", raw_bytes=artifacts.provider_response_bytes
+    )
+    raw_blob = await _store_blob(settings, suffix=".json", raw_bytes=artifacts.raw_ccef_bytes)
+    normalized_blob = await _store_blob(
+        settings, suffix=".json", raw_bytes=artifacts.normalized_ccef_bytes
+    )
+    await _register_artifacts(
+        database,
+        source,
+        [
+            _ArtifactCandidate("provider_response", None, provider_blob, "application/json"),
+            _ArtifactCandidate("raw_ccef", None, raw_blob, "application/json"),
+            _ArtifactCandidate("normalized_ccef", None, normalized_blob, "application/json"),
+        ],
+        artifact_kinds=_CCEF_ARTIFACT_KINDS,
+    )
+    return {
+        "result_schema": PDF_EXTRACTION_RESULT_SCHEMA,
+        "run_id": str(source.run_id),
+        "evidence": {key: value for key, value in committed.result.items() if key != "run_id"},
+        "candidate": {
+            "provider_response_sha256": provider_blob.sha256,
+            "request_sha256": artifacts.request_sha256,
+            "response_sha256": artifacts.response_sha256,
+            "raw_ccef_sha256": artifacts.raw_ccef_sha256,
+            "normalized_ccef_sha256": artifacts.normalized_ccef_sha256,
+            "summary": artifacts.summary.model_dump(mode="json"),
+        },
+    }
 
 
 async def process_pdf_extraction_job(
@@ -391,9 +792,22 @@ async def process_pdf_extraction_job(
     *,
     renderer: PdfPageRenderer | None = None,
     ocr_adapter: OcrAdapter | None = None,
+    provider: StructuredGenerationProvider | None = None,
 ) -> dict[str, Any]:
     """Render one immutable run, write CAS blobs, then atomically register indexes."""
     source = await _load_input(database, payload)
+    active_provider: StructuredGenerationProvider | None = provider
+    if payload["pipeline_version"] == PDF_EXTRACTION_PIPELINE_VERSION:
+        active_provider = _active_provider(settings, provider)
+        committed = await _load_committed_evidence(database, settings, source)
+        if committed is not None:
+            return await _process_ccef_candidate(
+                database,
+                settings,
+                source,
+                committed,
+                provider=active_provider,
+            )
     render_profile = _render_profile(source.profile)
     language, ocr_profile = _ocr_settings(source.profile)
     active_renderer = renderer or PdfiumPageRenderer()
@@ -463,7 +877,11 @@ async def process_pdf_extraction_job(
         except PdfEvidenceError as error:
             evidence_error = error
         if evidence_error is not None:
-            raise EngineError(evidence_error.code, evidence_error.message) from None
+            raise EngineError(
+                evidence_error.code,
+                evidence_error.message,
+                retryable=evidence_error.retryable,
+            ) from None
 
         fragments = _source_fragments(
             raw_fragments,
@@ -477,7 +895,9 @@ async def process_pdf_extraction_job(
         fragment_count += len(fragments)
         if fragment_count > _MAX_RUN_FRAGMENTS:
             raise EngineError(
-                "evidence_limit_exceeded", "PDF extraction produced too many text fragments"
+                "evidence_limit_exceeded",
+                "PDF extraction produced too many text fragments",
+                retryable=False,
             )
         if not fragments:
             warnings.append({"code": "empty_page", "physical_page": physical_page})
@@ -575,15 +995,28 @@ async def process_pdf_extraction_job(
             _ArtifactCandidate("ocr_manifest", None, ocr_manifest, "application/json"),
         ]
     )
-    await _register_artifacts(database, source, candidates)
-    return {
-        "run_id": str(source.run_id),
-        "render_manifest_sha256": render_manifest.sha256,
-        "ocr_manifest_sha256": ocr_manifest.sha256,
-        "page_count": source.last_page - source.first_page + 1,
-        "fragment_count": fragment_count,
-        "warning_count": len(warnings),
-    }
+    await _register_artifacts(
+        database,
+        source,
+        candidates,
+        artifact_kinds=_EVIDENCE_ARTIFACT_KINDS,
+    )
+    committed = await _load_committed_evidence(database, settings, source)
+    if committed is None:
+        raise RuntimeError("registered evidence artifacts are missing")
+    if payload["pipeline_version"] == PDF_EVIDENCE_PIPELINE_VERSION:
+        return committed.result
+    return await _process_ccef_candidate(
+        database,
+        settings,
+        source,
+        committed,
+        provider=active_provider,
+    )
 
 
-__all__ = ["PDF_EVIDENCE_ARTIFACT_SCHEMA", "process_pdf_extraction_job"]
+__all__ = [
+    "PDF_EVIDENCE_ARTIFACT_SCHEMA",
+    "PDF_EXTRACTION_RESULT_SCHEMA",
+    "process_pdf_extraction_job",
+]

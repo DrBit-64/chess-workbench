@@ -9,7 +9,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ValidationError
 from sanic import Blueprint, Request
-from sanic.response import HTTPResponse, json
+from sanic.response import HTTPResponse, json, raw
 from sanic_ext import openapi
 
 from chess_workbench.api.contracts import openapi_schema, parse_body
@@ -20,19 +20,25 @@ from chess_workbench.schemas.pdf import (
     PdfAssetList,
     PdfAssetRead,
     PdfAssetUploadMetadata,
+    PdfCandidateSummary,
     PdfEvidenceSummary,
     PdfExtractionCreate,
     PdfExtractionEnvelope,
     PdfExtractionList,
     PdfExtractionRead,
 )
+from chess_workbench.schemas.review import PdfReviewDocumentRead
 from chess_workbench.services.jobs import job_read
 from chess_workbench.services.pdf import prepare_pdf_asset
+from chess_workbench.services.pdf_extraction import PDF_EXTRACTION_RESULT_SCHEMA
 from chess_workbench.services.pdf_persistence import (
+    PDF_EVIDENCE_PIPELINE_VERSION,
+    PDF_EXTRACTION_PIPELINE_VERSION,
     PdfAssetView,
     PdfExtractionView,
     PdfPersistenceService,
 )
+from chess_workbench.services.pdf_review import PdfReviewReadService
 from chess_workbench.store.database import Database
 
 pdf_blueprint = Blueprint("pdf", url_prefix="/api")
@@ -205,8 +211,64 @@ async def list_pdf_extractions(request: Request) -> HTTPResponse:
             status=status,
             has_conflicts=has_conflicts,
         )
-    payload = PdfExtractionList(items=[_extraction_read(view) for view in views])
+    items = [_extraction_read(view) for view in views]
+    if has_conflicts is not None:
+        items = [item for item in items if item.has_conflicts is has_conflicts]
+    payload = PdfExtractionList(items=items)
     return json(payload.model_dump(mode="json"))
+
+
+@pdf_blueprint.get("/pdf-extractions/<run_id:uuid>/review", name="get_pdf_extraction_review")
+@openapi.operation("getPdfExtractionReview")
+@openapi.summary("Read one verified PDF extraction review document")
+@openapi.tag("pdf")
+@openapi.response(200, _media(PdfReviewDocumentRead), "PDF extraction review document")
+@openapi.response(404, ERROR_SCHEMA, "PDF extraction review not found")
+@openapi.response(409, ERROR_SCHEMA, "PDF extraction review is not available")
+@openapi.response(503, ERROR_SCHEMA, "Source storage unavailable")
+async def get_pdf_extraction_review(request: Request, run_id: UUID) -> HTTPResponse:
+    database = cast(Database, request.app.ctx.database)
+    async with database.session() as session:
+        document = await PdfReviewReadService(session, request.app.ctx.settings).read_document(
+            run_id
+        )
+    return json(document.model_dump(mode="json"))
+
+
+@pdf_blueprint.get(
+    "/pdf-extractions/<run_id:uuid>/review/pages/<physical_page:int>",
+    name="get_pdf_extraction_review_page",
+)
+@openapi.operation("getPdfExtractionReviewPage")
+@openapi.summary("Read one verified rendered PDF review page")
+@openapi.tag("pdf")
+@openapi.response(
+    200,
+    {"image/png": {"type": "string", "format": "binary"}},
+    "Verified rendered PDF review page",
+)
+@openapi.response(404, ERROR_SCHEMA, "PDF extraction review not found")
+@openapi.response(409, ERROR_SCHEMA, "PDF extraction review is not available")
+@openapi.response(503, ERROR_SCHEMA, "Source storage unavailable")
+async def get_pdf_extraction_review_page(
+    request: Request, run_id: UUID, physical_page: int
+) -> HTTPResponse:
+    database = cast(Database, request.app.ctx.database)
+    async with database.session() as session:
+        content = await PdfReviewReadService(session, request.app.ctx.settings).read_page(
+            run_id, physical_page
+        )
+    return raw(
+        content.body,
+        status=200,
+        content_type=content.media_type,
+        headers={
+            "Content-Length": str(content.byte_size),
+            "ETag": f'"{content.content_sha256}"',
+            "Cache-Control": "private, max-age=31536000, immutable",
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
 
 
 def _multipart_upload(
@@ -305,6 +367,8 @@ def _asset_read(view: PdfAssetView) -> PdfAssetRead:
 
 
 def _extraction_read(view: PdfExtractionView) -> PdfExtractionRead:
+    evidence = _evidence_summary(view)
+    candidate = _candidate_summary(view) if evidence is not None else None
     return PdfExtractionRead(
         id=view.run.id,
         pdf_asset_id=view.run.pdf_asset_id,
@@ -313,8 +377,9 @@ def _extraction_read(view: PdfExtractionView) -> PdfExtractionRead:
         pipeline_version=view.run.pipeline_version,
         profile=view.profile,
         job=job_read(view.job),
-        evidence=_evidence_summary(view),
-        has_conflicts=False,
+        evidence=evidence,
+        candidate=candidate,
+        has_conflicts=candidate.has_conflicts if candidate is not None else False,
         created_at=view.run.created_at,
     )
 
@@ -322,7 +387,7 @@ def _extraction_read(view: PdfExtractionView) -> PdfExtractionRead:
 def _evidence_summary(view: PdfExtractionView) -> PdfEvidenceSummary | None:
     if view.job.status != "succeeded":
         return None
-    result = view.job.result
+    result = _evidence_result(view)
     expected_result_fields = {
         "run_id",
         "render_manifest_sha256",
@@ -331,7 +396,7 @@ def _evidence_summary(view: PdfExtractionView) -> PdfEvidenceSummary | None:
         "fragment_count",
         "warning_count",
     }
-    if not isinstance(result, dict) or set(result) != expected_result_fields:
+    if result is None or set(result) != expected_result_fields:
         return None
     if result.get("run_id") != str(view.run.id):
         return None
@@ -379,6 +444,97 @@ def _evidence_summary(view: PdfExtractionView) -> PdfEvidenceSummary | None:
                 "warning_count": result["warning_count"],
                 "render_manifest_sha256": result["render_manifest_sha256"],
                 "ocr_manifest_sha256": result["ocr_manifest_sha256"],
+            }
+        )
+    except ValidationError:
+        return None
+
+
+def _evidence_result(view: PdfExtractionView) -> dict[str, Any] | None:
+    result = view.job.result
+    if not isinstance(result, dict):
+        return None
+    if view.run.pipeline_version == PDF_EVIDENCE_PIPELINE_VERSION:
+        if "result_schema" in result:
+            return None
+        return result
+    if (
+        view.run.pipeline_version != PDF_EXTRACTION_PIPELINE_VERSION
+        or result.get("result_schema") != PDF_EXTRACTION_RESULT_SCHEMA
+    ):
+        return None
+    if set(result) != {"result_schema", "run_id", "evidence", "candidate"}:
+        return None
+    evidence = result.get("evidence")
+    if not isinstance(evidence, dict):
+        return None
+    return {"run_id": result.get("run_id"), **cast(dict[str, Any], evidence)}
+
+
+def _candidate_summary(view: PdfExtractionView) -> PdfCandidateSummary | None:
+    if view.job.status != "succeeded":
+        return None
+    result = view.job.result
+    if (
+        not isinstance(result, dict)
+        or result.get("result_schema") != PDF_EXTRACTION_RESULT_SCHEMA
+        or set(result) != {"result_schema", "run_id", "evidence", "candidate"}
+        or result.get("run_id") != str(view.run.id)
+    ):
+        return None
+    candidate = result.get("candidate")
+    if not isinstance(candidate, dict) or set(candidate) != {
+        "provider_response_sha256",
+        "request_sha256",
+        "response_sha256",
+        "raw_ccef_sha256",
+        "normalized_ccef_sha256",
+        "summary",
+    }:
+        return None
+    summary = candidate.get("summary")
+    if not isinstance(summary, dict) or set(summary) != {
+        "item_count",
+        "move_node_count",
+        "figure_count",
+        "unresolved_item_count",
+        "warning_count",
+        "error_count",
+        "invalid_move_count",
+        "ambiguous_move_count",
+        "has_conflicts",
+    }:
+        return None
+    artifacts = [
+        artifact
+        for artifact in view.artifacts
+        if artifact.kind in {"provider_response", "raw_ccef", "normalized_ccef"}
+    ]
+    slots = {(artifact.kind, artifact.page_number): artifact for artifact in artifacts}
+    if len(artifacts) != 3 or set(slots) != {
+        ("provider_response", None),
+        ("raw_ccef", None),
+        ("normalized_ccef", None),
+    }:
+        return None
+    if (
+        slots[("provider_response", None)].content_sha256
+        != candidate.get("provider_response_sha256")
+        or slots[("raw_ccef", None)].content_sha256 != candidate.get("raw_ccef_sha256")
+        or slots[("normalized_ccef", None)].content_sha256
+        != candidate.get("normalized_ccef_sha256")
+    ):
+        return None
+    try:
+        return PdfCandidateSummary.model_validate(
+            {
+                "status": "committed",
+                "provider_response_sha256": candidate["provider_response_sha256"],
+                "request_sha256": candidate["request_sha256"],
+                "response_sha256": candidate["response_sha256"],
+                "raw_ccef_sha256": candidate["raw_ccef_sha256"],
+                "normalized_ccef_sha256": candidate["normalized_ccef_sha256"],
+                **cast(dict[str, Any], summary),
             }
         )
     except ValidationError:

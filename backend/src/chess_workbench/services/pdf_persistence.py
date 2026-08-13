@@ -30,7 +30,12 @@ from chess_workbench.store.models import (
 )
 
 PDF_EXTRACTION_JOB_KIND = "pdf_extraction"
-PDF_EXTRACTION_PIPELINE_VERSION = "pdf-extraction:v1"
+PDF_EVIDENCE_PIPELINE_VERSION = "pdf-extraction:v1"
+PDF_EXTRACTION_PIPELINE_VERSION = "pdf-extraction:v2"
+PDF_EXTRACTION_FINGERPRINT_VERSION = "pdfium-text-lines+ccef-formal-consolidation:v5"
+_SUPPORTED_PIPELINE_VERSIONS = frozenset(
+    {PDF_EVIDENCE_PIPELINE_VERSION, PDF_EXTRACTION_PIPELINE_VERSION}
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -215,6 +220,7 @@ class PdfPersistenceService:
         last_page: int,
         idempotency_key: str | None,
         profile: dict[str, JsonValue] | None = None,
+        pipeline_version: str = PDF_EXTRACTION_PIPELINE_VERSION,
     ) -> PdfExtractionEnqueue:
         """Atomically create or replay one immutable run and its durable Job."""
 
@@ -224,6 +230,8 @@ class PdfPersistenceService:
             raise TypeError("first_page must be int")
         if isinstance(last_page, bool) or not isinstance(last_page, int):
             raise TypeError("last_page must be int")
+        if pipeline_version not in _SUPPORTED_PIPELINE_VERSIONS:
+            raise ValueError("unsupported PDF extraction pipeline version")
         canonical_profile, profile_json = _validated_profile(profile)
         effective_key_from_header = _effective_idempotency_key(idempotency_key)
 
@@ -252,6 +260,7 @@ class PdfPersistenceService:
             first_page=first_page,
             last_page=last_page,
             profile_json=profile_json,
+            pipeline_version=pipeline_version,
         )
         effective_key_hash = effective_key_from_header or logical_fingerprint
         existing = await self._run_by_effective_key(effective_key_hash)
@@ -268,7 +277,7 @@ class PdfPersistenceService:
             "pdf_asset_id": str(asset.id),
             "first_page": first_page,
             "last_page": last_page,
-            "pipeline_version": PDF_EXTRACTION_PIPELINE_VERSION,
+            "pipeline_version": pipeline_version,
             "profile": canonical_profile,
         }
         try:
@@ -297,7 +306,7 @@ class PdfPersistenceService:
             job_id=job.id,
             first_page=first_page,
             last_page=last_page,
-            pipeline_version=PDF_EXTRACTION_PIPELINE_VERSION,
+            pipeline_version=pipeline_version,
             logical_fingerprint=logical_fingerprint,
             effective_key_hash=effective_key_hash,
         )
@@ -333,8 +342,9 @@ class PdfPersistenceService:
         status: str | None = None,
         has_conflicts: bool | None = None,
     ) -> list[PdfExtractionView]:
-        if has_conflicts is True:
-            return []
+        # Candidate conflict state is verified from the completed Job result plus
+        # immutable artifact slots at the HTTP read boundary, not stored twice.
+        del has_conflicts
         statement = select(ExtractionRun, Job).join(Job, Job.id == ExtractionRun.job_id)
         if status is not None:
             statement = statement.where(Job.status == status)
@@ -451,12 +461,14 @@ def _logical_fingerprint(
     first_page: int,
     last_page: int,
     profile_json: str,
+    pipeline_version: str = PDF_EXTRACTION_PIPELINE_VERSION,
 ) -> str:
     identity = {
         "asset_content_sha256": asset_content_sha256,
+        "extraction_fingerprint_version": PDF_EXTRACTION_FINGERPRINT_VERSION,
         "first_page": first_page,
         "last_page": last_page,
-        "pipeline_version": PDF_EXTRACTION_PIPELINE_VERSION,
+        "pipeline_version": pipeline_version,
         "profile": json.loads(profile_json),
     }
     canonical = json.dumps(

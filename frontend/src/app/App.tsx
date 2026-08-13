@@ -1,6 +1,6 @@
 import { Layout, Menu, Spin, Typography } from 'antd';
 import { lazy, Suspense } from 'react';
-import { Link, Route, Routes, useLocation } from 'react-router-dom';
+import { Link, Route, Routes, useLocation, useParams } from 'react-router-dom';
 
 import { Dashboard } from './Dashboard';
 import { NotFound } from './NotFound';
@@ -19,6 +19,11 @@ const SourcesPage = lazy(() =>
 const AnalysisPage = lazy(() =>
   import('./AnalysisPage').then((module) => ({ default: module.AnalysisPage })),
 );
+const PdfReviewPage = lazy(() =>
+  import('./PdfReviewPage').then((module) => ({
+    default: module.PdfReviewPage,
+  })),
+);
 
 const navigation = [
   { key: '/', label: <Link to="/">首页</Link> },
@@ -29,6 +34,27 @@ const navigation = [
   { key: '/practice', label: '练习', disabled: true },
   { key: '/games', label: '我的对局', disabled: true },
 ];
+
+function PdfReviewPageAdapter() {
+  const { runId } = useParams<{ runId: string }>();
+  if (runId === undefined) {
+    return <NotFound />;
+  }
+  return (
+    <div className="mx-auto max-w-7xl px-4 py-6">
+      <header className="mb-4 flex flex-wrap items-baseline gap-4">
+        <h1 className="text-2xl font-semibold text-stone-900">AI 棋书审核</h1>
+        <Link
+          to="/sources"
+          className="text-sm text-stone-600 hover:text-stone-900"
+        >
+          ← 返回资料
+        </Link>
+      </header>
+      <PdfReviewPage runId={runId} />
+    </div>
+  );
+}
 
 export function App() {
   const location = useLocation();
@@ -66,6 +92,10 @@ export function App() {
             <Route path="/learn" element={<CourseCatalog />} />
             <Route path="/learn/:courseId" element={<CourseEditor />} />
             <Route path="/sources" element={<SourcesPage />} />
+            <Route
+              path="/sources/pdf-extractions/:runId/review"
+              element={<PdfReviewPageAdapter />}
+            />
             <Route path="/analysis" element={<AnalysisPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>

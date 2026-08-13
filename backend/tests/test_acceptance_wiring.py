@@ -141,6 +141,16 @@ STAGE_8B_SUITES = (
     "backend/tests/test_pdf_api.py",
 )
 
+STAGE_8C_SUITES = (
+    "backend/tests/test_config.py",
+    "backend/tests/test_extraction_prompting.py",
+    "backend/tests/test_extraction_candidates.py",
+    "backend/tests/test_extraction_deepseek.py",
+    "backend/tests/test_stage8c_execution.py",
+    "backend/tests/test_pdf_schemas.py",
+    "backend/tests/test_pdf_api.py",
+)
+
 
 def _pytest_lines(recipe: str) -> list[str]:
     return [
@@ -162,6 +172,10 @@ def test_stage_8_make_target_prerequisites_are_frozen() -> None:
         "bootstrap-backend",
         "bootstrap-frontend",
     )
+    assert _target_prerequisites(makefile, "acceptance-stage-8c") == (
+        "bootstrap-backend",
+        "bootstrap-frontend",
+    )
 
 
 def test_stage_8_targets_are_declared_phony() -> None:
@@ -172,6 +186,7 @@ def test_stage_8_targets_are_declared_phony() -> None:
     assert "acceptance-stage-8p" in phony_block.group(0)
     assert "acceptance-stage-8a" in phony_block.group(0)
     assert "acceptance-stage-8b" in phony_block.group(0)
+    assert "acceptance-stage-8c" in phony_block.group(0)
 
 
 def test_stage_8p_recipe_runs_exactly_the_portable_boundary_suites() -> None:
@@ -251,6 +266,40 @@ def test_stage_8b_recipe_is_focused_and_uses_exact_stage_8b_suites() -> None:
         "ruff check",
         "mypy --config-file",
         "@test -s docs/decisions/0013-stage-8b-rendering-ocr-and-source-evidence.md",
+        "$(MAKE) check-contracts",
+        "prettier --check src/app/SourcesPage.tsx src/app/WorkbenchPages.test.tsx",
+        "eslint src/app/SourcesPage.tsx src/app/WorkbenchPages.test.tsx",
+        "tsc --noEmit",
+        "vitest run src/app/WorkbenchPages.test.tsx --coverage=false",
+    ):
+        assert required in recipe
+
+
+def test_stage_8c_recipe_is_focused_and_uses_exact_stage_8c_suites() -> None:
+    makefile = MAKEFILE.read_text(encoding="utf-8")
+    recipe = _target_recipe(makefile, "acceptance-stage-8c")
+
+    pytest_lines = _pytest_lines(recipe)
+    assert len(pytest_lines) == 1
+    pytest_line = pytest_lines[0]
+    assert "-o addopts=''" in pytest_line
+    assert "--cov" not in pytest_line
+    assert len(re.findall(r"backend/tests/[\w.]+\.py", pytest_line)) == len(STAGE_8C_SUITES)
+    assert [pytest_line.index(suite) for suite in STAGE_8C_SUITES] == sorted(
+        pytest_line.index(suite) for suite in STAGE_8C_SUITES
+    )
+    assert "acceptance-stage-8b" not in recipe
+    assert "acceptance-stage-8a" not in recipe
+    assert "acceptance-stage-8p" not in recipe
+    assert "$(MAKE) verify" not in recipe
+    assert "$(MAKE) smoke" not in recipe
+    for required in (
+        "test_extraction_deepseek.py",
+        "test_stage8c_execution.py",
+        "ruff format --check",
+        "ruff check",
+        "mypy --config-file",
+        "@test -s docs/decisions/0014-stage-8c-provider-execution-and-ccef-candidates.md",
         "$(MAKE) check-contracts",
         "prettier --check src/app/SourcesPage.tsx src/app/WorkbenchPages.test.tsx",
         "eslint src/app/SourcesPage.tsx src/app/WorkbenchPages.test.tsx",

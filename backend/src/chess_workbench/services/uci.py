@@ -15,8 +15,11 @@ from chess_workbench.schemas.engine import AnalysisLine, EngineParameters
 
 
 class EngineError(RuntimeError):
-    def __init__(self, code: str, message: str) -> None:
+    def __init__(self, code: str, message: str, *, retryable: bool = True) -> None:
+        if not isinstance(retryable, bool):
+            raise TypeError("retryable must be bool")
         self.code = code
+        self.retryable = retryable
         super().__init__(message)
 
 

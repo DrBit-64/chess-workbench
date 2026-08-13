@@ -53,7 +53,9 @@ FEN。未来视觉模型通过新的 capability/adapter 加入，不改变 CCEF 
 
 ### 4. Prompt 是版本化、确定性且抗来源指令注入的
 
-prompt version 固定为 `chess-workbench/ccef-prompt/1.0`。纯 `extraction` 模块接收调用者给出的
+prompt version 当前为 `chess-workbench/ccef-prompt/1.3`（1.1 明确连续棋步的 parent 链和同父
+sibling_order；1.2 禁止跨页拆线和从着法猜测 FEN；1.3 在证据没有明确六字段 FEN 时从本次响应
+Schema 中移除 FEN initial position）。纯 `extraction` 模块接收调用者给出的
 package/source/provenance 固定值和有序 evidence pages，输出一个
 `StructuredGenerationRequest`：
 
@@ -94,13 +96,17 @@ CCEF 和 canonical normalized CCEF 分开保存，三者互不覆盖。
 
 ### 7. Provider 配置、失败与重试
 
-API key 只能来自 server-owned secret setting，不能出现在 Job profile、SQL、artifact、日志、错误或
-`repr`。未配置 key 时核心应用和 8B/v1 数据仍可用；新的 v2 AI Job 以明确非重试
+API key 只能来自 server-owned、仓库外部的 secret file，配置中只保留文件路径；内联环境变量和
+`.env` 明文 key 被拒绝。POSIX 上 secret file 必须是普通文件且不能向 group/other 开放权限。key
+不能出现在 Job profile、SQL、artifact、日志、错误或 `repr`。未配置 key 时核心应用和 8B/v1 数据
+仍可用；新的 v2 AI Job 以明确非重试
 `provider_unconfigured` 失败。
 
-provider 的 authentication/invalid_request/invalid_response、decoder/binding/输入超限错误为
-非重试；rate_limited/timeout/unavailable 为重试。Job failure API 在 8C 增加显式 retryable 决策，
-不能让确定性失败白白消耗三次额度。每次真正调用都保留独立内部尝试计数，但只有最终接受的响应
+provider 的 authentication/invalid_request/invalid_response、binding/输入超限错误为非重试；
+rate_limited/timeout/unavailable 为重试。真实 V4 Flash 验证表明同一请求可能偶发产生非法 JSON 或
+不符合 CCEF 的 JSON，因此 decoder 的 `invalid_json`/`invalid_package` 也使用 Job 既有的最多三次
+有界重试；其他 decoder 安全错误仍立即终止。Job failure API 在 8C 增加显式 retryable 决策，避免
+让确定性失败白白消耗额度。每次真正调用都保留独立内部尝试计数，但只有最终接受的响应
 成为 run artifact；PR 测试只用 scripted provider 和 recorded HTTP fixture，绝不请求真实 API。
 
 取消和 worker shutdown 沿用既有语义：长 provider await 期间 heartbeat；用户取消会取消 HTTP
@@ -135,10 +141,25 @@ warning 不阻止 Stage 8C 保存候选，但任何候选都不能直接写 Cour
   provider 调用前失败；
 - scripted provider 合法/截断/非法 JSON/非法 CCEF/伪造 valid/来源不匹配分别得到稳定结果；
 - 本地 normalization 对合法、非法、歧义和断裂变化保留可审核状态；
-- retryable provider 失败可重试，authentication/config/schema/decoder 错误立即终止且不重复计费；
+- retryable provider 失败及偶发 invalid JSON/package 可有界重试；authentication/config/binding
+  错误立即终止且不重复计费；
 - 相同 accepted response 重放得到相同三工件 hash，冲突不覆盖，取消/失败零 CCEF artifact rows；
 - API 只从完整 committed artifacts 返回摘要，UI 不伪造进度或候选；
 - 测试不读取用户书籍、不调用网络、不消耗 DeepSeek 额度。
+
+## 真实联调观察（2026-08-13）
+
+物理页 319–323 的真实运行证明“一页一个请求”不是当前实现，也不是后续目标：五页证据已作为一个
+连续请求发送，因此模型能够看到跨页标题、正文和棋谱。修复 PDFium 字符级碎片后，输入从 4,914
+个碎片/约 688,804 tokens 降到 110 个行级碎片/22,379 tokens；prompt 1.3 和有界格式重试使该任务
+在第二次尝试成功，并提交完整候选工件。
+
+同时，单次严格生成仍输出 93,400 tokens、16 条大量重复前缀的路线和 362 个棋步节点，本地棋规
+校验发现 36 个错误连接的分支。由此可见，更长上下文有利于语义连续性，但把 81 页整章直接扩成
+一个更大的生成请求会放大延迟、费用、截断和整包重试风险。下一版不应机械逐页，也不应无限扩大
+单包；应先识别章节/小节/完整棋谱边界，以约 5–15 页的语义块独立抽取和校验，再执行章节级合并、
+去重和跨块锚点绑定。该方案会取代本 ADR 第 2 节的初版 whole-range 决定，实施前必须另立 ADR，
+冻结块 ID、重叠上下文、失败恢复、合并冲突和证据归属规则。
 
 ## 参考
 

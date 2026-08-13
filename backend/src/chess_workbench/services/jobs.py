@@ -253,6 +253,8 @@ class JobService:
                 status=JobStatus.SUCCEEDED.value,
                 result=result,
                 finished_at=now,
+                last_error_code=None,
+                last_error_message=None,
                 **_clear_lease(),
             )
         )
@@ -269,6 +271,7 @@ class JobService:
         code: str,
         message: str,
         retry_delay_seconds: int = 1,
+        retryable: bool = True,
     ) -> bool:
         row = await self.session.scalar(
             select(Job).where(
@@ -282,7 +285,11 @@ class JobService:
         if row.cancel_requested_at is not None:
             return await self.finish_cancelled(job_id, worker_id=worker_id)
         now = utc_now()
-        decision = failure_decision(attempt_count=row.attempt_count, max_attempts=row.max_attempts)
+        decision = failure_decision(
+            attempt_count=row.attempt_count,
+            max_attempts=row.max_attempts,
+            retryable=retryable,
+        )
         row.status = decision.status.value
         row.last_error_code = code
         row.last_error_message = message[:4000]

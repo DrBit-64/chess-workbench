@@ -12475,6 +12475,109 @@
                       "items": {
                         "additionalProperties": false,
                         "properties": {
+                          "candidate": {
+                            "additionalProperties": false,
+                            "default": null,
+                            "description": "Verified public summary of one fully committed Stage 8C candidate set.",
+                            "nullable": true,
+                            "properties": {
+                              "ambiguous_move_count": {
+                                "minimum": 0,
+                                "title": "Ambiguous Move Count",
+                                "type": "integer"
+                              },
+                              "error_count": {
+                                "minimum": 0,
+                                "title": "Error Count",
+                                "type": "integer"
+                              },
+                              "figure_count": {
+                                "minimum": 0,
+                                "title": "Figure Count",
+                                "type": "integer"
+                              },
+                              "has_conflicts": {
+                                "title": "Has Conflicts",
+                                "type": "boolean"
+                              },
+                              "invalid_move_count": {
+                                "minimum": 0,
+                                "title": "Invalid Move Count",
+                                "type": "integer"
+                              },
+                              "item_count": {
+                                "minimum": 0,
+                                "title": "Item Count",
+                                "type": "integer"
+                              },
+                              "move_node_count": {
+                                "minimum": 0,
+                                "title": "Move Node Count",
+                                "type": "integer"
+                              },
+                              "normalized_ccef_sha256": {
+                                "pattern": "^[0-9a-f]{64}$",
+                                "title": "Normalized Ccef Sha256",
+                                "type": "string"
+                              },
+                              "provider_response_sha256": {
+                                "pattern": "^[0-9a-f]{64}$",
+                                "title": "Provider Response Sha256",
+                                "type": "string"
+                              },
+                              "raw_ccef_sha256": {
+                                "pattern": "^[0-9a-f]{64}$",
+                                "title": "Raw Ccef Sha256",
+                                "type": "string"
+                              },
+                              "request_sha256": {
+                                "pattern": "^[0-9a-f]{64}$",
+                                "title": "Request Sha256",
+                                "type": "string"
+                              },
+                              "response_sha256": {
+                                "pattern": "^[0-9a-f]{64}$",
+                                "title": "Response Sha256",
+                                "type": "string"
+                              },
+                              "status": {
+                                "default": "committed",
+                                "enum": [
+                                  "committed"
+                                ],
+                                "title": "Status",
+                                "type": "string"
+                              },
+                              "unresolved_item_count": {
+                                "minimum": 0,
+                                "title": "Unresolved Item Count",
+                                "type": "integer"
+                              },
+                              "warning_count": {
+                                "minimum": 0,
+                                "title": "Warning Count",
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "provider_response_sha256",
+                              "request_sha256",
+                              "response_sha256",
+                              "raw_ccef_sha256",
+                              "normalized_ccef_sha256",
+                              "item_count",
+                              "move_node_count",
+                              "figure_count",
+                              "unresolved_item_count",
+                              "warning_count",
+                              "error_count",
+                              "invalid_move_count",
+                              "ambiguous_move_count",
+                              "has_conflicts"
+                            ],
+                            "title": "PdfCandidateSummary",
+                            "type": "object"
+                          },
                           "created_at": {
                             "format": "date-time",
                             "title": "Created At",
@@ -12807,6 +12910,109 @@
                     "extraction": {
                       "additionalProperties": false,
                       "properties": {
+                        "candidate": {
+                          "additionalProperties": false,
+                          "default": null,
+                          "description": "Verified public summary of one fully committed Stage 8C candidate set.",
+                          "nullable": true,
+                          "properties": {
+                            "ambiguous_move_count": {
+                              "minimum": 0,
+                              "title": "Ambiguous Move Count",
+                              "type": "integer"
+                            },
+                            "error_count": {
+                              "minimum": 0,
+                              "title": "Error Count",
+                              "type": "integer"
+                            },
+                            "figure_count": {
+                              "minimum": 0,
+                              "title": "Figure Count",
+                              "type": "integer"
+                            },
+                            "has_conflicts": {
+                              "title": "Has Conflicts",
+                              "type": "boolean"
+                            },
+                            "invalid_move_count": {
+                              "minimum": 0,
+                              "title": "Invalid Move Count",
+                              "type": "integer"
+                            },
+                            "item_count": {
+                              "minimum": 0,
+                              "title": "Item Count",
+                              "type": "integer"
+                            },
+                            "move_node_count": {
+                              "minimum": 0,
+                              "title": "Move Node Count",
+                              "type": "integer"
+                            },
+                            "normalized_ccef_sha256": {
+                              "pattern": "^[0-9a-f]{64}$",
+                              "title": "Normalized Ccef Sha256",
+                              "type": "string"
+                            },
+                            "provider_response_sha256": {
+                              "pattern": "^[0-9a-f]{64}$",
+                              "title": "Provider Response Sha256",
+                              "type": "string"
+                            },
+                            "raw_ccef_sha256": {
+                              "pattern": "^[0-9a-f]{64}$",
+                              "title": "Raw Ccef Sha256",
+                              "type": "string"
+                            },
+                            "request_sha256": {
+                              "pattern": "^[0-9a-f]{64}$",
+                              "title": "Request Sha256",
+                              "type": "string"
+                            },
+                            "response_sha256": {
+                              "pattern": "^[0-9a-f]{64}$",
+                              "title": "Response Sha256",
+                              "type": "string"
+                            },
+                            "status": {
+                              "default": "committed",
+                              "enum": [
+                                "committed"
+                              ],
+                              "title": "Status",
+                              "type": "string"
+                            },
+                            "unresolved_item_count": {
+                              "minimum": 0,
+                              "title": "Unresolved Item Count",
+                              "type": "integer"
+                            },
+                            "warning_count": {
+                              "minimum": 0,
+                              "title": "Warning Count",
+                              "type": "integer"
+                            }
+                          },
+                          "required": [
+                            "provider_response_sha256",
+                            "request_sha256",
+                            "response_sha256",
+                            "raw_ccef_sha256",
+                            "normalized_ccef_sha256",
+                            "item_count",
+                            "move_node_count",
+                            "figure_count",
+                            "unresolved_item_count",
+                            "warning_count",
+                            "error_count",
+                            "invalid_move_count",
+                            "ambiguous_move_count",
+                            "has_conflicts"
+                          ],
+                          "title": "PdfCandidateSummary",
+                          "type": "object"
+                        },
                         "created_at": {
                           "format": "date-time",
                           "title": "Created At",
@@ -13026,6 +13232,109 @@
                     "extraction": {
                       "additionalProperties": false,
                       "properties": {
+                        "candidate": {
+                          "additionalProperties": false,
+                          "default": null,
+                          "description": "Verified public summary of one fully committed Stage 8C candidate set.",
+                          "nullable": true,
+                          "properties": {
+                            "ambiguous_move_count": {
+                              "minimum": 0,
+                              "title": "Ambiguous Move Count",
+                              "type": "integer"
+                            },
+                            "error_count": {
+                              "minimum": 0,
+                              "title": "Error Count",
+                              "type": "integer"
+                            },
+                            "figure_count": {
+                              "minimum": 0,
+                              "title": "Figure Count",
+                              "type": "integer"
+                            },
+                            "has_conflicts": {
+                              "title": "Has Conflicts",
+                              "type": "boolean"
+                            },
+                            "invalid_move_count": {
+                              "minimum": 0,
+                              "title": "Invalid Move Count",
+                              "type": "integer"
+                            },
+                            "item_count": {
+                              "minimum": 0,
+                              "title": "Item Count",
+                              "type": "integer"
+                            },
+                            "move_node_count": {
+                              "minimum": 0,
+                              "title": "Move Node Count",
+                              "type": "integer"
+                            },
+                            "normalized_ccef_sha256": {
+                              "pattern": "^[0-9a-f]{64}$",
+                              "title": "Normalized Ccef Sha256",
+                              "type": "string"
+                            },
+                            "provider_response_sha256": {
+                              "pattern": "^[0-9a-f]{64}$",
+                              "title": "Provider Response Sha256",
+                              "type": "string"
+                            },
+                            "raw_ccef_sha256": {
+                              "pattern": "^[0-9a-f]{64}$",
+                              "title": "Raw Ccef Sha256",
+                              "type": "string"
+                            },
+                            "request_sha256": {
+                              "pattern": "^[0-9a-f]{64}$",
+                              "title": "Request Sha256",
+                              "type": "string"
+                            },
+                            "response_sha256": {
+                              "pattern": "^[0-9a-f]{64}$",
+                              "title": "Response Sha256",
+                              "type": "string"
+                            },
+                            "status": {
+                              "default": "committed",
+                              "enum": [
+                                "committed"
+                              ],
+                              "title": "Status",
+                              "type": "string"
+                            },
+                            "unresolved_item_count": {
+                              "minimum": 0,
+                              "title": "Unresolved Item Count",
+                              "type": "integer"
+                            },
+                            "warning_count": {
+                              "minimum": 0,
+                              "title": "Warning Count",
+                              "type": "integer"
+                            }
+                          },
+                          "required": [
+                            "provider_response_sha256",
+                            "request_sha256",
+                            "response_sha256",
+                            "raw_ccef_sha256",
+                            "normalized_ccef_sha256",
+                            "item_count",
+                            "move_node_count",
+                            "figure_count",
+                            "unresolved_item_count",
+                            "warning_count",
+                            "error_count",
+                            "invalid_move_count",
+                            "ambiguous_move_count",
+                            "has_conflicts"
+                          ],
+                          "title": "PdfCandidateSummary",
+                          "type": "object"
+                        },
                         "created_at": {
                           "format": "date-time",
                           "title": "Created At",
@@ -13435,6 +13744,109 @@
                 "schema": {
                   "additionalProperties": false,
                   "properties": {
+                    "candidate": {
+                      "additionalProperties": false,
+                      "default": null,
+                      "description": "Verified public summary of one fully committed Stage 8C candidate set.",
+                      "nullable": true,
+                      "properties": {
+                        "ambiguous_move_count": {
+                          "minimum": 0,
+                          "title": "Ambiguous Move Count",
+                          "type": "integer"
+                        },
+                        "error_count": {
+                          "minimum": 0,
+                          "title": "Error Count",
+                          "type": "integer"
+                        },
+                        "figure_count": {
+                          "minimum": 0,
+                          "title": "Figure Count",
+                          "type": "integer"
+                        },
+                        "has_conflicts": {
+                          "title": "Has Conflicts",
+                          "type": "boolean"
+                        },
+                        "invalid_move_count": {
+                          "minimum": 0,
+                          "title": "Invalid Move Count",
+                          "type": "integer"
+                        },
+                        "item_count": {
+                          "minimum": 0,
+                          "title": "Item Count",
+                          "type": "integer"
+                        },
+                        "move_node_count": {
+                          "minimum": 0,
+                          "title": "Move Node Count",
+                          "type": "integer"
+                        },
+                        "normalized_ccef_sha256": {
+                          "pattern": "^[0-9a-f]{64}$",
+                          "title": "Normalized Ccef Sha256",
+                          "type": "string"
+                        },
+                        "provider_response_sha256": {
+                          "pattern": "^[0-9a-f]{64}$",
+                          "title": "Provider Response Sha256",
+                          "type": "string"
+                        },
+                        "raw_ccef_sha256": {
+                          "pattern": "^[0-9a-f]{64}$",
+                          "title": "Raw Ccef Sha256",
+                          "type": "string"
+                        },
+                        "request_sha256": {
+                          "pattern": "^[0-9a-f]{64}$",
+                          "title": "Request Sha256",
+                          "type": "string"
+                        },
+                        "response_sha256": {
+                          "pattern": "^[0-9a-f]{64}$",
+                          "title": "Response Sha256",
+                          "type": "string"
+                        },
+                        "status": {
+                          "default": "committed",
+                          "enum": [
+                            "committed"
+                          ],
+                          "title": "Status",
+                          "type": "string"
+                        },
+                        "unresolved_item_count": {
+                          "minimum": 0,
+                          "title": "Unresolved Item Count",
+                          "type": "integer"
+                        },
+                        "warning_count": {
+                          "minimum": 0,
+                          "title": "Warning Count",
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "provider_response_sha256",
+                        "request_sha256",
+                        "response_sha256",
+                        "raw_ccef_sha256",
+                        "normalized_ccef_sha256",
+                        "item_count",
+                        "move_node_count",
+                        "figure_count",
+                        "unresolved_item_count",
+                        "warning_count",
+                        "error_count",
+                        "invalid_move_count",
+                        "ambiguous_move_count",
+                        "has_conflicts"
+                      ],
+                      "title": "PdfCandidateSummary",
+                      "type": "object"
+                    },
                     "created_at": {
                       "format": "date-time",
                       "title": "Created At",
@@ -13692,6 +14104,2223 @@
           }
         },
         "summary": "Read one immutable extraction request and its Job state",
+        "tags": [
+          "pdf"
+        ]
+      }
+    },
+    "/api/pdf-extractions/{run_id}/review": {
+      "get": {
+        "operationId": "getPdfExtractionReview",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "inspection": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "blocking_issue_count": {
+                          "minimum": 0,
+                          "title": "Blocking Issue Count",
+                          "type": "integer"
+                        },
+                        "inspection_version": {
+                          "default": "ccef-review-inspection/1.0",
+                          "enum": [
+                            "ccef-review-inspection/1.0"
+                          ],
+                          "title": "Inspection Version",
+                          "type": "string"
+                        },
+                        "issue_count": {
+                          "minimum": 0,
+                          "title": "Issue Count",
+                          "type": "integer"
+                        },
+                        "issues": {
+                          "default": [],
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "blocking": {
+                                "title": "Blocking",
+                                "type": "boolean"
+                              },
+                              "code": {
+                                "pattern": "^[a-z][a-z0-9_]{0,63}$",
+                                "title": "Code",
+                                "type": "string"
+                              },
+                              "evidence": {
+                                "default": [],
+                                "items": {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "bbox": {
+                                      "default": null,
+                                      "items": {
+                                        "type": "number"
+                                      },
+                                      "maxItems": 4,
+                                      "minItems": 4,
+                                      "nullable": true,
+                                      "title": "Bbox",
+                                      "type": "array"
+                                    },
+                                    "end_offset": {
+                                      "default": null,
+                                      "exclusiveMinimum": 0,
+                                      "nullable": true,
+                                      "title": "End Offset",
+                                      "type": "integer"
+                                    },
+                                    "fragment_sha256": {
+                                      "default": null,
+                                      "nullable": true,
+                                      "pattern": "^[0-9a-f]{64}$",
+                                      "title": "Fragment Sha256",
+                                      "type": "string"
+                                    },
+                                    "page": {
+                                      "minimum": 1,
+                                      "title": "Page",
+                                      "type": "integer"
+                                    },
+                                    "start_offset": {
+                                      "default": null,
+                                      "minimum": 0,
+                                      "nullable": true,
+                                      "title": "Start Offset",
+                                      "type": "integer"
+                                    }
+                                  },
+                                  "required": [
+                                    "page"
+                                  ],
+                                  "title": "EvidenceRef",
+                                  "type": "object"
+                                },
+                                "title": "Evidence",
+                                "type": "array"
+                              },
+                              "issue_id": {
+                                "pattern": "^[A-Za-z][A-Za-z0-9._:-]{0,511}$",
+                                "title": "Issue Id",
+                                "type": "string"
+                              },
+                              "item_id": {
+                                "nullable": true,
+                                "pattern": "^[A-Za-z][A-Za-z0-9._:-]{0,127}$",
+                                "title": "Item Id",
+                                "type": "string"
+                              },
+                              "message": {
+                                "maxLength": 4000,
+                                "minLength": 1,
+                                "title": "Message",
+                                "type": "string"
+                              },
+                              "node_id": {
+                                "nullable": true,
+                                "pattern": "^[A-Za-z][A-Za-z0-9._:-]{0,127}$",
+                                "title": "Node Id",
+                                "type": "string"
+                              },
+                              "scope": {
+                                "enum": [
+                                  "item",
+                                  "node",
+                                  "diagnostic"
+                                ],
+                                "title": "Scope",
+                                "type": "string"
+                              },
+                              "severity": {
+                                "enum": [
+                                  "warning",
+                                  "error"
+                                ],
+                                "title": "Severity",
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "issue_id",
+                              "scope",
+                              "severity",
+                              "blocking",
+                              "item_id",
+                              "node_id",
+                              "code",
+                              "message"
+                            ],
+                            "title": "ReviewIssue",
+                            "type": "object"
+                          },
+                          "title": "Issues",
+                          "type": "array"
+                        },
+                        "item_count": {
+                          "minimum": 0,
+                          "title": "Item Count",
+                          "type": "integer"
+                        },
+                        "move_node_count": {
+                          "minimum": 0,
+                          "title": "Move Node Count",
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "item_count",
+                        "move_node_count",
+                        "issue_count",
+                        "blocking_issue_count"
+                      ],
+                      "title": "ReviewInspection",
+                      "type": "object"
+                    },
+                    "normalized_ccef_sha256": {
+                      "pattern": "^[0-9a-f]{64}$",
+                      "title": "Normalized Ccef Sha256",
+                      "type": "string"
+                    },
+                    "package": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "diagnostics": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "code": {
+                                "pattern": "^[a-z][a-z0-9_]{0,63}$",
+                                "title": "Code",
+                                "type": "string"
+                              },
+                              "evidence": {
+                                "items": {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "bbox": {
+                                      "default": null,
+                                      "items": {
+                                        "type": "number"
+                                      },
+                                      "maxItems": 4,
+                                      "minItems": 4,
+                                      "nullable": true,
+                                      "title": "Bbox",
+                                      "type": "array"
+                                    },
+                                    "end_offset": {
+                                      "default": null,
+                                      "exclusiveMinimum": 0,
+                                      "nullable": true,
+                                      "title": "End Offset",
+                                      "type": "integer"
+                                    },
+                                    "fragment_sha256": {
+                                      "default": null,
+                                      "nullable": true,
+                                      "pattern": "^[0-9a-f]{64}$",
+                                      "title": "Fragment Sha256",
+                                      "type": "string"
+                                    },
+                                    "page": {
+                                      "minimum": 1,
+                                      "title": "Page",
+                                      "type": "integer"
+                                    },
+                                    "start_offset": {
+                                      "default": null,
+                                      "minimum": 0,
+                                      "nullable": true,
+                                      "title": "Start Offset",
+                                      "type": "integer"
+                                    }
+                                  },
+                                  "required": [
+                                    "page"
+                                  ],
+                                  "title": "EvidenceRef",
+                                  "type": "object"
+                                },
+                                "title": "Evidence",
+                                "type": "array"
+                              },
+                              "item_id": {
+                                "default": null,
+                                "nullable": true,
+                                "pattern": "^[A-Za-z][A-Za-z0-9._:-]{0,127}$",
+                                "title": "Item Id",
+                                "type": "string"
+                              },
+                              "message": {
+                                "maxLength": 4000,
+                                "minLength": 1,
+                                "title": "Message",
+                                "type": "string"
+                              },
+                              "node_id": {
+                                "default": null,
+                                "nullable": true,
+                                "pattern": "^[A-Za-z][A-Za-z0-9._:-]{0,127}$",
+                                "title": "Node Id",
+                                "type": "string"
+                              },
+                              "severity": {
+                                "enum": [
+                                  "info",
+                                  "warning",
+                                  "error"
+                                ],
+                                "title": "Severity",
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "severity",
+                              "code",
+                              "message"
+                            ],
+                            "title": "Diagnostic",
+                            "type": "object"
+                          },
+                          "title": "Diagnostics",
+                          "type": "array"
+                        },
+                        "extensions": {
+                          "patternProperties": {
+                            "^[a-z][a-z0-9-]*(?:\\.[a-z][a-z0-9-]*)+$": {}
+                          },
+                          "title": "Extensions",
+                          "type": "object"
+                        },
+                        "items": {
+                          "items": {
+                            "discriminator": {
+                              "propertyName": "kind"
+                            },
+                            "oneOf": [
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "confidence": {
+                                    "default": null,
+                                    "maximum": 1.0,
+                                    "minimum": 0.0,
+                                    "nullable": true,
+                                    "title": "Confidence",
+                                    "type": "number"
+                                  },
+                                  "evidence": {
+                                    "items": {
+                                      "additionalProperties": false,
+                                      "properties": {
+                                        "bbox": {
+                                          "default": null,
+                                          "items": {
+                                            "type": "number"
+                                          },
+                                          "maxItems": 4,
+                                          "minItems": 4,
+                                          "nullable": true,
+                                          "title": "Bbox",
+                                          "type": "array"
+                                        },
+                                        "end_offset": {
+                                          "default": null,
+                                          "exclusiveMinimum": 0,
+                                          "nullable": true,
+                                          "title": "End Offset",
+                                          "type": "integer"
+                                        },
+                                        "fragment_sha256": {
+                                          "default": null,
+                                          "nullable": true,
+                                          "pattern": "^[0-9a-f]{64}$",
+                                          "title": "Fragment Sha256",
+                                          "type": "string"
+                                        },
+                                        "page": {
+                                          "minimum": 1,
+                                          "title": "Page",
+                                          "type": "integer"
+                                        },
+                                        "start_offset": {
+                                          "default": null,
+                                          "minimum": 0,
+                                          "nullable": true,
+                                          "title": "Start Offset",
+                                          "type": "integer"
+                                        }
+                                      },
+                                      "required": [
+                                        "page"
+                                      ],
+                                      "title": "EvidenceRef",
+                                      "type": "object"
+                                    },
+                                    "minItems": 1,
+                                    "title": "Evidence",
+                                    "type": "array"
+                                  },
+                                  "extensions": {
+                                    "patternProperties": {
+                                      "^[a-z][a-z0-9-]*(?:\\.[a-z][a-z0-9-]*)+$": {}
+                                    },
+                                    "title": "Extensions",
+                                    "type": "object"
+                                  },
+                                  "id": {
+                                    "pattern": "^[A-Za-z][A-Za-z0-9._:-]{0,127}$",
+                                    "title": "Id",
+                                    "type": "string"
+                                  },
+                                  "kind": {
+                                    "enum": [
+                                      "heading"
+                                    ],
+                                    "title": "Kind",
+                                    "type": "string"
+                                  },
+                                  "level": {
+                                    "maximum": 6,
+                                    "minimum": 1,
+                                    "title": "Level",
+                                    "type": "integer"
+                                  },
+                                  "text": {
+                                    "maxLength": 2000,
+                                    "minLength": 1,
+                                    "title": "Text",
+                                    "type": "string"
+                                  },
+                                  "warnings": {
+                                    "items": {
+                                      "additionalProperties": false,
+                                      "properties": {
+                                        "code": {
+                                          "pattern": "^[a-z][a-z0-9_]{0,63}$",
+                                          "title": "Code",
+                                          "type": "string"
+                                        },
+                                        "evidence": {
+                                          "items": {
+                                            "additionalProperties": false,
+                                            "properties": {
+                                              "bbox": {
+                                                "default": null,
+                                                "items": {
+                                                  "type": "number"
+                                                },
+                                                "maxItems": 4,
+                                                "minItems": 4,
+                                                "nullable": true,
+                                                "title": "Bbox",
+                                                "type": "array"
+                                              },
+                                              "end_offset": {
+                                                "default": null,
+                                                "exclusiveMinimum": 0,
+                                                "nullable": true,
+                                                "title": "End Offset",
+                                                "type": "integer"
+                                              },
+                                              "fragment_sha256": {
+                                                "default": null,
+                                                "nullable": true,
+                                                "pattern": "^[0-9a-f]{64}$",
+                                                "title": "Fragment Sha256",
+                                                "type": "string"
+                                              },
+                                              "page": {
+                                                "minimum": 1,
+                                                "title": "Page",
+                                                "type": "integer"
+                                              },
+                                              "start_offset": {
+                                                "default": null,
+                                                "minimum": 0,
+                                                "nullable": true,
+                                                "title": "Start Offset",
+                                                "type": "integer"
+                                              }
+                                            },
+                                            "required": [
+                                              "page"
+                                            ],
+                                            "title": "EvidenceRef",
+                                            "type": "object"
+                                          },
+                                          "title": "Evidence",
+                                          "type": "array"
+                                        },
+                                        "message": {
+                                          "maxLength": 2000,
+                                          "minLength": 1,
+                                          "title": "Message",
+                                          "type": "string"
+                                        }
+                                      },
+                                      "required": [
+                                        "code",
+                                        "message"
+                                      ],
+                                      "title": "ExtractionWarning",
+                                      "type": "object"
+                                    },
+                                    "title": "Warnings",
+                                    "type": "array"
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "evidence",
+                                  "kind",
+                                  "level",
+                                  "text"
+                                ],
+                                "title": "HeadingItem",
+                                "type": "object"
+                              },
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "anchor": {
+                                    "default": null,
+                                    "discriminator": {
+                                      "propertyName": "kind"
+                                    },
+                                    "nullable": true,
+                                    "oneOf": [
+                                      {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "kind": {
+                                            "enum": [
+                                              "move_node"
+                                            ],
+                                            "title": "Kind",
+                                            "type": "string"
+                                          },
+                                          "node_id": {
+                                            "pattern": "^[A-Za-z][A-Za-z0-9._:-]{0,127}$",
+                                            "title": "Node Id",
+                                            "type": "string"
+                                          },
+                                          "sequence_id": {
+                                            "pattern": "^[A-Za-z][A-Za-z0-9._:-]{0,127}$",
+                                            "title": "Sequence Id",
+                                            "type": "string"
+                                          }
+                                        },
+                                        "required": [
+                                          "kind",
+                                          "sequence_id",
+                                          "node_id"
+                                        ],
+                                        "title": "MoveNodeAnchor",
+                                        "type": "object"
+                                      },
+                                      {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "fen": {
+                                            "maxLength": 200,
+                                            "minLength": 1,
+                                            "title": "Fen",
+                                            "type": "string"
+                                          },
+                                          "kind": {
+                                            "enum": [
+                                              "position"
+                                            ],
+                                            "title": "Kind",
+                                            "type": "string"
+                                          }
+                                        },
+                                        "required": [
+                                          "kind",
+                                          "fen"
+                                        ],
+                                        "title": "PositionAnchor",
+                                        "type": "object"
+                                      }
+                                    ],
+                                    "title": "Anchor"
+                                  },
+                                  "confidence": {
+                                    "default": null,
+                                    "maximum": 1.0,
+                                    "minimum": 0.0,
+                                    "nullable": true,
+                                    "title": "Confidence",
+                                    "type": "number"
+                                  },
+                                  "evidence": {
+                                    "items": {
+                                      "additionalProperties": false,
+                                      "properties": {
+                                        "bbox": {
+                                          "default": null,
+                                          "items": {
+                                            "type": "number"
+                                          },
+                                          "maxItems": 4,
+                                          "minItems": 4,
+                                          "nullable": true,
+                                          "title": "Bbox",
+                                          "type": "array"
+                                        },
+                                        "end_offset": {
+                                          "default": null,
+                                          "exclusiveMinimum": 0,
+                                          "nullable": true,
+                                          "title": "End Offset",
+                                          "type": "integer"
+                                        },
+                                        "fragment_sha256": {
+                                          "default": null,
+                                          "nullable": true,
+                                          "pattern": "^[0-9a-f]{64}$",
+                                          "title": "Fragment Sha256",
+                                          "type": "string"
+                                        },
+                                        "page": {
+                                          "minimum": 1,
+                                          "title": "Page",
+                                          "type": "integer"
+                                        },
+                                        "start_offset": {
+                                          "default": null,
+                                          "minimum": 0,
+                                          "nullable": true,
+                                          "title": "Start Offset",
+                                          "type": "integer"
+                                        }
+                                      },
+                                      "required": [
+                                        "page"
+                                      ],
+                                      "title": "EvidenceRef",
+                                      "type": "object"
+                                    },
+                                    "minItems": 1,
+                                    "title": "Evidence",
+                                    "type": "array"
+                                  },
+                                  "extensions": {
+                                    "patternProperties": {
+                                      "^[a-z][a-z0-9-]*(?:\\.[a-z][a-z0-9-]*)+$": {}
+                                    },
+                                    "title": "Extensions",
+                                    "type": "object"
+                                  },
+                                  "id": {
+                                    "pattern": "^[A-Za-z][A-Za-z0-9._:-]{0,127}$",
+                                    "title": "Id",
+                                    "type": "string"
+                                  },
+                                  "kind": {
+                                    "enum": [
+                                      "prose"
+                                    ],
+                                    "title": "Kind",
+                                    "type": "string"
+                                  },
+                                  "text": {
+                                    "maxLength": 200000,
+                                    "minLength": 1,
+                                    "title": "Text",
+                                    "type": "string"
+                                  },
+                                  "text_format": {
+                                    "default": "plain",
+                                    "enum": [
+                                      "plain",
+                                      "markdown"
+                                    ],
+                                    "title": "Text Format",
+                                    "type": "string"
+                                  },
+                                  "warnings": {
+                                    "items": {
+                                      "additionalProperties": false,
+                                      "properties": {
+                                        "code": {
+                                          "pattern": "^[a-z][a-z0-9_]{0,63}$",
+                                          "title": "Code",
+                                          "type": "string"
+                                        },
+                                        "evidence": {
+                                          "items": {
+                                            "additionalProperties": false,
+                                            "properties": {
+                                              "bbox": {
+                                                "default": null,
+                                                "items": {
+                                                  "type": "number"
+                                                },
+                                                "maxItems": 4,
+                                                "minItems": 4,
+                                                "nullable": true,
+                                                "title": "Bbox",
+                                                "type": "array"
+                                              },
+                                              "end_offset": {
+                                                "default": null,
+                                                "exclusiveMinimum": 0,
+                                                "nullable": true,
+                                                "title": "End Offset",
+                                                "type": "integer"
+                                              },
+                                              "fragment_sha256": {
+                                                "default": null,
+                                                "nullable": true,
+                                                "pattern": "^[0-9a-f]{64}$",
+                                                "title": "Fragment Sha256",
+                                                "type": "string"
+                                              },
+                                              "page": {
+                                                "minimum": 1,
+                                                "title": "Page",
+                                                "type": "integer"
+                                              },
+                                              "start_offset": {
+                                                "default": null,
+                                                "minimum": 0,
+                                                "nullable": true,
+                                                "title": "Start Offset",
+                                                "type": "integer"
+                                              }
+                                            },
+                                            "required": [
+                                              "page"
+                                            ],
+                                            "title": "EvidenceRef",
+                                            "type": "object"
+                                          },
+                                          "title": "Evidence",
+                                          "type": "array"
+                                        },
+                                        "message": {
+                                          "maxLength": 2000,
+                                          "minLength": 1,
+                                          "title": "Message",
+                                          "type": "string"
+                                        }
+                                      },
+                                      "required": [
+                                        "code",
+                                        "message"
+                                      ],
+                                      "title": "ExtractionWarning",
+                                      "type": "object"
+                                    },
+                                    "title": "Warnings",
+                                    "type": "array"
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "evidence",
+                                  "kind",
+                                  "text"
+                                ],
+                                "title": "ProseItem",
+                                "type": "object"
+                              },
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "confidence": {
+                                    "default": null,
+                                    "maximum": 1.0,
+                                    "minimum": 0.0,
+                                    "nullable": true,
+                                    "title": "Confidence",
+                                    "type": "number"
+                                  },
+                                  "evidence": {
+                                    "items": {
+                                      "additionalProperties": false,
+                                      "properties": {
+                                        "bbox": {
+                                          "default": null,
+                                          "items": {
+                                            "type": "number"
+                                          },
+                                          "maxItems": 4,
+                                          "minItems": 4,
+                                          "nullable": true,
+                                          "title": "Bbox",
+                                          "type": "array"
+                                        },
+                                        "end_offset": {
+                                          "default": null,
+                                          "exclusiveMinimum": 0,
+                                          "nullable": true,
+                                          "title": "End Offset",
+                                          "type": "integer"
+                                        },
+                                        "fragment_sha256": {
+                                          "default": null,
+                                          "nullable": true,
+                                          "pattern": "^[0-9a-f]{64}$",
+                                          "title": "Fragment Sha256",
+                                          "type": "string"
+                                        },
+                                        "page": {
+                                          "minimum": 1,
+                                          "title": "Page",
+                                          "type": "integer"
+                                        },
+                                        "start_offset": {
+                                          "default": null,
+                                          "minimum": 0,
+                                          "nullable": true,
+                                          "title": "Start Offset",
+                                          "type": "integer"
+                                        }
+                                      },
+                                      "required": [
+                                        "page"
+                                      ],
+                                      "title": "EvidenceRef",
+                                      "type": "object"
+                                    },
+                                    "minItems": 1,
+                                    "title": "Evidence",
+                                    "type": "array"
+                                  },
+                                  "extensions": {
+                                    "patternProperties": {
+                                      "^[a-z][a-z0-9-]*(?:\\.[a-z][a-z0-9-]*)+$": {}
+                                    },
+                                    "title": "Extensions",
+                                    "type": "object"
+                                  },
+                                  "id": {
+                                    "pattern": "^[A-Za-z][A-Za-z0-9._:-]{0,127}$",
+                                    "title": "Id",
+                                    "type": "string"
+                                  },
+                                  "initial_position": {
+                                    "discriminator": {
+                                      "propertyName": "kind"
+                                    },
+                                    "oneOf": [
+                                      {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "kind": {
+                                            "enum": [
+                                              "startpos"
+                                            ],
+                                            "title": "Kind",
+                                            "type": "string"
+                                          }
+                                        },
+                                        "required": [
+                                          "kind"
+                                        ],
+                                        "title": "StartPosition",
+                                        "type": "object"
+                                      },
+                                      {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "fen": {
+                                            "maxLength": 200,
+                                            "minLength": 1,
+                                            "title": "Fen",
+                                            "type": "string"
+                                          },
+                                          "kind": {
+                                            "enum": [
+                                              "fen"
+                                            ],
+                                            "title": "Kind",
+                                            "type": "string"
+                                          }
+                                        },
+                                        "required": [
+                                          "kind",
+                                          "fen"
+                                        ],
+                                        "title": "FenPosition",
+                                        "type": "object"
+                                      }
+                                    ],
+                                    "title": "Initial Position"
+                                  },
+                                  "kind": {
+                                    "enum": [
+                                      "move_sequence"
+                                    ],
+                                    "title": "Kind",
+                                    "type": "string"
+                                  },
+                                  "nodes": {
+                                    "items": {
+                                      "additionalProperties": false,
+                                      "properties": {
+                                        "confidence": {
+                                          "default": null,
+                                          "maximum": 1.0,
+                                          "minimum": 0.0,
+                                          "nullable": true,
+                                          "title": "Confidence",
+                                          "type": "number"
+                                        },
+                                        "evidence": {
+                                          "items": {
+                                            "additionalProperties": false,
+                                            "properties": {
+                                              "bbox": {
+                                                "default": null,
+                                                "items": {
+                                                  "type": "number"
+                                                },
+                                                "maxItems": 4,
+                                                "minItems": 4,
+                                                "nullable": true,
+                                                "title": "Bbox",
+                                                "type": "array"
+                                              },
+                                              "end_offset": {
+                                                "default": null,
+                                                "exclusiveMinimum": 0,
+                                                "nullable": true,
+                                                "title": "End Offset",
+                                                "type": "integer"
+                                              },
+                                              "fragment_sha256": {
+                                                "default": null,
+                                                "nullable": true,
+                                                "pattern": "^[0-9a-f]{64}$",
+                                                "title": "Fragment Sha256",
+                                                "type": "string"
+                                              },
+                                              "page": {
+                                                "minimum": 1,
+                                                "title": "Page",
+                                                "type": "integer"
+                                              },
+                                              "start_offset": {
+                                                "default": null,
+                                                "minimum": 0,
+                                                "nullable": true,
+                                                "title": "Start Offset",
+                                                "type": "integer"
+                                              }
+                                            },
+                                            "required": [
+                                              "page"
+                                            ],
+                                            "title": "EvidenceRef",
+                                            "type": "object"
+                                          },
+                                          "minItems": 1,
+                                          "title": "Evidence",
+                                          "type": "array"
+                                        },
+                                        "extensions": {
+                                          "patternProperties": {
+                                            "^[a-z][a-z0-9-]*(?:\\.[a-z][a-z0-9-]*)+$": {}
+                                          },
+                                          "title": "Extensions",
+                                          "type": "object"
+                                        },
+                                        "fen_after": {
+                                          "default": null,
+                                          "maxLength": 200,
+                                          "minLength": 1,
+                                          "nullable": true,
+                                          "title": "Fen After",
+                                          "type": "string"
+                                        },
+                                        "fen_before": {
+                                          "default": null,
+                                          "maxLength": 200,
+                                          "minLength": 1,
+                                          "nullable": true,
+                                          "title": "Fen Before",
+                                          "type": "string"
+                                        },
+                                        "id": {
+                                          "pattern": "^[A-Za-z][A-Za-z0-9._:-]{0,127}$",
+                                          "title": "Id",
+                                          "type": "string"
+                                        },
+                                        "move_number": {
+                                          "default": null,
+                                          "minimum": 1,
+                                          "nullable": true,
+                                          "title": "Move Number",
+                                          "type": "integer"
+                                        },
+                                        "move_text": {
+                                          "maxLength": 100,
+                                          "minLength": 1,
+                                          "title": "Move Text",
+                                          "type": "string"
+                                        },
+                                        "nags": {
+                                          "items": {
+                                            "maximum": 255,
+                                            "minimum": 0,
+                                            "type": "integer"
+                                          },
+                                          "title": "Nags",
+                                          "type": "array"
+                                        },
+                                        "parent_id": {
+                                          "default": null,
+                                          "nullable": true,
+                                          "pattern": "^[A-Za-z][A-Za-z0-9._:-]{0,127}$",
+                                          "title": "Parent Id",
+                                          "type": "string"
+                                        },
+                                        "san_candidate": {
+                                          "default": null,
+                                          "maxLength": 100,
+                                          "minLength": 1,
+                                          "nullable": true,
+                                          "title": "San Candidate",
+                                          "type": "string"
+                                        },
+                                        "sibling_order": {
+                                          "minimum": 0,
+                                          "title": "Sibling Order",
+                                          "type": "integer"
+                                        },
+                                        "side_to_move": {
+                                          "default": null,
+                                          "enum": [
+                                            "w",
+                                            "b"
+                                          ],
+                                          "nullable": true,
+                                          "title": "Side To Move",
+                                          "type": "string"
+                                        },
+                                        "uci_candidate": {
+                                          "default": null,
+                                          "nullable": true,
+                                          "pattern": "^[a-h][1-8][a-h][1-8][qrbn]?$",
+                                          "title": "Uci Candidate",
+                                          "type": "string"
+                                        },
+                                        "validation_status": {
+                                          "default": "unvalidated",
+                                          "enum": [
+                                            "unvalidated",
+                                            "valid",
+                                            "invalid",
+                                            "ambiguous"
+                                          ],
+                                          "title": "Validation Status",
+                                          "type": "string"
+                                        },
+                                        "warnings": {
+                                          "items": {
+                                            "additionalProperties": false,
+                                            "properties": {
+                                              "code": {
+                                                "pattern": "^[a-z][a-z0-9_]{0,63}$",
+                                                "title": "Code",
+                                                "type": "string"
+                                              },
+                                              "evidence": {
+                                                "items": {
+                                                  "additionalProperties": false,
+                                                  "properties": {
+                                                    "bbox": {
+                                                      "default": null,
+                                                      "items": {
+                                                        "type": "number"
+                                                      },
+                                                      "maxItems": 4,
+                                                      "minItems": 4,
+                                                      "nullable": true,
+                                                      "title": "Bbox",
+                                                      "type": "array"
+                                                    },
+                                                    "end_offset": {
+                                                      "default": null,
+                                                      "exclusiveMinimum": 0,
+                                                      "nullable": true,
+                                                      "title": "End Offset",
+                                                      "type": "integer"
+                                                    },
+                                                    "fragment_sha256": {
+                                                      "default": null,
+                                                      "nullable": true,
+                                                      "pattern": "^[0-9a-f]{64}$",
+                                                      "title": "Fragment Sha256",
+                                                      "type": "string"
+                                                    },
+                                                    "page": {
+                                                      "minimum": 1,
+                                                      "title": "Page",
+                                                      "type": "integer"
+                                                    },
+                                                    "start_offset": {
+                                                      "default": null,
+                                                      "minimum": 0,
+                                                      "nullable": true,
+                                                      "title": "Start Offset",
+                                                      "type": "integer"
+                                                    }
+                                                  },
+                                                  "required": [
+                                                    "page"
+                                                  ],
+                                                  "title": "EvidenceRef",
+                                                  "type": "object"
+                                                },
+                                                "title": "Evidence",
+                                                "type": "array"
+                                              },
+                                              "message": {
+                                                "maxLength": 2000,
+                                                "minLength": 1,
+                                                "title": "Message",
+                                                "type": "string"
+                                              }
+                                            },
+                                            "required": [
+                                              "code",
+                                              "message"
+                                            ],
+                                            "title": "ExtractionWarning",
+                                            "type": "object"
+                                          },
+                                          "title": "Warnings",
+                                          "type": "array"
+                                        }
+                                      },
+                                      "required": [
+                                        "id",
+                                        "sibling_order",
+                                        "move_text",
+                                        "evidence"
+                                      ],
+                                      "title": "MoveNode",
+                                      "type": "object"
+                                    },
+                                    "minItems": 1,
+                                    "title": "Nodes",
+                                    "type": "array"
+                                  },
+                                  "title": {
+                                    "default": null,
+                                    "maxLength": 2000,
+                                    "minLength": 1,
+                                    "nullable": true,
+                                    "title": "Title",
+                                    "type": "string"
+                                  },
+                                  "warnings": {
+                                    "items": {
+                                      "additionalProperties": false,
+                                      "properties": {
+                                        "code": {
+                                          "pattern": "^[a-z][a-z0-9_]{0,63}$",
+                                          "title": "Code",
+                                          "type": "string"
+                                        },
+                                        "evidence": {
+                                          "items": {
+                                            "additionalProperties": false,
+                                            "properties": {
+                                              "bbox": {
+                                                "default": null,
+                                                "items": {
+                                                  "type": "number"
+                                                },
+                                                "maxItems": 4,
+                                                "minItems": 4,
+                                                "nullable": true,
+                                                "title": "Bbox",
+                                                "type": "array"
+                                              },
+                                              "end_offset": {
+                                                "default": null,
+                                                "exclusiveMinimum": 0,
+                                                "nullable": true,
+                                                "title": "End Offset",
+                                                "type": "integer"
+                                              },
+                                              "fragment_sha256": {
+                                                "default": null,
+                                                "nullable": true,
+                                                "pattern": "^[0-9a-f]{64}$",
+                                                "title": "Fragment Sha256",
+                                                "type": "string"
+                                              },
+                                              "page": {
+                                                "minimum": 1,
+                                                "title": "Page",
+                                                "type": "integer"
+                                              },
+                                              "start_offset": {
+                                                "default": null,
+                                                "minimum": 0,
+                                                "nullable": true,
+                                                "title": "Start Offset",
+                                                "type": "integer"
+                                              }
+                                            },
+                                            "required": [
+                                              "page"
+                                            ],
+                                            "title": "EvidenceRef",
+                                            "type": "object"
+                                          },
+                                          "title": "Evidence",
+                                          "type": "array"
+                                        },
+                                        "message": {
+                                          "maxLength": 2000,
+                                          "minLength": 1,
+                                          "title": "Message",
+                                          "type": "string"
+                                        }
+                                      },
+                                      "required": [
+                                        "code",
+                                        "message"
+                                      ],
+                                      "title": "ExtractionWarning",
+                                      "type": "object"
+                                    },
+                                    "title": "Warnings",
+                                    "type": "array"
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "evidence",
+                                  "kind",
+                                  "initial_position",
+                                  "nodes"
+                                ],
+                                "title": "MoveSequenceItem",
+                                "type": "object"
+                              },
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "alt_text": {
+                                    "default": null,
+                                    "maxLength": 10000,
+                                    "minLength": 1,
+                                    "nullable": true,
+                                    "title": "Alt Text",
+                                    "type": "string"
+                                  },
+                                  "caption": {
+                                    "default": null,
+                                    "maxLength": 10000,
+                                    "minLength": 1,
+                                    "nullable": true,
+                                    "title": "Caption",
+                                    "type": "string"
+                                  },
+                                  "confidence": {
+                                    "default": null,
+                                    "maximum": 1.0,
+                                    "minimum": 0.0,
+                                    "nullable": true,
+                                    "title": "Confidence",
+                                    "type": "number"
+                                  },
+                                  "evidence": {
+                                    "items": {
+                                      "additionalProperties": false,
+                                      "properties": {
+                                        "bbox": {
+                                          "default": null,
+                                          "items": {
+                                            "type": "number"
+                                          },
+                                          "maxItems": 4,
+                                          "minItems": 4,
+                                          "nullable": true,
+                                          "title": "Bbox",
+                                          "type": "array"
+                                        },
+                                        "end_offset": {
+                                          "default": null,
+                                          "exclusiveMinimum": 0,
+                                          "nullable": true,
+                                          "title": "End Offset",
+                                          "type": "integer"
+                                        },
+                                        "fragment_sha256": {
+                                          "default": null,
+                                          "nullable": true,
+                                          "pattern": "^[0-9a-f]{64}$",
+                                          "title": "Fragment Sha256",
+                                          "type": "string"
+                                        },
+                                        "page": {
+                                          "minimum": 1,
+                                          "title": "Page",
+                                          "type": "integer"
+                                        },
+                                        "start_offset": {
+                                          "default": null,
+                                          "minimum": 0,
+                                          "nullable": true,
+                                          "title": "Start Offset",
+                                          "type": "integer"
+                                        }
+                                      },
+                                      "required": [
+                                        "page"
+                                      ],
+                                      "title": "EvidenceRef",
+                                      "type": "object"
+                                    },
+                                    "minItems": 1,
+                                    "title": "Evidence",
+                                    "type": "array"
+                                  },
+                                  "extensions": {
+                                    "patternProperties": {
+                                      "^[a-z][a-z0-9-]*(?:\\.[a-z][a-z0-9-]*)+$": {}
+                                    },
+                                    "title": "Extensions",
+                                    "type": "object"
+                                  },
+                                  "figure_type": {
+                                    "enum": [
+                                      "chessboard",
+                                      "photo",
+                                      "illustration",
+                                      "other"
+                                    ],
+                                    "title": "Figure Type",
+                                    "type": "string"
+                                  },
+                                  "id": {
+                                    "pattern": "^[A-Za-z][A-Za-z0-9._:-]{0,127}$",
+                                    "title": "Id",
+                                    "type": "string"
+                                  },
+                                  "kind": {
+                                    "enum": [
+                                      "figure"
+                                    ],
+                                    "title": "Kind",
+                                    "type": "string"
+                                  },
+                                  "position_fen_candidate": {
+                                    "default": null,
+                                    "maxLength": 200,
+                                    "minLength": 1,
+                                    "nullable": true,
+                                    "title": "Position Fen Candidate",
+                                    "type": "string"
+                                  },
+                                  "warnings": {
+                                    "items": {
+                                      "additionalProperties": false,
+                                      "properties": {
+                                        "code": {
+                                          "pattern": "^[a-z][a-z0-9_]{0,63}$",
+                                          "title": "Code",
+                                          "type": "string"
+                                        },
+                                        "evidence": {
+                                          "items": {
+                                            "additionalProperties": false,
+                                            "properties": {
+                                              "bbox": {
+                                                "default": null,
+                                                "items": {
+                                                  "type": "number"
+                                                },
+                                                "maxItems": 4,
+                                                "minItems": 4,
+                                                "nullable": true,
+                                                "title": "Bbox",
+                                                "type": "array"
+                                              },
+                                              "end_offset": {
+                                                "default": null,
+                                                "exclusiveMinimum": 0,
+                                                "nullable": true,
+                                                "title": "End Offset",
+                                                "type": "integer"
+                                              },
+                                              "fragment_sha256": {
+                                                "default": null,
+                                                "nullable": true,
+                                                "pattern": "^[0-9a-f]{64}$",
+                                                "title": "Fragment Sha256",
+                                                "type": "string"
+                                              },
+                                              "page": {
+                                                "minimum": 1,
+                                                "title": "Page",
+                                                "type": "integer"
+                                              },
+                                              "start_offset": {
+                                                "default": null,
+                                                "minimum": 0,
+                                                "nullable": true,
+                                                "title": "Start Offset",
+                                                "type": "integer"
+                                              }
+                                            },
+                                            "required": [
+                                              "page"
+                                            ],
+                                            "title": "EvidenceRef",
+                                            "type": "object"
+                                          },
+                                          "title": "Evidence",
+                                          "type": "array"
+                                        },
+                                        "message": {
+                                          "maxLength": 2000,
+                                          "minLength": 1,
+                                          "title": "Message",
+                                          "type": "string"
+                                        }
+                                      },
+                                      "required": [
+                                        "code",
+                                        "message"
+                                      ],
+                                      "title": "ExtractionWarning",
+                                      "type": "object"
+                                    },
+                                    "title": "Warnings",
+                                    "type": "array"
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "evidence",
+                                  "kind",
+                                  "figure_type"
+                                ],
+                                "title": "FigureItem",
+                                "type": "object"
+                              },
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "confidence": {
+                                    "default": null,
+                                    "maximum": 1.0,
+                                    "minimum": 0.0,
+                                    "nullable": true,
+                                    "title": "Confidence",
+                                    "type": "number"
+                                  },
+                                  "details": {
+                                    "default": null,
+                                    "maxLength": 10000,
+                                    "minLength": 1,
+                                    "nullable": true,
+                                    "title": "Details",
+                                    "type": "string"
+                                  },
+                                  "evidence": {
+                                    "items": {
+                                      "additionalProperties": false,
+                                      "properties": {
+                                        "bbox": {
+                                          "default": null,
+                                          "items": {
+                                            "type": "number"
+                                          },
+                                          "maxItems": 4,
+                                          "minItems": 4,
+                                          "nullable": true,
+                                          "title": "Bbox",
+                                          "type": "array"
+                                        },
+                                        "end_offset": {
+                                          "default": null,
+                                          "exclusiveMinimum": 0,
+                                          "nullable": true,
+                                          "title": "End Offset",
+                                          "type": "integer"
+                                        },
+                                        "fragment_sha256": {
+                                          "default": null,
+                                          "nullable": true,
+                                          "pattern": "^[0-9a-f]{64}$",
+                                          "title": "Fragment Sha256",
+                                          "type": "string"
+                                        },
+                                        "page": {
+                                          "minimum": 1,
+                                          "title": "Page",
+                                          "type": "integer"
+                                        },
+                                        "start_offset": {
+                                          "default": null,
+                                          "minimum": 0,
+                                          "nullable": true,
+                                          "title": "Start Offset",
+                                          "type": "integer"
+                                        }
+                                      },
+                                      "required": [
+                                        "page"
+                                      ],
+                                      "title": "EvidenceRef",
+                                      "type": "object"
+                                    },
+                                    "minItems": 1,
+                                    "title": "Evidence",
+                                    "type": "array"
+                                  },
+                                  "extensions": {
+                                    "patternProperties": {
+                                      "^[a-z][a-z0-9-]*(?:\\.[a-z][a-z0-9-]*)+$": {}
+                                    },
+                                    "title": "Extensions",
+                                    "type": "object"
+                                  },
+                                  "id": {
+                                    "pattern": "^[A-Za-z][A-Za-z0-9._:-]{0,127}$",
+                                    "title": "Id",
+                                    "type": "string"
+                                  },
+                                  "kind": {
+                                    "enum": [
+                                      "unresolved"
+                                    ],
+                                    "title": "Kind",
+                                    "type": "string"
+                                  },
+                                  "raw_text": {
+                                    "default": null,
+                                    "maxLength": 200000,
+                                    "minLength": 1,
+                                    "nullable": true,
+                                    "title": "Raw Text",
+                                    "type": "string"
+                                  },
+                                  "reason_code": {
+                                    "pattern": "^[a-z][a-z0-9_]{0,63}$",
+                                    "title": "Reason Code",
+                                    "type": "string"
+                                  },
+                                  "unresolved_type": {
+                                    "enum": [
+                                      "text",
+                                      "figure",
+                                      "mixed"
+                                    ],
+                                    "title": "Unresolved Type",
+                                    "type": "string"
+                                  },
+                                  "warnings": {
+                                    "items": {
+                                      "additionalProperties": false,
+                                      "properties": {
+                                        "code": {
+                                          "pattern": "^[a-z][a-z0-9_]{0,63}$",
+                                          "title": "Code",
+                                          "type": "string"
+                                        },
+                                        "evidence": {
+                                          "items": {
+                                            "additionalProperties": false,
+                                            "properties": {
+                                              "bbox": {
+                                                "default": null,
+                                                "items": {
+                                                  "type": "number"
+                                                },
+                                                "maxItems": 4,
+                                                "minItems": 4,
+                                                "nullable": true,
+                                                "title": "Bbox",
+                                                "type": "array"
+                                              },
+                                              "end_offset": {
+                                                "default": null,
+                                                "exclusiveMinimum": 0,
+                                                "nullable": true,
+                                                "title": "End Offset",
+                                                "type": "integer"
+                                              },
+                                              "fragment_sha256": {
+                                                "default": null,
+                                                "nullable": true,
+                                                "pattern": "^[0-9a-f]{64}$",
+                                                "title": "Fragment Sha256",
+                                                "type": "string"
+                                              },
+                                              "page": {
+                                                "minimum": 1,
+                                                "title": "Page",
+                                                "type": "integer"
+                                              },
+                                              "start_offset": {
+                                                "default": null,
+                                                "minimum": 0,
+                                                "nullable": true,
+                                                "title": "Start Offset",
+                                                "type": "integer"
+                                              }
+                                            },
+                                            "required": [
+                                              "page"
+                                            ],
+                                            "title": "EvidenceRef",
+                                            "type": "object"
+                                          },
+                                          "title": "Evidence",
+                                          "type": "array"
+                                        },
+                                        "message": {
+                                          "maxLength": 2000,
+                                          "minLength": 1,
+                                          "title": "Message",
+                                          "type": "string"
+                                        }
+                                      },
+                                      "required": [
+                                        "code",
+                                        "message"
+                                      ],
+                                      "title": "ExtractionWarning",
+                                      "type": "object"
+                                    },
+                                    "title": "Warnings",
+                                    "type": "array"
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "evidence",
+                                  "kind",
+                                  "unresolved_type",
+                                  "reason_code"
+                                ],
+                                "title": "UnresolvedItem",
+                                "type": "object"
+                              }
+                            ]
+                          },
+                          "title": "Items",
+                          "type": "array"
+                        },
+                        "package_id": {
+                          "format": "uuid",
+                          "title": "Package Id",
+                          "type": "string"
+                        },
+                        "provenance": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "adapter_name": {
+                              "maxLength": 128,
+                              "minLength": 1,
+                              "title": "Adapter Name",
+                              "type": "string"
+                            },
+                            "adapter_version": {
+                              "maxLength": 64,
+                              "minLength": 1,
+                              "title": "Adapter Version",
+                              "type": "string"
+                            },
+                            "created_at": {
+                              "format": "date-time",
+                              "title": "Created At",
+                              "type": "string"
+                            },
+                            "model": {
+                              "default": null,
+                              "maxLength": 128,
+                              "minLength": 1,
+                              "nullable": true,
+                              "title": "Model",
+                              "type": "string"
+                            },
+                            "provider": {
+                              "default": null,
+                              "maxLength": 128,
+                              "minLength": 1,
+                              "nullable": true,
+                              "title": "Provider",
+                              "type": "string"
+                            },
+                            "request_sha256": {
+                              "default": null,
+                              "nullable": true,
+                              "pattern": "^[0-9a-f]{64}$",
+                              "title": "Request Sha256",
+                              "type": "string"
+                            },
+                            "response_sha256": {
+                              "default": null,
+                              "nullable": true,
+                              "pattern": "^[0-9a-f]{64}$",
+                              "title": "Response Sha256",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "created_at",
+                            "adapter_name",
+                            "adapter_version"
+                          ],
+                          "title": "Provenance",
+                          "type": "object"
+                        },
+                        "schema_version": {
+                          "enum": [
+                            "chess-content-extraction/1.0"
+                          ],
+                          "title": "Schema Version",
+                          "type": "string"
+                        },
+                        "source": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "language": {
+                              "default": null,
+                              "maxLength": 35,
+                              "minLength": 1,
+                              "nullable": true,
+                              "title": "Language",
+                              "type": "string"
+                            },
+                            "media_type": {
+                              "maxLength": 255,
+                              "minLength": 1,
+                              "title": "Media Type",
+                              "type": "string"
+                            },
+                            "page_range": {
+                              "additionalProperties": false,
+                              "default": null,
+                              "nullable": true,
+                              "properties": {
+                                "end_page": {
+                                  "minimum": 1,
+                                  "title": "End Page",
+                                  "type": "integer"
+                                },
+                                "start_page": {
+                                  "minimum": 1,
+                                  "title": "Start Page",
+                                  "type": "integer"
+                                }
+                              },
+                              "required": [
+                                "start_page",
+                                "end_page"
+                              ],
+                              "title": "PageRange",
+                              "type": "object"
+                            },
+                            "source_ref": {
+                              "maxLength": 1024,
+                              "minLength": 1,
+                              "title": "Source Ref",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "source_ref",
+                            "media_type"
+                          ],
+                          "title": "SourceDescriptor",
+                          "type": "object"
+                        }
+                      },
+                      "required": [
+                        "schema_version",
+                        "package_id",
+                        "source",
+                        "provenance"
+                      ],
+                      "title": "ExtractionPackage",
+                      "type": "object"
+                    },
+                    "pages": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "byte_size": {
+                            "exclusiveMinimum": 0,
+                            "title": "Byte Size",
+                            "type": "integer"
+                          },
+                          "content_sha256": {
+                            "pattern": "^[0-9a-f]{64}$",
+                            "title": "Content Sha256",
+                            "type": "string"
+                          },
+                          "content_url": {
+                            "maxLength": 128,
+                            "pattern": "^/api/pdf-extractions/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/review/pages/[1-9][0-9]*$",
+                            "title": "Content Url",
+                            "type": "string"
+                          },
+                          "media_type": {
+                            "default": "image/png",
+                            "enum": [
+                              "image/png"
+                            ],
+                            "title": "Media Type",
+                            "type": "string"
+                          },
+                          "physical_page": {
+                            "maximum": 20000,
+                            "minimum": 1,
+                            "title": "Physical Page",
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "physical_page",
+                          "byte_size",
+                          "content_sha256",
+                          "content_url"
+                        ],
+                        "title": "PdfReviewPageRead",
+                        "type": "object"
+                      },
+                      "title": "Pages",
+                      "type": "array"
+                    },
+                    "run_id": {
+                      "format": "uuid",
+                      "title": "Run Id",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "run_id",
+                    "normalized_ccef_sha256",
+                    "package",
+                    "inspection",
+                    "pages"
+                  ],
+                  "title": "PdfReviewDocumentRead",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "PDF extraction review document"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error",
+                        "payload_too_large",
+                        "unsupported_media_type",
+                        "invalid_pgn",
+                        "pgn_limit_exceeded",
+                        "idempotency_conflict",
+                        "course_mode_conflict",
+                        "pgn_not_exportable",
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "PDF extraction review not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error",
+                        "payload_too_large",
+                        "unsupported_media_type",
+                        "invalid_pgn",
+                        "pgn_limit_exceeded",
+                        "idempotency_conflict",
+                        "course_mode_conflict",
+                        "pgn_not_exportable",
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "PDF extraction review is not available"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error",
+                        "payload_too_large",
+                        "unsupported_media_type",
+                        "invalid_pgn",
+                        "pgn_limit_exceeded",
+                        "idempotency_conflict",
+                        "course_mode_conflict",
+                        "pgn_not_exportable",
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Source storage unavailable"
+          }
+        },
+        "summary": "Read one verified PDF extraction review document",
+        "tags": [
+          "pdf"
+        ]
+      }
+    },
+    "/api/pdf-extractions/{run_id}/review/pages/{physical_page}": {
+      "get": {
+        "operationId": "getPdfExtractionReviewPage",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "physical_page",
+            "required": true,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "image/png": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Verified rendered PDF review page"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error",
+                        "payload_too_large",
+                        "unsupported_media_type",
+                        "invalid_pgn",
+                        "pgn_limit_exceeded",
+                        "idempotency_conflict",
+                        "course_mode_conflict",
+                        "pgn_not_exportable",
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "PDF extraction review not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error",
+                        "payload_too_large",
+                        "unsupported_media_type",
+                        "invalid_pgn",
+                        "pgn_limit_exceeded",
+                        "idempotency_conflict",
+                        "course_mode_conflict",
+                        "pgn_not_exportable",
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "PDF extraction review is not available"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error",
+                        "payload_too_large",
+                        "unsupported_media_type",
+                        "invalid_pgn",
+                        "pgn_limit_exceeded",
+                        "idempotency_conflict",
+                        "course_mode_conflict",
+                        "pgn_not_exportable",
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Source storage unavailable"
+          }
+        },
+        "summary": "Read one verified rendered PDF review page",
         "tags": [
           "pdf"
         ]

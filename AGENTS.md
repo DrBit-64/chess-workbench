@@ -56,7 +56,11 @@ chess-workbench/
 
 ### After editing
 
-1. Run the relevant formatter, type checker, and tests (see Commands below).
+1. During an iterative single-task change, run only the smallest formatter, type checker and test
+   selection that directly exercises the changed behavior. Do not run full suites, cumulative
+   acceptance, smoke or unrelated checks merely for reassurance. Run the broader Stage/full gates
+   only when the user requests them, the change genuinely crosses those boundaries, or the user is
+   closing a Stage for acceptance.
 2. Review `git diff --stat` for unintended changes.
 3. Update `docs/agent/HANDOFF.md`.
 4. Summarize: files changed, tests run and results, failures, assumptions, remaining risks.

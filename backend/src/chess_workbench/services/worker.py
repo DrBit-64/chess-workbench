@@ -86,6 +86,7 @@ class SqlWorker:
                     worker_id=self.worker_id,
                     code=error.code,
                     message=str(error),
+                    retryable=error.retryable,
                 )
         except Exception as error:
             async with self.database.session() as session, session.begin():

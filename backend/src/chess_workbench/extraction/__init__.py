@@ -82,16 +82,53 @@ from .provider import (
 )
 
 if TYPE_CHECKING:
+    from .candidates import (
+        CCEF_PROVIDER_RESPONSE_ARTIFACT_SCHEMA,
+        CcefCandidateArtifacts,
+        CcefCandidateError,
+        CcefCandidateErrorCode,
+        CcefCandidateSummary,
+        assemble_ccef_candidate_artifacts,
+    )
+    from .consolidation import consolidate_move_sequences
     from .deepseek import DeepSeekV4FlashProvider
     from .validation import normalize_chess_moves
 
 
 def __getattr__(name: str) -> Any:
     """Load integration-only exports without polluting contract imports."""
+    if name == "CCEF_PROVIDER_RESPONSE_ARTIFACT_SCHEMA":
+        from .candidates import CCEF_PROVIDER_RESPONSE_ARTIFACT_SCHEMA
+
+        return CCEF_PROVIDER_RESPONSE_ARTIFACT_SCHEMA
+    if name == "CcefCandidateArtifacts":
+        from .candidates import CcefCandidateArtifacts
+
+        return CcefCandidateArtifacts
+    if name == "CcefCandidateError":
+        from .candidates import CcefCandidateError
+
+        return CcefCandidateError
+    if name == "CcefCandidateErrorCode":
+        from .candidates import CcefCandidateErrorCode
+
+        return CcefCandidateErrorCode
+    if name == "CcefCandidateSummary":
+        from .candidates import CcefCandidateSummary
+
+        return CcefCandidateSummary
+    if name == "assemble_ccef_candidate_artifacts":
+        from .candidates import assemble_ccef_candidate_artifacts
+
+        return assemble_ccef_candidate_artifacts
     if name == "DeepSeekV4FlashProvider":
         from .deepseek import DeepSeekV4FlashProvider
 
         return DeepSeekV4FlashProvider
+    if name == "consolidate_move_sequences":
+        from .consolidation import consolidate_move_sequences
+
+        return consolidate_move_sequences
     if name == "normalize_chess_moves":
         from .validation import normalize_chess_moves
 
@@ -125,6 +162,7 @@ __all__ = [
     "CcefDecodeError",
     "CcefDecodeErrorCode",
     "decode_extraction_response",
+    "consolidate_move_sequences",
     "EvidenceOrigin",
     "NormalizedBox",
     "OcrAdapter",
@@ -161,4 +199,10 @@ __all__ = [
     "PromptEvidenceFragment",
     "PromptEvidencePage",
     "build_ccef_generation_request",
+    "CCEF_PROVIDER_RESPONSE_ARTIFACT_SCHEMA",
+    "CcefCandidateArtifacts",
+    "CcefCandidateError",
+    "CcefCandidateErrorCode",
+    "CcefCandidateSummary",
+    "assemble_ccef_candidate_artifacts",
 ]

@@ -30,7 +30,7 @@ STAGE_2D_CONTENT_TESTS := $(wildcard \
 	acceptance-stage-3a acceptance-stage-3b acceptance-stage-3c acceptance-stage-3d acceptance-stage-3 \
 	acceptance-stage-4a acceptance-stage-4b acceptance-stage-4c acceptance-stage-4 \
 	acceptance-stage-6a acceptance-stage-6b acceptance-stage-6c acceptance-stage-6d acceptance-stage-6 \
-	acceptance-stage-8p acceptance-stage-8a acceptance-stage-8b
+	acceptance-stage-8p acceptance-stage-8a acceptance-stage-8b acceptance-stage-8c
 
 install-stockfish:
 	uv run --project backend --locked python scripts/install_stockfish.py
@@ -230,6 +230,20 @@ acceptance-stage-8b: bootstrap-backend bootstrap-frontend
 	uv run --project backend --locked ruff check --config backend/pyproject.toml backend/src/chess_workbench/extraction/evidence.py backend/src/chess_workbench/extraction/pdfium.py backend/src/chess_workbench/extraction/paddleocr.py backend/src/chess_workbench/services/source_storage.py backend/src/chess_workbench/services/pdf_extraction.py backend/src/chess_workbench/services/pdf_persistence.py backend/src/chess_workbench/schemas/pdf.py backend/src/chess_workbench/api/pdf.py
 	uv run --project backend --locked mypy --config-file backend/pyproject.toml backend/src/chess_workbench/extraction/evidence.py backend/src/chess_workbench/extraction/pdfium.py backend/src/chess_workbench/extraction/paddleocr.py backend/src/chess_workbench/services/source_storage.py backend/src/chess_workbench/services/pdf_extraction.py backend/src/chess_workbench/services/pdf_persistence.py backend/src/chess_workbench/schemas/pdf.py backend/src/chess_workbench/api/pdf.py
 	@test -s docs/decisions/0013-stage-8b-rendering-ocr-and-source-evidence.md
+	$(MAKE) check-contracts
+	$(PNPM) --dir frontend exec prettier --check src/app/SourcesPage.tsx src/app/WorkbenchPages.test.tsx
+	$(PNPM) --dir frontend exec eslint src/app/SourcesPage.tsx src/app/WorkbenchPages.test.tsx
+	$(PNPM) --dir frontend exec tsc --noEmit
+	$(PNPM) --dir frontend exec vitest run src/app/WorkbenchPages.test.tsx --coverage=false
+
+# Stage 8C remains a focused candidate-generation gate. It uses only scripted
+# providers and recorded HTTP fixtures: no user books, API keys or network calls.
+acceptance-stage-8c: bootstrap-backend bootstrap-frontend
+	uv run --project backend --locked pytest -c backend/pyproject.toml -o addopts='' backend/tests/test_config.py backend/tests/test_extraction_prompting.py backend/tests/test_extraction_candidates.py backend/tests/test_extraction_deepseek.py backend/tests/test_stage8c_execution.py backend/tests/test_pdf_schemas.py backend/tests/test_pdf_api.py
+	uv run --project backend --locked ruff format --check --config backend/pyproject.toml backend/src/chess_workbench/config.py backend/src/chess_workbench/domain/jobs.py backend/src/chess_workbench/extraction/prompting.py backend/src/chess_workbench/extraction/candidates.py backend/src/chess_workbench/services/jobs.py backend/src/chess_workbench/services/pdf_extraction.py backend/src/chess_workbench/services/pdf_persistence.py backend/src/chess_workbench/services/uci.py backend/src/chess_workbench/services/worker.py backend/src/chess_workbench/schemas/pdf.py backend/src/chess_workbench/api/pdf.py
+	uv run --project backend --locked ruff check --config backend/pyproject.toml backend/src/chess_workbench/config.py backend/src/chess_workbench/domain/jobs.py backend/src/chess_workbench/extraction/prompting.py backend/src/chess_workbench/extraction/candidates.py backend/src/chess_workbench/services/jobs.py backend/src/chess_workbench/services/pdf_extraction.py backend/src/chess_workbench/services/pdf_persistence.py backend/src/chess_workbench/services/uci.py backend/src/chess_workbench/services/worker.py backend/src/chess_workbench/schemas/pdf.py backend/src/chess_workbench/api/pdf.py
+	uv run --project backend --locked mypy --config-file backend/pyproject.toml backend/src/chess_workbench/config.py backend/src/chess_workbench/domain/jobs.py backend/src/chess_workbench/extraction/prompting.py backend/src/chess_workbench/extraction/candidates.py backend/src/chess_workbench/services/jobs.py backend/src/chess_workbench/services/pdf_extraction.py backend/src/chess_workbench/services/pdf_persistence.py backend/src/chess_workbench/services/uci.py backend/src/chess_workbench/services/worker.py backend/src/chess_workbench/schemas/pdf.py backend/src/chess_workbench/api/pdf.py
+	@test -s docs/decisions/0014-stage-8c-provider-execution-and-ccef-candidates.md
 	$(MAKE) check-contracts
 	$(PNPM) --dir frontend exec prettier --check src/app/SourcesPage.tsx src/app/WorkbenchPages.test.tsx
 	$(PNPM) --dir frontend exec eslint src/app/SourcesPage.tsx src/app/WorkbenchPages.test.tsx

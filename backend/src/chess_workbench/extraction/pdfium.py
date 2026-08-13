@@ -76,15 +76,41 @@ def _embedded_fragments(
     fragments: list[TextFragment] = []
     text_page = page.get_textpage()
     try:
-        rectangle_count = text_page.count_rects()
-        if rectangle_count > MAX_FRAGMENTS:
+        text = text_page.get_text_range()
+        if len(text) > MAX_TEXT_CODE_POINTS or len(text) > text_page.count_chars():
             raise _error(_RENDER_LIMIT)
-        for rectangle_index in range(rectangle_count):
-            rect = text_page.get_rect(rectangle_index)
-            text = text_page.get_text_bounded(*rect)
-            if not text or not text.strip():
+        line_start = 0
+        cursor = 0
+        lines: list[tuple[int, str]] = []
+        while cursor < len(text):
+            if text[cursor] not in "\r\n":
+                cursor += 1
                 continue
-            if len(text) > MAX_TEXT_CODE_POINTS or len(fragments) >= MAX_FRAGMENTS:
+            lines.append((line_start, text[line_start:cursor]))
+            if text[cursor] == "\r" and cursor + 1 < len(text) and text[cursor + 1] == "\n":
+                cursor += 1
+            cursor += 1
+            line_start = cursor
+        lines.append((line_start, text[line_start:]))
+        if len(lines) > MAX_FRAGMENTS:
+            raise _error(_RENDER_LIMIT)
+        for start, line in lines:
+            if not line.strip():
+                continue
+            character_boxes = [
+                text_page.get_charbox(start + offset)
+                for offset, character in enumerate(line)
+                if not character.isspace()
+            ]
+            if not character_boxes:
+                continue
+            rect = (
+                min(box[0] for box in character_boxes),
+                min(box[1] for box in character_boxes),
+                max(box[2] for box in character_boxes),
+                max(box[3] for box in character_boxes),
+            )
+            if len(fragments) >= MAX_FRAGMENTS:
                 raise _error(_RENDER_LIMIT)
             box = _pixel_box(
                 rect,
@@ -96,7 +122,7 @@ def _embedded_fragments(
             if box is None:
                 continue
             fragments.append(
-                TextFragment(order=len(fragments), text=text, box=box, confidence=None)
+                TextFragment(order=len(fragments), text=line, box=box, confidence=None)
             )
     finally:
         text_page.close()
@@ -158,7 +184,7 @@ def _render_open_document(
             png_bytes=png_bytes,
             embedded_fragments=fragments,
             renderer_name="pdfium",
-            renderer_version=str(pypdfium2.version.PDFIUM_INFO),
+            renderer_version=f"{pypdfium2.version.PDFIUM_INFO};text-lines-v1",
         )
     finally:
         page.close()

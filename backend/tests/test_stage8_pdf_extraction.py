@@ -23,7 +23,10 @@ from chess_workbench.extraction.evidence import (
 from chess_workbench.services.jobs import JobService
 from chess_workbench.services.pdf import prepare_pdf_asset
 from chess_workbench.services.pdf_extraction import process_pdf_extraction_job
-from chess_workbench.services.pdf_persistence import PdfPersistenceService
+from chess_workbench.services.pdf_persistence import (
+    PDF_EVIDENCE_PIPELINE_VERSION,
+    PdfPersistenceService,
+)
 from chess_workbench.services.uci import EngineError
 from chess_workbench.services.worker import SqlWorker
 from chess_workbench.store.base import Base
@@ -140,6 +143,7 @@ async def _setup(
                 "ocr_language": "en",
                 "ocr": {"device": "cpu", "runner_protocol": "fixture/1"},
             },
+            pipeline_version=PDF_EVIDENCE_PIPELINE_VERSION,
         )
     return database, settings, extraction
 
