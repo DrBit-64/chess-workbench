@@ -32,8 +32,10 @@ from chess_workbench.services.jobs import job_read
 from chess_workbench.services.pdf import prepare_pdf_asset
 from chess_workbench.services.pdf_extraction import PDF_EXTRACTION_RESULT_SCHEMA
 from chess_workbench.services.pdf_persistence import (
+    PDF_ANNOTATED_EXTRACTION_PIPELINE_VERSION,
     PDF_EVIDENCE_PIPELINE_VERSION,
     PDF_EXTRACTION_PIPELINE_VERSION,
+    PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION,
     PdfAssetView,
     PdfExtractionView,
     PdfPersistenceService,
@@ -160,6 +162,7 @@ async def create_pdf_extraction(request: Request) -> HTTPResponse:
             last_page=body.last_page,
             idempotency_key=request.headers.get("idempotency-key"),
             profile=body.profile,
+            pipeline_version=PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION,
         )
         view = await service.get_extraction(outcome.run.id)
         if view is None:
@@ -459,7 +462,12 @@ def _evidence_result(view: PdfExtractionView) -> dict[str, Any] | None:
             return None
         return result
     if (
-        view.run.pipeline_version != PDF_EXTRACTION_PIPELINE_VERSION
+        view.run.pipeline_version
+        not in {
+            PDF_EXTRACTION_PIPELINE_VERSION,
+            PDF_ANNOTATED_EXTRACTION_PIPELINE_VERSION,
+            PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION,
+        }
         or result.get("result_schema") != PDF_EXTRACTION_RESULT_SCHEMA
     ):
         return None
@@ -476,7 +484,13 @@ def _candidate_summary(view: PdfExtractionView) -> PdfCandidateSummary | None:
         return None
     result = view.job.result
     if (
-        not isinstance(result, dict)
+        view.run.pipeline_version
+        not in {
+            PDF_EXTRACTION_PIPELINE_VERSION,
+            PDF_ANNOTATED_EXTRACTION_PIPELINE_VERSION,
+            PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION,
+        }
+        or not isinstance(result, dict)
         or result.get("result_schema") != PDF_EXTRACTION_RESULT_SCHEMA
         or set(result) != {"result_schema", "run_id", "evidence", "candidate"}
         or result.get("run_id") != str(view.run.id)

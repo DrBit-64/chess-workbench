@@ -31,6 +31,7 @@ from sqlalchemy import func, select
 
 from chess_workbench.api.app import ChessWorkbenchApp, create_app
 from chess_workbench.config import Settings
+from chess_workbench.services.pdf_persistence import PdfPersistenceService
 from chess_workbench.services.worker import SqlWorker
 from chess_workbench.store.base import Base
 from chess_workbench.store.models import (
@@ -47,6 +48,7 @@ from chess_workbench.store.models import (
 )
 
 PDF_EXTRACTION_PIPELINE_VERSION = "pdf-extraction:v2"
+PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION = "pdf-extraction:v4"
 MISSING_UUID = "00000000-0000-0000-0000-000000000000"
 
 ASSET_TABLES = (PdfAsset, Source, SourceVersion, SourceFile)
@@ -147,13 +149,25 @@ def expected_run_id(
     first_page: int,
     last_page: int,
     profile: dict[str, Any],
+    pipeline_version: str = PDF_EXTRACTION_PIPELINE_VERSION,
 ) -> UUID:
-    """Replicate the frozen deterministic run id for an enqueue request."""
+    """Replicate the frozen deterministic run id for an enqueue request.
+
+    This helper independently mirrors the production canonical fingerprint
+    identity (including the frozen fingerprint-version field) without calling
+    the production private helper.
+    """
+    fingerprint_version = (
+        "pdfium-text-lines+ccef-semantic-consolidation:v7"
+        if pipeline_version == PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION
+        else "pdfium-text-lines+ccef-formal-consolidation:v5"
+    )
     identity = {
         "asset_content_sha256": asset_content_sha256,
+        "extraction_fingerprint_version": fingerprint_version,
         "first_page": first_page,
         "last_page": last_page,
-        "pipeline_version": PDF_EXTRACTION_PIPELINE_VERSION,
+        "pipeline_version": pipeline_version,
         "profile": profile,
     }
     canonical = json.dumps(
@@ -376,7 +390,11 @@ async def test_extraction_enqueue_returns_202_with_exact_job(tmp_path: Path) -> 
         assert body["replayed"] is False
 
         run_id = expected_run_id(
-            asset["content_sha256"], first_page=1, last_page=2, profile=profile
+            asset["content_sha256"],
+            first_page=1,
+            last_page=2,
+            profile=profile,
+            pipeline_version=PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION,
         )
         extraction = body["extraction"]
         assert extraction["id"] == str(run_id)
@@ -384,7 +402,7 @@ async def test_extraction_enqueue_returns_202_with_exact_job(tmp_path: Path) -> 
         assert extraction["pdf_asset_id"] == asset["id"]
         assert extraction["first_page"] == 1
         assert extraction["last_page"] == 2
-        assert extraction["pipeline_version"] == PDF_EXTRACTION_PIPELINE_VERSION
+        assert extraction["pipeline_version"] == PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION
         assert extraction["profile"] == profile
         assert extraction["has_conflicts"] is False
         # The nested generic Job is exact: queued, attempt 0, finite payload.
@@ -403,7 +421,7 @@ async def test_extraction_enqueue_returns_202_with_exact_job(tmp_path: Path) -> 
             "pdf_asset_id": asset["id"],
             "first_page": 1,
             "last_page": 2,
-            "pipeline_version": PDF_EXTRACTION_PIPELINE_VERSION,
+            "pipeline_version": PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION,
             "profile": profile,
         }
         assert await count_rows(app, ExtractionRun) == 1
@@ -788,6 +806,370 @@ async def test_extraction_read_exposes_only_a_complete_committed_evidence_summar
         assert incomplete.json["evidence"] is None
         assert incomplete.json["candidate"] is None
         assert incomplete.json["has_conflicts"] is False
+    finally:
+        await app.ctx.database.close()
+
+
+# ── HTTP v3 cutover and v2/v3 read compatibility ─────────────────────────────
+
+
+async def _enqueue_direct(
+    app: ChessWorkbenchApp,
+    asset_id: str,
+    *,
+    first_page: int,
+    last_page: int,
+    profile: dict[str, Any] | None,
+    idempotency_key: str | None,
+    pipeline_version: str,
+) -> UUID:
+    async with app.ctx.database.session() as session, session.begin():
+        outcome = await PdfPersistenceService(session).enqueue_extraction(
+            pdf_asset_id=UUID(asset_id),
+            first_page=first_page,
+            last_page=last_page,
+            idempotency_key=idempotency_key,
+            profile=profile,
+            pipeline_version=pipeline_version,
+        )
+    return outcome.run.id
+
+
+async def _commit_completed_run(
+    app: ChessWorkbenchApp, run_id: UUID, *, normalized_sha: str = "5" * 64
+) -> None:
+    async with app.ctx.database.session() as session, session.begin():
+        run = await session.get(ExtractionRun, run_id)
+        assert run is not None
+        job = await session.get(Job, run.job_id)
+        assert job is not None
+        job.status = "succeeded"
+        job.attempt_count = 1
+        job.result = {
+            "result_schema": "chess-workbench/pdf-extraction-result/2.0",
+            "run_id": str(run_id),
+            "evidence": {
+                "render_manifest_sha256": "a" * 64,
+                "ocr_manifest_sha256": "b" * 64,
+                "page_count": 2,
+                "fragment_count": 37,
+                "warning_count": 1,
+            },
+            "candidate": {
+                "provider_response_sha256": "1" * 64,
+                "request_sha256": "2" * 64,
+                "response_sha256": "3" * 64,
+                "raw_ccef_sha256": "4" * 64,
+                "normalized_ccef_sha256": "5" * 64,
+                "summary": {
+                    "item_count": 9,
+                    "move_node_count": 12,
+                    "figure_count": 0,
+                    "unresolved_item_count": 1,
+                    "warning_count": 2,
+                    "error_count": 0,
+                    "invalid_move_count": 1,
+                    "ambiguous_move_count": 0,
+                    "has_conflicts": True,
+                },
+            },
+        }
+        for kind, page_number, digest, media_type in (
+            ("rendered_page", 1, "c" * 64, "image/png"),
+            ("rendered_page", 2, "d" * 64, "image/png"),
+            ("ocr_fragment", 1, "e" * 64, "application/json"),
+            ("ocr_fragment", 2, "f" * 64, "application/json"),
+            ("render_manifest", None, "a" * 64, "application/json"),
+            ("ocr_manifest", None, "b" * 64, "application/json"),
+            ("provider_response", None, "1" * 64, "application/json"),
+            ("raw_ccef", None, "4" * 64, "application/json"),
+            ("normalized_ccef", None, normalized_sha, "application/json"),
+        ):
+            session.add(
+                ExtractionArtifact(
+                    run_id=run_id,
+                    kind=kind,
+                    page_number=page_number,
+                    relative_path=f"derived/extraction/{digest[:2]}/{digest}.bin",
+                    media_type=media_type,
+                    byte_size=10,
+                    content_sha256=digest,
+                )
+            )
+
+
+async def test_http_post_creates_v4_distinct_from_existing_v2_and_replays_stable(
+    tmp_path: Path,
+) -> None:
+    app = build_app(tmp_path, "v4-cutover")
+    await create_schema(app)
+    client = cast(Any, app.asgi_client)
+    try:
+        asset = (await upload_pdf(client, make_pdf(3))).json["asset"]
+        profile = {"engine": "ocr-v1"}
+        v2_run = await _enqueue_direct(
+            app,
+            asset["id"],
+            first_page=1,
+            last_page=2,
+            profile=profile,
+            idempotency_key=None,
+            pipeline_version=PDF_EXTRACTION_PIPELINE_VERSION,
+        )
+        created = (
+            await client.post(
+                "/api/pdf-extractions",
+                json={
+                    "pdf_asset_id": asset["id"],
+                    "first_page": 1,
+                    "last_page": 2,
+                    "profile": profile,
+                },
+            )
+        )[1]
+        assert created.status == 202
+        assert created.headers["idempotency-replayed"] == "false"
+        v3_run = UUID(created.json["extraction"]["id"])
+        assert v3_run != v2_run
+        assert (
+            created.json["extraction"]["pipeline_version"]
+            == PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION
+        )
+        # The POST binds the exact deterministic v7 fingerprint identity.
+        assert v3_run == expected_run_id(
+            asset["content_sha256"],
+            first_page=1,
+            last_page=2,
+            profile=profile,
+            pipeline_version=PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION,
+        )
+        # Replay of the v4 identity stays stable and never returns the v2 run.
+        replay = (
+            await client.post(
+                "/api/pdf-extractions",
+                json={
+                    "pdf_asset_id": asset["id"],
+                    "first_page": 1,
+                    "last_page": 2,
+                    "profile": profile,
+                },
+            )
+        )[1]
+        assert replay.status == 200
+        assert UUID(replay.json["extraction"]["id"]) == v3_run
+        assert await count_rows(app, ExtractionRun) == 2
+    finally:
+        await app.ctx.database.close()
+
+
+async def test_explicit_key_bound_to_v2_is_not_rebound_to_v4(tmp_path: Path) -> None:
+    app = build_app(tmp_path, "key-v2-v3")
+    await create_schema(app)
+    client = cast(Any, app.asgi_client)
+    try:
+        asset = (await upload_pdf(client, make_pdf(3))).json["asset"]
+        await _enqueue_direct(
+            app,
+            asset["id"],
+            first_page=1,
+            last_page=2,
+            profile=None,
+            idempotency_key="fixed-key",
+            pipeline_version=PDF_EXTRACTION_PIPELINE_VERSION,
+        )
+        response = (
+            await client.post(
+                "/api/pdf-extractions",
+                json={"pdf_asset_id": asset["id"], "first_page": 1, "last_page": 2},
+                headers={"Idempotency-Key": "fixed-key"},
+            )
+        )[1]
+        assert response.status == 409
+        assert response.json["code"] == "idempotency_conflict"
+        assert (
+            response.json["message"]
+            == "Idempotency-Key is already bound to a different PDF extraction"
+        )
+        assert await count_rows(app, ExtractionRun) == 1
+        assert await count_rows(app, Job) == 1
+    finally:
+        await app.ctx.database.close()
+
+
+async def test_committed_v2_and_v3_runs_expose_identical_summary_shapes(
+    tmp_path: Path,
+) -> None:
+    app = build_app(tmp_path, "read-compat")
+    await create_schema(app)
+    client = cast(Any, app.asgi_client)
+    try:
+        asset = (await upload_pdf(client, make_pdf(3))).json["asset"]
+        v2_run = await _enqueue_direct(
+            app,
+            asset["id"],
+            first_page=1,
+            last_page=2,
+            profile=None,
+            idempotency_key=None,
+            pipeline_version=PDF_EXTRACTION_PIPELINE_VERSION,
+        )
+        v3_run = UUID(
+            (
+                await client.post(
+                    "/api/pdf-extractions",
+                    json={"pdf_asset_id": asset["id"], "first_page": 1, "last_page": 2},
+                )
+            )[1].json["extraction"]["id"]
+        )
+        await _commit_completed_run(app, v2_run)
+        await _commit_completed_run(app, v3_run)
+
+        _, v2_get = await client.get(f"/api/pdf-extractions/{v2_run}")
+        _, v3_get = await client.get(f"/api/pdf-extractions/{v3_run}")
+        assert v2_get.status == v3_get.status == 200
+        expected_evidence = {
+            "status": "committed",
+            "page_count": 2,
+            "fragment_count": 37,
+            "warning_count": 1,
+            "render_manifest_sha256": "a" * 64,
+            "ocr_manifest_sha256": "b" * 64,
+        }
+        expected_candidate = {
+            "status": "committed",
+            "provider_response_sha256": "1" * 64,
+            "request_sha256": "2" * 64,
+            "response_sha256": "3" * 64,
+            "raw_ccef_sha256": "4" * 64,
+            "normalized_ccef_sha256": "5" * 64,
+            "item_count": 9,
+            "move_node_count": 12,
+            "figure_count": 0,
+            "unresolved_item_count": 1,
+            "warning_count": 2,
+            "error_count": 0,
+            "invalid_move_count": 1,
+            "ambiguous_move_count": 0,
+            "has_conflicts": True,
+        }
+        assert v2_get.json["evidence"] == expected_evidence
+        assert v3_get.json["evidence"] == expected_evidence
+        assert v2_get.json["candidate"] == expected_candidate
+        assert v3_get.json["candidate"] == expected_candidate
+        assert v2_get.json["has_conflicts"] is True
+        assert v3_get.json["has_conflicts"] is True
+        assert "relative_path" not in v2_get.text
+        assert "derived/extraction" not in v3_get.text
+
+        _, listing = await client.get("/api/pdf-extractions")
+        listed = {item["id"]: item for item in listing.json["items"]}
+        assert listed[str(v2_run)]["evidence"] == expected_evidence
+        assert listed[str(v3_run)]["evidence"] == expected_evidence
+        assert listed[str(v2_run)]["candidate"] == expected_candidate
+        assert listed[str(v3_run)]["candidate"] == expected_candidate
+        _, conflicted = await client.get("/api/pdf-extractions?has_conflicts=true")
+        assert {item["id"] for item in conflicted.json["items"]} == {str(v2_run), str(v3_run)}
+        _, clean = await client.get("/api/pdf-extractions?has_conflicts=false")
+        assert clean.json["items"] == []
+    finally:
+        await app.ctx.database.close()
+
+
+async def test_forged_v1_or_unsupported_pipeline_envelopes_are_not_exposed(
+    tmp_path: Path,
+) -> None:
+    app = build_app(tmp_path, "forged")
+    await create_schema(app)
+    client = cast(Any, app.asgi_client)
+    try:
+        asset = (await upload_pdf(client, make_pdf(3))).json["asset"]
+        run_id = UUID(
+            (
+                await client.post(
+                    "/api/pdf-extractions",
+                    json={"pdf_asset_id": asset["id"], "first_page": 1, "last_page": 2},
+                )
+            )[1].json["extraction"]["id"]
+        )
+        for forged in ("pdf-extraction:v1", "pdf-extraction:v9"):
+            async with app.ctx.database.session() as session, session.begin():
+                run = await session.get(ExtractionRun, run_id)
+                assert run is not None
+                run.pipeline_version = forged
+                job = await session.get(Job, run.job_id)
+                assert job is not None
+                job.status = "succeeded"
+                job.attempt_count = 1
+                job.result = {
+                    "result_schema": "chess-workbench/pdf-extraction-result/2.0",
+                    "run_id": str(run_id),
+                    "evidence": {
+                        "render_manifest_sha256": "a" * 64,
+                        "ocr_manifest_sha256": "b" * 64,
+                        "page_count": 2,
+                        "fragment_count": 37,
+                        "warning_count": 1,
+                    },
+                    "candidate": {
+                        "provider_response_sha256": "1" * 64,
+                        "request_sha256": "2" * 64,
+                        "response_sha256": "3" * 64,
+                        "raw_ccef_sha256": "4" * 64,
+                        "normalized_ccef_sha256": "5" * 64,
+                        "summary": {
+                            "item_count": 9,
+                            "move_node_count": 12,
+                            "figure_count": 0,
+                            "unresolved_item_count": 1,
+                            "warning_count": 2,
+                            "error_count": 0,
+                            "invalid_move_count": 1,
+                            "ambiguous_move_count": 0,
+                            "has_conflicts": True,
+                        },
+                    },
+                }
+            _, got = await client.get(f"/api/pdf-extractions/{run_id}")
+            assert got.status == 200
+            assert got.json["evidence"] is None
+            assert got.json["candidate"] is None
+            assert got.json["has_conflicts"] is False
+    finally:
+        await app.ctx.database.close()
+
+
+async def test_malformed_v2_run_fails_closed(tmp_path: Path) -> None:
+    app = build_app(tmp_path, "malformed-v2")
+    await create_schema(app)
+    client = cast(Any, app.asgi_client)
+    try:
+        asset = (await upload_pdf(client, make_pdf(3))).json["asset"]
+        v2_run = await _enqueue_direct(
+            app,
+            asset["id"],
+            first_page=1,
+            last_page=2,
+            profile=None,
+            idempotency_key=None,
+            pipeline_version=PDF_EXTRACTION_PIPELINE_VERSION,
+        )
+        await _commit_completed_run(app, v2_run)
+        async with app.ctx.database.session() as session, session.begin():
+            artifact = await session.scalar(
+                select(ExtractionArtifact).where(
+                    ExtractionArtifact.run_id == v2_run,
+                    ExtractionArtifact.kind == "rendered_page",
+                    ExtractionArtifact.page_number == 1,
+                )
+            )
+            assert artifact is not None
+            await session.delete(artifact)
+        _, got = await client.get(f"/api/pdf-extractions/{v2_run}")
+        assert got.status == 200
+        assert got.json["job"]["status"] == "succeeded"
+        assert got.json["evidence"] is None
+        assert got.json["candidate"] is None
+        assert got.json["has_conflicts"] is False
     finally:
         await app.ctx.database.close()
 

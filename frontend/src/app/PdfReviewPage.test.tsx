@@ -11,6 +11,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { PdfReviewPage } from './PdfReviewPage';
 import type { PdfReviewDocument } from '../logic/api/types';
+import type { AnnotatedMoveSequenceItem } from './reviewMoveLayout';
 
 const RUN_ID = '11111111-1111-4111-8111-111111111111';
 const RUN_ID_2 = '22222222-2222-4222-8222-222222222222';
@@ -253,6 +254,66 @@ function pairItems(): ReviewItem[] {
       confidence: null,
     },
   ];
+}
+
+function annotatedDocument(): PdfReviewDocument {
+  const nodes = baseNodes().slice(0, 3);
+  const sequence: AnnotatedMoveSequenceItem = {
+    id: 'annotated-seq',
+    kind: 'move_sequence',
+    title: '带谱内注释的棋谱',
+    initial_position: { kind: 'startpos' },
+    nodes,
+    annotations: [
+      {
+        id: 'a1',
+        text: '第一条原子说明',
+        text_format: 'plain',
+        anchor: { kind: 'move_node', node_id: 'n1', relation: 'after' },
+        evidence: evidence(5),
+        confidence: 0.9,
+      },
+      {
+        id: 'a2',
+        text: '**变化结论**',
+        text_format: 'markdown',
+        anchor: { kind: 'move_node', node_id: 'n3', relation: 'after' },
+        evidence: evidence(6),
+        confidence: 0.8,
+      },
+    ],
+    reading_flow: [
+      { kind: 'move', node_id: 'n1' },
+      { kind: 'annotation', annotation_id: 'a1' },
+      { kind: 'move', node_id: 'n2' },
+      { kind: 'move', node_id: 'n3' },
+      { kind: 'annotation', annotation_id: 'a2' },
+    ],
+    evidence: evidence(5),
+    confidence: 0.9,
+  };
+  const legacy = baseDocument({
+    items: [],
+    issues: [],
+    issueCounts: { issue_count: 0, blocking_issue_count: 0 },
+  });
+  return {
+    ...legacy,
+    package: {
+      ...legacy.package,
+      schema_version: 'chess-content-extraction/1.1',
+      items: [sequence],
+      provenance: {
+        ...legacy.package.provenance,
+        adapter_version: '1.1',
+      },
+    },
+    inspection: {
+      ...legacy.inspection,
+      item_count: 1,
+      move_node_count: nodes.length,
+    },
+  };
 }
 
 function baseItems(): ReviewItem[] {
@@ -903,6 +964,55 @@ describe('Stage 8D review page (8D-3A)', () => {
     expect(within(row).getAllByText('合法')).toHaveLength(2);
     expect(within(row).getByText('NAG 1')).toBeTruthy();
     expect(within(row).getByText('NAG 1 2')).toBeTruthy();
+  });
+
+  it('renders CCEF 1.1 annotations in reading-flow order and navigates their anchors', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => json(annotatedDocument())),
+    );
+    renderPage();
+
+    const sequence = (await screen.findByText('带谱内注释的棋谱')).closest(
+      'section',
+    )!;
+    const ordered = ['e4', '第一条原子说明', 'e5', 'c5', '变化结论'].map(
+      (label) => within(sequence).getByText(label),
+    );
+    for (let index = 1; index < ordered.length; index += 1) {
+      expect(
+        (ordered[index - 1].compareDocumentPosition(ordered[index]) &
+          Node.DOCUMENT_POSITION_FOLLOWING) !==
+          0,
+      ).toBe(true);
+    }
+
+    const c5Row = within(sequence)
+      .getByText('c5')
+      .closest('[data-variation-depth]') as HTMLElement;
+    expect(c5Row.getAttribute('data-variation-depth')).toBe('1');
+    const annotations = sequence.querySelectorAll('[data-annotation-id]');
+    expect(
+      [...annotations].map((entry) => entry.getAttribute('data-annotation-id')),
+    ).toEqual(['a1', 'a2']);
+
+    const board = screen.getByTestId('board-pdf-review-board');
+    const anchorButtons = within(sequence).getAllByRole('button', {
+      name: '定位注释局面',
+    });
+    fireEvent.click(anchorButtons[0]);
+    expect(board.getAttribute('data-position')).toBe(FEN_AFTER_E4);
+    fireEvent.click(anchorButtons[1]);
+    expect(board.getAttribute('data-position')).toBe(FEN_AFTER_C5);
+
+    fireEvent.click(
+      within(annotations[1] as HTMLElement).getByRole('button', {
+        name: '第 6 页',
+      }),
+    );
+    expect(screen.getByAltText('物理页 6 图片').getAttribute('src')).toBe(
+      pageUrl(6),
+    );
   });
 
   it('scopes wide screens to independent scroll panes with accessible labels', async () => {

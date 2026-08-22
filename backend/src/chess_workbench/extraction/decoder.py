@@ -21,12 +21,16 @@ parser/Pydantic exception is ever retained by the public error.
 from __future__ import annotations
 
 import json
+import logging
+from collections.abc import Mapping
 from typing import Any, Literal, get_args
 
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 
-from .contracts import ExtractionPackage
+from .contracts import ExtractionPackage, ExtractionPackageV1_1
 from .provider import StructuredGenerationResponse
+
+_LOGGER = logging.getLogger(__name__)
 
 CcefDecodeErrorCode = Literal[
     "truncated",
@@ -49,26 +53,82 @@ _INVALID_PACKAGE_MESSAGE = "Structured generation content is not a valid CCEF pa
 _AUTHORITATIVE_FIELDS = ("san_candidate", "uci_candidate", "fen_before", "fen_after")
 
 
-class CcefDecodeError(ValueError):
-    """Public decode failure carrying only a fixed code and fixed message.
+class _DuplicateMemberError(ValueError):
+    """Internal marker for a duplicate JSON object member."""
 
-    ``message`` is intentionally the only textual payload: raw provider
-    content, rejected input values and parser/Pydantic exceptions are
-    never stored on the error, in ``args``, or in ``__cause__``/
-    ``__context__`` (the decoder raises it only after leaving the
-    sensitive exception handler).
+
+class _NonStandardConstantError(ValueError):
+    """Internal marker for NaN or infinity in JSON."""
+
+
+def _schema_property_names(model: type[BaseModel]) -> frozenset[str]:
+    """Return only contract-owned field names, never provider-owned keys."""
+    names: set[str] = set()
+
+    def visit(value: Any) -> None:
+        if isinstance(value, dict):
+            properties = value.get("properties")
+            if isinstance(properties, dict):
+                names.update(key for key in properties if type(key) is str)
+            for child in value.values():
+                visit(child)
+        elif isinstance(value, list):
+            for child in value:
+                visit(child)
+
+    visit(model.model_json_schema())
+    return frozenset(names)
+
+
+def _sanitized_validation_diagnostic(
+    detail: Mapping[str, Any], allowed_fields: frozenset[str]
+) -> str:
+    location_parts = []
+    for part in detail.get("loc", ()):
+        if type(part) is int:
+            location_parts.append(str(part))
+        elif type(part) is str and part in allowed_fields:
+            location_parts.append(part)
+        else:
+            location_parts.append("<field>")
+    location = ".".join(location_parts) or "<root>"
+    error_type = detail.get("type")
+    if type(error_type) is not str or not error_type.replace("_", "").isalnum():
+        error_type = "validation_error"
+    return f"{location}:{error_type}"[:512]
+
+
+class CcefDecodeError(ValueError):
+    """Public decode failure with a fixed message and sanitized diagnostics.
+
+    Raw provider content, rejected input values and parser/Pydantic exceptions
+    are never stored on the error, in ``args``, or in ``__cause__``/
+    ``__context__``. Diagnostics contain only bounded field locations and
+    validation error types.
     """
 
-    def __init__(self, code: CcefDecodeErrorCode, message: str) -> None:
+    def __init__(
+        self,
+        code: CcefDecodeErrorCode,
+        message: str,
+        *,
+        diagnostics: tuple[str, ...] = (),
+    ) -> None:
         if not isinstance(code, str) or code not in _CCEF_DECODE_ERROR_CODES:
             raise ValueError(
                 f"code must be one of {sorted(_CCEF_DECODE_ERROR_CODES)}, got {code!r}"
             )
         if not isinstance(message, str) or not message.strip():
             raise ValueError("message must be a non-empty string")
+        if type(diagnostics) is not tuple or any(
+            type(item) is not str or not item or "\n" in item or len(item) > 512
+            for item in diagnostics
+        ):
+            raise ValueError("diagnostics must contain bounded single-line strings")
         super().__init__(message)
         self.code = code
         self.message = message
+        self.diagnostics = diagnostics
 
     def __str__(self) -> str:
         return self.message
@@ -83,14 +143,15 @@ def _reject_duplicate_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
     result: dict[str, Any] = {}
     for key, value in pairs:
         if key in result:
-            raise ValueError(f"duplicate object member name {key!r}")
+            raise _DuplicateMemberError
         result[key] = value
     return result
 
 
 def _reject_non_standard_constant(constant: str) -> Any:
     """json.loads ``parse_constant`` that rejects NaN/Infinity/-Infinity."""
-    raise ValueError(f"non-standard JSON constant {constant!r}")
+    del constant
+    raise _NonStandardConstantError
 
 
 def _check_untrusted_move_nodes(payload: dict[str, Any]) -> None:
@@ -141,10 +202,34 @@ def decode_extraction_response(
     handler so Python exception chaining can never retain raw provider
     content or rejected validation input values.
     """
+    payload = _parse_payload(response)
+    package = _validate_payload(payload, ExtractionPackage)
+    assert isinstance(package, ExtractionPackage)
+    return package
+
+
+def decode_extraction_response_v1_1(
+    response: StructuredGenerationResponse,
+) -> ExtractionPackageV1_1:
+    """Decode one structured-generation response into a strict CCEF 1.1 package.
+
+    Version-explicit: the payload must declare ``schema_version`` 1.1; a 1.0
+    package is rejected as ``invalid_package`` and never auto-upgraded. The
+    strict parse and the unvalidated-only trust boundary are shared with the
+    v1 decoder.
+    """
+    payload = _parse_payload(response)
+    package = _validate_payload(payload, ExtractionPackageV1_1)
+    assert isinstance(package, ExtractionPackageV1_1)
+    return package
+
+
+def _parse_payload(response: StructuredGenerationResponse) -> dict[str, Any]:
+    """Shared strict parse: truncation wins, then JSON syntax, then root shape."""
     if response.finish_reason == "length":
         raise CcefDecodeError("truncated", _TRUNCATED_MESSAGE)
 
-    parse_failed = False
+    parse_diagnostics: tuple[str, ...] = ()
     payload: Any = None
     try:
         payload = json.loads(
@@ -152,31 +237,78 @@ def decode_extraction_response(
             parse_constant=_reject_non_standard_constant,
             object_pairs_hook=_reject_duplicate_keys,
         )
-    except (ValueError, RecursionError):
+    except json.JSONDecodeError as error:
+        parse_diagnostics = (
+            f"json_error_line={error.lineno}",
+            f"json_error_column={error.colno}",
+        )
+    except _DuplicateMemberError:
+        parse_diagnostics = ("duplicate_object_member=1",)
+    except _NonStandardConstantError:
+        parse_diagnostics = ("non_standard_json_constant=1",)
+    except RecursionError:
+        parse_diagnostics = ("json_nesting_too_deep=1",)
+    except ValueError:
         # JSONDecodeError (a ValueError) retains the raw source document in
-        # .doc and duplicate/constant errors carry value reprs, so the
-        # handler must be left before the public error is raised.
-        parse_failed = True
-    if parse_failed:
-        raise CcefDecodeError("invalid_json", _INVALID_JSON_MESSAGE)
+        # .doc, so the handler must be left before the public error is raised.
+        parse_diagnostics = ("json_parser_value_error=1",)
+    if parse_diagnostics:
+        raise CcefDecodeError(
+            "invalid_json",
+            _INVALID_JSON_MESSAGE,
+            diagnostics=parse_diagnostics,
+        )
 
     if not isinstance(payload, dict):
-        raise CcefDecodeError("invalid_json", _INVALID_JSON_MESSAGE)
+        raise CcefDecodeError(
+            "invalid_json",
+            _INVALID_JSON_MESSAGE,
+            diagnostics=("json_root_not_object=1",),
+        )
+    return payload
 
+
+def _validate_payload[PackageModel: (ExtractionPackage, ExtractionPackageV1_1)](
+    payload: dict[str, Any], model: type[PackageModel]
+) -> PackageModel:
+    """Shared trust boundary: unvalidated-only nodes, then strict model validation."""
     _check_untrusted_move_nodes(payload)
-
     validation_failed = False
-    package: ExtractionPackage | None = None
+    validation_diagnostics: tuple[str, ...] = ()
+    package: PackageModel | None = None
     try:
-        package = ExtractionPackage.model_validate(payload)
-    except ValidationError:
+        package = model.model_validate(payload)
+    except ValidationError as error:
         # Pydantic errors embed the rejected input values; detach them for
         # the same reason as above.
+        allowed_fields = _schema_property_names(model)
+        diagnostics = []
+        for detail in error.errors(
+            include_url=False,
+            include_context=False,
+            include_input=False,
+        )[:20]:
+            diagnostics.append(_sanitized_validation_diagnostic(detail, allowed_fields))
+        _LOGGER.warning(
+            "Structured CCEF validation failed for %s: %s",
+            model.__name__,
+            ", ".join(diagnostics),
+        )
+        validation_diagnostics = tuple(diagnostics)
         validation_failed = True
     if validation_failed:
-        raise CcefDecodeError("invalid_package", _INVALID_PACKAGE_MESSAGE)
+        raise CcefDecodeError(
+            "invalid_package",
+            _INVALID_PACKAGE_MESSAGE,
+            diagnostics=validation_diagnostics,
+        )
     assert package is not None
     return package
 
 
-__all__ = ["CcefDecodeError", "CcefDecodeErrorCode", "decode_extraction_response"]
+__all__ = [
+    "CcefDecodeError",
+    "CcefDecodeErrorCode",
+    "decode_extraction_response",
+    "decode_extraction_response_v1_1",
+]

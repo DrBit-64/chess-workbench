@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, cast
@@ -15,11 +16,17 @@ from sqlalchemy.exc import IntegrityError
 
 from chess_workbench.config import SecretFileError, Settings, load_deepseek_api_key
 from chess_workbench.extraction.candidates import (
+    CcefCandidateArtifacts,
     CcefCandidateError,
     assemble_ccef_candidate_artifacts,
+    assemble_ccef_candidate_artifacts_v1_1,
+    assemble_ccef_candidate_artifacts_v1_1_semantic,
 )
 from chess_workbench.extraction.decoder import CcefDecodeError
-from chess_workbench.extraction.deepseek import DeepSeekV4FlashProvider
+from chess_workbench.extraction.deepseek import (
+    DeepSeekInvalidResponseRecorder,
+    DeepSeekV4FlashProvider,
+)
 from chess_workbench.extraction.evidence import (
     EvidenceOrigin,
     NormalizedBox,
@@ -41,15 +48,25 @@ from chess_workbench.extraction.prompting import (
     PromptEvidenceFragment,
     PromptEvidencePage,
     build_ccef_generation_request,
+    build_ccef_v1_1_generation_request,
+    build_ccef_v1_1_semantic_generation_request,
 )
 from chess_workbench.extraction.provider import (
     StructuredGenerationProvider,
     StructuredGenerationProviderError,
+    StructuredGenerationRequest,
+    StructuredGenerationResponse,
+)
+from chess_workbench.services.ccef_failure_debug import (
+    store_ccef_failure_capture,
+    store_deepseek_invalid_response_capture,
 )
 from chess_workbench.services.content import ServiceError
 from chess_workbench.services.pdf_persistence import (
+    PDF_ANNOTATED_EXTRACTION_PIPELINE_VERSION,
     PDF_EVIDENCE_PIPELINE_VERSION,
     PDF_EXTRACTION_PIPELINE_VERSION,
+    PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION,
 )
 from chess_workbench.services.source_storage import (
     StoredSourceBlob,
@@ -72,7 +89,14 @@ _EVIDENCE_ARTIFACT_KINDS = frozenset(
     {"rendered_page", "ocr_fragment", "render_manifest", "ocr_manifest"}
 )
 _CCEF_ARTIFACT_KINDS = frozenset({"provider_response", "raw_ccef", "normalized_ccef"})
-_SUPPORTED_PIPELINES = frozenset({PDF_EVIDENCE_PIPELINE_VERSION, PDF_EXTRACTION_PIPELINE_VERSION})
+_SUPPORTED_PIPELINES = frozenset(
+    {
+        PDF_EVIDENCE_PIPELINE_VERSION,
+        PDF_EXTRACTION_PIPELINE_VERSION,
+        PDF_ANNOTATED_EXTRACTION_PIPELINE_VERSION,
+        PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION,
+    }
+)
 _MAX_RUN_FRAGMENTS = 200_000
 _MAX_EVIDENCE_ARTIFACT_BYTES = 64 * 1024 * 1024
 
@@ -90,6 +114,8 @@ class _ExtractionInput:
     relative_path: str
     profile: dict[str, JsonValue]
     created_at: datetime
+    pipeline_version: str
+    attempt_count: int
 
 
 @dataclass(frozen=True, slots=True)
@@ -226,6 +252,8 @@ async def _load_input(database: Database, payload: dict[str, Any]) -> _Extractio
         relative_path=source_file.relative_path,
         profile=profile,
         created_at=run.created_at,
+        pipeline_version=pipeline_version,
+        attempt_count=job.attempt_count,
     )
 
 
@@ -701,6 +729,9 @@ async def _load_committed_evidence(
 def _active_provider(
     settings: Settings,
     provider: StructuredGenerationProvider | None,
+    *,
+    thinking_enabled: bool = False,
+    invalid_response_recorder: DeepSeekInvalidResponseRecorder | None = None,
 ) -> StructuredGenerationProvider:
     if provider is not None:
         return provider
@@ -722,7 +753,33 @@ def _active_provider(
         api_key=api_key.get_secret_value(),
         timeout_seconds=settings.ccef_provider_timeout_seconds,
         max_output_tokens_limit=settings.ccef_max_output_tokens,
+        thinking_enabled=thinking_enabled,
+        invalid_response_recorder=invalid_response_recorder,
     )
+
+
+def _deepseek_invalid_response_recorder(
+    settings: Settings,
+    source: _ExtractionInput,
+) -> DeepSeekInvalidResponseRecorder:
+    async def record(
+        response_bytes: bytes,
+        status_code: int,
+        diagnostics: tuple[str, ...],
+    ) -> None:
+        await asyncio.to_thread(
+            store_deepseek_invalid_response_capture,
+            settings.source_storage_root,
+            run_id=source.run_id,
+            job_id=source.job_id,
+            attempt_count=source.attempt_count,
+            pipeline_version=source.pipeline_version,
+            response_bytes=response_bytes,
+            status_code=status_code,
+            diagnostics=diagnostics,
+        )
+
+    return record
 
 
 async def _process_ccef_candidate(
@@ -733,25 +790,58 @@ async def _process_ccef_candidate(
     *,
     provider: StructuredGenerationProvider | None,
 ) -> dict[str, Any]:
+    builder, assemble = _ccef_pipeline_functions(source.pipeline_version)
     try:
-        request = build_ccef_generation_request(committed.context)
+        request = builder(committed.context)
     except CcefPromptError as error:
         raise EngineError(f"ccef_{error.code}", str(error), retryable=False) from None
-    active_provider = _active_provider(settings, provider)
+    active_provider = _active_provider(
+        settings,
+        provider,
+        thinking_enabled=source.pipeline_version == PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION,
+    )
     try:
         response = await active_provider.generate(request)
     except StructuredGenerationProviderError as error:
         raise EngineError(error.code, str(error), retryable=error.retryable) from None
     try:
-        artifacts = assemble_ccef_candidate_artifacts(committed.context, request, response)
+        artifacts = assemble(committed.context, request, response)
     except CcefDecodeError as error:
+        if source.pipeline_version == PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION:
+            await _capture_failed_generation(
+                settings,
+                source,
+                response,
+                error_code=f"ccef_{error.code}",
+                error_message=str(error),
+                diagnostics=error.diagnostics,
+            )
         raise EngineError(
             f"ccef_{error.code}",
             str(error),
-            retryable=error.code in {"invalid_json", "invalid_package"},
+            retryable=(
+                source.pipeline_version != PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION
+                and error.code in {"invalid_json", "invalid_package"}
+            ),
         ) from None
     except CcefCandidateError as error:
-        raise EngineError(f"ccef_{error.code}", str(error), retryable=False) from None
+        if source.pipeline_version == PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION:
+            await _capture_failed_generation(
+                settings,
+                source,
+                response,
+                error_code=f"ccef_{error.code}",
+                error_message=str(error),
+                diagnostics=error.diagnostics,
+            )
+        raise EngineError(
+            f"ccef_{error.code}",
+            str(error),
+            retryable=(
+                source.pipeline_version != PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION
+                and error.code == "semantic_incomplete"
+            ),
+        ) from None
 
     provider_blob = await _store_blob(
         settings, suffix=".json", raw_bytes=artifacts.provider_response_bytes
@@ -785,6 +875,64 @@ async def _process_ccef_candidate(
     }
 
 
+async def _capture_failed_generation(
+    settings: Settings,
+    source: _ExtractionInput,
+    response: StructuredGenerationResponse,
+    *,
+    error_code: str,
+    error_message: str,
+    diagnostics: tuple[str, ...],
+) -> None:
+    try:
+        await asyncio.to_thread(
+            store_ccef_failure_capture,
+            settings.source_storage_root,
+            run_id=source.run_id,
+            job_id=source.job_id,
+            attempt_count=source.attempt_count,
+            pipeline_version=source.pipeline_version,
+            response=response,
+            error_code=error_code,
+            error_message=error_message,
+            diagnostics=diagnostics,
+        )
+    except (ServiceError, OSError, ValueError):
+        raise EngineError(
+            "ccef_failure_capture_failed",
+            "Failed CCEF response could not be retained for local diagnosis",
+            retryable=False,
+        ) from None
+
+
+def _ccef_pipeline_functions(
+    pipeline_version: str,
+) -> tuple[
+    Callable[[CcefPromptContext], StructuredGenerationRequest],
+    Callable[
+        [CcefPromptContext, StructuredGenerationRequest, StructuredGenerationResponse],
+        CcefCandidateArtifacts,
+    ],
+]:
+    """Version-explicit builder/assembler selection from the trusted pipeline.
+
+    The choice comes only from the persisted pipeline identity; response
+    content, provider metadata and artifact presence are never inspected.
+    """
+    if pipeline_version == PDF_ANNOTATED_EXTRACTION_PIPELINE_VERSION:
+        return build_ccef_v1_1_generation_request, assemble_ccef_candidate_artifacts_v1_1
+    if pipeline_version == PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION:
+        return (
+            build_ccef_v1_1_semantic_generation_request,
+            assemble_ccef_candidate_artifacts_v1_1_semantic,
+        )
+    if pipeline_version == PDF_EXTRACTION_PIPELINE_VERSION:
+        return build_ccef_generation_request, assemble_ccef_candidate_artifacts
+    raise EngineError(
+        "invalid_job_payload", "PDF extraction Job payload is invalid", retryable=False
+    )
+
+
 async def process_pdf_extraction_job(
     database: Database,
     settings: Settings,
@@ -797,8 +945,20 @@ async def process_pdf_extraction_job(
     """Render one immutable run, write CAS blobs, then atomically register indexes."""
     source = await _load_input(database, payload)
     active_provider: StructuredGenerationProvider | None = provider
-    if payload["pipeline_version"] == PDF_EXTRACTION_PIPELINE_VERSION:
-        active_provider = _active_provider(settings, provider)
+    if payload["pipeline_version"] in {
+        PDF_EXTRACTION_PIPELINE_VERSION,
+        PDF_ANNOTATED_EXTRACTION_PIPELINE_VERSION,
+        PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION,
+    }:
+        is_semantic_v4 = payload["pipeline_version"] == PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION
+        active_provider = _active_provider(
+            settings,
+            provider,
+            thinking_enabled=is_semantic_v4,
+            invalid_response_recorder=(
+                _deepseek_invalid_response_recorder(settings, source) if is_semantic_v4 else None
+            ),
+        )
         committed = await _load_committed_evidence(database, settings, source)
         if committed is not None:
             return await _process_ccef_candidate(

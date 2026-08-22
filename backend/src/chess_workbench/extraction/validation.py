@@ -20,9 +20,11 @@ import chess
 
 from .contracts import (
     ExtractionPackage,
+    ExtractionPackageV1_1,
     ExtractionWarning,
     MoveNode,
     MoveSequenceItem,
+    MoveSequenceItemV1_1,
     StartPosition,
 )
 
@@ -73,7 +75,26 @@ def normalize_chess_moves(package: ExtractionPackage) -> ExtractionPackage:
     return ExtractionPackage.model_validate(result.model_dump(mode="json"))
 
 
-def _normalize_sequence(item: MoveSequenceItem) -> None:
+def normalize_chess_moves_v1_1(package: ExtractionPackageV1_1) -> ExtractionPackageV1_1:
+    """Recompute every move node of a deep copy of a CCEF 1.1 package.
+
+    Uses exactly the accepted python-chess rules and warning policy shared with
+    the v1 normalizer. Board progress follows ``parent_id`` topology only;
+    sequence annotations and ``reading_flow`` are never inspected, split,
+    re-anchored or reordered and survive byte-for-byte. The input is never
+    mutated, and the result is revalidated through ``ExtractionPackageV1_1`` so
+    the exact-cover flow and every 1.1 reference remain enforced.
+    """
+    result = copy.deepcopy(package)
+    for item in result.items:
+        if isinstance(item, MoveSequenceItemV1_1):
+            _normalize_sequence(item)
+    return ExtractionPackageV1_1.model_validate(result.model_dump(mode="json"))
+
+
+def _normalize_sequence(
+    item: MoveSequenceItem | MoveSequenceItemV1_1,
+) -> None:
     initial = item.initial_position
     if isinstance(initial, StartPosition):
         initial_board: chess.Board | None = chess.Board()
@@ -181,4 +202,4 @@ def _fen_is_valid_standard(fen: str) -> bool:
     return board.is_valid()
 
 
-__all__ = ["normalize_chess_moves"]
+__all__ = ["normalize_chess_moves", "normalize_chess_moves_v1_1"]

@@ -15,7 +15,6 @@ from typing import Any, cast
 from uuid import UUID
 
 import pytest
-
 from chess_workbench.api.app import ChessWorkbenchApp, create_app
 from chess_workbench.config import Settings
 from chess_workbench.extraction.contracts import ExtractionPackage
@@ -341,8 +340,12 @@ async def test_openapi_contains_both_review_operations(tmp_path: Path) -> None:
     assert document_operation["tags"] == ["pdf"]
     assert document_operation["summary"] == "Read one verified PDF extraction review document"
     schema = document_operation["responses"]["200"]["content"]["application/json"]["schema"]
-    item_union = schema["properties"]["package"]["properties"]["items"]["items"]
-    assert item_union["discriminator"]["propertyName"] == "kind"
+    package_union = schema["properties"]["package"]
+    assert package_union["discriminator"]["propertyName"] == "schema_version"
+    assert len(package_union["oneOf"]) == 2
+    for package_schema in package_union["oneOf"]:
+        item_union = package_schema["properties"]["items"]["items"]
+        assert item_union["discriminator"]["propertyName"] == "kind"
     for status in ("404", "409", "503"):
         assert "application/json" in document_operation["responses"][status]["content"]
 

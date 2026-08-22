@@ -18,12 +18,12 @@ from typing import Any
 from uuid import UUID
 
 import pytest
-from pypdf import PdfWriter
-from sqlalchemy import select
-
 from chess_workbench.config import Settings
-from chess_workbench.extraction.contracts import ExtractionPackage
-from chess_workbench.extraction.validation import normalize_chess_moves
+from chess_workbench.extraction.contracts import ExtractionPackage, ExtractionPackageV1_1
+from chess_workbench.extraction.validation import (
+    normalize_chess_moves,
+    normalize_chess_moves_v1_1,
+)
 from chess_workbench.review.inspection import inspect_review_candidate
 from chess_workbench.schemas.review import PdfReviewDocumentRead
 from chess_workbench.services.content import ServiceError
@@ -33,7 +33,9 @@ from chess_workbench.services.pdf_extraction import (
     PDF_EXTRACTION_RESULT_SCHEMA,
 )
 from chess_workbench.services.pdf_persistence import (
+    PDF_ANNOTATED_EXTRACTION_PIPELINE_VERSION,
     PDF_EXTRACTION_PIPELINE_VERSION,
+    PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION,
     PdfPersistenceService,
 )
 from chess_workbench.services.pdf_review import PdfReviewPageContent, PdfReviewReadService
@@ -41,6 +43,8 @@ from chess_workbench.services.source_storage import store_content_addressed_byte
 from chess_workbench.store.base import Base
 from chess_workbench.store.database import Database
 from chess_workbench.store.models import ExtractionArtifact, ExtractionRun, Job, PdfAsset
+from pypdf import PdfWriter
+from sqlalchemy import select
 
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 REVIEW_NOT_FOUND = "PDF extraction review was not found"
@@ -134,6 +138,27 @@ def _package_payload(run_id: UUID, first: int, last: int) -> dict[str, Any]:
     }
 
 
+def _package_payload_v1_1(run_id: UUID, first: int, last: int) -> dict[str, Any]:
+    payload = _package_payload(run_id, first, last)
+    payload["schema_version"] = "chess-content-extraction/1.1"
+    payload["provenance"]["adapter_version"] = "1.1"
+    sequence = payload["items"][1]
+    sequence["annotations"] = [
+        {
+            "id": "a1",
+            "text": "A synthetic note after White's first move.",
+            "anchor": {"kind": "move_node", "node_id": "n1", "relation": "after"},
+            "evidence": [{"page": first}],
+        }
+    ]
+    sequence["reading_flow"] = [
+        {"kind": "move", "node_id": "n1"},
+        {"kind": "annotation", "annotation_id": "a1"},
+        {"kind": "move", "node_id": "n2"},
+    ]
+    return payload
+
+
 def _normalized_package(run_id: UUID, first: int, last: int) -> ExtractionPackage:
     return normalize_chess_moves(
         ExtractionPackage.model_validate(_package_payload(run_id, first, last))
@@ -153,7 +178,12 @@ async def _store(settings: Settings, *, suffix: str, raw_bytes: bytes) -> str:
 
 
 async def _setup(
-    tmp_path: Path, name: str, *, first: int = FIRST_PAGE, last: int = LAST_PAGE
+    tmp_path: Path,
+    name: str,
+    *,
+    first: int = FIRST_PAGE,
+    last: int = LAST_PAGE,
+    pipeline_version: str = PDF_EXTRACTION_PIPELINE_VERSION,
 ) -> tuple[Database, Settings, UUID]:
     settings = Settings(
         database_url=f"sqlite+aiosqlite:///{tmp_path / f'{name}.db'}",
@@ -182,7 +212,7 @@ async def _setup(
             first_page=first,
             last_page=last,
             idempotency_key=name,
-            pipeline_version=PDF_EXTRACTION_PIPELINE_VERSION,
+            pipeline_version=pipeline_version,
         )
     return database, settings, extraction.run.id
 
@@ -203,7 +233,11 @@ async def _complete_review(
         if normalized_payload is None
         else normalized_payload
     )
-    package = normalize_chess_moves(ExtractionPackage.model_validate(payload))
+    package: ExtractionPackage | ExtractionPackageV1_1
+    if payload.get("schema_version") == "chess-content-extraction/1.1":
+        package = normalize_chess_moves_v1_1(ExtractionPackageV1_1.model_validate(payload))
+    else:
+        package = normalize_chess_moves(ExtractionPackage.model_validate(payload))
     normalized_bytes = _json_bytes(package.model_dump(mode="json"))
     normalized_path = await _store(settings, suffix=".json", raw_bytes=normalized_bytes)
     normalized_sha = _sha256(normalized_bytes)
@@ -421,6 +455,39 @@ async def test_valid_document_and_page_reads(tmp_path: Path) -> None:
 
 
 @pytest.mark.asyncio
+async def test_valid_semantic_v4_document_preserves_annotations_and_reading_flow(
+    tmp_path: Path,
+) -> None:
+    database, settings, run_id = await _setup(
+        tmp_path,
+        "valid-v4",
+        pipeline_version=PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION,
+    )
+    await _complete_review(
+        database,
+        settings,
+        run_id,
+        normalized_payload=_package_payload_v1_1(run_id, FIRST_PAGE, LAST_PAGE),
+    )
+    async with database.session() as session:
+        document = await PdfReviewReadService(session, settings).read_document(run_id)
+
+    assert isinstance(document.package, ExtractionPackageV1_1)
+    assert document.package.schema_version == "chess-content-extraction/1.1"
+    sequence = document.package.items[1]
+    assert sequence.kind == "move_sequence"
+    assert [annotation.id for annotation in sequence.annotations] == ["a1"]
+    assert [entry.kind for entry in sequence.reading_flow] == [
+        "move",
+        "annotation",
+        "move",
+    ]
+    assert document.inspection == inspect_review_candidate(document.package)
+
+    await database.close()
+
+
+@pytest.mark.asyncio
 async def test_reads_are_deterministic_and_session_is_not_mutated(tmp_path: Path) -> None:
     database, settings, run_id = await _setup(tmp_path, "deterministic")
     await _complete_review(database, settings, run_id)
@@ -481,11 +548,37 @@ async def test_historical_v1_pipeline_is_unavailable(tmp_path: Path) -> None:
     assert error.status == 409
     assert str(error) == REVIEW_UNAVAILABLE
 
-    # ---------------------------------------------------------------------------
-    # 3. Malformed result, hash mismatch, slot problems, media/size metadata
-    # ---------------------------------------------------------------------------
-
     await database.close()
+
+
+@pytest.mark.asyncio
+async def test_v3_run_returns_sanitized_409_for_document_and_page(
+    tmp_path: Path,
+) -> None:
+    database, settings, run_id = await _setup(tmp_path, "v3-review")
+    await _complete_review(database, settings, run_id)
+    async with database.session() as session, session.begin():
+        run = await session.get(ExtractionRun, run_id)
+        assert run is not None
+        run.pipeline_version = PDF_ANNOTATED_EXTRACTION_PIPELINE_VERSION
+    async with database.session() as session:
+        service = PdfReviewReadService(session, settings)
+        with pytest.raises(ServiceError) as caught_document:
+            await service.read_document(run_id)
+        with pytest.raises(ServiceError) as caught_page:
+            await service.read_page(run_id, FIRST_PAGE)
+    for caught in (caught_document, caught_page):
+        assert caught.value.code == "ambiguous_context"
+        assert caught.value.status == 409
+        assert str(caught.value) == REVIEW_UNAVAILABLE
+        assert caught.value.details is None
+        assert caught.value.__cause__ is None
+    await database.close()
+
+
+# ---------------------------------------------------------------------------
+# 3. Malformed result, hash mismatch, slot problems, media/size metadata
+# ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio

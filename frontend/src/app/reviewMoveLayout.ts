@@ -2,8 +2,19 @@ import type { PdfReviewDocument } from '../logic/api/types';
 
 type ReviewItem = NonNullable<PdfReviewDocument['package']['items']>[number];
 type MoveSequenceItem = Extract<ReviewItem, { kind: 'move_sequence' }>;
+type V1_1Package = Extract<
+  PdfReviewDocument['package'],
+  { schema_version: 'chess-content-extraction/1.1' }
+>;
+export type AnnotatedMoveSequenceItem = Extract<
+  NonNullable<V1_1Package['items']>[number],
+  { kind: 'move_sequence' }
+>;
 
 export type MoveNode = MoveSequenceItem['nodes'][number];
+export type SequenceAnnotation = NonNullable<
+  AnnotatedMoveSequenceItem['annotations']
+>[number];
 
 export interface ReviewMoveRow {
   /** Stable row key built from the contained node ids. */
@@ -22,6 +33,15 @@ export interface ReviewMoveRow {
   evidencePages: number[];
 }
 
+export type ReviewReadingBlock =
+  | { kind: 'move_row'; key: string; row: ReviewMoveRow }
+  | {
+      kind: 'annotation';
+      key: string;
+      annotation: SequenceAnnotation;
+      variationDepth: number;
+    };
+
 /**
  * Project a normalized move sequence into conventional two-ply score rows.
  *
@@ -35,6 +55,68 @@ export interface ReviewMoveRow {
  */
 export function buildReviewMoveRows(nodes: MoveNode[]): ReviewMoveRow[] {
   const depths = variationDepths(nodes);
+  return buildMoveRowsWithDepths(nodes, depths);
+}
+
+/**
+ * Project a CCEF 1.1 reading flow into move rows interleaved with annotations.
+ *
+ * Topology remains authoritative for variation depth, while reading_flow is
+ * authoritative for presentation. An annotation flushes a pending half-row,
+ * so notes can genuinely interrupt a main line before it resumes.
+ */
+export function buildReviewReadingFlow(
+  item: AnnotatedMoveSequenceItem,
+): ReviewReadingBlock[] {
+  const depths = variationDepths(item.nodes);
+  const nodes = new Map(item.nodes.map((node) => [node.id, node]));
+  const annotations = new Map(
+    (item.annotations ?? []).map((annotation) => [annotation.id, annotation]),
+  );
+  const blocks: ReviewReadingBlock[] = [];
+  let bufferedMoves: MoveNode[] = [];
+
+  function flushMoves() {
+    for (const row of buildMoveRowsWithDepths(bufferedMoves, depths)) {
+      blocks.push({ kind: 'move_row', key: `move:${row.key}`, row });
+    }
+    bufferedMoves = [];
+  }
+
+  for (const entry of item.reading_flow) {
+    if (entry.kind === 'move') {
+      const node = nodes.get(entry.node_id);
+      if (node === undefined) {
+        throw new Error('review reading flow contains an unknown move');
+      }
+      bufferedMoves.push(node);
+      continue;
+    }
+
+    flushMoves();
+    const annotation = annotations.get(entry.annotation_id);
+    if (annotation === undefined) {
+      throw new Error('review reading flow contains an unknown annotation');
+    }
+    const variationDepth =
+      annotation.anchor?.kind === 'move_node'
+        ? (depths.get(annotation.anchor.node_id) ?? 0)
+        : 0;
+    blocks.push({
+      kind: 'annotation',
+      key: `annotation:${annotation.id}`,
+      annotation,
+      variationDepth,
+    });
+  }
+  flushMoves();
+  return blocks;
+}
+
+function buildMoveRowsWithDepths(
+  nodes: MoveNode[],
+  depths: Map<string, number>,
+): ReviewMoveRow[] {
   const rows: ReviewMoveRow[] = [];
   let pendingWhite: MoveNode | null = null;
   let pendingWhiteDepth = 0;

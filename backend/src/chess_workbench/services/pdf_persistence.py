@@ -32,9 +32,18 @@ from chess_workbench.store.models import (
 PDF_EXTRACTION_JOB_KIND = "pdf_extraction"
 PDF_EVIDENCE_PIPELINE_VERSION = "pdf-extraction:v1"
 PDF_EXTRACTION_PIPELINE_VERSION = "pdf-extraction:v2"
+PDF_ANNOTATED_EXTRACTION_PIPELINE_VERSION = "pdf-extraction:v3"
+PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION = "pdf-extraction:v4"
 PDF_EXTRACTION_FINGERPRINT_VERSION = "pdfium-text-lines+ccef-formal-consolidation:v5"
+PDF_ANNOTATED_EXTRACTION_FINGERPRINT_VERSION = "pdfium-text-lines+ccef-annotated-consolidation:v6"
+PDF_SEMANTIC_EXTRACTION_FINGERPRINT_VERSION = "pdfium-text-lines+ccef-semantic-consolidation:v12"
 _SUPPORTED_PIPELINE_VERSIONS = frozenset(
-    {PDF_EVIDENCE_PIPELINE_VERSION, PDF_EXTRACTION_PIPELINE_VERSION}
+    {
+        PDF_EVIDENCE_PIPELINE_VERSION,
+        PDF_EXTRACTION_PIPELINE_VERSION,
+        PDF_ANNOTATED_EXTRACTION_PIPELINE_VERSION,
+        PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION,
+    }
 )
 
 
@@ -463,9 +472,15 @@ def _logical_fingerprint(
     profile_json: str,
     pipeline_version: str = PDF_EXTRACTION_PIPELINE_VERSION,
 ) -> str:
+    if pipeline_version == PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION:
+        fingerprint_version = PDF_SEMANTIC_EXTRACTION_FINGERPRINT_VERSION
+    elif pipeline_version == PDF_ANNOTATED_EXTRACTION_PIPELINE_VERSION:
+        fingerprint_version = PDF_ANNOTATED_EXTRACTION_FINGERPRINT_VERSION
+    else:
+        fingerprint_version = PDF_EXTRACTION_FINGERPRINT_VERSION
     identity = {
         "asset_content_sha256": asset_content_sha256,
-        "extraction_fingerprint_version": PDF_EXTRACTION_FINGERPRINT_VERSION,
+        "extraction_fingerprint_version": fingerprint_version,
         "first_page": first_page,
         "last_page": last_page,
         "pipeline_version": pipeline_version,

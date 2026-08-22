@@ -8,8 +8,17 @@ import useSWR from 'swr';
 import { ApiError, fetchJson } from '../logic/api/client';
 import type { PdfReviewDocument } from '../logic/api/types';
 import { FAST_MOVE_ANIMATION_MS } from './boardInteraction';
-import { buildReviewMoveRows } from './reviewMoveLayout';
-import type { MoveNode, ReviewMoveRow } from './reviewMoveLayout';
+import {
+  buildReviewMoveRows,
+  buildReviewReadingFlow,
+} from './reviewMoveLayout';
+import type {
+  AnnotatedMoveSequenceItem,
+  MoveNode,
+  ReviewMoveRow,
+  ReviewReadingBlock,
+  SequenceAnnotation,
+} from './reviewMoveLayout';
 
 const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
@@ -46,6 +55,12 @@ function sequenceStartFen(item: MoveSequenceItem): string {
   return item.initial_position.kind === 'fen'
     ? item.initial_position.fen
     : START_FEN;
+}
+
+function isAnnotatedMoveSequence(
+  item: MoveSequenceItem,
+): item is AnnotatedMoveSequenceItem {
+  return 'annotations' in item && 'reading_flow' in item;
 }
 
 function uniqueEvidencePages(evidence: EvidenceRef[]): number[] {
@@ -124,6 +139,30 @@ export function PdfReviewPage({ runId }: { runId: string }) {
       node.fen_after !== null
     ) {
       setBoardFen(node.fen_after);
+    }
+  }
+
+  function selectSequenceAnnotation(
+    sequence: AnnotatedMoveSequenceItem,
+    annotation: SequenceAnnotation,
+  ) {
+    const anchor = annotation.anchor;
+    if (anchor === null) {
+      return;
+    }
+    if (anchor.kind === 'position') {
+      setBoardFen(anchor.fen);
+      return;
+    }
+    const node = sequence.nodes.find(
+      (candidate) => candidate.id === anchor.node_id,
+    );
+    if (node === undefined || node.validation_status !== 'valid') {
+      return;
+    }
+    const fen = anchor.relation === 'before' ? node.fen_before : node.fen_after;
+    if (fen !== null) {
+      setBoardFen(fen);
     }
   }
 
@@ -209,6 +248,7 @@ export function PdfReviewPage({ runId }: { runId: string }) {
               onSelectPage={selectPage}
               onSelectNode={selectNode}
               onSelectAnchor={selectProseAnchor}
+              onSelectAnnotation={selectSequenceAnnotation}
               onSelectSequenceStart={(sequence) =>
                 setBoardFen(sequenceStartFen(sequence))
               }
@@ -226,12 +266,17 @@ function ReviewItemView({
   onSelectPage,
   onSelectNode,
   onSelectAnchor,
+  onSelectAnnotation,
   onSelectSequenceStart,
 }: {
   item: ReviewItem;
   onSelectPage: (page: number) => void;
   onSelectNode: (node: MoveNode) => void;
   onSelectAnchor: (item: ProseItem) => void;
+  onSelectAnnotation: (
+    sequence: AnnotatedMoveSequenceItem,
+    annotation: SequenceAnnotation,
+  ) => void;
   onSelectSequenceStart: (item: MoveSequenceItem) => void;
 }) {
   switch (item.kind) {
@@ -279,6 +324,7 @@ function ReviewItemView({
           item={item}
           onSelectPage={onSelectPage}
           onSelectNode={onSelectNode}
+          onSelectAnnotation={onSelectAnnotation}
           onSelectStart={onSelectSequenceStart}
         />
       );
@@ -335,14 +381,28 @@ function MoveSequenceView({
   item,
   onSelectPage,
   onSelectNode,
+  onSelectAnnotation,
   onSelectStart,
 }: {
   item: MoveSequenceItem;
   onSelectPage: (page: number) => void;
   onSelectNode: (node: MoveNode) => void;
+  onSelectAnnotation: (
+    sequence: AnnotatedMoveSequenceItem,
+    annotation: SequenceAnnotation,
+  ) => void;
   onSelectStart: (item: MoveSequenceItem) => void;
 }) {
-  const rows = useMemo(() => buildReviewMoveRows(item.nodes), [item.nodes]);
+  const blocks = useMemo<ReviewReadingBlock[]>(() => {
+    if (isAnnotatedMoveSequence(item)) {
+      return buildReviewReadingFlow(item);
+    }
+    return buildReviewMoveRows(item.nodes).map((row) => ({
+      kind: 'move_row' as const,
+      key: `move:${row.key}`,
+      row,
+    }));
+  }, [item]);
   return (
     <section className="rounded border border-stone-200 bg-white p-3">
       <header className="mb-2 flex flex-wrap items-center gap-2">
@@ -357,16 +417,76 @@ function MoveSequenceView({
         <EvidencePages evidence={item.evidence} onSelectPage={onSelectPage} />
       </header>
       <div className="space-y-1">
-        {rows.map((row) => (
-          <MoveRow
-            key={row.key}
-            row={row}
-            onSelectPage={onSelectPage}
-            onSelectNode={onSelectNode}
-          />
-        ))}
+        {blocks.map((block) =>
+          block.kind === 'move_row' ? (
+            <MoveRow
+              key={block.key}
+              row={block.row}
+              onSelectPage={onSelectPage}
+              onSelectNode={onSelectNode}
+            />
+          ) : (
+            <SequenceAnnotationView
+              key={block.key}
+              annotation={block.annotation}
+              variationDepth={block.variationDepth}
+              onSelectPage={onSelectPage}
+              onSelectAnchor={() => {
+                if (isAnnotatedMoveSequence(item)) {
+                  onSelectAnnotation(item, block.annotation);
+                }
+              }}
+            />
+          ),
+        )}
       </div>
     </section>
+  );
+}
+
+function SequenceAnnotationView({
+  annotation,
+  variationDepth,
+  onSelectPage,
+  onSelectAnchor,
+}: {
+  annotation: SequenceAnnotation;
+  variationDepth: number;
+  onSelectPage: (page: number) => void;
+  onSelectAnchor: () => void;
+}) {
+  const visualDepth = Math.min(4, variationDepth);
+  return (
+    <aside
+      data-annotation-id={annotation.id}
+      data-variation-depth={variationDepth}
+      style={{ marginLeft: `${visualDepth * 16}px` }}
+      className="rounded border-l-4 border-emerald-400 bg-emerald-50 px-3 py-2 text-sm text-stone-800"
+    >
+      {annotation.text_format === 'markdown' ? (
+        <ReactMarkdown rehypePlugins={[rehypeSanitize]}>
+          {annotation.text}
+        </ReactMarkdown>
+      ) : (
+        <p className="whitespace-pre-wrap">{annotation.text}</p>
+      )}
+      <div className="mt-1 flex flex-wrap items-center gap-1">
+        <Tag color="green">谱内注释</Tag>
+        {annotation.anchor !== null ? (
+          <button
+            type="button"
+            onClick={onSelectAnchor}
+            className="rounded border border-stone-300 bg-white px-2 py-0.5 text-xs"
+          >
+            定位注释局面
+          </button>
+        ) : null}
+        <EvidencePages
+          evidence={annotation.evidence}
+          onSelectPage={onSelectPage}
+        />
+      </div>
+    </aside>
   );
 }
 

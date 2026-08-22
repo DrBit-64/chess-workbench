@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildReviewMoveRows } from './reviewMoveLayout';
-import type { MoveNode } from './reviewMoveLayout';
+import {
+  buildReviewMoveRows,
+  buildReviewReadingFlow,
+} from './reviewMoveLayout';
+import type { AnnotatedMoveSequenceItem, MoveNode } from './reviewMoveLayout';
 
 function node(overrides: Partial<MoveNode> & { id: string }): MoveNode {
   return {
@@ -208,5 +211,98 @@ describe('buildReviewMoveRows', () => {
     expect(flatten(rows).map((entry) => entry.id)).toEqual(
       nodes.map((entry) => entry.id),
     );
+  });
+});
+
+describe('buildReviewReadingFlow', () => {
+  it('interleaves atomic notes and true local branches without changing topology', () => {
+    const n10 = black('n10', 5, { parent_id: null, move_text: 'Nc6' });
+    const n11 = white('n11', 6, { parent_id: 'n10', move_text: 'Be3' });
+    const n12 = white('n12', 6, {
+      parent_id: 'n10',
+      sibling_order: 1,
+      move_text: 'O-O',
+    });
+    const n13 = black('n13', 6, {
+      parent_id: 'n12',
+      move_text: 'O-O-O',
+    });
+    const n30 = black('n30', 6, {
+      parent_id: 'n11',
+      move_text: 'O-O-O',
+    });
+    const item: AnnotatedMoveSequenceItem = {
+      id: 'seq1',
+      kind: 'move_sequence',
+      title: 'Synthetic annotated score',
+      initial_position: { kind: 'startpos' },
+      nodes: [n10, n11, n12, n13, n30],
+      annotations: [
+        {
+          id: 'a1',
+          text: 'The local alternative begins here.',
+          text_format: 'plain',
+          anchor: { kind: 'move_node', node_id: 'n10', relation: 'after' },
+          evidence: evidence(321),
+          confidence: 0.9,
+        },
+        {
+          id: 'a2',
+          text: 'The main line resumes after this note.',
+          text_format: 'plain',
+          anchor: { kind: 'move_node', node_id: 'n12', relation: 'after' },
+          evidence: evidence(321),
+          confidence: 0.9,
+        },
+      ],
+      reading_flow: [
+        { kind: 'move', node_id: 'n10' },
+        { kind: 'move', node_id: 'n11' },
+        { kind: 'annotation', annotation_id: 'a1' },
+        { kind: 'move', node_id: 'n12' },
+        { kind: 'move', node_id: 'n13' },
+        { kind: 'annotation', annotation_id: 'a2' },
+        { kind: 'move', node_id: 'n30' },
+      ],
+      evidence: evidence(321),
+      confidence: 0.9,
+    };
+
+    const blocks = buildReviewReadingFlow(item);
+    expect(blocks.map((block) => block.kind)).toEqual([
+      'move_row',
+      'move_row',
+      'annotation',
+      'move_row',
+      'annotation',
+      'move_row',
+    ]);
+    expect(
+      blocks.map((block) =>
+        block.kind === 'annotation'
+          ? block.annotation.id
+          : [block.row.white?.id, block.row.black?.id]
+              .filter(Boolean)
+              .join('+'),
+      ),
+    ).toEqual(['n10', 'n11', 'a1', 'n12+n13', 'a2', 'n30']);
+
+    const variation = blocks[3];
+    expect(variation.kind).toBe('move_row');
+    if (variation.kind === 'move_row') {
+      expect(variation.row.variationDepth).toBe(1);
+    }
+    const resumedMainline = blocks[5];
+    expect(resumedMainline.kind).toBe('move_row');
+    if (resumedMainline.kind === 'move_row') {
+      expect(resumedMainline.row.variationDepth).toBe(0);
+      expect(resumedMainline.row.black).toBe(n30);
+    }
+
+    // Presentation never rewrites the actual branch parents.
+    expect(n11.parent_id).toBe('n10');
+    expect(n12.parent_id).toBe('n10');
+    expect(n13.parent_id).toBe('n12');
+    expect(n30.parent_id).toBe('n11');
   });
 });

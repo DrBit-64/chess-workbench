@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import copy
 import re
-from typing import Annotated, Literal
+from typing import Annotated, Literal, TypeGuard
 
 import chess
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
@@ -19,13 +19,16 @@ from ..extraction.contracts import (
     DiagnosticCode,
     EvidenceRef,
     ExtractionPackage,
+    ExtractionPackageV1_1,
     ExtractionWarning,
     FenPosition,
     FigureItem,
     HeadingItem,
     LocalId,
     MoveSequenceItem,
+    MoveSequenceItemV1_1,
     PositionAnchor,
+    PositionAnnotationAnchor,
     ProseItem,
     StartPosition,
     UnresolvedItem,
@@ -33,7 +36,7 @@ from ..extraction.contracts import (
 
 REVIEW_INSPECTION_VERSION: Literal["ccef-review-inspection/1.0"] = "ccef-review-inspection/1.0"
 
-ReviewIssueScope = Literal["item", "node", "diagnostic"]
+ReviewIssueScope = Literal["item", "node", "annotation", "diagnostic"]
 ReviewIssueSeverity = Literal["warning", "error"]
 
 _HEADING_TOO_LONG_MESSAGE = "Heading exceeds the publishable 200-character limit"
@@ -132,11 +135,19 @@ def _canonical_fen(fen: str) -> str | None:
     return board.fen(en_passant="fen")
 
 
-def _occurrence_positions(package: ExtractionPackage) -> list[str]:
+ReviewPackage = ExtractionPackage | ExtractionPackageV1_1
+ReviewMoveSequence = MoveSequenceItem | MoveSequenceItemV1_1
+
+
+def _is_move_sequence(item: object) -> TypeGuard[ReviewMoveSequence]:
+    return isinstance(item, (MoveSequenceItem, MoveSequenceItemV1_1))
+
+
+def _occurrence_positions(package: ReviewPackage) -> list[str]:
     """Every candidate occurrence position package-wide, duplicates preserved."""
     positions: list[str] = []
     for item in package.items:
-        if not isinstance(item, MoveSequenceItem):
+        if not _is_move_sequence(item):
             continue
         initial = item.initial_position
         if isinstance(initial, StartPosition):
@@ -153,9 +164,9 @@ def _occurrence_positions(package: ExtractionPackage) -> list[str]:
     return positions
 
 
-def _raise_if_not_normalized(package: ExtractionPackage) -> None:
+def _raise_if_not_normalized(package: ReviewPackage) -> None:
     for item in package.items:
-        if not isinstance(item, MoveSequenceItem):
+        if not _is_move_sequence(item):
             continue
         if any(node.validation_status == "unvalidated" for node in item.nodes):
             raise ValueError(_NOT_NORMALIZED_MESSAGE)
@@ -180,10 +191,10 @@ def _append_item_warnings(
         )
 
 
-def inspect_review_candidate(package: ExtractionPackage) -> ReviewInspection:
+def inspect_review_candidate(package: ReviewPackage) -> ReviewInspection:
     """Inspect one locally normalized package and return ordered review issues."""
-    if type(package) is not ExtractionPackage:
-        raise TypeError("package must be ExtractionPackage")
+    if type(package) not in (ExtractionPackage, ExtractionPackageV1_1):
+        raise TypeError("package must be ExtractionPackage or ExtractionPackageV1_1")
     _raise_if_not_normalized(package)
 
     occurrences = _occurrence_positions(package)
@@ -191,7 +202,7 @@ def inspect_review_candidate(package: ExtractionPackage) -> ReviewInspection:
     move_node_count = 0
 
     for item in package.items:
-        if isinstance(item, MoveSequenceItem):
+        if _is_move_sequence(item):
             move_node_count += len(item.nodes)
 
         # 1. Item warnings in original order.
@@ -298,7 +309,7 @@ def inspect_review_candidate(package: ExtractionPackage) -> ReviewInspection:
             )
 
         # 3. Move sequence nodes in topology/source order.
-        if isinstance(item, MoveSequenceItem):
+        if _is_move_sequence(item):
             for node in item.nodes:
                 if node.validation_status in ("invalid", "ambiguous"):
                     issues.append(
@@ -346,6 +357,74 @@ def inspect_review_candidate(package: ExtractionPackage) -> ReviewInspection:
                             evidence=_copied_evidence(node.evidence),
                         )
                     )
+
+            # CCEF 1.1 annotations are source-ordered review units. Their
+            # warnings participate in inspection just like item/node warnings,
+            # and position anchors use the same package-wide occurrence rule as
+            # top-level prose. The reading-flow placement itself is already an
+            # exact-cover contract invariant and is not recomputed here.
+            if isinstance(item, MoveSequenceItemV1_1):
+                for annotation in item.annotations:
+                    node_id = (
+                        annotation.anchor.node_id
+                        if annotation.anchor is not None and annotation.anchor.kind == "move_node"
+                        else None
+                    )
+                    for index, warning in enumerate(annotation.warnings):
+                        issues.append(
+                            _issue(
+                                issue_id=(f"annotation:{item.id}:{annotation.id}:warning:{index}"),
+                                scope="annotation",
+                                severity="warning",
+                                blocking=False,
+                                item_id=item.id,
+                                node_id=node_id,
+                                code=warning.code,
+                                message=warning.message,
+                                evidence=_copied_evidence(warning.evidence),
+                            )
+                        )
+                    if isinstance(annotation.anchor, PositionAnnotationAnchor):
+                        anchor_canonical = _canonical_fen(annotation.anchor.fen)
+                        matches = (
+                            0
+                            if anchor_canonical is None
+                            else sum(1 for position in occurrences if position == anchor_canonical)
+                        )
+                        if matches == 0:
+                            issues.append(
+                                _issue(
+                                    issue_id=(
+                                        f"annotation:{item.id}:{annotation.id}:"
+                                        "position-anchor-no-match"
+                                    ),
+                                    scope="annotation",
+                                    severity="error",
+                                    blocking=True,
+                                    item_id=item.id,
+                                    node_id=None,
+                                    code="position_anchor_no_match",
+                                    message=_POSITION_ANCHOR_NO_MATCH_MESSAGE,
+                                    evidence=_copied_evidence(annotation.evidence),
+                                )
+                            )
+                        elif matches > 1:
+                            issues.append(
+                                _issue(
+                                    issue_id=(
+                                        f"annotation:{item.id}:{annotation.id}:"
+                                        "position-anchor-ambiguous"
+                                    ),
+                                    scope="annotation",
+                                    severity="error",
+                                    blocking=True,
+                                    item_id=item.id,
+                                    node_id=None,
+                                    code="position_anchor_ambiguous",
+                                    message=_POSITION_ANCHOR_AMBIGUOUS_MESSAGE,
+                                    evidence=_copied_evidence(annotation.evidence),
+                                )
+                            )
 
     # Diagnostics in original order; info ignored; warning/error kept.
     for index, diagnostic in enumerate(package.diagnostics):

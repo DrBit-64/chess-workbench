@@ -461,6 +461,248 @@ class ExtractionPackage(_StrictModel):
 
 
 # ---------------------------------------------------------------------------
+# CCEF 1.1 annotated move-sequence profile (ADR 0017)
+# ---------------------------------------------------------------------------
+# CCEF 1.0 models, Schema bytes and artifacts stay unchanged. The 1.1 profile
+# replaces only the move-sequence member of the item union and adds sequence
+# annotations plus an explicit reading flow. Structure/reference validation
+# only; no chess-legality inference happens here.
+
+
+CCEF_VERSION_1_1: Literal["chess-content-extraction/1.1"] = "chess-content-extraction/1.1"
+SCHEMA_ID_1_1 = "urn:chess-content-extraction:schema:1.1"
+
+
+class MoveNodeAnnotationAnchor(_StrictModel):
+    kind: Literal["move_node"]
+    node_id: LocalId
+    relation: Literal["before", "after"]
+
+
+class PositionAnnotationAnchor(_StrictModel):
+    kind: Literal["position"]
+    fen: Fen
+
+
+SequenceAnnotationAnchor = Annotated[
+    MoveNodeAnnotationAnchor | PositionAnnotationAnchor, Field(discriminator="kind")
+]
+
+
+class SequenceAnnotation(_StrictModel):
+    id: LocalId
+    text: Annotated[str, _non_empty(1, 200_000)]
+    text_format: Literal["plain", "markdown"] = "plain"
+    anchor: SequenceAnnotationAnchor | None = None
+    evidence: list[EvidenceRef] = Field(min_length=1)
+    confidence: Confidence = None
+    warnings: list[ExtractionWarning] = Field(default_factory=list)
+    extensions: dict[ExtensionKey, FiniteJsonValue] = Field(default_factory=dict)
+
+
+class MoveFlowRef(_StrictModel):
+    kind: Literal["move"]
+    node_id: LocalId
+
+
+class AnnotationFlowRef(_StrictModel):
+    kind: Literal["annotation"]
+    annotation_id: LocalId
+
+
+SequenceFlowEntry = Annotated[MoveFlowRef | AnnotationFlowRef, Field(discriminator="kind")]
+
+
+class MoveSequenceItemV1_1(_ItemBase):
+    kind: Literal["move_sequence"]
+    title: Annotated[str, _non_empty(1, 2000)] | None = None
+    initial_position: InitialPosition
+    nodes: list[MoveNode] = Field(min_length=1)
+    annotations: list[SequenceAnnotation] = Field(default_factory=list)
+    reading_flow: list[SequenceFlowEntry] = Field(min_length=1)
+
+
+ExtractionItemV1_1 = Annotated[
+    HeadingItem | ProseItem | MoveSequenceItemV1_1 | FigureItem | UnresolvedItem,
+    Field(discriminator="kind"),
+]
+
+
+class ExtractionPackageV1_1(_StrictModel):
+    schema_version: Literal["chess-content-extraction/1.1"]
+    package_id: UUID
+    source: SourceDescriptor
+    items: list[ExtractionItemV1_1] = Field(default_factory=list)
+    diagnostics: list[Diagnostic] = Field(default_factory=list)
+    provenance: Provenance
+    extensions: dict[ExtensionKey, FiniteJsonValue] = Field(default_factory=dict)
+
+    @field_validator("package_id", mode="before")
+    @classmethod
+    def _uuid_instance_or_string(cls, value: Any) -> Any:
+        if isinstance(value, UUID):
+            return value
+        if isinstance(value, str):
+            return UUID(value)
+        raise ValueError("package_id must be a UUID instance or UUID string")
+
+    def _all_evidence(self) -> list[EvidenceRef]:
+        refs: list[EvidenceRef] = []
+        for item in self.items:
+            refs.extend(item.evidence)
+            for warning in item.warnings:
+                refs.extend(warning.evidence)
+            if isinstance(item, MoveSequenceItemV1_1):
+                for node in item.nodes:
+                    refs.extend(node.evidence)
+                    for warning in node.warnings:
+                        refs.extend(warning.evidence)
+                for annotation in item.annotations:
+                    refs.extend(annotation.evidence)
+                    for warning in annotation.warnings:
+                        refs.extend(warning.evidence)
+        for diagnostic in self.diagnostics:
+            refs.extend(diagnostic.evidence)
+        return refs
+
+    @model_validator(mode="after")
+    def _referential_integrity(self) -> ExtractionPackageV1_1:
+        item_ids: set[str] = set()
+        sequences: dict[str, MoveSequenceItemV1_1] = {}
+        for item in self.items:
+            if item.id in item_ids:
+                raise ValueError(f"duplicate item id {item.id!r}")
+            item_ids.add(item.id)
+            if isinstance(item, MoveSequenceItemV1_1):
+                sequences[item.id] = item
+
+        page_range = self.source.page_range
+        if page_range is not None:
+            for ref in self._all_evidence():
+                if not (page_range.start_page <= ref.page <= page_range.end_page):
+                    raise ValueError(
+                        f"evidence page {ref.page} outside declared page range "
+                        f"{page_range.start_page}..{page_range.end_page}"
+                    )
+
+        for item in self.items:
+            if isinstance(item, ProseItem) and isinstance(item.anchor, MoveNodeAnchor):
+                sequence = sequences.get(item.anchor.sequence_id)
+                if sequence is None:
+                    raise ValueError(
+                        f"dangling move_node anchor sequence {item.anchor.sequence_id!r}"
+                    )
+                if not any(node.id == item.anchor.node_id for node in sequence.nodes):
+                    raise ValueError(f"dangling move_node anchor node {item.anchor.node_id!r}")
+
+        for diagnostic in self.diagnostics:
+            if diagnostic.item_id is not None and diagnostic.item_id not in item_ids:
+                raise ValueError(f"diagnostic item_id {diagnostic.item_id!r} does not resolve")
+            if diagnostic.node_id is not None:
+                if diagnostic.item_id is None:
+                    raise ValueError("diagnostic node_id requires item_id")
+                sequence = sequences.get(diagnostic.item_id)
+                if sequence is None:
+                    raise ValueError(
+                        f"diagnostic node_id requires a move_sequence item {diagnostic.item_id!r}"
+                    )
+                if not any(node.id == diagnostic.node_id for node in sequence.nodes):
+                    raise ValueError(
+                        f"diagnostic node_id {diagnostic.node_id!r} not in sequence "
+                        f"{diagnostic.item_id!r}"
+                    )
+
+        for sequence_id, sequence in sequences.items():
+            self._check_sequence(sequence_id, sequence)
+        return self
+
+    @staticmethod
+    def _check_sequence(sequence_id: str, sequence: MoveSequenceItemV1_1) -> None:
+        node_ids: set[str] = set()
+        sibling_orders: dict[str | None, list[int]] = {}
+        for node in sequence.nodes:
+            if node.id in node_ids:
+                raise ValueError(f"duplicate node id {node.id!r} in sequence {sequence_id!r}")
+            # parent must have appeared before the current node: check before
+            # adding node.id so a self-parent is rejected too.
+            if node.parent_id is not None and node.parent_id not in node_ids:
+                raise ValueError(
+                    f"dangling or forward parent {node.parent_id!r} for node "
+                    f"{node.id!r} in sequence {sequence_id!r}"
+                )
+            node_ids.add(node.id)
+            sibling_orders.setdefault(node.parent_id, []).append(node.sibling_order)
+        for parent, orders in sibling_orders.items():
+            if sorted(orders) != list(range(len(orders))):
+                raise ValueError(
+                    f"non-contiguous sibling_order under parent {parent!r} "
+                    f"in sequence {sequence_id!r}"
+                )
+
+        annotation_ids: set[str] = set()
+        for annotation in sequence.annotations:
+            if annotation.id in annotation_ids:
+                raise ValueError(
+                    f"duplicate annotation id {annotation.id!r} in sequence {sequence_id!r}"
+                )
+            if annotation.id in node_ids:
+                raise ValueError(
+                    f"annotation id {annotation.id!r} collides with a node id "
+                    f"in sequence {sequence_id!r}"
+                )
+            annotation_ids.add(annotation.id)
+            if isinstance(annotation.anchor, MoveNodeAnnotationAnchor) and (
+                annotation.anchor.node_id not in node_ids
+            ):
+                raise ValueError(
+                    f"annotation anchor node {annotation.anchor.node_id!r} absent "
+                    f"in sequence {sequence_id!r}"
+                )
+
+        move_refs: list[str] = []
+        annotation_refs: list[str] = []
+        seen_move_refs: set[str] = set()
+        seen_annotation_refs: set[str] = set()
+        for entry in sequence.reading_flow:
+            if entry.kind == "move":
+                if entry.node_id not in node_ids:
+                    raise ValueError(
+                        f"flow move reference {entry.node_id!r} absent in sequence {sequence_id!r}"
+                    )
+                if entry.node_id in seen_move_refs:
+                    raise ValueError(
+                        f"duplicate flow move reference {entry.node_id!r} "
+                        f"in sequence {sequence_id!r}"
+                    )
+                seen_move_refs.add(entry.node_id)
+                move_refs.append(entry.node_id)
+            else:
+                if entry.annotation_id not in annotation_ids:
+                    raise ValueError(
+                        f"flow annotation reference {entry.annotation_id!r} absent "
+                        f"in sequence {sequence_id!r}"
+                    )
+                if entry.annotation_id in seen_annotation_refs:
+                    raise ValueError(
+                        f"duplicate flow annotation reference {entry.annotation_id!r} "
+                        f"in sequence {sequence_id!r}"
+                    )
+                seen_annotation_refs.add(entry.annotation_id)
+                annotation_refs.append(entry.annotation_id)
+
+        # Ordered projections are retained only for this exact-order comparison;
+        # duplicate detection above uses the seen sets and stays O(1) average.
+        expected_moves = [node.id for node in sequence.nodes]
+        if move_refs != expected_moves:
+            raise ValueError(f"move flow projection differs from nodes in sequence {sequence_id!r}")
+        expected_annotations = [annotation.id for annotation in sequence.annotations]
+        if annotation_refs != expected_annotations:
+            raise ValueError(
+                f"annotation flow projection differs from annotations in sequence {sequence_id!r}"
+            )
+
+
+# ---------------------------------------------------------------------------
 # Deterministic JSON Schema artifact
 # ---------------------------------------------------------------------------
 
@@ -505,27 +747,67 @@ def ccef_schema_canonical_json() -> str:
     )
 
 
+def ccef_v1_1_schema_document() -> dict[str, Any]:
+    """Return the portable Draft 2020-12 CCEF 1.1 schema as a plain dict."""
+    schema = ExtractionPackageV1_1.model_json_schema()
+    _close_extension_maps(schema)
+    # Same UTC-only restriction on created_at as the 1.0 runtime validator.
+    created_at = schema["$defs"]["Provenance"]["properties"]["created_at"]
+    created_at["pattern"] = _DATETIME_STRING.pattern
+    schema["$schema"] = SCHEMA_DIALECT
+    schema["$id"] = SCHEMA_ID_1_1
+    schema["title"] = "Chess Content Extraction Format v1.1"
+    return schema
+
+
+def ccef_v1_1_schema_canonical_json() -> str:
+    """Canonical CCEF 1.1 schema bytes (compact, sorted keys, trailing newline)."""
+    return (
+        json.dumps(
+            ccef_v1_1_schema_document(),
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+        + "\n"
+    )
+
+
 __all__ = [
     "CCEF_VERSION",
+    "CCEF_VERSION_1_1",
     "SCHEMA_DIALECT",
     "SCHEMA_ID",
+    "SCHEMA_ID_1_1",
+    "AnnotationFlowRef",
     "Diagnostic",
     "EvidenceRef",
+    "ExtractionItemV1_1",
     "ExtractionPackage",
+    "ExtractionPackageV1_1",
     "ExtractionWarning",
     "FenPosition",
     "FigureItem",
     "HeadingItem",
+    "MoveFlowRef",
     "MoveNode",
     "MoveNodeAnchor",
+    "MoveNodeAnnotationAnchor",
     "MoveSequenceItem",
+    "MoveSequenceItemV1_1",
     "PageRange",
     "PositionAnchor",
+    "PositionAnnotationAnchor",
     "ProseItem",
     "Provenance",
+    "SequenceAnnotation",
+    "SequenceAnnotationAnchor",
+    "SequenceFlowEntry",
     "SourceDescriptor",
     "StartPosition",
     "UnresolvedItem",
     "ccef_schema_canonical_json",
     "ccef_schema_document",
+    "ccef_v1_1_schema_canonical_json",
+    "ccef_v1_1_schema_document",
 ]

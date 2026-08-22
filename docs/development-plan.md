@@ -407,7 +407,8 @@ Repertoire/Exercise 发布 adapter 等 Stage 5 模型存在后再接入。
 
 ### 交付物
 
-- `chess-content-extraction/1.0` Pydantic 契约、固定 JSON Schema 和兼容性夹具；
+- `chess-content-extraction/1.0` 基础 Pydantic 契约，以及在不改变 1.0 工件的前提下增加的
+  `chess-content-extraction/1.1` 原子棋谱注释/独立阅读流契约、固定 JSON Schema 和兼容性夹具；
 - provider 接收调用者给定的 JSON Schema，默认 DeepSeek V4 Flash，并允许后续增加千问、
   OpenAI 或本地实现；provider 不导入消费者领域模型；
 - ChessWorkbench ConsumerAdapter 单向映射 CCEF heading/prose/move tree/figure/unresolved，
@@ -417,7 +418,8 @@ Repertoire/Exercise 发布 adapter 等 Stage 5 模型存在后再接入。
 - PyMuPDF 页面渲染、OCRmyPDF/PaddleOCR adapter；
 - `AI_PROVIDER=mock|deepseek|dashscope|openai|local` adapter；测试只使用 mock transport，
   默认生产配置为 DeepSeek V4 Flash 非思考模式；
-- 章节、正文、棋谱、棋盘图、说明和 SourceSpan 候选；
+- 章节、正文、棋谱、棋盘图、说明和 SourceSpan 候选；连续主谱、局部分支和原子说明分别
+  保留棋局拓扑、来源阅读顺序与语义锚点，分支不复制公共前缀；
 - JSON Schema、python-chess、前后局面和置信度验证；
 - 三栏审核页：原文/页图、棋盘、候选变化/警告；
 - 批准、修改、拒绝、多来源合并和审计记录；
@@ -442,6 +444,8 @@ Repertoire/Exercise 发布 adapter 等 Stage 5 模型存在后再接入。
 9. 任务重试和重复批准保持幂等；发布事务失败时正式知识零部分写入；
 10. 在无任意云模型 key、无 OCR 二进制的精简 CI job 中，除相应可选集成外所有测试仍绿；
 11. 云模型 adapter 只做 Schema 合约测试和显式手动/定时集成，不在 PR 中花费真实额度。
+12. 合成棋书片段能表达“主线走到某步 → 插入原子说明与从更早局面分出的括号变化 → 原
+    主线继续”；过滤阅读流必须完整覆盖棋步/注释一次，变化父节点必须指向真实分叉局面。
 
 ---
 

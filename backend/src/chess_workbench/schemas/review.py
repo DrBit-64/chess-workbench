@@ -13,7 +13,7 @@ from typing import Annotated, Literal
 
 from pydantic import Field, StringConstraints, model_validator
 
-from ..extraction.contracts import ExtractionPackage
+from ..extraction.contracts import ExtractionPackage, ExtractionPackageV1_1
 from ..review.inspection import ReviewInspection, inspect_review_candidate
 from .domain import EntityId, Sha256, StrictContract
 
@@ -29,6 +29,11 @@ ReviewPageContentPath = Annotated[
     ),
 ]
 
+ReviewPackage = Annotated[
+    ExtractionPackage | ExtractionPackageV1_1,
+    Field(discriminator="schema_version"),
+]
+
 
 class PdfReviewPageRead(StrictContract):
     physical_page: Annotated[int, Field(ge=1, le=20_000)]
@@ -41,7 +46,7 @@ class PdfReviewPageRead(StrictContract):
 class PdfReviewDocumentRead(StrictContract):
     run_id: EntityId
     normalized_ccef_sha256: Sha256
-    package: ExtractionPackage
+    package: ReviewPackage
     inspection: ReviewInspection
     pages: list[PdfReviewPageRead]
 

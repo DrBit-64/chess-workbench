@@ -20,6 +20,7 @@ from typing import Any, Literal
 
 import httpx
 import pytest
+
 from chess_workbench.extraction import DeepSeekV4FlashProvider
 from chess_workbench.extraction.provider import (
     StructuredGenerationProvider,
@@ -164,6 +165,22 @@ async def test_successful_request_mapping_with_non_ascii_schema() -> None:
     assert request.model_dump() == snapshot
 
 
+async def test_thinking_profile_is_explicit_and_uses_max_effort() -> None:
+    def handler(req: httpx.Request) -> httpx.Response:
+        body = json.loads(req.content)
+        assert body["thinking"] == {"type": "enabled"}
+        assert body["reasoning_effort"] == "max"
+        return httpx.Response(200, json=_ok_payload())
+
+    provider = DeepSeekV4FlashProvider(
+        api_key="test-key",
+        thinking_enabled=True,
+        transport=httpx.MockTransport(handler),
+    )
+    response = await provider.generate(_request())
+    assert response.content == '{"ok": true}'
+
+
 async def test_successful_request_mapping_with_empty_schema() -> None:
     request = _request(response_schema={}, max_output_tokens=1)
     expected_system_content = (
@@ -306,6 +323,118 @@ async def test_invalid_top_level_json_is_invalid_response() -> None:
     with pytest.raises(StructuredGenerationProviderError) as excinfo:
         await provider.generate(_request())
     _assert_invalid_response_error(excinfo.value)
+
+
+async def test_invalid_null_content_records_exact_raw_response() -> None:
+    private_marker = "PRIVATE_REASONING_MARKER_16f2"
+    raw_body = json.dumps(
+        {
+            "model": "deepseek-v4-flash",
+            "choices": [
+                {
+                    "message": {
+                        "content": None,
+                        "reasoning_content": private_marker,
+                    },
+                    "finish_reason": "length",
+                }
+            ],
+            "usage": {
+                "prompt_tokens": 10,
+                "completion_tokens": 48_000,
+                "total_tokens": 48_010,
+            },
+        },
+        separators=(",", ":"),
+    ).encode()
+    captures: list[tuple[bytes, int, tuple[str, ...]]] = []
+
+    async def recorder(
+        response_bytes: bytes,
+        status_code: int,
+        diagnostics: tuple[str, ...],
+    ) -> None:
+        captures.append((response_bytes, status_code, diagnostics))
+
+    provider = DeepSeekV4FlashProvider(
+        api_key="test-key",
+        transport=httpx.MockTransport(
+            lambda req: httpx.Response(
+                200,
+                content=raw_body,
+                headers={"content-type": "application/json"},
+            )
+        ),
+        invalid_response_recorder=recorder,
+    )
+
+    with pytest.raises(StructuredGenerationProviderError) as excinfo:
+        await provider.generate(_request())
+
+    _assert_invalid_response_error(excinfo.value)
+    assert excinfo.value.__cause__ is None
+    assert excinfo.value.__context__ is None
+    assert private_marker not in str(excinfo.value)
+    assert captures == [(raw_body, 200, ("content_null",))]
+
+
+async def test_malformed_json_records_exact_raw_response() -> None:
+    raw_body = b'{"private":"PRIVATE_INVALID_JSON_901d"'
+    captures: list[tuple[bytes, int, tuple[str, ...]]] = []
+
+    async def recorder(
+        response_bytes: bytes,
+        status_code: int,
+        diagnostics: tuple[str, ...],
+    ) -> None:
+        captures.append((response_bytes, status_code, diagnostics))
+
+    provider = DeepSeekV4FlashProvider(
+        api_key="test-key",
+        transport=httpx.MockTransport(
+            lambda req: httpx.Response(
+                200,
+                content=raw_body,
+                headers={"content-type": "application/json"},
+            )
+        ),
+        invalid_response_recorder=recorder,
+    )
+
+    with pytest.raises(StructuredGenerationProviderError) as excinfo:
+        await provider.generate(_request())
+
+    _assert_invalid_response_error(excinfo.value)
+    assert captures == [(raw_body, 200, ("response_json_invalid",))]
+
+
+async def test_invalid_response_recorder_failure_is_sanitized() -> None:
+    private_marker = "PRIVATE_CAPTURE_FAILURE_d179"
+
+    async def recorder(
+        response_bytes: bytes,
+        status_code: int,
+        diagnostics: tuple[str, ...],
+    ) -> None:
+        raise OSError(private_marker)
+
+    provider = DeepSeekV4FlashProvider(
+        api_key="test-key",
+        transport=httpx.MockTransport(lambda req: httpx.Response(200, content=b"not-json")),
+        invalid_response_recorder=recorder,
+    )
+
+    with pytest.raises(StructuredGenerationProviderError) as excinfo:
+        await provider.generate(_request())
+
+    assert excinfo.value.code == "invalid_response"
+    assert excinfo.value.retryable is False
+    assert str(excinfo.value) == (
+        "DeepSeek invalid response could not be retained for local diagnosis"
+    )
+    assert private_marker not in str(excinfo.value)
+    assert excinfo.value.__cause__ is None
+    assert excinfo.value.__context__ is None
 
 
 @pytest.mark.parametrize(
@@ -501,6 +630,12 @@ def test_constructor_rejects_invalid_timeout_seconds(bad: Any) -> None:
 def test_constructor_rejects_invalid_max_output_tokens_limit(bad: Any) -> None:
     with pytest.raises((TypeError, ValueError)):
         DeepSeekV4FlashProvider(api_key="k", max_output_tokens_limit=bad)
+
+
+@pytest.mark.parametrize("bad", [0, 1, "true", None])
+def test_constructor_rejects_non_boolean_thinking_mode(bad: Any) -> None:
+    with pytest.raises(TypeError):
+        DeepSeekV4FlashProvider(api_key="k", thinking_enabled=bad)
 
 
 async def test_api_key_is_trimmed_before_use() -> None:

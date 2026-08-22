@@ -2,8 +2,9 @@
 
 ## Goal
 
-Implement Stage **8D** on top of accepted Stage 8C: a safe human-review read surface, immutable
-review ledger and commands, followed by atomic publication into a traditional draft course.
+Implement Stage **8D** on top of accepted Stage 8C: correct the real-book annotated score model,
+then provide a safe human-review read surface, immutable review ledger and commands, followed by
+atomic publication into a traditional draft course.
 ADR 0016 is authoritative. Stage 5/6E and Stage 7 remain deferred.
 
 ## Delivery order
@@ -103,12 +104,1476 @@ publication and UI into one delegated task.
    - [x] **8D-3A page:** self-contained typed read-only review component.
    - [x] **8D-3B integration:** application route and eligible Sources-run entry point.
    - [x] **8D-3C interaction correction:** independent scrolling and conventional move rows.
+   - [ ] **8D-3D annotated score correction:** atomic in-score notes, true local branches and an
+     independent source reading flow; JSON acceptance precedes UI changes.
 4. [ ] **8D-4 review ledger:** review session/revision/event persistence, evidence fidelity and
    optimistic concurrency.
 5. [ ] **8D-5 review commands:** edit/acknowledge/approve/reject/reopen with immutable audit.
 6. [ ] **8D-6 draft publication:** atomic idempotent Course/Knowledge draft mapping.
 7. [ ] **8D-7 interactive completion:** editing, explicit conflict resolution, multi-source merge
    and focused `make acceptance-stage-8` closeout.
+
+## Architecture correction gate before 8D-4
+
+The first real review exposed a semantic limitation rather than a view-only defect. CCEF 1.0 can
+represent a move tree and separately anchored prose, but it cannot place atomic notes inside one
+continuous score while preserving a different chess branch point. ADR 0017 and
+`docs/architecture/ccef-v1.1.md` are authoritative: CCEF 1.0 remains immutable; CCEF 1.1 adds
+sequence annotations and an exact-cover reading flow. A parenthesized local variation shares its
+real common prefix, while the main line may be interrupted by notes and resume afterward.
+
+Delivery order is frozen:
+
+1. [x] **8D-3D1 portable contract:** additive CCEF 1.1 model and Schema with synthetic topology/
+   reading-flow oracles; 1.0 bytes and behavior remain unchanged.
+2. [x] **8D-3D2 producer protocol:** 1.1 prompt/decoder rules for atomic semantic notes, real branch
+   parents and no duplicated common prefixes.
+   - [x] **8D-3D2A request/decoder:** version-explicit 1.1 request construction and strict response
+     decoding; existing 1.0 entry points remain unchanged.
+   - [x] **8D-3D2B pipeline wiring:** candidate/worker/artifact fingerprints consume 1.1 without
+     rewriting old 1.0 artifacts.
+     - [x] **8D-3D2B1 candidate assembly/exports:** pure 1.1 trusted artifacts and portable exports.
+     - [x] **8D-3D2B2 immutable v3 execution:** new pipeline identity/fingerprint and worker routing;
+       v1/v2 execution remains reproducible.
+     - [x] **8D-3D2B3 legacy read compatibility:** public summaries and v2 review stay readable
+       while v3 waits for 3D5 review consumption.
+3. [x] **8D-3D3 deterministic consolidation:** merge by legal path/position while preserving exact
+   annotation evidence and reading flow; no source-specific special cases.
+   - [x] **8D-3D3A normalizer foundation:** locally normalize 1.1 move trees while preserving all
+     annotations and exact reading flow.
+   - [x] **8D-3D3B annotated consolidation:** merge/remap legal paths, annotations and flow.
+4. [x] **8D-3D4 offline JSON checkpoint:** reprocess/inspect pages 319–323 before touching the
+   review UI. The Game 13 main line must remain continuous around embedded notes; local/nested
+   variations attach at their real parents; all evidence remains traceable.
+   - [x] **8D-3D4A versioned inspector:** provider-free CCEF 1.1 offline recomputation, committed-
+     artifact comparison and annotation/reading-flow/branch report.
+   - [x] **8D-3D4B real five-page checkpoint:** one immutable v4 run, machine gate and semantic
+     pretty-JSON review; no UI work or source-specific production fix.
+5. [ ] **8D-3D5 review consumption:** inspection/read API/UI render the accepted annotated score,
+   then repeat the real-browser checkpoint.
+   - [x] inspection/schema/read service accept version-bound CCEF 1.0 and 1.1 packages; v2/v3/v4
+     artifacts remain immutable and provider/raw/path content stays undisclosed.
+   - [x] review UI follows CCEF 1.1 `reading_flow`, interleaves atomic annotations, preserves real
+     variation depth and navigates move/position annotation anchors on the board.
+   - [ ] operator browser checkpoint on v12 run `4b33f70a-b623-5ec3-bc8e-5ed6a2a28e4a`.
+
+Do not design the review ledger migration or start 8D-4 until this gate is accepted. Real book
+text is local/manual evidence only and must not enter committed fixtures.
+
+Implementation dependency after 8D-3D2A is **3D3A → 3D3B → 3D2B**. Candidate/worker wiring cannot
+precede the pure 1.1 normalizer/consolidator because committed candidate assembly always produces a
+locally validated normalized artifact; it must not bypass normalization or introduce a temporary
+lossy path.
+
+## Codex diagnostic correction before the next real checkpoint
+
+The previous semantic-v4 attempts discarded provider content whenever strict JSON/CCEF decoding or
+trusted evidence binding failed. That made the public error safe, but made model/debug iteration
+opaque. Before another paid run, failed v4 generations must follow this local-only policy:
+
+- preserve the exact generated content under the gitignored server storage namespace
+  `data/debug/extraction-failures/<run-id>/attempt-<n>/`;
+- write a separate sanitized JSON report containing run/job/attempt identity, response digest and
+  size, provider metadata, token usage, the stable failure code and bounded structural diagnostics;
+- never register these files as authoritative `ExtractionArtifact` rows, expose them through HTTP,
+  or treat them as a reviewable candidate;
+- never put request text, API keys, raw HTTP bodies, rejected field values or arbitrary model-owned
+  JSON keys into the diagnostic report or logs;
+- distinguish JSON syntax location, duplicate members, non-standard constants, CCEF field/type
+  failures and aggregate evidence-binding failures; an explicit wrong fragment hash is a conflict,
+  while a missing hash may be filled only from one uniquely matching trusted bbox;
+- stop semantic-v4 after the captured failure instead of consuming another automatic model attempt;
+  legacy v2/v3 retry behavior remains unchanged.
+
+This policy applies to future failures only. A response discarded before this correction cannot be
+reconstructed. It authorizes local diagnostic retention, not another real provider call.
+
+The operator then authorized exactly one new pages-319–323 semantic-v4 attempt. Fingerprint v11
+created run `be1f911c-8a5e-5f16-a451-260d75491721` and Job
+`ae399f4a-8adb-4009-90a8-ac63032c1726`; it made one provider call and stopped non-retryably with
+`invalid_response`. Read-only state confirms the evidence artifacts committed, but no provider,
+raw or normalized CCEF artifact exists. This exposed a second capture boundary: the 2xx DeepSeek
+HTTP body failed inside the transport adapter before a `StructuredGenerationResponse` existed, so
+the decoder-level capture could not run and the historical body is irrecoverable.
+
+Future semantic-v4 calls now also inject a local-only provider-boundary recorder. Invalid 2xx
+bodies are stored byte-for-byte as `.bin` under the same per-run/per-attempt debug namespace, with
+a separate sanitized report containing only response digest/size/status and one adapter-owned
+shape diagnostic such as `content_null`, `finish_reason_unsupported` or
+`response_json_invalid`. Headers, credentials, requests and decoded provider values are excluded.
+The public provider error contract remains unchanged. No second paid call is authorized by this
+change; 3D4B remains open until a future explicitly authorized run produces inspectable output.
+
+Follow-up budget analysis confirmed that DeepSeek V4 does not expose an independent reasoning-token
+cap: `reasoning_effort` selects `high` or `max`, while `max_tokens` bounds the complete generated
+completion, including reasoning and final content. The semantic-v4 request therefore now uses
+`reasoning_effort=max`, raises its explicit completion cap from 48,000 to 128,000 tokens, removes
+the internal 600-second timeout clamp, and advances only the semantic fingerprint to v12. A future
+authorized checkpoint should launch with `CHESS_WORKBENCH_CCEF_PROVIDER_TIMEOUT_SECONDS=1200` so
+the larger budget is not cut off by the default runtime setting. This configuration change itself
+does not authorize or perform another provider call.
+
+## Completed packet: DS-STAGE8-ANNOTATED-REAL-CHECKPOINT-01 (8D-3D4B)
+
+Fingerprint v12 completed pages 319–323 in one provider attempt with max reasoning effort,
+128,000 generated-token allowance and a 1,200-second runtime timeout. The inspector passed and the
+committed normalized artifact exactly matched offline recomputation: 16 items, two sequences, 120
+valid nodes, seven atomic annotations, 11 variation starts, zero duplicate UCI paths and 105/105
+trusted evidence fragments preserved. Manual review confirmed the Game 13 main line resumes from
+`n11` (`6.Be3`) to `n30` (`6...O-O-O`) after the displayed note/variation; `n12` (`6.O-O`) is an
+alternative child of the real `n10` (`5...Nc6`) parent and its continuation remains local. All
+six frozen semantic criteria passed. The candidate conflict flag is caused only by the retained
+source figure, not an invalid/ambiguous move or warning. 8D-3D5 may now begin as a separate task.
+
+### Goal
+
+Run or reuse exactly one immutable CCEF 1.1 (`pdf-extraction:v3`) extraction for the already-
+registered Smerdon Scandinavian physical pages 319–323, export only its raw CCEF, committed
+normalized CCEF and five evidence-index artifacts into gitignored `data/debug`, run the accepted
+1.1 offline inspector, and review the formatted JSON before any review API/UI work.
+
+This is an operational local checkpoint, not an implementation task. It authorizes the existing
+server-owned DeepSeek provider to process this one target run (including only the Job's existing
+bounded retry policy). It does not authorize code changes, arbitrary retries, other queued jobs,
+chapter-wide processing or provider-response inspection.
+
+### Permitted state boundary
+
+- the existing local SQLite database and content-addressed storage, only through normal API/Job
+  execution for the selected asset/pages/profile;
+- new gitignored files named under `data/debug/stage8d-v3-pages-319-323.*` plus five correspondingly
+  prefixed evidence JSON copies;
+- `docs/agent/HANDOFF.md` (append checkpoint evidence only).
+
+Every tracked source/test/contract/script/plan file is read-only. Existing runtime artifacts are
+read-only and must not be deleted or overwritten. Do not commit, stage, unstage, reset, migrate
+schema manually, edit SQL rows, install dependencies, open the secret file, print environment
+values, print provider-response/raw-response content, upload another book or process any other page
+range.
+
+### Preflight and paid-call guard
+
+1. Use the configured API with the worker disabled first to inspect public asset/extraction state.
+   Identify the already-registered source asset by public metadata and confirm it covers physical
+   pages 319–323. Reuse the exact profile from the prior successful v2 pages-319–323 run.
+2. Before enabling a worker, prove there is no unrelated queued/running Job of any kind the normal
+   API worker could claim (including `pdf_extraction` and `engine_analysis`). If there is one, stop
+   and report only its sanitized ID/kind/status; do not let the worker claim it.
+3. POST exactly one pages-319–323 request through the now-v3 HTTP route. If it replays an existing
+   v3 run, use that run and do not create another identity. Record only run ID, Job ID, pipeline,
+   status/attempt count and candidate/report hashes; do not record payload text or provider body.
+4. Enable the normal single local worker only after the target is the sole queued PDF job. Allow
+   the target Job's existing maximum-attempt/retryability policy to finish; do not manually enqueue
+   a second profile/run after failure.
+5. If the provider reports exhausted balance/credit/quota, HTTP 402/authentication, or the DeepSeek
+   CLI itself reports insufficient balance, stop immediately. Do not ask Codex to spend its own
+   model/API quota and do not implement a fallback. Likewise stop on missing/insecure secret,
+   unrelated queued work or ambiguous asset/profile identity.
+
+The secret must remain server-owned through `CHESS_WORKBENCH_DEEPSEEK_API_KEY_FILE`; never read,
+copy, echo or validate its contents manually.
+
+### Artifact export and machine gate
+
+Only after the target Job succeeds:
+
+1. Read artifact metadata for that exact run and require exactly one page-null `raw_ccef`, one
+   page-null `normalized_ccef`, and exactly one `ocr_fragment` for each page 319–323. Do not select
+   or open `provider_response`.
+2. Verify each selected CAS file's byte size and SHA-256 against its database artifact row before
+   copying it to the permitted `data/debug/stage8d-v3-pages-319-323.*` names. Never accept a path
+   supplied externally and never report the original CAS relative/absolute paths.
+3. Run the accepted CLI in explicit 1.1 mode with all five evidence files and the committed
+   normalized copy:
+
+```bash
+uv run --project backend --locked python scripts/inspect_ccef_consolidation.py \
+  data/debug/stage8d-v3-pages-319-323.raw.json \
+  --ccef-version 1.1 \
+  --committed-normalized data/debug/stage8d-v3-pages-319-323.committed.normalized.json \
+  --evidence data/debug/stage8d-v3-pages-319-323.evidence-319.json \
+  --evidence data/debug/stage8d-v3-pages-319-323.evidence-320.json \
+  --evidence data/debug/stage8d-v3-pages-319-323.evidence-321.json \
+  --evidence data/debug/stage8d-v3-pages-319-323.evidence-322.json \
+  --evidence data/debug/stage8d-v3-pages-319-323.evidence-323.json \
+  --output data/debug/stage8d-v3-pages-319-323.normalized.pretty.json \
+  --report data/debug/stage8d-v3-pages-319-323.report.json
+```
+
+Require exit 0, `gate_passed == true`, `committed_matches_offline == true`, every normalized node
+valid, zero duplicate paths, complete flow-reference counts and zero missing evidence hashes.
+
+### Semantic pretty-JSON checkpoint
+
+Machine success is necessary but not sufficient. Inspect the local pretty JSON and report evidence
+for all of these without copying long book passages into HANDOFF:
+
+1. The Game 13 score is one continuous move sequence, not several sequences that duplicate the
+   prefix from move one.
+2. The source main line continues from `6.Be3` to the later black `6...O-O-O` node even though
+   explanatory annotations and local variations are displayed between them in `reading_flow`.
+3. The local `6.O-O` variation shares the actual position after `5...Nc6`: it is an alternative
+   child of that real parent, not a new root and not a copied prefix. Its nested parenthesized
+   alternative also shares its actual local parent.
+4. Explanatory material associated with the score is represented as multiple atomic sequence
+   annotations with evidence and appropriate move-node/position/null anchors. General game/chapter
+   narrative may remain top-level prose.
+5. Natural-language plan references are not converted into chronological move nodes. No sequence
+   contains invented moves merely because prose mentions candidate plans.
+6. All pages/evidence remain traceable, and consolidation does not drop annotations, reading-flow
+   entries or non-move items.
+
+These are manual source-to-JSON findings, never production conditionals or automated thresholds.
+If any criterion is doubtful, mark the checkpoint failed and quote only compact item/node IDs,
+parent/sibling relationships and page numbers needed to explain the issue.
+
+### Completion evidence
+
+Append to HANDOFF:
+
+- run/Job IDs, pipeline version, final status/attempt count and sanitized failure code if any;
+- selected artifact kinds/pages plus verified hashes/byte sizes (hashes may be shortened to 12
+  characters in prose; full values remain only in local report/artifact metadata);
+- inspector exit and the machine-report metrics;
+- a pass/fail statement for each of the six semantic criteria using IDs/relationships, not long
+  source quotations;
+- exact local debug filenames and confirmation they are gitignored;
+- provider usage counts if exposed by the stored result, but never the response content or secret.
+
+Run `git status --short` and `git diff --check` after the operation. The only tracked change allowed
+is the HANDOFF append; no broad test/acceptance suite is required.
+
+### Stop conditions
+
+Stop without modifying code if the target asset/profile is ambiguous, an unrelated PDF Job is
+queued/running, the provider/CLI reports balance/credit/quota exhaustion, the Job fails after its
+normal bounded attempts, artifact slots/hash/size are inconsistent, the inspector gate fails, or
+any semantic checkpoint is not clearly satisfied. Report exact sanitized evidence and leave the
+debug artifacts for Codex; do not weaken the gate, add source-specific logic, edit provider output,
+enqueue another run, begin 3D5/8D-4 or commit.
+
+## Accepted packet: DS-STAGE8-ANNOTATED-OFFLINE-INSPECTOR-01 (8D-3D4A)
+
+### Goal
+
+Extend the existing provider-free consolidation inspection CLI with an explicit CCEF 1.1 mode so
+the next real pages 319–323 v3 run can be checked as formatted JSON before any review API/UI work.
+The tool must expose machine-verifiable annotation/reading-flow/branch topology facts and compare
+an offline recomputation with the worker's committed normalized artifact. Preserve the existing
+CCEF 1.0 CLI interface, report and gate behavior.
+
+This packet builds and tests the offline inspector only. It must not enqueue a run, read the local
+database/CAS automatically, call DeepSeek, inspect the user's book or declare the real checkpoint
+passed.
+
+### Permitted edit boundary
+
+- `scripts/inspect_ccef_consolidation.py`
+- `backend/tests/test_inspect_ccef_consolidation_v1_1.py` (new)
+- `docs/agent/HANDOFF.md` (append completion evidence only)
+
+Everything else is read-only, including extraction contracts/validation/consolidation/candidates,
+provider/execution/persistence/API/review/frontend, existing tests, schemas/OpenAPI, SQL, ADRs,
+runtime data and this plan. Preserve all dirty/untracked work. Do not commit, stage, unstage, reset,
+delete, install dependencies, create probes, read `data/books`, read or modify `data/database`,
+read provider secrets or make network/provider calls.
+
+### Frozen version-explicit CLI
+
+Keep the existing positional/options and default behavior working:
+
+```text
+inspect_ccef_consolidation.py RAW_CCEF --evidence PAGE ... --output OUT --report REPORT
+```
+
+Add:
+
+```text
+--ccef-version {1.0,1.1}       # default 1.0 for backward compatibility
+--committed-normalized PATH    # optional verified comparison input
+```
+
+1. Selection must come only from `--ccef-version`, never from inspecting untrusted JSON content.
+   Mode 1.0 must use `ExtractionPackage` + `consolidate_move_sequences`; mode 1.1 must use
+   `ExtractionPackageV1_1` + `consolidate_move_sequences_v1_1`.
+2. A document whose literal schema version does not match the selected mode must fail validation;
+   do not silently upgrade/downgrade or fall back to the other parser.
+3. Existing evidence loading, pretty normalized output and exit convention remain. Inputs are never
+   modified. Do not include provider response content, API keys or filesystem paths in the report.
+4. When `--committed-normalized` is supplied, parse it with the same selected public model and
+   compare its canonical `model_dump(mode="json")` value with the offline recomputation. Do not
+   compare formatting or mutate either package.
+
+### Frozen 1.0 compatibility
+
+With the default 1.0 mode and no new option, preserve the existing report key set, counts,
+`gate_passed` conditions, output JSON shape and exit status. Do not alter the accepted v1
+consolidation algorithm or make new 1.1-only requirements apply to 1.0.
+
+### Frozen 1.1 inspection report
+
+The 1.1 report must retain all existing raw/normalized metrics and add deterministic facts derived
+only from the validated package, including at least:
+
+- total annotation count and reading-flow entry count;
+- move-reference and annotation-reference counts in reading flow;
+- count of nodes with `sibling_order > 0` (variation starts/alternatives);
+- annotation anchor counts split into `move_node`, `position` and null;
+- per-sequence node/annotation/flow counts plus the existing leaf-line representation;
+- whether the optional committed normalized package equals the offline recomputation (`true`,
+  `false`, or `null` when not supplied).
+
+The 1.1 `gate_passed` must require all existing legality/no-duplicate/evidence-preservation gates,
+plus:
+
+- every normalized node has `validation_status == "valid"` (therefore no invalid, ambiguous or
+  unvalidated node, including unresolved-parent/disconnected cases);
+- reading-flow move references count equals normalized move-node count;
+- reading-flow annotation references count equals normalized annotation count;
+- if `--committed-normalized` is supplied, it matches the offline recomputation.
+
+Contract validation remains authoritative for exact-cover/reference validity. The report is an
+inspection aid, not a semantic claim that the model chose the correct real branch parent.
+
+### Focused synthetic oracle
+
+Use invented, copyright-free CCEF/evidence only. Create one valid 1.1 sequence containing:
+
+- a continuous main line;
+- an annotation interleaved in reading flow;
+- a local variation attached to an earlier real parent and a nested variation;
+- a later main-line move that continues from the main-line parent rather than the most recently
+  displayed variation/annotation.
+
+Prove the pretty output preserves exact parent IDs, sibling order, annotations and reading-flow
+order; the report counts are exact; the committed comparison reports true for an equivalent
+canonical package and false/nonzero gate for a different valid package; version mismatch is
+rejected; inputs remain unchanged; and a small default-1.0 regression preserves the old report key
+set and behavior. Tests must not contain the user's title, pages, quoted text, exact real moves,
+hashes or expected real output counts.
+
+Do not add timing, AST/source-text or mock-console assertions.
+
+### Focused acceptance commands
+
+Run only:
+
+```bash
+uv run --project backend --locked pytest -c backend/pyproject.toml -o addopts='' \
+  backend/tests/test_inspect_ccef_consolidation_v1_1.py
+uv run --project backend --locked ruff format --check \
+  scripts/inspect_ccef_consolidation.py \
+  backend/tests/test_inspect_ccef_consolidation_v1_1.py
+uv run --project backend --locked ruff check \
+  scripts/inspect_ccef_consolidation.py \
+  backend/tests/test_inspect_ccef_consolidation_v1_1.py
+uv run --project backend --locked mypy --config-file backend/pyproject.toml \
+  scripts/inspect_ccef_consolidation.py \
+  backend/tests/test_inspect_ccef_consolidation_v1_1.py
+git diff --check
+```
+
+### Stop conditions
+
+Stop and report evidence instead of guessing if a production extraction/consolidation/public
+contract must change; version selection would require inspecting JSON content; v1 behavior cannot
+remain unchanged; the requested facts cannot be derived from public 1.1 models; a new dependency
+is required; or a focused gate exposes an unrelated failure. If balance/credit/quota is exhausted,
+stop immediately. Report `pending Codex review`; do not make a real provider call, begin 3D4B/3D5/
+8D-4 or commit.
+
+## Accepted packet: DS-STAGE8-ANNOTATED-READ-COMPAT-01 (8D-3D2B3)
+
+### Goal
+
+Cut the public HTTP create default over to the accepted immutable `pdf-extraction:v3` pipeline
+without changing the persistence service's frozen v2 default. Make extraction GET/list summaries
+read both completed v2 CCEF 1.0 runs and completed v3 CCEF 1.1 runs through their unchanged common
+summary shape. Preserve the existing v2 review document/page behavior exactly; v3 review must
+remain a sanitized 409 until 8D-3D5 adds 1.1 inspection/read/UI consumption.
+
+### Permitted edit boundary
+
+- `backend/src/chess_workbench/api/pdf.py`
+- `backend/tests/test_pdf_api.py`
+- `backend/tests/test_stage8d_review_read_service.py`
+- `docs/agent/HANDOFF.md` (append completion evidence only)
+
+Everything else is read-only, including persistence/execution/extraction contracts and artifacts,
+`pdf_review.py`, review schemas/inspection/routes beyond existing API wiring, worker/jobs,
+SQL/models/migrations, OpenAPI/generated TypeScript, frontend, ADRs and this plan. Preserve all
+dirty/untracked work. Do not commit, stage, unstage, reset, delete, install dependencies, create
+probes, use the user's book data or call a real provider.
+
+### Frozen HTTP create cutover
+
+1. Import `PDF_ANNOTATED_EXTRACTION_PIPELINE_VERSION` in `api/pdf.py` and make
+   `create_pdf_extraction` pass it explicitly to `PdfPersistenceService.enqueue_extraction`.
+   Do not change `enqueue_extraction`'s own default: non-HTTP/internal callers that omit the
+   argument must still receive v2.
+2. A new POST without an explicit idempotency header must create/replay the v3 identity. Its
+   response, Location, Job payload and deterministic run ID must all bind v3 and the accepted v6
+   fingerprint identity.
+3. An already-existing v2 run for the same asset/pages/profile must not be replayed by the new HTTP
+   default; POST creates a distinct v3 run. Existing explicit Idempotency-Key conflict semantics
+   remain unchanged and must not silently rebind a key from v2 to v3.
+4. The request and response schemas do not gain a pipeline selector. Clients cannot choose an
+   arbitrary pipeline through JSON. No OpenAPI/generated-contract change is expected.
+
+### Frozen public read compatibility
+
+1. `_evidence_result` must accept the existing result envelope only when the trusted run pipeline
+   is v2 or v3. Historical evidence-only v1 behavior remains unchanged.
+2. `_candidate_summary` must likewise expose a candidate only for trusted v2/v3 runs and retain all
+   existing exact result keys, artifact-slot/hash bindings, strict Pydantic validation and
+   fail-closed behavior. Never infer a version from response content or artifact bytes.
+3. GET `/api/pdf-extractions/{run_id}`, GET `/api/pdf-extractions`, and `has_conflicts` filtering
+   must expose the same `PdfEvidenceSummary`/`PdfCandidateSummary` shape for complete v2 and v3
+   runs. No raw CCEF, provider content, CAS path or API key becomes public.
+4. Malformed/misbound/incomplete v2 or v3 results still yield `evidence=null`, `candidate=null` and
+   `has_conflicts=false` under the existing fail-closed rules.
+
+### Frozen review compatibility boundary
+
+`PdfReviewReadService` is read-only in this packet and must retain its accepted boundary:
+
+- valid completed v2 reviews and rendered pages remain readable exactly as before;
+- any v3 run returns the existing sanitized
+  `ServiceError("ambiguous_context", 409, "PDF extraction review is not available")` before a
+  CCEF package is parsed or inspected;
+- v1 remains unavailable, and 404/503/page behavior is unchanged.
+
+Do not broaden `ExtractionPackage`/review schemas to a union and do not parse CCEF 1.1 here. That is
+8D-3D5 work after the offline JSON checkpoint.
+
+### Focused oracle
+
+Update the independent deterministic API test helper to include the frozen v6 fingerprint-version
+field and v3 pipeline literal; do not call the production private fingerprint helper. Cover at
+least:
+
+- POST queues v3 with the exact deterministic v6 run ID and exact v3 Job payload; replay remains
+  stable;
+- a pre-existing same-input v2 run is distinct and is not returned as the POST v3 replay;
+- an explicit idempotency key already bound to v2 is not rebound to v3 (existing 409 semantics);
+- complete committed v2 and v3 runs both expose identical-shaped evidence/candidate summaries via
+  detail/list and participate correctly in `has_conflicts` filtering;
+- forged v1/unsupported-pipeline result envelopes are not exposed as candidates;
+- malformed/missing slots or wrong hashes for either v2/v3 remain fail-closed;
+- the existing v2 review suite remains green, plus a focused v3 test proves both `read_document`
+  and `read_page` return the exact sanitized 409 without parsing the annotated package;
+- no raw/provider/path/secret data appears in public JSON or errors.
+
+Use only generated in-memory PDFs, temporary SQLite/CAS and invented content. Do not run a worker or
+provider for this packet.
+
+### Focused acceptance commands
+
+Run only:
+
+```bash
+uv run --project backend --locked pytest -c backend/pyproject.toml -o addopts='' \
+  backend/tests/test_pdf_api.py \
+  backend/tests/test_stage8d_review_read_service.py
+uv run --project backend --locked ruff format --check \
+  backend/src/chess_workbench/api/pdf.py \
+  backend/tests/test_pdf_api.py \
+  backend/tests/test_stage8d_review_read_service.py
+uv run --project backend --locked ruff check \
+  backend/src/chess_workbench/api/pdf.py \
+  backend/tests/test_pdf_api.py \
+  backend/tests/test_stage8d_review_read_service.py
+uv run --project backend --locked mypy --config-file backend/pyproject.toml \
+  backend/src/chess_workbench/api/pdf.py \
+  backend/tests/test_pdf_api.py \
+  backend/tests/test_stage8d_review_read_service.py
+git diff --check
+```
+
+### Stop conditions
+
+Stop and report evidence instead of guessing if persistence/execution/review implementation,
+schemas/OpenAPI/generated types, SQL/models or frontend must change; old v2 runs cannot remain
+readable without parsing artifact content in the API layer; the v3 review boundary cannot remain a
+sanitized 409; an existing oracle must be weakened; or a focused gate exposes an unrelated
+failure. If balance/credit/quota is exhausted, stop immediately. Report `pending Codex review`;
+do not begin 8D-3D4/3D5/8D-4 or commit.
+
+## Accepted correction packet: DS-STAGE8-ANNOTATED-EXECUTION-01 R1 (8D-3D2B2)
+
+### Review finding
+
+The production implementation is accepted as written and Codex independently obtained `68 passed`.
+One focused oracle is not yet trustworthy: the branch described as “v2 receives a 1.1 response”
+starts from the v2 prompt skeleton and adds 1.1-only item fields, but leaves
+`schema_version == "chess-content-extraction/1.0"` and adapter version `1.0`. It therefore proves
+only that v2 rejects a malformed 1.0 package, not that v2 rejects a valid 1.1 package.
+
+### R1 goal
+
+Strengthen only the cross-version test so both rejected response documents are independently valid
+instances of the opposite CCEF contract before they are sent to the wrong execution pipeline. Do
+not change production code or any accepted execution behavior.
+
+### R1 permitted edit boundary
+
+- `backend/tests/test_stage8_annotated_execution.py`
+- `docs/agent/HANDOFF.md` (append R1 evidence only)
+
+Everything else is read-only, especially `pdf_persistence.py`, `pdf_extraction.py`, extraction
+contracts/decoder/prompting/candidates, existing tests, API/review/UI/SQL and this plan. Preserve
+all dirty/untracked work. Do not commit, stage, unstage, reset, delete, install dependencies, create
+probes or call a real provider.
+
+### Frozen R1 correction
+
+1. In `test_cross_version_responses_fail_sanitized_without_candidate_artifacts`, validate the v3
+   branch's submitted 1.0 document with `ExtractionPackage.model_validate(...)` before serializing
+   it. It must remain a genuine CCEF 1.0 package.
+2. Build the response submitted to v2 as a genuine CCEF 1.1 package: set the top-level
+   `schema_version` to `chess-content-extraction/1.1`, set trusted prompt provenance
+   `adapter_version` to `1.1`, supply the accepted annotated items, and validate it with
+   `ExtractionPackageV1_1.model_validate(...)` before returning the provider response. Do not
+   obtain the package by merely leaving the v2 skeleton at version 1.0.
+3. Put a different invented private marker inside each otherwise-valid opposite-version package
+   and assert neither marker occurs in the corresponding public `EngineError` string. Keep the
+   exact `ccef_invalid_package` assertion and zero-candidate-artifact assertion for both halves.
+4. Keep all eight existing tests and their assertions. Do not weaken or replace the v2/v3 identity,
+   resume, immutable-artifact or compatibility oracles.
+
+### R1 focused acceptance commands
+
+Run only:
+
+```bash
+uv run --project backend --locked pytest -c backend/pyproject.toml -o addopts='' \
+  backend/tests/test_stage8_annotated_execution.py
+uv run --project backend --locked ruff format --check \
+  backend/tests/test_stage8_annotated_execution.py
+uv run --project backend --locked ruff check \
+  backend/tests/test_stage8_annotated_execution.py
+uv run --project backend --locked mypy \
+  backend/tests/test_stage8_annotated_execution.py
+git diff --check
+```
+
+### R1 stop conditions
+
+Stop and report evidence instead of guessing if a production file or contract must change, either
+opposite-version document cannot be made valid under its accepted public model, an existing oracle
+must be weakened, or the focused gate exposes an unrelated failure. If balance/credit/quota is
+exhausted, stop immediately. Report `pending Codex re-review`; do not begin 3D2B3/3D4 or commit.
+
+## Accepted implementation packet: DS-STAGE8-ANNOTATED-EXECUTION-01 (8D-3D2B2)
+
+### Goal
+
+Introduce an immutable `pdf-extraction:v3` execution identity for CCEF 1.1 and route only v3 jobs
+through the accepted 1.1 prompt/candidate path. Preserve `pdf-extraction:v1` evidence behavior and
+`pdf-extraction:v2` CCEF 1.0 execution/fingerprints byte-for-byte. Make v3 explicitly enqueueable
+through the persistence service, but do not switch the HTTP default or read/review behavior in this
+packet; that compatibility cutover belongs to 3D2B3.
+
+### Permitted edit boundary
+
+- `backend/src/chess_workbench/services/pdf_persistence.py`
+- `backend/src/chess_workbench/services/pdf_extraction.py`
+- `backend/tests/test_stage8_annotated_execution.py` (new)
+- `docs/agent/HANDOFF.md` (append completion evidence only)
+
+Everything else is read-only, including extraction contracts/prompting/decoder/validation/
+consolidation/candidates/`__init__`, config/provider adapters, worker/jobs, schemas/API/generated
+types, `pdf_review.py`, SQL/models/migrations, review/UI, existing tests, ADRs and this plan. Preserve
+all dirty/untracked work. Do not commit, stage, unstage, reset, delete, install dependencies, create
+probes or call a real provider.
+
+### Frozen pipeline identities and persistence behavior
+
+Keep these existing constants and semantics unchanged:
+
+```python
+PDF_EVIDENCE_PIPELINE_VERSION = "pdf-extraction:v1"
+PDF_EXTRACTION_PIPELINE_VERSION = "pdf-extraction:v2"
+PDF_EXTRACTION_FINGERPRINT_VERSION = "pdfium-text-lines+ccef-formal-consolidation:v5"
+```
+
+Add:
+
+```python
+PDF_ANNOTATED_EXTRACTION_PIPELINE_VERSION = "pdf-extraction:v3"
+PDF_ANNOTATED_EXTRACTION_FINGERPRINT_VERSION = (
+    "pdfium-text-lines+ccef-annotated-consolidation:v6"
+)
+```
+
+The persistence service must:
+
+1. accept v1, v2 and v3 as the complete supported pipeline set;
+2. keep `enqueue_extraction(..., pipeline_version=PDF_EXTRACTION_PIPELINE_VERSION)` defaulting to
+   v2 in this packet, so the untouched HTTP API and every existing caller remain compatible;
+3. use the frozen v5 fingerprint-version value for explicit v1/v2 requests and the new v6 value
+   only for v3; pipeline version remains inside the canonical fingerprint identity;
+4. produce a distinct logical fingerprint, effective key, deterministic run UUID and Job for v3
+   versus v2 on the same asset/pages/profile; replay each version only against itself;
+5. preserve the existing canonical profile, idempotency conflict, payload schema, transaction and
+   no-hard-overwrite behavior. No migration or model change is allowed.
+
+Do not rename/reassign the existing v2 constant to v3. Existing modules currently use that name to
+identify readable CCEF 1.0 reviews.
+
+### Frozen version-explicit execution behavior
+
+In `pdf_extraction.py`:
+
+1. add v3 to `_SUPPORTED_PIPELINES` and retain the validated pipeline version on `_ExtractionInput`;
+2. v1 continues evidence-only processing exactly as before;
+3. v2 must continue rebuilding `build_ccef_generation_request`, accepting only CCEF 1.0 through
+   `assemble_ccef_candidate_artifacts`, and emitting the existing provider-response/1.0 and CCEF
+   1.0 raw/normalized artifacts;
+4. v3 must rebuild `build_ccef_v1_1_generation_request`, accept only CCEF 1.1 through
+   `assemble_ccef_candidate_artifacts_v1_1`, and emit provider-response/1.1 plus CCEF 1.1 raw/
+   normalized artifacts;
+5. choose the builder/assembler only from the trusted persisted pipeline identity, never from
+   response content, provider metadata or artifact presence;
+6. keep the three immutable artifact slot names and media types unchanged within their distinct
+   run IDs: `provider_response`, `raw_ccef`, `normalized_ccef`, all page-null JSON;
+7. keep `PDF_EXTRACTION_RESULT_SCHEMA`, result outer shape and `candidate.summary` fields unchanged.
+   Candidate hashes must bind the exact newly stored blobs as before;
+8. keep provider selection, sanitized prompt/provider/decode/candidate errors, retryability,
+   committed-evidence resume, CAS verification, artifact-conflict protection and transaction
+   boundaries unchanged;
+9. reject a 1.0 response for v3 and a 1.1 response for v2 through the accepted sanitized decoder
+   error. Neither cross-version response may register any candidate artifact;
+10. never call a real provider in tests and never rewrite artifacts belonging to an existing v2
+    run.
+
+A narrow private version-selection helper is preferred over duplicating `_process_ccef_candidate`.
+Do not create a generic response-content dispatcher.
+
+### Focused oracle
+
+Use temporary SQLite/CAS and scripted providers with invented content only. Cover at least:
+
+- same asset/pages/profile explicitly enqueued as v2 and v3: distinct logical fingerprints/run IDs/
+  jobs; replaying each version returns its own original run;
+- v3 job request is the exact 1.1 prompt request; scripted valid 1.1 response is called once and the
+  succeeded result registers exactly three candidate slots whose bytes/hashes parse as provider-
+  response/1.1 and `ExtractionPackageV1_1` raw/normalized; normalized annotations/flow/branch
+  topology survive;
+- v2 job still sends the exact 1.0 request and produces the existing provider-response/1.0 plus
+  `ExtractionPackage` 1.0 artifacts. Assert its provider document does not gain
+  `ccef_schema_version`;
+- v3 committed-evidence resume uses the 1.1 path without rerender/OCR duplication, matching the
+  existing v2 resume invariant;
+- v3 with a 1.0 response and v2 with a 1.1 response fail with the accepted sanitized
+  `ccef_invalid_package` behavior, register no candidate artifacts and do not leak response text;
+- exact artifact conflict/idempotency behavior remains fail-closed for v3 and never changes an
+  existing row/blob binding;
+- unsupported pipeline payloads remain rejected, while v1/v2 focused regression behavior stays
+  unchanged;
+- constants and default are explicit: persistence default is still v2, v3 must be requested
+  explicitly until 3D2B3.
+
+Reuse existing test helpers where import-safe, but do not edit existing tests in this packet. Do not
+use the user's PDF/text/pages, a real provider, timing sleeps or full acceptance.
+
+### Focused acceptance commands
+
+Run only:
+
+```bash
+uv run --project backend --locked pytest -c backend/pyproject.toml -o addopts='' \
+  backend/tests/test_pdf_persistence.py \
+  backend/tests/test_stage8c_execution.py \
+  backend/tests/test_stage8_annotated_execution.py
+uv run --project backend --locked ruff format --check \
+  backend/src/chess_workbench/services/pdf_persistence.py \
+  backend/src/chess_workbench/services/pdf_extraction.py \
+  backend/tests/test_stage8_annotated_execution.py
+uv run --project backend --locked ruff check \
+  backend/src/chess_workbench/services/pdf_persistence.py \
+  backend/src/chess_workbench/services/pdf_extraction.py \
+  backend/tests/test_stage8_annotated_execution.py
+uv run --project backend --locked mypy \
+  backend/src/chess_workbench/services/pdf_persistence.py \
+  backend/src/chess_workbench/services/pdf_extraction.py \
+  backend/tests/test_stage8_annotated_execution.py
+git diff --check
+```
+
+### Stop conditions
+
+Stop and report evidence instead of guessing if v1/v2 constants, fingerprints, artifact bytes or
+execution behavior must change; a Schema/API/SQL/model/review/provider/config/worker module must be
+edited; result/public summary fields must change; safe routing would require inspecting untrusted
+response content; or the focused gate exposes an unrelated failure. If balance/credit/quota is
+exhausted, stop immediately. Report `pending Codex review`; do not begin 3D2B3/3D4 or commit.
+
+## Accepted packet: DS-STAGE8-ANNOTATED-CANDIDATE-01 (8D-3D2B1)
+
+### Goal
+
+Add a pure trusted-candidate assembler for CCEF 1.1 and expose the accepted 1.1 portable surface
+from `chess_workbench.extraction`. Produce separately versioned immutable provider/raw/normalized
+artifact bytes while preserving every CCEF 1.0 API, byte format and test. This packet performs no
+I/O, provider call, job/worker routing, pipeline-version change, SQL/API/review/UI work or real-book
+processing.
+
+### Permitted edit boundary
+
+- `backend/src/chess_workbench/extraction/candidates.py`
+- `backend/src/chess_workbench/extraction/__init__.py`
+- `backend/tests/test_extraction_candidates_v1_1.py` (new)
+- `docs/agent/HANDOFF.md` (append completion evidence only)
+
+Everything else is read-only, including contracts/Schema, prompting/decoder/validation/
+consolidation, provider adapters, config, services/worker/jobs/pdf persistence, API/generated types,
+review/UI/SQL, ADRs and this plan. Preserve all dirty/untracked work. Do not commit, stage, unstage,
+reset, delete, install dependencies, create probes or call a provider.
+
+### Frozen CCEF 1.0 compatibility
+
+Keep these existing names, signatures and behavior unchanged:
+
+```python
+CCEF_PROVIDER_RESPONSE_ARTIFACT_SCHEMA = "chess-workbench/provider-response/1.0"
+def assemble_ccef_candidate_artifacts(...) -> CcefCandidateArtifacts: ...
+```
+
+The existing v1 request rebuild, decoder, metadata binding (`adapter_version == "1.0"`),
+provenance binding, canonical raw/normalized bytes, provider-response document key set/hashes,
+summary and error behavior remain byte-compatible. Do not silently dispatch the old function by
+response content or accept a 1.1 request/package through it. All existing candidate tests must pass
+unchanged.
+
+### Frozen CCEF 1.1 API and artifact behavior
+
+Add in `candidates.py`:
+
+```python
+CCEF_PROVIDER_RESPONSE_ARTIFACT_SCHEMA_1_1 = "chess-workbench/provider-response/1.1"
+
+def assemble_ccef_candidate_artifacts_v1_1(
+    context: CcefPromptContext,
+    request: StructuredGenerationRequest,
+    response: StructuredGenerationResponse,
+) -> CcefCandidateArtifacts: ...
+```
+
+The new function must:
+
+1. enforce the same exact input-type boundary and sanitized `CcefCandidateError` behavior as v1;
+2. rebuild the trusted request with `build_ccef_v1_1_generation_request` and require exact request
+   equality before decoding;
+3. decode only with `decode_extraction_response_v1_1`; a 1.0 package, wrong version, malformed JSON
+   or unknown field must follow the accepted decoder errors without raw content/cause leakage;
+4. bind the decoded package exactly to context metadata, requiring adapter name
+   `chess-workbench-ccef-prompt`, adapter version `1.1`, null provider/model/request/response hashes
+   and empty extensions before local provenance binding;
+5. compute request/response SHA-256 exactly as v1, deep-copy the decoded package, bind trusted
+   provider/model/hash provenance, and revalidate it as `ExtractionPackageV1_1` without mutating
+   context/request/response/decoded data;
+6. call `consolidate_move_sequences_v1_1(raw_package, context.pages)` exactly once and serialize raw
+   and normalized packages with the accepted compact sorted UTF-8 canonical JSON plus one trailing
+   newline;
+7. emit a provider-response artifact with `artifact_schema` equal to the new 1.1 constant and the
+   existing provider/model/finish_reason/usage/content and request/response hashes. Add exactly one
+   version binding field `ccef_schema_version: "chess-content-extraction/1.1"`; do not change the
+   v1 provider-response document;
+8. return the existing frozen `CcefCandidateArtifacts`/`CcefCandidateSummary` types. Summary fields
+   remain API-compatible: count 1.1 move nodes/figures/unresolved items exactly as v1, include
+   annotation warning entries in `warning_count`, and let those warnings contribute to
+   `has_conflicts`. Do not add an annotation-count field in this packet;
+9. be deterministic: identical trusted inputs produce identical bytes/hashes/summary, while a
+   semantic annotation/flow/tree change changes the applicable raw/normalized hashes;
+10. perform no I/O and never call a provider.
+
+Narrowly factor private helpers over `ExtractionPackage | ExtractionPackageV1_1` where useful, but
+keep version choice explicit at the two public entry points. Do not duplicate the whole v1
+assembler and do not weaken strict validation.
+
+### Frozen portable package exports
+
+Update `extraction/__init__.py` without breaking its import-purity/lazy-integration design.
+
+Eager core exports from `contracts` must add:
+
+- `CCEF_VERSION_1_1`, `SCHEMA_ID_1_1`;
+- `AnnotationFlowRef`, `ExtractionItemV1_1`, `ExtractionPackageV1_1`, `MoveFlowRef`,
+  `MoveNodeAnnotationAnchor`, `MoveSequenceItemV1_1`, `PositionAnnotationAnchor`,
+  `SequenceAnnotation`, `SequenceAnnotationAnchor`, `SequenceFlowEntry`;
+- `ccef_v1_1_schema_document`, `ccef_v1_1_schema_canonical_json`.
+
+Existing eager decoder/prompt exports must add `decode_extraction_response_v1_1`,
+`CCEF_PROMPT_VERSION_1_1` and `build_ccef_v1_1_generation_request`. Lazy `TYPE_CHECKING`,
+`__getattr__` and `__all__` wiring must add:
+
+- `CCEF_PROVIDER_RESPONSE_ARTIFACT_SCHEMA_1_1`;
+- `assemble_ccef_candidate_artifacts_v1_1`;
+- `consolidate_move_sequences_v1_1`;
+- `normalize_chess_moves_v1_1`.
+
+Importing `chess_workbench.extraction` in a fresh interpreter must still not import `chess`, HTTP,
+SQLAlchemy, store, service, worker or review modules. Accessing lazy integration names may load only
+their already-accepted dependencies.
+
+### Focused oracle
+
+Use invented packages only. Cover at least:
+
+- valid 1.1 assembly with an interleaved atomic annotation, a shared-prefix local branch and later
+  mainline continuation; raw remains unvalidated, normalized is consolidated/valid, annotation
+  anchor/evidence and exact-cover flow survive;
+- exact trusted metadata/provenance binding and canonical trailing-newline bytes/hash verification;
+- exact 1.1 provider-response document keys/schema/version/content/hash binding;
+- annotation warnings included in warning_count/has_conflicts, while a clean annotated package is
+  conflict-free;
+- deterministic repeated assembly and input non-mutation; changes to annotation text/anchor/flow
+  or legal tree produce the expected raw/normalized hash change;
+- mismatched request, v1 response, wrong adapter version and malformed provider content are rejected
+  through the frozen sanitized errors;
+- root-package exports are present and identity-equal to their owner-module objects; fresh root
+  import retains the frozen import-purity boundary;
+- all existing `test_extraction_candidates.py` tests pass unchanged and the old provider artifact
+  schema/key set/bytes remain unchanged.
+
+Do not use the user's book text/pages, make a provider call, add timing tests, or assert private
+implementation source text except the existing import-purity style.
+
+### Focused acceptance commands
+
+Run only:
+
+```bash
+uv run --project backend --locked pytest -c backend/pyproject.toml -o addopts='' \
+  backend/tests/test_extraction_candidates.py \
+  backend/tests/test_extraction_candidates_v1_1.py
+uv run --project backend --locked ruff format --check \
+  backend/src/chess_workbench/extraction/candidates.py \
+  backend/src/chess_workbench/extraction/__init__.py \
+  backend/tests/test_extraction_candidates_v1_1.py
+uv run --project backend --locked ruff check \
+  backend/src/chess_workbench/extraction/candidates.py \
+  backend/src/chess_workbench/extraction/__init__.py \
+  backend/tests/test_extraction_candidates_v1_1.py
+uv run --project backend --locked mypy \
+  backend/src/chess_workbench/extraction/candidates.py \
+  backend/src/chess_workbench/extraction/__init__.py \
+  backend/tests/test_extraction_candidates_v1_1.py
+git diff --check
+```
+
+### Stop conditions
+
+Stop and report evidence instead of guessing if v1 artifact bytes/behavior must change, the 1.1
+contract/prompt/decoder/normalizer/consolidator must change, a new public summary field is required,
+root import purity cannot be preserved, another implementation module is needed, or the focused
+gate exposes an unrelated failure. If balance/credit/quota is exhausted, stop immediately. Report
+`pending Codex review`; do not begin 8D-3D2B2/3D2B3/3D4 or commit.
+
+## Accepted packet: DS-STAGE8-ANNOTATED-SCORE-CONSOLIDATION-01 R1 (8D-3D3B)
+
+### Goal
+
+Add a pure, version-explicit consolidator for `ExtractionPackageV1_1`. Merge duplicate legal UCI
+paths inside the existing heading/title/initial-position scope while retaining one continuous move
+tree, every source annotation, its evidence and a deterministic exact-cover reading flow. Preserve
+the existing CCEF 1.0 consolidator byte/behavior compatibility. This packet does not wire the
+candidate/worker pipeline, call a provider, change contracts or consume real book data.
+
+### Permitted edit boundary
+
+- `backend/src/chess_workbench/extraction/consolidation.py`
+- `backend/tests/test_extraction_consolidation_v1_1.py` (new)
+- `docs/agent/HANDOFF.md` (append completion evidence only)
+
+Everything else is read-only, including contracts/Schema, validation, prompting/decoder,
+`extraction/__init__.py`, candidates/services/worker/jobs/config, API/generated types, review/UI/
+SQL, ADRs and this plan. Preserve all dirty/untracked work. Do not commit, stage, unstage, reset,
+delete, install dependencies, create probes or call a provider.
+
+### Codex review blockers and R1 delta
+
+The original focused gate passed 20 tests, but Codex found two untested violations in the
+all-unplayable-group fallback. Fix only these defects; preserve every other accepted behavior and
+do not refactor the working trie/flow path.
+
+1. `_annotation_prose_fallbacks` currently appends
+   `ccef_annotation_anchor_unresolved` to every converted annotation. Append that warning only when
+   the original annotation anchor is `MoveNodeAnnotationAnchor`. A `PositionAnnotationAnchor` must
+   become the equivalent top-level `PositionAnchor` with its existing warnings unchanged; a null
+   anchor must remain null with its existing warnings unchanged. Existing input warnings must never
+   be removed or duplicated.
+2. The output loop currently emits annotation prose only for the first source sequence of an
+   all-unplayable merged group because emission is guarded by the group-level `emitted` set. When a
+   group has multiple all-unplayable source sequences, retain every annotation from every sequence
+   exactly once, in source item order and annotation projection order, at that source sequence's
+   output location. The group-level guard should continue to emit a surviving merged sequence only
+   once; it must not suppress per-source annotation prose when no merged sequence exists. Each
+   source sequence's existing omitted-move fallback must remain in its deterministic location.
+
+Add two focused regression oracles without weakening the existing 11 tests:
+
+- one all-unplayable sequence containing move-node, position and null annotation anchors: only the
+  move-node-derived prose has exactly one unresolved-anchor warning; position/null prose retain no
+  generated warning, and the position anchor value is preserved;
+- two same-group all-unplayable source sequences: all annotations from both sequences are present
+  exactly once in source order, with collision-free deterministic prose IDs; both sequences'
+  omitted-move fallbacks remain present. Re-consolidating the output remains byte-value identical.
+
+Do not solve either regression by changing the contract, suppressing validation, merging annotation
+text, moving all prose to the first sequence, or adding source-specific conditions.
+
+### Frozen public API and compatibility
+
+Keep this existing function and all of its behavior unchanged:
+
+```python
+def consolidate_move_sequences(
+    package: ExtractionPackage,
+    evidence_pages: list[PromptEvidencePage] | None = None,
+) -> ExtractionPackage: ...
+```
+
+Add in `consolidation.py` only:
+
+```python
+def consolidate_move_sequences_v1_1(
+    package: ExtractionPackageV1_1,
+    evidence_pages: list[PromptEvidencePage] | None = None,
+) -> ExtractionPackageV1_1: ...
+```
+
+Export the new name from this module's `__all__`, but do not edit package `__init__.py` in this
+packet. Require `type(package) is ExtractionPackageV1_1`; validate `evidence_pages` exactly as the
+v1 entry point does. Deep-copy all retained data and never mutate the input. Begin with
+`normalize_chess_moves_v1_1` and revalidate/renormalize the final result through the 1.1 models.
+
+### Frozen grouping and move-tree behavior
+
+1. Use the accepted v1 grouping identity unchanged: current heading scope, exact initial-position
+   model value, title and extensions. Never merge across a different group.
+2. Within one group, include only locally normalized `valid` nodes with non-null UCI and a retained
+   legal parent path. Merge identical root-to-node lowercase-UCI paths. Never guess or repair a
+   different parent.
+3. Preserve deterministic first encounter order: source sequence item order, then each source
+   sequence's node order. Assign merged node IDs `n1`, `n2`, ... in that order. Parent IDs and
+   contiguous sibling order come only from the merged trie. A local or nested alternative therefore
+   shares its real common prefix; it must not duplicate that prefix or restart from the initial
+   position.
+4. Build each merged node using the accepted v1 policy: canonical SAN/move context/FEN from the
+   first normalized source, stable-union evidence and non-validator warnings, sorted union of NAGs
+   (including symbolic source suffixes), maximum non-null confidence and a deep copy of the first
+   source extensions.
+5. Merge sequence evidence/warnings by stable union, confidence by maximum non-null value, and keep
+   the first sequence's ID/title/initial position/extensions exactly as v1 does.
+6. Preserve the existing deterministic omitted-node fallback, top-level prose-anchor remapping,
+   diagnostic remapping and optional evidence-order sorting behavior, generalized narrowly for
+   1.1. Invalid/disconnected nodes never enter the playable tree.
+
+### Frozen annotation and reading-flow behavior
+
+For every surviving merged group, construct annotations and flow by scanning each source sequence
+in source item order and each valid input `reading_flow` in its declared order:
+
+1. For a move entry, resolve its source node through the merged trie. If that legal merged node has
+   not appeared in output flow, emit one `MoveFlowRef`; skip duplicate-path occurrences and omitted
+   nodes. The resulting move projection must equal the merged `nodes` IDs exactly in array order.
+2. For an annotation entry, deep-copy that source annotation exactly once and emit its flow entry at
+   that position. Do not deduplicate annotations by text, anchor or evidence. The annotation
+   projection must equal the output `annotations` IDs exactly in array order.
+3. Preserve an annotation ID when it does not collide with a merged node ID or an earlier retained
+   annotation ID. Otherwise assign the next deterministic free local ID `a1`, `a2`, ... . Use the
+   remapped ID consistently in `annotations` and `reading_flow`. This rule must be idempotent.
+4. For a `MoveNodeAnnotationAnchor`, remap its node ID through the same source-node map and preserve
+   `relation`. If the source node was omitted, set the anchor to null and append exactly one stable
+   `ccef_annotation_anchor_unresolved` warning with the fixed message
+   `The source annotation anchor was removed with an unplayable move fragment.` and a deep copy of
+   the annotation evidence. Do not duplicate that warning on repeated consolidation.
+5. Preserve position anchors and null anchors unchanged. Preserve every annotation's text,
+   text_format, evidence, confidence, non-generated warnings and extensions exactly.
+6. Annotation evidence counts as already represented source content when omitted-node fallbacks are
+   computed, so the same fragment is not also emitted as duplicate fallback prose/unresolved data.
+7. If a group contains no playable node and therefore cannot form a valid 1.1 move sequence,
+   preserve its annotations as top-level `ProseItem`s in source reading order. Preserve text,
+   text_format, evidence, confidence, warnings and extensions; preserve a position anchor as a
+   top-level position anchor, use null for a null anchor, and turn a removed move-node anchor into
+   null with the same one-time unresolved-anchor warning. Allocate collision-free deterministic
+   fallback item IDs using the existing consolidation fallback convention. The invalid move text
+   remains covered by the existing omitted-node fallback policy.
+8. Optional `evidence_pages` may provide fallback source text and top-level evidence ordering, but
+   the 1.1 path MUST NOT call the v1 standalone-notation reconstruction (`_extract_formal_sequences`)
+   or replace the provider's annotated legal tree with a linear fragment-only score. This is what
+   permits inline legal variations and mainline continuation around annotations to survive.
+
+Do not split or rewrite annotation text, infer new annotation FENs, turn narrative plan moves into
+nodes, use punctuation heuristics, special-case a title/page/move/fragment hash, or modify the 1.1
+contract.
+
+### Focused oracle
+
+Use invented, copyright-free packages/fragments only. Cover at least:
+
+- two same-group sequences with a duplicated legal prefix, a local alternative from an earlier
+  parent, a nested alternative and a later mainline continuation; output has one shared tree with
+  correct parents/sibling orders and no duplicated prefix;
+- annotations interleaved between those moves such that the mainline resumes after commentary;
+  exact output flow order is asserted separately from chess topology, and both move/annotation
+  projections satisfy exact cover;
+- annotation move anchors remap with before/after preserved; position/null anchors survive;
+  duplicate annotation IDs and annotation-vs-merged-node ID collisions receive stable IDs;
+- duplicate move paths union node evidence/NAGs but never deduplicate two distinct annotations;
+- an omitted invalid/disconnected node is absent, its annotation remains in flow with a null anchor
+  and one sanitized warning, and repeated consolidation is idempotent;
+- an all-unplayable sequence retains annotations as deterministic top-level prose and retains the
+  existing move fallback without invalid package references;
+- top-level prose move anchors and diagnostics remap as in v1;
+- with synthetic `evidence_pages`, a legal branch whose evidence fragment also contains prose is
+  retained from the normalized 1.1 tree (proving v1 formal-fragment reconstruction is not used),
+  while item ordering and omitted-source fallback remain deterministic;
+- the input is unchanged, nested output is independent, repeated calls are byte-value identical,
+  and exact type misuse is rejected without including input values;
+- all existing v1 consolidation tests run unchanged and pass.
+
+Do not use the user's book title/text, pages 319–323, screenshot moves, a provider call, timing
+tests or assertions over private source-code text.
+
+### Focused acceptance commands
+
+Run only:
+
+```bash
+uv run --project backend --locked pytest -c backend/pyproject.toml -o addopts='' \
+  backend/tests/test_extraction_consolidation.py \
+  backend/tests/test_extraction_consolidation_v1_1.py
+uv run --project backend --locked ruff format --check \
+  backend/src/chess_workbench/extraction/consolidation.py \
+  backend/tests/test_extraction_consolidation_v1_1.py
+uv run --project backend --locked ruff check \
+  backend/src/chess_workbench/extraction/consolidation.py \
+  backend/tests/test_extraction_consolidation_v1_1.py
+uv run --project backend --locked mypy \
+  backend/src/chess_workbench/extraction/consolidation.py \
+  backend/tests/test_extraction_consolidation_v1_1.py
+git diff --check
+```
+
+### Stop conditions
+
+Stop and report evidence instead of guessing if exact-cover flow cannot be made deterministic,
+annotation evidence would be lost, the v1.1 contract/normalizer must change, preserving v1 behavior
+requires a public semantic change, another implementation/export is required, or the focused gate
+exposes an unrelated failure. If balance/credit/quota is exhausted, stop immediately. Report
+`pending Codex review`; do not begin 8D-3D2B/8D-3D4 or commit.
+
+## Accepted packet: DS-STAGE8-ANNOTATED-SCORE-NORMALIZER-01 (8D-3D3A)
+
+### Goal
+
+Add a pure, version-explicit chess normalizer for `ExtractionPackageV1_1`. Normalize the same move
+tree fields with the accepted python-chess rules while preserving sequence annotations and
+`reading_flow` exactly. Preserve the existing v1 normalizer's signature, behavior and tests. This
+packet does not merge/deduplicate paths, alter annotation semantics, wire candidate/worker
+artifacts or call a provider.
+
+### Permitted edit boundary
+
+- `backend/src/chess_workbench/extraction/validation.py`
+- `backend/tests/test_extraction_validation_v1_1.py` (new)
+- `docs/agent/HANDOFF.md` (append completion evidence only)
+
+Everything else is read-only, including contracts/Schema, prompting/decoder, extraction `__init__`,
+candidates/consolidation, services/worker/jobs/config, API/generated types, review/UI/SQL, ADRs and
+this plan. Preserve all dirty/untracked work. Do not commit, stage, unstage, reset, delete, install
+dependencies, create probes or call a provider.
+
+### Frozen API and behavior
+
+Keep `normalize_chess_moves(package: ExtractionPackage) -> ExtractionPackage` byte/behavior
+compatible. Add in `validation.py` only:
+
+```python
+def normalize_chess_moves_v1_1(
+    package: ExtractionPackageV1_1,
+) -> ExtractionPackageV1_1: ...
+```
+
+The new function must:
+
+1. deep-copy the input and never mutate it;
+2. run the same accepted standard-chess initial-position, SAN token cleaning, move-number/side
+   context, null-move rejection, canonical SAN/lowercase UCI, full six-field before/after FEN and
+   stable validator-warning rules as v1;
+3. normalize every node in every `MoveSequenceItemV1_1`, including mainline, local and nested
+   alternatives, using `parent_id` topology rather than `reading_flow` adjacency;
+4. leave every non-move item unchanged;
+5. leave sequence/annotation fields byte-for-byte equal under `model_dump(mode="json")`: sequence
+   ID/title/evidence/confidence/warnings/extensions, the complete ordered annotations array and all
+   annotation IDs/text/format/anchors/evidence/confidence/warnings/extensions, plus the complete
+   ordered `reading_flow` array;
+6. change only move-node normalization fields and existing validator-warning entries as the v1
+   algorithm does; source move text, IDs, parent/sibling order, evidence, confidence, extensions
+   and non-validator warnings remain unchanged;
+7. revalidate the result through `ExtractionPackageV1_1` before return, so exact-cover flow and all
+   1.1 references remain enforced;
+8. be deterministic and idempotent. Re-normalizing its output yields the same JSON value.
+
+Reuse the existing private move-normalization implementation rather than copying chess parsing or
+warning policy. A narrow union/protocol/helper type adjustment is allowed inside `validation.py`
+only if MyPy stays precise and v1 behavior remains unchanged. Do not validate/split/re-anchor
+annotation text, derive annotation FEN, or reorder flow.
+
+### Focused oracle
+
+Use invented packages only. Cover at least:
+
+- a structurally valid 1.1 startpos tree with a legal mainline, an earlier-parent legal alternative,
+  a nested legal alternative and a later mainline continuation, with annotations interleaved in
+  reading flow;
+- exact expected canonical SAN/UCI/FEN/status for representative nodes on each branch, proving
+  topology rather than flow adjacency drives the board;
+- annotations, reading flow, non-move items and all non-normalization fields compare exactly before
+  and after; the input package is unchanged and nested output objects are independent;
+- illegal/ambiguous/context-mismatched/disconnected nodes retain stable review warnings while their
+  annotation anchors and flow entries remain present;
+- repeated normalization is identical and validator warnings do not duplicate;
+- an invalid initial FEN remains reviewable under the accepted v1 rules;
+- explicit v1 regression by running the existing `test_extraction_validation.py` unchanged;
+- import purity and absence of provider/HTTP/SQL/store/service/review dependencies.
+
+Do not use the user's book text, title, pages 319–323 or screenshot move sequence. Do not add a real
+provider call, timing test or source-code/AST implementation assertion beyond the existing import-
+purity style.
+
+### Focused acceptance commands
+
+Run only:
+
+```bash
+uv run --project backend --locked pytest -c backend/pyproject.toml -o addopts='' \
+  backend/tests/test_extraction_validation.py \
+  backend/tests/test_extraction_validation_v1_1.py
+uv run --project backend --locked ruff format --check \
+  backend/src/chess_workbench/extraction/validation.py \
+  backend/tests/test_extraction_validation_v1_1.py
+uv run --project backend --locked ruff check \
+  backend/src/chess_workbench/extraction/validation.py \
+  backend/tests/test_extraction_validation_v1_1.py
+uv run --project backend --locked mypy \
+  backend/src/chess_workbench/extraction/validation.py \
+  backend/tests/test_extraction_validation_v1_1.py
+git diff --check
+```
+
+### Stop conditions
+
+Stop and report evidence instead of guessing if annotations/flow cannot remain exact, the v1.1
+contract must change, reuse of the accepted chess rules requires changing a v1 public behavior,
+another implementation/export is needed, or the focused gate exposes an unrelated failure. If
+balance/credit/quota is exhausted, stop immediately. Report `pending Codex review`; do not begin
+8D-3D3B/8D-3D2B or commit.
+
+## Accepted packet: DS-STAGE8-ANNOTATED-SCORE-PROTOCOL-01 (8D-3D2A)
+
+### Goal
+
+Add version-explicit CCEF 1.1 request construction and provider-neutral response decoding on top of
+the accepted 1.1 contract. Teach the prompt to represent one continuous annotated score with true
+local/nested branches and no duplicated common prefixes. Preserve every existing CCEF 1.0 public
+entry point and test. This packet does not wire the worker/candidate/artifact pipeline and does not
+perform chess normalization or real provider work.
+
+### Permitted edit boundary
+
+- `backend/src/chess_workbench/extraction/prompting.py`
+- `backend/src/chess_workbench/extraction/decoder.py`
+- `backend/tests/test_extraction_prompting_v1_1.py` (new)
+- `backend/tests/test_extraction_decoder_v1_1.py` (new)
+- `docs/agent/HANDOFF.md` (append completion evidence only)
+
+Everything else is read-only, including contracts/Schema artifacts, extraction `__init__`,
+provider/candidates/consolidation/validation, services/worker/jobs/config, API/generated types,
+review/UI/SQL, ADRs and this plan. Preserve all dirty/untracked work. Do not commit, stage, unstage,
+reset, delete, install dependencies, create probes or call a provider.
+
+### Frozen request API and compatibility
+
+Keep `CCEF_PROMPT_VERSION == "chess-workbench/ccef-prompt/1.3"` and
+`build_ccef_generation_request()` byte/behavior compatible for CCEF 1.0. Add:
+
+- `CCEF_PROMPT_VERSION_1_1 = "chess-workbench/ccef-prompt/1.4"`;
+- `build_ccef_v1_1_generation_request(context: CcefPromptContext) ->
+  StructuredGenerationRequest`;
+- response schema name `chess_content_extraction_v1_1`;
+- the same `CcefPromptContext`, evidence limits, injection boundary, deterministic compact JSON,
+  errors and caller-independent snapshots as v1;
+- a package skeleton with schema version 1.1 and provenance adapter version `1.1`;
+- `ccef_v1_1_schema_document()` as the response schema. When no exact six-field FEN occurs in the
+  evidence, narrow `$defs.MoveSequenceItemV1_1.properties.initial_position` to `StartPosition`
+  exactly as v1 narrows its own move-sequence definition. Do not alter either canonical Schema.
+
+The user document remains the same `{prompt_version, package, evidence_pages}` shape and uses the
+new prompt/version skeleton. The function must be deterministic and must never modify the context,
+evidence pages or returned schema source.
+
+### Frozen 1.1 extraction instructions
+
+The 1.1 system message retains all accepted injection, evidence, uncertainty, unvalidated-node and
+no-invented-FEN rules and explicitly states all of the following semantics without quoting user
+book content:
+
+1. A continuous numbered game/theory line remains one move sequence even across pages, paragraphs,
+   diagrams, annotations or evidence fragments.
+2. Emit every move node once in parent-before-child topology/source encounter order. A local or
+   parenthesized variation shares the real preceding parent node and must not repeat the common
+   path from the initial position. Mainline `sibling_order=0`; alternatives under the same parent
+   are contiguous 1, 2, ... in source order.
+3. `reading_flow` contains every node and every sequence annotation exactly once, preserving their
+   source display order. It may interleave notes and moves; it never defines chess parentage.
+4. Use sequence annotations for commentary embedded inside a continuous score. Each annotation is
+   one atomic semantic assertion, normally one sentence, with its own supplied evidence. Do not
+   split mechanically at periods/ellipses that belong to names, abbreviations, move numbers or
+   chess punctuation.
+5. A move-node annotation anchor describes the semantic position before/after that node; its
+   location in `reading_flow` independently describes where the source displays it. Use a null
+   anchor rather than guessing. Narrative chapter/game background unrelated to a score position
+   remains a top-level prose item.
+6. Move-looking words in ordinary explanatory prose (plans, candidate ideas, ellipses such as
+   `...e5`, square references) are not move nodes unless the source supplies a formal variation
+   that can be attached to one unique earlier extracted position. If attachment is not unique,
+   preserve prose or unresolved content; never guess a parent or restart from move one.
+
+Do not introduce brittle instructions containing the user's title, pages, exact real moves,
+expected counts or hashes. The structured provider still receives untrusted source fragments only
+inside the user JSON message.
+
+### Frozen decoder API and trust boundary
+
+Keep `decode_extraction_response(response) -> ExtractionPackage` and every v1 error code/message/
+trust behavior. Add
+`decode_extraction_response_v1_1(response) -> ExtractionPackageV1_1` in `decoder.py`.
+
+Both decoders must share one private parse/trust implementation rather than copy security logic:
+
+- length truncation wins before reading content;
+- reject malformed JSON, duplicate keys at any depth, non-standard constants and non-object roots;
+- provider nodes may only be unvalidated and may not supply authoritative SAN/UCI/FEN fields;
+- validate against the explicitly selected model only—v1 rejects a 1.1 package and v1.1 rejects a
+  1.0 package; never auto-detect, upgrade, downgrade or repair;
+- detach raw JSON/Pydantic exceptions exactly as the accepted decoder does; public errors retain no
+  raw provider text or rejected nested values;
+- a structurally invalid 1.1 reading flow/annotation/reference is the existing sanitized
+  `invalid_package` error.
+
+A private generic helper may factor parsing/model validation, but no public v1 signature or
+behavior may change. Do not export 1.1 names through package `__init__` in this packet.
+
+### Focused oracle
+
+Use invented JSON and recorded in-memory responses only. Cover at least:
+
+1. deterministic 1.1 request/schema/skeleton/version, no-FEN narrowing and exact-FEN retention;
+2. system-message assertions for continuous score, shared branch parent/no repeated prefix,
+   reading-flow exact coverage, atomic notes, semantic-anchor/display separation, narrative prose,
+   move-looking explanatory prose and no guessed attachment;
+3. injection isolation, caller/schema snapshots, size/range validation and no input mutation;
+4. valid 1.1 decode with interleaved annotations, an earlier-parent alternative and later mainline
+   continuation; defaults and response non-mutation;
+5. v1.1 wrong version, dangling annotation/flow refs, projection mismatch and unknown fields map to
+   sanitized `invalid_package`;
+6. duplicate JSON keys, truncation, non-object roots and NaN map exactly as v1;
+7. validation claims on any v1.1 move map to `untrusted_validation` before package validation;
+8. explicit cross-version rejection in both directions and existing v1 prompt/decoder tests remain
+   unchanged and green;
+9. import purity: prompting/decoder add no chess/HTTP/SQL/store/service/review dependency and no
+   provider call occurs.
+
+Do not use user-book text, Game 13 names, pages 319–323, screenshot move sequences or a real API.
+Do not assert the entire system prompt as one brittle string; assert the frozen semantic clauses.
+
+### Focused acceptance commands
+
+Run only:
+
+```bash
+uv run --project backend --locked pytest -c backend/pyproject.toml -o addopts='' \
+  backend/tests/test_extraction_prompting.py \
+  backend/tests/test_extraction_prompting_v1_1.py \
+  backend/tests/test_extraction_decoder.py \
+  backend/tests/test_extraction_decoder_v1_1.py
+uv run --project backend --locked ruff format --check \
+  backend/src/chess_workbench/extraction/prompting.py \
+  backend/src/chess_workbench/extraction/decoder.py \
+  backend/tests/test_extraction_prompting_v1_1.py \
+  backend/tests/test_extraction_decoder_v1_1.py
+uv run --project backend --locked ruff check \
+  backend/src/chess_workbench/extraction/prompting.py \
+  backend/src/chess_workbench/extraction/decoder.py \
+  backend/tests/test_extraction_prompting_v1_1.py \
+  backend/tests/test_extraction_decoder_v1_1.py
+uv run --project backend --locked mypy \
+  backend/src/chess_workbench/extraction/prompting.py \
+  backend/src/chess_workbench/extraction/decoder.py \
+  backend/tests/test_extraction_prompting_v1_1.py \
+  backend/tests/test_extraction_decoder_v1_1.py
+git diff --check
+```
+
+### Stop conditions
+
+Stop and report evidence instead of guessing if preserving v1 behavior requires a public v1
+change, 1.1 needs a contract/Schema alteration, generic decoder factoring weakens exception
+detachment, the prompt cannot express the frozen semantics within existing limits, another
+implementation/export is required, or the focused gate exposes an unrelated failure. If balance/
+credit/quota is exhausted, stop immediately. Report `pending Codex review`; do not begin 8D-3D2B
+or commit.
+
+### Final Codex review
+
+Accepted on 2026-08-14 after inspecting both version-explicit request/decoder paths and their
+security boundaries. Codex independently reran 108 focused tests plus Ruff format/check, MyPy and
+`git diff --check`; all passed. The v1.1 builder preserves the v1 injection/evidence limits while
+adding the frozen annotated-score semantics and Schema narrowing. Both decoder versions share one
+strict parse/trust implementation, reject cross-version payloads explicitly and continue to raise
+sanitized errors only after leaving sensitive exception handlers. No full suite, provider call or
+commit was performed.
+
+## Accepted packet: DS-STAGE8-ANNOTATED-SCORE-CONTRACT-01 (8D-3D1)
+
+### Goal
+
+Mechanically implement the Codex-frozen CCEF 1.1 portable contract in ADR 0017 and
+`docs/architecture/ccef-v1.1.md`. Preserve CCEF 1.0 exactly. This packet implements structure and
+reference validation only; it does not change provider execution, prompting, chess normalization,
+review APIs/UI or persistence.
+
+### Permitted edit boundary
+
+- `backend/src/chess_workbench/extraction/contracts.py`
+- `backend/tests/test_extraction_contract_v1_1.py` (new)
+- `contracts/chess-content-extraction-v1.1.schema.json` (generated, new)
+- `docs/agent/HANDOFF.md` (append completion evidence only)
+
+Everything else is read-only, including the existing v1 Schema/example artifacts, extraction
+package exports, prompting/decoder/candidates/consolidation, API/generated TS, SQL, review modules,
+ADRs, architecture documents and this plan. Preserve all dirty/untracked work. Do not commit,
+stage, unstage, reset, delete, install dependencies or call a provider.
+
+### Frozen public names and shapes
+
+Add to `contracts.py` without changing existing `CCEF_VERSION`, `ExtractionPackage`, item models or
+v1 schema functions/bytes:
+
+- `CCEF_VERSION_1_1 = "chess-content-extraction/1.1"` and Schema ID
+  `urn:chess-content-extraction:schema:1.1`;
+- strict models `MoveNodeAnnotationAnchor`, `PositionAnnotationAnchor`, `SequenceAnnotation`,
+  `MoveFlowRef`, `AnnotationFlowRef`, `MoveSequenceItemV1_1`, `ExtractionPackageV1_1`;
+- discriminated unions `SequenceAnnotationAnchor`, `SequenceFlowEntry`, and
+  `ExtractionItemV1_1`; use exactly the discriminators and fields in the normative 1.1 document;
+- deterministic public functions `ccef_v1_1_schema_document()` and
+  `ccef_v1_1_schema_canonical_json()` analogous to the accepted v1 functions, with Draft 2020-12
+  dialect, the frozen 1.1 ID and the frozen UTC `created_at` pattern.
+
+Reuse existing public CCEF 1.0 value/common item classes rather than copying their field shapes.
+`MoveSequenceItemV1_1` replaces only the move-sequence member of the 1.1 item union. Do not mutate
+inputs in validators and do not import `python-chess` or any provider/HTTP/SQL/review module.
+
+### Frozen validators
+
+`ExtractionPackageV1_1` enforces every applicable v1 package invariant plus annotation evidence.
+Within each 1.1 sequence it must reject:
+
+1. duplicate node IDs, duplicate annotation IDs, or any node/annotation ID collision;
+2. dangling/forward/self parents and non-contiguous sibling orders, exactly as v1;
+3. a move-node annotation anchor whose node is absent;
+4. a flow reference whose target is absent;
+5. any duplicate move or annotation flow reference;
+6. a move-ref projection that differs from `nodes` IDs in exact array order;
+7. an annotation-ref projection that differs from `annotations` IDs in exact array order;
+8. annotation evidence or annotation-warning evidence outside `source.page_range`;
+9. dangling top-level prose move-node anchors or diagnostic node references, using 1.1 sequences.
+
+All new objects use `extra="forbid"` and strict typing. `reading_flow` is non-empty even when
+`annotations=[]`, because it exactly covers the non-empty nodes. Schema generation must preserve
+discriminator `propertyName` values and `additionalProperties:false` at every new object boundary.
+
+### Focused oracle
+
+Create only synthetic, invented test content. Cover at least:
+
+- a fully valid 1.1 package whose primary sixth move is followed in reading flow by two atomic
+  notes, an alternative sixth move sharing the earlier fifth-move parent, a nested alternative,
+  and the later primary Black sixth move whose parent is still the primary White sixth move;
+- exact move and annotation projection order, JSON round trip, frozen input/non-mutation behavior
+  and deterministic repeated Schema bytes;
+- every rejection in the frozen validator list, unknown fields and strict scalar/container types;
+- annotation anchor `before`/`after`, position anchor/null, evidence boundaries/defaults;
+- Schema artifact byte-for-byte drift checking and the 1.1 version/ID/discriminators;
+- explicit regression that `ccef_schema_canonical_json()` still equals the existing checked-in
+  `contracts/chess-content-extraction-v1.schema.json` and representative v1 packages still validate.
+
+Do not use the user's PDF text, Game 13 names, pages 319–323, the screenshot's exact move sequence,
+or a real provider call in tests. Use a short invented legal-looking topology; this packet does not
+need to prove chess legality.
+
+### Focused acceptance commands
+
+Run only:
+
+```bash
+uv run --project backend --locked pytest -c backend/pyproject.toml -o addopts='' \
+  backend/tests/test_extraction_contract.py \
+  backend/tests/test_extraction_contract_v1_1.py
+uv run --project backend --locked ruff format --check \
+  backend/src/chess_workbench/extraction/contracts.py \
+  backend/tests/test_extraction_contract_v1_1.py
+uv run --project backend --locked ruff check \
+  backend/src/chess_workbench/extraction/contracts.py \
+  backend/tests/test_extraction_contract_v1_1.py
+uv run --project backend --locked mypy \
+  backend/src/chess_workbench/extraction/contracts.py \
+  backend/tests/test_extraction_contract_v1_1.py
+git diff --check
+```
+
+### Stop conditions
+
+Stop and report evidence instead of guessing if the normative document conflicts with existing v1
+invariants, preserving v1 canonical bytes requires changing a v1 public behavior, Pydantic cannot
+express the frozen discriminated unions without a different public shape, another implementation
+module/export is needed, or the focused gate exposes an unrelated failure. If DeepSeek reports
+balance/credit/quota exhaustion, stop immediately. Report `pending Codex review`; do not begin
+8D-3D2 and do not commit.
+
+### Codex review finding — R1 required
+
+The focused gate passes, but the first implementation is not yet accepted. In
+`ExtractionPackageV1_1._check_sequence`, duplicate flow detection performs `id in list` for every
+entry. Since the contract validates untrusted provider output and the producer permits large
+candidates, this makes valid and adversarial reading-flow validation O(n²). The two projection
+mismatch errors also interpolate the complete actual/expected ID arrays, allowing an invalid large
+package to create an unnecessarily large exception message.
+
+R1 remains inside the original boundary and must:
+
+1. retain ordered `move_refs` / `annotation_refs` only for the final exact-order comparison, while
+   using dedicated `set[str]` values for O(1)-average duplicate detection;
+2. keep all frozen validation behavior and Schema bytes unchanged;
+3. replace the two full-array projection error messages with fixed relation-only messages that name
+   the sequence but do not include ID collections;
+4. add focused regression assertions for duplicate rejection and bounded mismatch messages; do not
+   add a wall-clock timing test or a source-code/AST assertion;
+5. rerun the same five packet acceptance commands, append R1 evidence to HANDOFF, report
+   `pending Codex re-review`, and do not begin 8D-3D2 or commit.
+
+### Final Codex review
+
+Accepted on 2026-08-14 after inspecting the contract, generated Schema, synthetic oracle and R1.
+Codex independently reran 78 focused contract tests plus Ruff format/check, MyPy and
+`git diff --check`; all passed. CCEF 1.0 remains byte/behavior compatible; CCEF 1.1 strictly
+validates annotations, exact-cover reading flow, topology, evidence and references. R1 uses seen
+sets for linear flow duplicate detection and bounded mismatch messages while retaining ordered
+projection checks. No full suite, provider call or commit was performed.
 
 ## Accepted packet: DS-STAGE8D-REVIEW-INSPECTION-01 (8D-1)
 

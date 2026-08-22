@@ -3848,6 +3848,26 @@ but rendering and conservation remain correct and it is not a blocker.
 refreshes the real browser page and confirms scrollbar geometry and reading density. Do not begin
 8D-4 before that visual checkpoint. No broad suite or commit was run.
 
+## Codex architecture handoff — annotated score correction before 8D-4
+
+On 2026-08-14 the user identified a deeper real-book mismatch: prose can interrupt one continuous
+main score, contain local/nested parenthesized variations branching from an earlier position, and
+then return to the original main line. Rebuilding each variation from move one is incorrect. The
+user also wants position/move explanations represented as atomic in-score notes rather than one
+large paragraph.
+
+ADR 0017 and `docs/architecture/ccef-v1.1.md` now freeze the correction. CCEF 1.0 and all existing
+artifacts remain immutable. CCEF 1.1 adds sequence-local atomic annotations and an exact-cover
+reading flow; chess topology remains exclusively `parent_id + sibling_order`. Semantic annotation
+anchors and source display placement are deliberately separate. Narrative prose remains a top-level
+item, and no punctuation-regex sentence splitting or source-specific special case is permitted.
+
+`PLANS.md` inserts 8D-3D1..5 before the review ledger. The active bounded Flash packet is
+`DS-STAGE8-ANNOTATED-SCORE-CONTRACT-01 (8D-3D1)`: implement only the frozen 1.1 contract, generated
+Schema and synthetic tests in the named boundary. Provider/prompt/consolidation/review/UI/SQL and
+real-book processing remain untouched. Pending DeepSeek implementation; no tests were run for this
+documentation-only planning change and no commit was created.
+
 ## Codex final review — DS-STAGE8D-REVIEW-INTEGRATION-01 accepted
 
 Accepted on 2026-08-14 after inspecting the actual routing, Sources link and test changes.
@@ -3983,3 +4003,1621 @@ git diff --check                       → clean
 ### Status
 
 **Pending Codex review.** 8D-4 not started; no commit created.
+
+## DS-STAGE8-ANNOTATED-SCORE-CONTRACT-01 (8D-3D1) completion
+
+### Files changed
+
+- `backend/src/chess_workbench/extraction/contracts.py` — added the CCEF 1.1 annotated
+  move-sequence profile (ADR 0017) without changing any v1 model, constant, schema function or
+  canonical byte.
+- `backend/tests/test_extraction_contract_v1_1.py` (new) — 35 focused synthetic tests.
+- `contracts/chess-content-extraction-v1.1.schema.json` (new, generated) — written from
+  `ccef_v1_1_schema_canonical_json()`; not hand-edited.
+- `docs/agent/HANDOFF.md` — this evidence.
+
+No provider/prompt/decoder/candidate/consolidation/review/API/frontend/DB change; no dependency
+install; no commit/stage/unstage/reset; no probe files.
+
+### Public names and shapes added
+
+- `CCEF_VERSION_1_1 = "chess-content-extraction/1.1"`, `SCHEMA_ID_1_1 =
+  "urn:chess-content-extraction:schema:1.1"`.
+- Strict models `MoveNodeAnnotationAnchor` (kind/node_id/relation before|after),
+  `PositionAnnotationAnchor` (kind/fen), `SequenceAnnotation` (id/text 1..200000/text_format
+  default plain/anchor/evidence non-empty/confidence/warnings/extensions),
+  `MoveFlowRef`, `AnnotationFlowRef`, `MoveSequenceItemV1_1` (common item fields + title/
+  initial_position/nodes non-empty/annotations default []/reading_flow non-empty),
+  `ExtractionPackageV1_1`.
+- Discriminated unions `SequenceAnnotationAnchor`, `SequenceFlowEntry` (discriminator `kind`),
+  `ExtractionItemV1_1`.
+- Deterministic `ccef_v1_1_schema_document()` / `ccef_v1_1_schema_canonical_json()`: Draft
+  2020-12 dialect, frozen 1.1 ID, injected UTC `created_at` pattern; reused the shared v1 value
+  classes (`MoveNode`, `EvidenceRef`, `Provenance`, `PageRange`, `_ItemBase`, etc.) rather than
+  copying field shapes. All new objects use `extra="forbid"` + strict typing. Validators do not
+  mutate inputs and do not import `python-chess`/provider/HTTP/SQL/review modules.
+
+### Validators (`ExtractionPackageV1_1`)
+
+Enforces every v1 package invariant (duplicate item ids, page-range containment for all evidence
+including annotation + annotation-warning evidence, top-level prose anchors and diagnostic refs
+against 1.1 sequences) plus per-sequence: duplicate node/annotation ids and node/annotation id
+collision; dangling/forward/self parents; non-contiguous sibling orders; absent move-node
+annotation anchor; absent flow targets; duplicate move/annotation flow refs; move-ref projection
+must equal `nodes` IDs in exact array order; annotation-ref projection must equal `annotations`
+IDs in exact array order. `reading_flow` stays non-empty even when `annotations=[]`. Schema
+generation preserves discriminator `propertyName` values and `additionalProperties:false` at
+every new object boundary.
+
+### Focused oracle (35 new tests, all pass)
+
+- Fully valid synthetic 1.1 package: primary line through White's sixth move, two atomic notes
+  plus one null-anchored note displayed in reading flow, an alternative White sixth move sharing
+  the earlier common fifth-move parent, a nested variation, and a later primary Black sixth move
+  whose parent remains the primary White sixth move; exact move/annotation projection order, JSON
+  round trip, defaults, frozen-input/non-mutation, deterministic repeated Schema bytes.
+- Every rejection in the frozen validator list, unknown fields, strict scalar/container types,
+  empty annotation evidence, anchor before/after/position/null, evidence boundaries/defaults.
+- Schema artifact byte-for-byte drift check, 1.1 version/ID/discriminators/`additionalProperties`
+  at new boundaries, and explicit regression that `ccef_schema_canonical_json()` still equals the
+  checked-in v1 artifact and a representative v1 package still validates.
+
+### Focused acceptance commands (packet-verbatim)
+
+```
+uv run --project backend --locked pytest -c backend/pyproject.toml -o addopts='' \
+  backend/tests/test_extraction_contract.py backend/tests/test_extraction_contract_v1_1.py
+                                       → 76 passed (41 v1 + 35 v1.1)
+uv run --project backend --locked ruff format --check (2 files)
+                                       → 2 files already formatted
+uv run --project backend --locked ruff check (2 files)
+                                       → All checks passed!
+uv run --project backend --locked mypy (2 files)
+                                       → Success: no issues found in 2 source files
+git diff --check                       → clean
+```
+
+### Assumptions
+
+- The three-annotation synthetic oracle interleaves annotations at fixed invented display
+  positions; annotation entries in `reading_flow` are derived from the actual annotation list so
+  `annotations=[]` yields an all-move flow.
+- The schema discriminator for the nullable `anchor` is nested inside `anyOf[0]` (as Pydantic
+  emits it); tests assert the exact path.
+- The v1 package regression uses a real `MoveSequenceItem` (1.0) to prove v1 behavior is
+  untouched.
+
+### Remaining risks
+
+- Contract validation remains structural/referential only; chess legality, sentence-boundary
+  inference and FEN derivation stay in later producer/consumer stages per ADR 0017.
+- The 1.1 models are not yet exported from the extraction package `__init__` (read-only boundary);
+  downstream provider/decoder/consolidation packets will wire exports when they consume 1.1.
+
+### Status
+
+**Pending Codex review.** 8D-3D2 not started; no commit created.
+
+## Codex review — DS-STAGE8-ANNOTATED-SCORE-CONTRACT-01 R1 required
+
+Codex independently reproduced the focused gate on 2026-08-14: 76/76 contract tests passed; Ruff
+format/check and MyPy passed for the two owned Python files; `git diff --check` was clean. The first
+`uv` invocation was blocked before collection by the sandbox's read-only default cache, then the
+same command passed with repository-local `UV_CACHE_DIR`/`UV_PYTHON_INSTALL_DIR` and no dependency
+change.
+
+One pre-producer blocker remains. `_check_sequence` uses list membership for every move/annotation
+flow duplicate check, making large untrusted reading flows O(n²). Its projection mismatch messages
+also embed complete actual/expected ID arrays. R1 is frozen in the active packet: use separate seen
+sets while retaining ordered projections, emit bounded relation-only mismatch messages, preserve
+all behavior/Schema bytes, add focused message regressions and rerun the same gate. 8D-3D1 remains
+pending and 8D-3D2 must not start. No implementation file was changed by Codex and no commit was
+created.
+
+## DS-STAGE8-ANNOTATED-SCORE-CONTRACT-01 (8D-3D1) R1 completion
+
+### Files changed
+
+- `backend/src/chess_workbench/extraction/contracts.py` — `_check_sequence` R1 correction only.
+- `backend/tests/test_extraction_contract_v1_1.py` — 2 new focused regression tests.
+- `docs/agent/HANDOFF.md` — this evidence.
+
+No other file changed; no Schema byte change; no commit/stage/unstage/reset.
+
+### Corrections applied (per PLANS.md R1)
+
+1. Ordered `move_refs` / `annotation_refs` lists are now used only for the final exact-order
+   projection comparison. Duplicate detection uses dedicated `seen_move_refs` / `seen_annotation_refs`
+   `set[str]` values, making duplicate checks O(1) average while the overall pass stays linear
+   (absent-target checks were already set-based).
+2. The two projection mismatch messages no longer interpolate the complete actual/expected ID
+   arrays; they now name the relation and the sequence only:
+   `move flow projection differs from nodes in sequence 'seq1'` and
+   `annotation flow projection differs from annotations in sequence 'seq1'`.
+3. All frozen validation behavior is preserved: duplicate/absent/projection rejections still fire,
+   and both the v1 and v1.1 Schema canonical bytes are byte-for-byte unchanged (verified against
+   both checked-in artifacts).
+4. New focused regressions (no wall-clock timing, no AST/source assertions):
+   - `test_duplicate_flow_references_still_rejected_with_clear_messages` — move and annotation
+     duplicates still raise with `duplicate flow move/annotation reference` in the error message.
+   - `test_projection_mismatch_messages_are_bounded_and_omit_id_collections` — mismatch errors
+     contain only the fixed relation text + sequence id, contain no node/annotation IDs (`n1`/`a1`
+     absent from the per-error message), and are under 200 characters.
+
+### Focused acceptance commands (packet-verbatim, all green)
+
+```
+uv run --project backend --locked pytest -c backend/pyproject.toml -o addopts='' \
+  backend/tests/test_extraction_contract.py backend/tests/test_extraction_contract_v1_1.py
+                                       → 78 passed (41 v1 + 37 v1.1)
+uv run --project backend --locked ruff format --check (2 files)
+                                       → 2 files already formatted
+uv run --project backend --locked ruff check (2 files)
+                                       → All checks passed!
+uv run --project backend --locked mypy (2 files)
+                                       → Success: no issues found in 2 source files
+git diff --check                       → clean
+```
+
+### Assumptions
+
+- Error messages were not frozen by the original oracle (tests assert `ValidationError` only), so
+  the bounded-message change does not weaken any existing behavior.
+- The per-error `msg` (not `str(ValidationError)`, which embeds the input payload) is the correct
+  boundary for the bounded-message assertions.
+
+### Remaining risks
+
+- None new; structural/referential-only validation unchanged, and 1.1 package exports remain out
+  of scope for downstream packets.
+
+### Status
+
+**Pending Codex re-review.** 8D-3D2 not started; no commit created.
+
+## Codex final review — DS-STAGE8-ANNOTATED-SCORE-CONTRACT-01 accepted
+
+Accepted on 2026-08-14. Codex inspected the actual CCEF 1.1 models, package/sequence validators,
+canonical Schema artifact, 37-test synthetic oracle and R1. Independent focused rerun: 78/78 tests
+passed; Ruff format/check and MyPy passed for the owned Python files; `git diff --check` was clean.
+
+R1 correctly retains ordered lists only for exact projection comparison, uses separate seen sets
+for average-O(1) duplicate checks, and emits bounded relation-only projection errors. The tests
+assert behavior/messages without wall-clock, AST or source-text coupling. Existing CCEF 1.0
+canonical bytes and representative package behavior remain unchanged. 8D-3D1 is accepted; no full
+suite, provider call or commit was performed.
+
+The next active packet is `DS-STAGE8-ANNOTATED-SCORE-PROTOCOL-01 (8D-3D2A)` in PLANS.md. It adds
+version-explicit CCEF 1.1 request construction and response decoding while preserving v1 entry
+points. It does not wire candidates/workers/artifacts and must stop before 8D-3D2B.
+
+## DS-STAGE8-ANNOTATED-SCORE-PROTOCOL-01 (8D-3D2A) completion
+
+### Files changed
+
+- `backend/src/chess_workbench/extraction/prompting.py` — added `CCEF_PROMPT_VERSION_1_1`
+  (`chess-workbench/ccef-prompt/1.4`), `build_ccef_v1_1_generation_request`,
+  `_SYSTEM_CONTENT_1_1` (v1 rules + frozen 1.1 semantics), the 1.1 evidence skeleton
+  (schema version 1.1, adapter version `1.1`) and the 1.1 response schema with the same
+  no-FEN narrowing as v1 (`$defs.MoveSequenceItemV1_1.properties.initial_position` →
+  `StartPosition`). v1 request construction is byte/behavior compatible.
+- `backend/src/chess_workbench/extraction/decoder.py` — added
+  `decode_extraction_response_v1_1(response) -> ExtractionPackageV1_1`; refactored v1 and v1.1 to
+  share one private `_parse_payload` + `_validate_payload` (PEP 695 constrained type parameter)
+  with identical truncation/JSON/root/unvalidated-only/exception-detachment behavior. v1 public
+  behavior unchanged (all 85 v1 tests green).
+- `backend/tests/test_extraction_prompting_v1_1.py` (new) — 10 tests.
+- `backend/tests/test_extraction_decoder_v1_1.py` (new) — 13 tests (parametrized).
+- `docs/agent/HANDOFF.md` — this evidence.
+
+No `extraction/__init__.py`, contracts/Schema artifacts, provider/candidates/consolidation,
+services/worker/config, API/generated types, review/UI/SQL, dependency or Makefile change; no
+provider call; no commit/stage/unstage/reset; no probe files.
+
+### Request API
+
+- `CCEF_PROMPT_VERSION_1_1 = "chess-workbench/ccef-prompt/1.4"`; schema name
+  `chess_content_extraction_v1_1`; same `CcefPromptContext`, evidence limits, injection boundary,
+  deterministic compact JSON (`ensure_ascii=False, allow_nan=False, sort_keys=True`), sanitized
+  `CcefPromptError` codes and caller-independent deep-copied snapshots as v1. The user document
+  keeps the `{prompt_version, package, evidence_pages}` shape with the 1.1 skeleton
+  (`adapter_version "1.1"`). No-FEN context narrows the 1.1 `initial_position` to StartPosition;
+  an explicit six-field FEN retains the full union. Both canonical Schemas are unchanged.
+
+### Prompt semantics (frozen clauses asserted individually, never as one brittle string)
+
+Continuous numbered line stays one move sequence across pages/paragraphs/diagrams/annotations/
+fragments; every node emitted once parent-before-child in source encounter order; local
+variations share the real preceding parent without repeating the common prefix; mainline
+`sibling_order=0` with contiguous alternatives; `reading_flow` covers every node and annotation
+exactly once in source display order and never defines parentage; annotations are atomic
+semantic assertions with their own evidence, not split at names/abbreviations/move-number/
+chess punctuation; move-node anchors are semantic before/after while `reading_flow` location is
+display; null anchor instead of guessing; narrative background stays top-level prose;
+move-looking explanatory prose is not a move node without a unique earlier attachment, and never
+guess a parent or restart from move one. All inherited v1 rules (untrusted data, unvalidated
+nodes, no invented FEN) remain in the 1.1 system message.
+
+### Decoder API and trust boundary
+
+`decode_extraction_response_v1_1` is version-explicit: a 1.0 payload is `invalid_package` (and
+the v1 decoder rejects a 1.1 payload). Both decoders share the single private parse/trust path:
+truncation wins before reading content; duplicate keys at any depth, non-standard constants and
+non-object roots are `invalid_json`; provider nodes may only be unvalidated (any `valid`/
+`invalid`/`ambiguous` status or non-null `san_candidate`/`uci_candidate`/`fen_before`/`fen_after`
+is `untrusted_validation` before package validation); every remaining structural/reference
+failure (dangling annotation/flow refs, projection mismatch, unknown fields) is the sanitized
+`invalid_package`. Public errors retain no raw provider text or rejected values, and the
+response object is never mutated.
+
+### Focused oracle (108 tests, all pass; v1 files unchanged and green)
+
+- New prompting tests: deterministic request/schema/skeleton/version; no-FEN narrowing and
+  explicit-FEN retention (`oneOf` union); frozen semantic clauses; injection isolation;
+  caller/schema snapshots; size/range/type validation (`input_too_large`, `invalid_evidence`,
+  TypeError); context non-mutation; v1 builder/version compatibility; AST import purity
+  (relative imports exactly `{contracts, evidence, provider}`).
+- New decoder tests: valid 1.1 decode with interleaved annotations, earlier-parent alternative
+  (`n12` parent `n10` sibling 1) and later mainline continuation (`n16` parent `n11`), defaults
+  and response non-mutation; cross-version rejection in both directions; five invalid-structure
+  parametrizations → `invalid_package`; JSON trust boundary (duplicate keys, truncation,
+  non-object root, NaN) matching v1 codes; three untrusted-claim parametrizations; marker
+  hygiene for both invalid_json and invalid_package; subprocess import purity.
+
+### Focused acceptance commands (packet-verbatim, all green)
+
+```
+uv run --project backend --locked pytest -c backend/pyproject.toml -o addopts='' \
+  backend/tests/test_extraction_prompting.py \
+  backend/tests/test_extraction_prompting_v1_1.py \
+  backend/tests/test_extraction_decoder.py \
+  backend/tests/test_extraction_decoder_v1_1.py
+                                       → 108 passed (85 v1 + 23 new)
+uv run --project backend --locked ruff format --check (4 files)
+                                       → 4 files already formatted
+uv run --project backend --locked ruff check (4 files)
+                                       → All checks passed!
+uv run --project backend --locked mypy (4 files)
+                                       → Success: no issues found in 4 source files
+git diff --check                       → clean
+```
+
+### Assumptions
+
+- The 1.1 system message appends the frozen semantics to the accepted v1 content; the v1
+  content string is untouched, so v1 request bytes are unchanged.
+- The 1.1 response-schema narrowing mirrors v1 exactly, targeting the 1.1 move-sequence member
+  (`MoveSequenceItemV1_1`); the un-narrowed 1.1 union uses `oneOf` + discriminator (asserted
+  accordingly in tests).
+- The decoder refactor preserves the exact raise-after-handler pattern, so exception-chaining
+  hygiene is identical to the accepted v1 decoder.
+
+### Remaining risks
+
+- The 1.1 names are not exported through `extraction/__init__.py` (read-only boundary); the
+  provider/candidate/worker wiring packet (8D-3D2B+) will add exports when consuming 1.1.
+- Prompt ordering is non-normative; tests assert semantic clauses, not the full string.
+
+### Status
+
+**Pending Codex review.** 8D-3D2B not started; no commit created.
+
+## Codex final review — DS-STAGE8-ANNOTATED-SCORE-PROTOCOL-01 accepted
+
+Accepted on 2026-08-14. Codex inspected the actual 1.1 prompt builder, semantic clauses, no-FEN
+Schema narrowing, generic decoder factoring and 23 new tests. Independent focused rerun: 108/108
+tests passed; Ruff format/check and MyPy passed for the four owned files; `git diff --check` was
+clean.
+
+The v1 builder/version and decoder remain compatible. The v1.1 path is version-explicit, retains
+the injection/evidence/unvalidated/no-invented-FEN boundaries, encodes continuous score/shared
+branch/reading-flow/atomic-note semantics and rejects cross-version or malformed provider output
+with detached sanitized errors. No full suite, provider call or commit was performed.
+
+Dependency review found that candidate/worker wiring cannot safely be the immediate next packet:
+the assembler always produces a locally normalized artifact, while the accepted normalizer and
+consolidator currently accept only `ExtractionPackage` 1.0. PLANS therefore freezes the next order
+as **8D-3D3A normalizer → 8D-3D3B consolidation → 8D-3D2B pipeline wiring**. The active packet is
+`DS-STAGE8-ANNOTATED-SCORE-NORMALIZER-01 (8D-3D3A)`; it must preserve annotations and exact reading
+flow and stop before consolidation/wiring.
+
+## DS-STAGE8-ANNOTATED-SCORE-NORMALIZER-01 (8D-3D3A) completion
+
+### Files changed
+
+- `backend/src/chess_workbench/extraction/validation.py` — added
+  `normalize_chess_moves_v1_1(package: ExtractionPackageV1_1) -> ExtractionPackageV1_1` and
+  widened the private `_normalize_sequence` to the union
+  `MoveSequenceItem | MoveSequenceItemV1_1`. The accepted v1 `normalize_chess_moves` signature,
+  behavior and all 39 v1 tests are unchanged.
+- `backend/tests/test_extraction_validation_v1_1.py` (new) — 9 focused tests.
+- `docs/agent/HANDOFF.md` — this evidence.
+
+No contracts/Schema artifact, prompting/decoder, `extraction/__init__.py`, consolidation/
+candidate/worker/artifact, service/API/review/UI/SQL, dependency or Makefile change; no provider
+call; no commit/stage/unstage/reset; no probe files.
+
+### Frozen API and behavior
+
+`normalize_chess_moves_v1_1` deep-copies the input (never mutates it), reuses the exact accepted
+python-chess normalization path (startpos/standard initial-position rule, SAN token cleaning,
+move-number/side context checks, null-move rejection, canonical SAN/lowercase UCI, full
+six-field before/after FEN, stable validator warnings) for every `MoveSequenceItemV1_1`, and
+revalidates the result through `ExtractionPackageV1_1`. Board progress follows `parent_id`
+topology only; annotations and `reading_flow` are never inspected, split, re-anchored or
+reordered and survive byte-for-byte under `model_dump(mode="json")` (verified by a
+normalization-stripped equality comparison that also covers sequence id/title/evidence/
+confidence/warnings/extensions, non-validator node warnings and all non-move items). Only
+move-node normalization fields and validator-warning entries change, exactly as v1. The function
+is deterministic and idempotent (re-normalizing yields the same JSON value without duplicating
+validator warnings).
+
+### Focused oracle (48 tests, all pass; v1 file unchanged and green)
+
+- A structurally valid 1.1 startpos tree with a legal mainline, an earlier-parent alternative
+  (n12 `a3`, parent n10 sibling 1), a nested alternative (n15 `b3`, parent n13 sibling 1) and a
+  later primary Black sixth move (n16 `Be7`, parent n11 sibling 0), with three annotations
+  interleaved in reading flow. Exact canonical SAN/UCI/before-after FEN asserted for
+  representative nodes, proving topology rather than flow adjacency drives the board:
+  n16.fen_before == n11.fen_after (not the flow-preceding node/annotation), n12.fen_before ==
+  n10.fen_after (earlier parent), and n14/n15 share n13.fen_after as siblings.
+- Annotations, reading flow, all non-normalization fields and non-move items compare exactly
+  before/after; the input package is unchanged and the output's nested annotation objects are
+  independent of the input.
+- Illegal (blocked `O-O-O`), context-mismatched (`move_number=7` on e4) and disconnected nodes
+  retain their stable validator warnings while annotation anchors and all flow entries remain
+  present.
+- Repeated normalization is identical and validator warnings never duplicate; a six-field
+  king-less initial FEN stays reviewable with `ccef_chess_invalid_initial_position`.
+- Import purity: relative imports exactly `{contracts}`; no provider/HTTP/SQL/store/service/
+  review/prompting/decoder/validation dependency beyond `python-chess` (AST check).
+- Explicit v1 regression: `test_extraction_validation.py` runs unchanged (39 passed).
+
+### Focused acceptance commands (packet-verbatim, all green)
+
+```
+uv run --project backend --locked pytest -c backend/pyproject.toml -o addopts='' \
+  backend/tests/test_extraction_validation.py backend/tests/test_extraction_validation_v1_1.py
+                                       → 48 passed (39 v1 + 9 v1.1)
+uv run --project backend --locked ruff format --check (2 files)
+                                       → 2 files already formatted
+uv run --project backend --locked ruff check (2 files)
+                                       → All checks passed!
+uv run --project backend --locked mypy (2 files)
+                                       → Success: no issues found in 2 source files
+git diff --check                       → clean
+```
+
+### Assumptions
+
+- `MoveSequenceItemV1_1` is structurally a superset of v1's sequence for the fields the
+  normalizer touches (initial_position, nodes), so widening `_normalize_sequence` to the union
+  reuses the identical chess logic without copying it.
+- The invented tree is chess-legal by construction (verified with python-chess); expected FENs
+  are the exact `fen(en_passant="fen")` values.
+
+### Remaining risks
+
+- `normalize_chess_moves_v1_1` is not exported through `extraction/__init__.py` (read-only
+  boundary); the consolidation/wiring packets (8D-3D3B/8D-3D2B) will add exports when consuming.
+- No annotation-semantics, sentence-splitting or FEN-derivation work happens here by design.
+
+### Status
+
+**Pending Codex review.** 8D-3D3B/8D-3D2B not started; no commit created.
+
+## Codex final review — DS-STAGE8-ANNOTATED-SCORE-NORMALIZER-01 accepted
+
+Accepted on 2026-08-14. Codex inspected the actual `validation.py` diff and the complete synthetic
+v1.1 oracle. The implementation is deliberately narrow: it deep-copies and revalidates a 1.1
+package while reusing the existing parent-topology python-chess path; it does not interpret
+`reading_flow`, rewrite annotations or change the v1 entry point.
+
+Independent focused verification used the repository-local uv cache and passed:
+
+```
+pytest test_extraction_validation.py test_extraction_validation_v1_1.py
+                                      -> 48 passed
+ruff format --check (2 owned files)   -> passed
+ruff check (2 owned files)            -> passed
+mypy (2 owned files)                  -> passed
+git diff --check                      -> clean
+```
+
+No full suite, provider call or commit was performed. No review blocker remains. The known missing
+package-level export is intentionally deferred until pipeline wiring.
+
+The next packet is now `DS-STAGE8-ANNOTATED-SCORE-CONSOLIDATION-01 (8D-3D3B)`. Its frozen design
+keeps the v1 consolidator compatible, merges 1.1 legal paths by shared UCI topology, remaps atomic
+annotations and exact-cover reading flow, preserves annotations from all-unplayable sequences as
+top-level prose, and explicitly forbids the v1 standalone-fragment reconstruction from flattening
+inline variations. Candidate/worker wiring and the real pages 319-323 checkpoint remain later
+steps.
+
+## DS-STAGE8-ANNOTATED-SCORE-CONSOLIDATION-01 (8D-3D3B) completion
+
+### Files changed
+
+- `backend/src/chess_workbench/extraction/consolidation.py` — added
+  `consolidate_move_sequences_v1_1` plus the 1.1 annotation/flow/prose helpers, and widened the
+  internal group/collection/fallback types to the `MoveSequenceItem | MoveSequenceItemV1_1` union.
+  The accepted v1 `consolidate_move_sequences` signature, behavior and all 9 v1 tests are unchanged.
+- `backend/tests/test_extraction_consolidation_v1_1.py` (new) — 11 focused tests.
+- `docs/agent/HANDOFF.md` — this evidence.
+
+No contracts/Schema, validation, prompting/decoder, `extraction/__init__.py`,
+candidates/services/worker/config, API/generated types, review/UI/SQL, dependency or Makefile
+change; no provider call; no commit/stage/unstage/reset; no probe files.
+
+### Merged topology rules
+
+- Grouping identity unchanged from v1: current heading scope, exact initial-position model value,
+  title and extensions. Never merges across a different group.
+- Within a group, only locally normalized `valid` nodes with non-null UCI and a retained legal
+  parent path enter the trie; identical root-to-node lowercase-UCI paths merge. Node IDs `n1`,
+  `n2`, ... follow deterministic first-encounter order (source sequence order, then node order);
+  parent IDs and contiguous sibling order come only from the merged trie. A local or nested
+  alternative therefore shares its real common prefix and never restarts from the initial position.
+- Merged nodes use the accepted v1 policy (`_build_node`): canonical SAN/context/FEN from the
+  first source, stable-union evidence/non-validator warnings, sorted NAG union (including symbolic
+  suffixes), max non-null confidence, deep-copied first-source extensions; sequence
+  evidence/warnings by stable union, confidence max, first sequence's id/title/initial/extensions.
+
+### Annotation mapping and reading-flow rules
+
+- Output flow scans each source sequence in source item order and each valid input `reading_flow`
+  in declared order. Move entries resolve through the merged trie; duplicate-path occurrences and
+  omitted nodes are skipped, so the move projection equals the merged `nodes` IDs exactly in array
+  order. Annotation entries deep-copy the source annotation exactly once (never deduplicated by
+  text/anchor/evidence) and emit their flow entry at that position; the annotation projection
+  equals the output `annotations` IDs exactly in array order.
+- Annotation IDs are preserved unless they collide with a merged node ID or an earlier retained
+  annotation ID, in which case the next deterministic free local ID `a1`, `a2`, ... is assigned and
+  used consistently in `annotations` and `reading_flow` (idempotent).
+- `MoveNodeAnnotationAnchor` node IDs remap through the source-node trie map with `relation`
+  preserved; an omitted source node sets the anchor to null and appends exactly one stable
+  `ccef_annotation_anchor_unresolved` warning (fixed message) with a deep copy of the annotation
+  evidence (no duplication on repeated consolidation). Position/null anchors survive unchanged;
+  every annotation's text, text_format, evidence, confidence, non-generated warnings and
+  extensions are preserved exactly.
+- Annotation evidence counts as covered source content when omitted-node fallbacks are computed,
+  so the same fragment is not emitted twice as fallback data.
+- An all-unplayable group keeps its annotations as deterministic top-level `ProseItem`s in source
+  order (`consolidation_annotation_<n>` ids): text/format/evidence/confidence/warnings/extensions
+  preserved, position anchors kept, move-node anchors nulled with the same one-time warning. The
+  invalid move text stays covered by the existing omitted-node fallback policy.
+- The 1.1 path never calls `_extract_formal_sequences`; with `evidence_pages` the legal annotated
+  tree (including inline variations) is retained from the normalized model, while item ordering and
+  omitted-source fallback stay deterministic. Top-level prose anchors and diagnostics remap as in
+  v1. The result is revalidated and re-normalized through the 1.1 models.
+
+### Focused oracle (20 tests, all pass; v1 file unchanged and green)
+
+- Two same-group sequences (shared prefix, earlier-parent alternative, nested alternative, later
+  mainline continuation) merge into one 17-node tree with correct parents/siblings and no
+  duplicated prefix; duplicate paths union evidence/NAGs while distinct annotations never dedup.
+- Reading flow is asserted separately from topology: a1 sits right after the n11 mainline move in
+  flow while the alternative n12 (parent n10) follows; move and annotation projections both satisfy
+  exact cover.
+- Annotation move anchors remap (before/after preserved); position/null anchors survive; duplicate
+  annotation IDs and annotation-vs-merged-node collisions receive stable free IDs.
+- An omitted illegal node keeps its annotation in flow with a null anchor and exactly one sanitized
+  warning; repeated consolidation stays idempotent. An all-unplayable sequence retains annotations
+  as top-level prose plus the existing move fallback without invalid references.
+- Top-level prose anchors and diagnostics remap to merged ids; synthetic `evidence_pages` retain
+  the normalized 1.1 tree with the inline alternative (proving fragment reconstruction is unused).
+- Input unchanged, output nested objects independent, repeated calls byte-value identical, exact
+  type misuse rejected without input values; all 9 existing v1 consolidation tests pass unchanged.
+
+### Focused acceptance commands (packet-verbatim, all green)
+
+```
+uv run --project backend --locked pytest -c backend/pyproject.toml -o addopts='' \
+  backend/tests/test_extraction_consolidation.py backend/tests/test_extraction_consolidation_v1_1.py
+                                       → 20 passed (9 v1 + 11 v1.1)
+uv run --project backend --locked ruff format --check (2 files)
+                                       → 2 files already formatted
+uv run --project backend --locked ruff check (2 files)
+                                       → All checks passed!
+uv run --project backend --locked mypy (2 files)
+                                       → Success: no issues found in 2 source files
+git diff --check                       → clean
+```
+
+### Assumptions
+
+- `MoveSequenceItemV1_1` is a structural superset for the fields the v1 machinery touches
+  (initial_position, title, extensions, nodes), so the union widening reuses the accepted trie/
+  merge policy without copying it; 1.1-only fields are handled by the new helpers.
+- Flow emission order equals merged creation order because each source flow covers its nodes in
+  node order and sequences are scanned in source order; the final 1.1 revalidation enforces exact
+  cover as a safety net.
+
+### Remaining risks
+
+- `consolidate_move_sequences_v1_1` is not exported through `extraction/__init__.py` (read-only
+  boundary); pipeline wiring (8D-3D2B) will add exports.
+- Annotation-to-prose fallback and omitted-node behavior are exercised with synthetic fragments
+  only; the real pages 319-323 checkpoint remains a later step.
+
+### Status
+
+**Pending Codex review.** 8D-3D2B/8D-3D4 not started; no commit created.
+
+## Codex review — DS-STAGE8-ANNOTATED-SCORE-CONSOLIDATION-01 requires R1
+
+Reviewed on 2026-08-14. The main playable-tree, annotation remap and exact-cover flow path is
+sound, and Codex independently reproduced the reported focused gate: 20/20 tests passed; Ruff
+format/check, MyPy and `git diff --check` passed. The packet is not accepted because the existing
+oracle misses two deterministic all-unplayable-group violations.
+
+1. `_annotation_prose_fallbacks` appends `ccef_annotation_anchor_unresolved` unconditionally. In a
+   synthetic sequence containing move-node, position and null anchors, all three resulting prose
+   items received the warning. Only the removed move-node anchor may receive it; position and null
+   anchors must preserve their existing warning lists unchanged.
+2. The output loop guards annotation-prose emission with the group-level `emitted` set. A synthetic
+   same-group input with two all-unplayable source sequences and four total annotations returned
+   only the first sequence's three annotations. The second sequence's annotation was silently lost.
+
+Codex's read-only counterexample reported:
+
+```
+prose_count 3  # expected 4
+warnings:
+  move-node annotation -> ccef_annotation_anchor_unresolved  # expected
+  position annotation  -> ccef_annotation_anchor_unresolved  # wrong
+  null annotation      -> ccef_annotation_anchor_unresolved  # wrong
+```
+
+PLANS now contains the bounded active correction packet
+`DS-STAGE8-ANNOTATED-SCORE-CONSOLIDATION-01 R1`. It requires conditional warning generation and
+per-source annotation-prose emission for all-unplayable groups, with two focused regressions added
+to the existing oracle. Do not begin 8D-3D2B or 8D-3D4 until R1 passes Codex re-review.
+
+## DS-STAGE8-ANNOTATED-SCORE-CONSOLIDATION-01 R1 (8D-3D3B) completion
+
+### Files changed
+
+- `backend/src/chess_workbench/extraction/consolidation.py` — two R1 fixes in the 1.1
+  all-unplayable fallback path only.
+- `backend/tests/test_extraction_consolidation_v1_1.py` — strengthened the existing
+  all-unplayable test and added 2 focused R1 regressions (13 v1.1 tests total).
+- `docs/agent/HANDOFF.md` — this evidence.
+
+No contracts/Schema/validation/candidate/worker/API/UI/database change; the working trie, legal
+move merge and reading-flow paths are untouched; no commit/stage/unstage/reset; no probe files.
+
+### R1 fix 1 — conditional unresolved-anchor warning
+
+`_annotation_prose_fallbacks` now appends `ccef_annotation_anchor_unresolved` only when the
+original annotation anchor is a `MoveNodeAnnotationAnchor` (converted to a null top-level anchor).
+A `PositionAnnotationAnchor` becomes the equivalent top-level `PositionAnchor` with its existing
+warnings unchanged; a null anchor stays null with its warnings unchanged. Existing input warnings
+are never removed or duplicated; the generated warning is still emitted at most once (the
+once-guard remains for re-consolidation).
+
+### R1 fix 2 — per-source annotation prose for multi-sequence all-unplayable groups
+
+The output loop now uses the group-level `emitted` set only to prevent re-emitting a surviving
+merged sequence. For a group with no merged sequence (`merged_by_key[key] is None`), annotation
+prose is emitted at every source sequence's output location in source item order, each in
+annotation projection order. Every source sequence's existing omitted-move fallback stays at its
+deterministic location.
+
+### R1 focused regressions (added without weakening the existing tests)
+
+- `test_all_unplayable_anchor_warnings_are_conditional` — one all-unplayable sequence with
+  move-node, position and null annotation anchors: only the move-node-derived prose carries
+  exactly one unresolved-anchor warning (fixed message); position/null-derived prose retain no
+  generated warning; the position anchor value survives as `PositionAnchor`; re-consolidation
+  does not duplicate the generated warning.
+- `test_two_all_unplayable_sequences_keep_all_annotations_and_fallbacks` — two same-group
+  all-unplayable source sequences: all annotations from both sequences appear exactly once in
+  source item order (and per-sequence projection order), with collision-free deterministic
+  `consolidation_annotation_*` prose IDs; both sequences' omitted-move fallbacks remain (distinct
+  evidence pages prove no dedup); re-consolidation of the output is byte-value identical.
+
+### Focused acceptance commands (packet-verbatim, all green)
+
+```
+uv run --project backend --locked pytest -c backend/pyproject.toml -o addopts='' \
+  backend/tests/test_extraction_consolidation.py backend/tests/test_extraction_consolidation_v1_1.py
+                                       → 22 passed (9 v1 + 13 v1.1)
+uv run --project backend --locked ruff format --check (2 files)
+                                       → 2 files already formatted
+uv run --project backend --locked ruff check (2 files)
+                                       → All checks passed!
+uv run --project backend --locked mypy (2 files)
+                                       → Success: no issues found in 2 source files
+git diff --check                       → clean
+```
+
+### Assumptions
+
+- The two-regression fixture sets per-node evidence pages so the two source sequences' omitted
+  moves produce distinct fallback signatures (the v1 `_unresolved_fallbacks` dedup is by
+  signature, not by sequence).
+- Re-consolidation idempotency holds because annotation-derived prose items are non-sequence items
+  that pass through unchanged.
+
+### Remaining risks
+
+- None new; both defects were confined to the all-unplayable fallback path and are now covered by
+  focused regressions. 1.1 package exports remain deferred to pipeline wiring (8D-3D2B).
+
+### Status
+
+**Pending Codex re-review.** 8D-3D2B/8D-3D4 not started; no commit created.
+
+## Codex final re-review — DS-STAGE8-ANNOTATED-SCORE-CONSOLIDATION-01 accepted
+
+Accepted on 2026-08-14 after R1. Codex inspected both corrected branches and the strengthened
+oracles. Independent focused verification passed 22/22 tests; Ruff format/check, MyPy and
+`git diff --check` passed. The original read-only counterexample now returns all four source
+annotations, with the unresolved-anchor warning only on the annotation whose move-node anchor was
+actually removed; position/null annotations carry no generated warning.
+
+The R1 control flow is narrow and correct: a surviving merged sequence remains group-emitted once,
+while an all-unplayable group emits each source sequence's annotation prose at that sequence's
+location. Position anchors convert to top-level position anchors, null stays null, and only the
+remaining move-node-anchor union branch generates the one-time warning. No full suite, provider
+call or commit was performed. 8D-3D3 is accepted.
+
+Pipeline review determined that 8D-3D2B must not silently change existing `pdf-extraction:v2`
+semantics. The logical fingerprint includes pipeline version; reusing v2 would replay an old CCEF
+1.0 run for the same PDF/profile instead of creating a 1.1 artifact, and changing the bytes in the
+same immutable artifact slots could conflict. PLANS therefore splits 3D2B into:
+
+1. **3D2B1** pure 1.1 candidate assembly and portable exports;
+2. **3D2B2** a new immutable v3 pipeline identity/fingerprint plus version-explicit worker routing,
+   keeping v1/v2 execution reproducible;
+3. **3D2B3** legacy public-summary/review compatibility so existing v2 runs stay readable while v3
+   review consumption waits for 3D5.
+
+The active packet is `DS-STAGE8-ANNOTATED-CANDIDATE-01 (8D-3D2B1)`. It touches only the candidate
+assembler, root extraction exports and a new focused test file. It freezes all v1 bytes and adds a
+separately versioned 1.1 provider-response artifact with explicit CCEF schema binding.
+
+## DS-STAGE8-ANNOTATED-CANDIDATE-01 (8D-3D2B1) completion
+
+### Files changed
+
+- `backend/src/chess_workbench/extraction/candidates.py` — added
+  `CCEF_PROVIDER_RESPONSE_ARTIFACT_SCHEMA_1_1 = "chess-workbench/provider-response/1.1"` and
+  `assemble_ccef_candidate_artifacts_v1_1`; generalized the private helpers
+  (`_canonical_ccef_bytes`, `_package_matches_context` with an explicit adapter-version argument,
+  `_summarize` over the package union with annotation-warning counting) over
+  `ExtractionPackage | ExtractionPackageV1_1`. v1 behavior/bytes unchanged.
+- `backend/src/chess_workbench/extraction/__init__.py` — eager contracts exports
+  (CCEF_VERSION_1_1, SCHEMA_ID_1_1, AnnotationFlowRef, ExtractionItemV1_1, ExtractionPackageV1_1,
+  MoveFlowRef, MoveNodeAnnotationAnchor, MoveSequenceItemV1_1, PositionAnnotationAnchor,
+  SequenceAnnotation, SequenceAnnotationAnchor, SequenceFlowEntry, ccef_v1_1_schema_document,
+  ccef_v1_1_schema_canonical_json), eager decoder/prompting exports
+  (decode_extraction_response_v1_1, CCEF_PROMPT_VERSION_1_1, build_ccef_v1_1_generation_request),
+  and lazy TYPE_CHECKING/`__getattr__`/`__all__` wiring for
+  CCEF_PROVIDER_RESPONSE_ARTIFACT_SCHEMA_1_1, assemble_ccef_candidate_artifacts_v1_1,
+  consolidate_move_sequences_v1_1 and normalize_chess_moves_v1_1.
+- `backend/tests/test_extraction_candidates_v1_1.py` (new) — 12 focused tests.
+- `docs/agent/HANDOFF.md` — this evidence.
+
+No contracts/Schema/prompting/decoder/validation/consolidation change in this packet (their diffs
+are from prior accepted packets); no services/worker/pipeline/SQL/API/review/UI change; no
+provider call; no commit/stage/unstage/reset; no probe files. Both canonical Schemas verified
+byte-identical.
+
+### Assembler behavior
+
+`assemble_ccef_candidate_artifacts_v1_1` is version-explicit (never dispatches by response
+content): same exact input-type boundary and sanitized `CcefCandidateError` behavior as v1;
+rebuilds the trusted request with `build_ccef_v1_1_generation_request` and requires exact
+equality; decodes only via `decode_extraction_response_v1_1` (a 1.0 package / wrong version /
+malformed JSON / unknown field follow the accepted decoder errors without leakage); binds the
+decoded package to context metadata requiring adapter name `chess-workbench-ccef-prompt`,
+adapter version `1.1`, null provider/model/request/response hashes and empty extensions; computes
+request/response SHA-256 exactly as v1; deep-copies the decoded package, binds trusted
+provider/model/hash provenance and revalidates as `ExtractionPackageV1_1` without mutating
+context/request/response/decoded data; calls `consolidate_move_sequences_v1_1(raw_package,
+context.pages)` exactly once; serializes raw and normalized packages with the accepted compact
+sorted UTF-8 canonical JSON plus one trailing newline; emits the 1.1 provider-response artifact
+with `artifact_schema` = the new 1.1 constant plus exactly one version binding field
+`ccef_schema_version: "chess-content-extraction/1.1"` (v1 provider-response document unchanged);
+returns the existing frozen `CcefCandidateArtifacts`/`CcefCandidateSummary` types, counting 1.1
+move nodes/figures/unresolved items exactly as v1, including annotation warnings in
+`warning_count` and letting them contribute to `has_conflicts` (no annotation-count field added).
+
+### Focused oracle (41 tests, all pass; v1 file unchanged and green)
+
+- Valid 1.1 assembly with an interleaved atomic annotation, a shared-prefix local branch and a
+  later mainline continuation: raw stays unvalidated, normalized is consolidated/valid,
+  annotation anchor/evidence and exact-cover flow survive; summary counts exact and conflict-free.
+- Exact trusted provenance binding, canonical trailing-newline bytes and request/response/raw/
+  normalized SHA-256 verification; the 1.1 provider-response document has exactly the 9 frozen
+  keys including `artifact_schema`/`ccef_schema_version` and the content/hash bindings.
+- Annotation warnings count toward `warning_count` and `has_conflicts`; a clean annotated package
+  is conflict-free.
+- Deterministic repeated assembly, input non-mutation (context/request/response snapshots equal),
+  and semantic annotation-text change altering raw/normalized/response hashes.
+- Sanitized rejections: tampered request -> binding_mismatch; v1 response -> invalid_package;
+  wrong adapter version -> binding_mismatch; malformed content -> invalid_json without leakage.
+- Root exports identity-equal to owner modules; fresh subprocess import keeps the frozen import
+  purity (no chess/httpx/sqlalchemy/sanic/store/service/worker/review); AST check of the root
+  `__init__` shows no forbidden eager imports.
+- All 29 existing `test_extraction_candidates.py` tests pass unchanged; v1 provider artifact
+  schema/key set/bytes untouched.
+
+### Focused acceptance commands (packet-verbatim, all green)
+
+```
+uv run --project backend --locked pytest -c backend/pyproject.toml -o addopts='' \
+  backend/tests/test_extraction_candidates.py backend/tests/test_extraction_candidates_v1_1.py
+                                       → 41 passed (29 v1 + 12 v1.1)
+uv run --project backend --locked ruff format --check (3 files)
+                                       → 3 files already formatted
+uv run --project backend --locked ruff check (3 files)
+                                       → All checks passed!
+uv run --project backend --locked mypy (3 files)
+                                       → Success: no issues found in 3 source files
+git diff --check                       → clean
+```
+
+### Assumptions
+
+- The 1.1 provider-response artifact is a separate schema string, so the v1 document key set and
+  bytes remain byte-compatible (no shared mutation).
+- Annotation warnings are counted only through the normalized package (post-consolidation), so
+  generated and source warnings both flow into `warning_count`.
+
+### Remaining risks
+
+- The candidate/worker wiring (8D-3D2B2 pipeline identity/fingerprint) is not part of this packet;
+  the 1.1 assembler is callable but not yet routed by any worker.
+- Real-book checkpoint remains a later step; only invented synthetic content is exercised.
+
+### Status
+
+**Pending Codex review.** 8D-3D2B2/8D-3D2B3/8D-3D4 not started; no commit created.
+
+## Codex final review — DS-STAGE8-ANNOTATED-CANDIDATE-01 accepted
+
+Accepted on 2026-08-14. Codex inspected the two public version paths, summary factoring, root lazy
+exports and all 12 new tests. Independent focused verification passed 41/41 tests; Ruff format/
+check, MyPy and `git diff --check` passed. A stricter fresh-interpreter check explicitly tested
+`module == "chess"` as well as `chess.*`, HTTP, SQLAlchemy, Sanic, store/services/review modules and
+returned an empty forbidden-module set.
+
+The v1 entry remains version-explicit and byte-compatible. The v1.1 entry rebuilds/decodes/binds/
+consolidates only through accepted 1.1 functions, emits a separately versioned provider-response
+artifact with explicit CCEF version binding, preserves canonical bytes and includes annotation
+warnings in the existing summary shape. No provider, I/O, full suite or commit was used.
+
+One non-blocking oracle detail was noted: the committed fresh-import test's marker `"chess."`
+would not by itself match the top-level module name `"chess"`; Codex's stricter independent check
+confirmed the current implementation is clean. This does not justify another correction round and
+can be tightened during a later test-maintenance touch.
+
+PLANS now activates `DS-STAGE8-ANNOTATED-EXECUTION-01 (8D-3D2B2)`. The architecture keeps existing
+v1/v2 constants and fingerprints immutable, adds an explicitly requested `pdf-extraction:v3` plus
+v6 fingerprint, and routes trusted v3 jobs to CCEF 1.1. Persistence still defaults to v2 until the
+3D2B3 HTTP/read compatibility packet, preventing a temporarily unreadable public default.
+
+## DS-STAGE8-ANNOTATED-EXECUTION-01 (8D-3D2B2) completion
+
+### Files changed
+
+- `backend/src/chess_workbench/services/pdf_persistence.py` — added
+  `PDF_ANNOTATED_EXTRACTION_PIPELINE_VERSION = "pdf-extraction:v3"` and
+  `PDF_ANNOTATED_EXTRACTION_FINGERPRINT_VERSION = "pdfium-text-lines+ccef-annotated-consolidation:v6"`;
+  `_SUPPORTED_PIPELINE_VERSIONS` now accepts v1/v2/v3; `_logical_fingerprint` selects the v6
+  fingerprint version only for v3 (v5 frozen for v1/v2). The `enqueue_extraction` default remains
+  v2; the v1/v2 constants are untouched.
+- `backend/src/chess_workbench/services/pdf_extraction.py` — `_SUPPORTED_PIPELINES` accepts v3;
+  `_ExtractionInput` retains the validated `pipeline_version`; a narrow private
+  `_ccef_pipeline_functions(pipeline_version)` helper selects the request builder/assembler pair
+  only from the trusted persisted pipeline identity (v3 -> 1.1 pair, v2 -> 1.0 pair, anything else
+  -> sanitized invalid_job_payload); `_process_ccef_candidate` uses the helper; the committed-
+  evidence resume path now covers v3 alongside v2.
+- `backend/tests/test_stage8_annotated_execution.py` (new) — 8 focused tests.
+- `docs/agent/HANDOFF.md` — this evidence.
+
+No API/Schema/model/migration/review/worker/frontend change; no real provider call; no
+commit/stage/unstage/reset; no probe files.
+
+### Pipeline identities
+
+- v1 (`pdf-extraction:v1`) evidence-only behavior unchanged; v2 (`pdf-extraction:v2`) constant and
+  v5 fingerprint byte-for-byte unchanged; v3 (`pdf-extraction:v3`) is explicitly enqueueable only.
+- Same asset/pages/profile enqueued as v2 vs v3 produce distinct logical fingerprints (identity
+  differs in both `extraction_fingerprint_version` v5/v6 and `pipeline_version`), distinct
+  effective keys, distinct deterministic run UUIDs and distinct Jobs; replaying each version
+  returns only its own run.
+- Persistence default is still v2: an `enqueue_extraction` without `pipeline_version` yields a v2
+  run; unsupported pipeline payloads are rejected with the existing sanitized ValueError.
+
+### Execution behavior
+
+- v2 continues to rebuild `build_ccef_generation_request` and accept only CCEF 1.0 through
+  `assemble_ccef_candidate_artifacts`, emitting provider-response/1.0 plus CCEF 1.0 raw/normalized
+  artifacts (its provider document does not gain `ccef_schema_version`).
+- v3 rebuilds `build_ccef_v1_1_generation_request` and accepts only CCEF 1.1 through
+  `assemble_ccef_candidate_artifacts_v1_1`, emitting provider-response/1.1 (with
+  `ccef_schema_version: "chess-content-extraction/1.1"`) plus CCEF 1.1 raw/normalized artifacts.
+- The builder/assembler choice comes only from the persisted trusted `pipeline_version`; response
+  content, provider metadata and artifact presence are never inspected (no content dispatcher).
+- The three immutable slot names and page-null JSON media types are unchanged within their distinct
+  v2/v3 run IDs; v3 never writes artifacts belonging to an existing v2 run.
+- `PDF_EXTRACTION_RESULT_SCHEMA`, result outer shape and `candidate.summary` fields are unchanged;
+  candidate hashes bind the exact newly stored blobs.
+- Provider selection, sanitized prompt/provider/decode/candidate errors, retryability,
+  committed-evidence resume, CAS verification, artifact-conflict protection and transaction
+  boundaries are unchanged.
+- Cross-version responses fail sanitized: v3 with a 1.0 response and v2 with a 1.1 response both
+  raise `ccef_invalid_package` through the accepted decoder and register no candidate artifacts.
+
+### Focused oracle (68 tests, all pass; existing files unchanged and green)
+
+- v2/v3 distinct fingerprints/runs/jobs + per-version replay isolation.
+- v3 job sends the exact 1.1 prompt request (prompt version `chess-workbench/ccef-prompt/1.4`,
+  schema 1.1, adapter 1.1), is called once, and the succeeded result registers exactly the three
+  CCEF slots whose bytes parse as provider-response/1.1 and `ExtractionPackageV1_1` raw/normalized
+  with annotations/flow/branch topology surviving.
+- v2 job keeps the 1.0 request and artifacts; its provider document lacks `ccef_schema_version`.
+- v3 committed-evidence resume reuses the 1.1 path with no rerender/OCR duplication.
+- v3-with-1.0 and v2-with-1.1 both fail sanitized (`ccef_invalid_package`) without leaking
+  response text and register no candidate artifacts.
+- Artifact conflict stays fail-closed: a semantically different but trusted-binding package re-run
+  raises `artifact_conflict` and the existing row/blob bindings are never changed.
+- Unsupported pipeline payloads rejected; constants/default explicit (v2 default, v3 explicit);
+  all 60 existing `test_pdf_persistence.py`/`test_stage8c_execution.py` tests pass unchanged.
+
+### Focused acceptance commands (packet-verbatim, all green)
+
+```
+uv run --project backend --locked pytest -c backend/pyproject.toml -o addopts='' \
+  backend/tests/test_pdf_persistence.py backend/tests/test_stage8c_execution.py \
+  backend/tests/test_stage8_annotated_execution.py
+                                       → 68 passed (60 existing + 8 new)
+uv run --project backend --locked ruff format --check (3 files)
+                                       → 3 files already formatted
+uv run --project backend --locked ruff check (3 files)
+                                       → All checks passed!
+uv run --project backend --locked mypy (3 files)
+                                       → Success: no issues found in 3 source files
+git diff --check                       → clean
+```
+
+### Assumptions
+
+- The v6 fingerprint version is only reachable for explicit v3 requests; v1/v2 keep the frozen v5
+  value, so existing logical fingerprints are byte-identical.
+- `_ccef_pipeline_functions` raises the sanitized invalid_job_payload only for a pipeline value
+  that already passed `_load_input` validation (v1 evidence-only never reaches it).
+
+### Remaining risks
+
+- The HTTP/read compatibility cutover (3D2B3) is not part of this packet: persistence still
+  defaults to v2, so the public default remains readable until then.
+- No real-book checkpoint; only invented synthetic content exercised.
+
+### Status
+
+**Pending Codex review.** 3D2B3/3D4 not started; no commit created.
+
+## Codex review: DS-STAGE8-ANNOTATED-EXECUTION-01 R1 required
+
+Codex reviewed the actual B2 diff. The production implementation is accepted as written: v3 has
+its own immutable v6 fingerprint identity, `_load_input` retains and validates the persisted
+pipeline version, and builder/assembler routing depends only on that trusted identity. Existing
+v1/v2 constants and the v2 persistence default remain unchanged.
+
+Independent focused verification:
+
+```text
+pytest test_pdf_persistence.py test_stage8c_execution.py test_stage8_annotated_execution.py
+  -> 68 passed in 10.63s (outside the tool sandbox after aiosqlite hung inside it)
+ruff format --check -> clean
+ruff check -> clean
+mypy -> clean
+git diff --check -> clean
+```
+
+One oracle blocker remains. The “v2 receives a 1.1 response” half of
+`test_cross_version_responses_fail_sanitized_without_candidate_artifacts` derives its response
+from the v2 prompt skeleton and never changes `schema_version` or provenance adapter version from
+1.0. It therefore sends malformed 1.0-with-1.1-fields, not a valid CCEF 1.1 document. The code path
+is sound, but the frozen cross-version claim is not yet proved.
+
+PLANS now activates a test-only R1: validate each submitted opposite-version document against its
+own public model, use distinct private markers to prove sanitized errors, keep all eight tests, and
+leave production files read-only. Status remains **pending Codex re-review**; do not start 3D2B3 or
+3D4 and do not commit.
+
+## DS-STAGE8-ANNOTATED-EXECUTION-01 R1 (8D-3D2B2) completion
+
+### Files changed
+
+- `backend/tests/test_stage8_annotated_execution.py` — cross-version test strengthened only;
+  imports `ExtractionPackage`/`ExtractionPackageV1_1` from contracts and
+  `Awaitable`/`Callable` from collections.abc.
+- `docs/agent/HANDOFF.md` — this evidence.
+
+No production file changed (`pdf_persistence.py`/`pdf_extraction.py` and every other module are
+untouched in this R1 round); no commit/stage/unstage/reset; no probe files.
+
+### R1 correction (frozen)
+
+1. The v3 branch's submitted 1.0 document is now validated with
+   `ExtractionPackage.model_validate(...)` and serialized from its `model_dump(mode="json")`
+   before being sent to the wrong (v3) pipeline, so it is a genuine CCEF 1.0 package.
+2. The response submitted to v2 is now built as a genuine CCEF 1.1 package: top-level
+   `schema_version = "chess-content-extraction/1.1"`, trusted provenance `adapter_version = "1.1"`,
+   the accepted annotated items, validated with `ExtractionPackageV1_1.model_validate(...)` before
+   returning the provider response. It is no longer the v2 skeleton left at version 1.0.
+3. Each otherwise-valid opposite-version package carries a distinct invented private marker
+   (`private-marker-v3-9f4c2d` in the v1 heading text; `private-marker-v2-1e8a5b` in a v1.1
+   annotation text). Both halves keep the exact `ccef_invalid_package` assertion and the
+   zero-candidate-artifact assertion, and additionally assert the respective marker does not occur
+   in the public `EngineError` string.
+4. All eight existing tests and their assertions are preserved unweakened (identity, resume,
+   immutable-artifact, compatibility oracles intact); the only other test-file change is typing
+   `_V2Provider`'s responder as `Callable[[StructuredGenerationRequest],
+   Awaitable[StructuredGenerationResponse]]` to satisfy strict mypy.
+
+### Focused acceptance commands (packet-verbatim, all green)
+
+```
+uv run --project backend --locked pytest -c backend/pyproject.toml -o addopts='' \
+  backend/tests/test_stage8_annotated_execution.py
+                                       → 8 passed
+uv run --project backend --locked ruff format --check backend/tests/test_stage8_annotated_execution.py
+                                       → 1 file already formatted
+uv run --project backend --locked ruff check backend/tests/test_stage8_annotated_execution.py
+                                       → All checks passed!
+uv run --project backend --locked mypy --config-file backend/pyproject.toml \
+  backend/tests/test_stage8_annotated_execution.py
+                                       → Success: no issues found in 1 source file
+git diff --check                       → clean
+```
+
+### mypy invocation note
+
+The bare packet command `uv run --project backend --locked mypy
+backend/tests/test_stage8_annotated_execution.py` (from the repo root) reports 11
+`import-untyped` errors. These are a pre-existing config-discovery artifact, not an R1 regression:
+the repo root has no `pyproject.toml`, so mypy cannot discover `backend/pyproject.toml` when only
+a test file is given (every earlier packet's mypy command included at least one
+`backend/src/...` file, which made the package resolve without the config), and the editable
+install of `chess_workbench` lacks `py.typed`. All 11 errors are `import-untyped`; zero genuine
+findings. The config-aware equivalent (`--config-file backend/pyproject.toml`, which also makes
+`mypy_path = "backend/src"` resolve from the repo root) passes clean and is the run recorded
+above.
+
+### Assumptions
+
+- The opposite-version documents are structurally valid instances of their own public contract
+  (validated round-trip through `model_dump(mode="json")`), so the rejection is genuinely a
+  cross-version rejection rather than malformed-content rejection.
+- The markers live in fields that are part of the valid packages (heading text / annotation text)
+  and would surface in any unsanitized error that leaked response content.
+
+### Remaining risks
+
+- None new; the frozen cross-version claim is now backed by model-validated opposite-version
+  packages and non-leakage markers. HTTP/read cutover (3D2B3) and real-book checkpoint remain
+  later steps.
+
+### Status
+
+**Pending Codex re-review.** 3D2B3/3D4 not started; no commit created.
+
+## Codex final re-review: DS-STAGE8-ANNOTATED-EXECUTION-01 R1 accepted
+
+Codex inspected the actual R1 test changes. Both cross-version payloads are now validated by their
+own public models before being sent to the wrong pipeline: the v3 branch submits a genuine
+`ExtractionPackage` 1.0 document, while the v2 branch submits a genuine
+`ExtractionPackageV1_1` document with schema/adapter version 1.1. Each contains a distinct private
+marker and each public `EngineError` is proved not to leak it. All eight prior tests remain.
+
+Independent focused verification:
+
+```text
+pytest test_stage8_annotated_execution.py -> 8 passed in 2.06s
+ruff format --check -> clean
+ruff check -> clean
+mypy --config-file backend/pyproject.toml -> clean
+git diff --check -> clean
+```
+
+The production B2 implementation and its R1 oracle are accepted. The bare mypy command in the R1
+packet lacked the backend configuration when it named only a test file; the config-aware project
+command is authoritative and has been frozen explicitly in the next packet.
+
+PLANS now activates `DS-STAGE8-ANNOTATED-READ-COMPAT-01 (8D-3D2B3)`: the HTTP create route will
+explicitly choose immutable v3, public extraction summaries will read both v2/v3 through their
+unchanged result shape, and the existing review loader will remain v2-only with sanitized 409 for
+v3 until 8D-3D5. Do not start the offline 3D4 checkpoint or later review work until B3 is reviewed.
+
+## DS-STAGE8-ANNOTATED-READ-COMPAT-01 (8D-3D2B3) completion
+
+### Files changed
+
+- `backend/src/chess_workbench/api/pdf.py` — HTTP create cutover plus v2/v3 read gates (7 insertions,
+  2 deletions).
+- `backend/tests/test_pdf_api.py` — the deterministic run-id helper now mirrors the frozen
+  fingerprint-version field (v5/v6 selection) and takes an explicit pipeline version; the exact-job
+  enqueue test moved to v3 expectations; five new focused tests added.
+- `backend/tests/test_stage8d_review_read_service.py` — one focused v3 review-boundary test.
+- `docs/agent/HANDOFF.md` — this evidence.
+
+No change to persistence (`enqueue_extraction` default stays v2), execution, `pdf_review.py`,
+schemas/OpenAPI/generated types/SQL/models/migrations or frontend; no real provider call; no
+commit/stage/unstage/reset; no probe files.
+
+### HTTP create cutover
+
+- `api/pdf.py` imports `PDF_ANNOTATED_EXTRACTION_PIPELINE_VERSION` and `create_pdf_extraction`
+  passes `pipeline_version=PDF_ANNOTATED_EXTRACTION_PIPELINE_VERSION` explicitly to
+  `PdfPersistenceService.enqueue_extraction`. The persistence service's own default remains v2, so
+  non-HTTP/internal callers that omit the argument still get v2.
+- A new POST without an explicit idempotency header creates/replays the v3 identity: response,
+  Location, Job payload and deterministic run ID all bind v3 with the v6 fingerprint identity
+  (test asserts the exact deterministic run id).
+- A pre-existing same-input v2 run is distinct; POST creates a separate v3 run and never replays the
+  v2 one. An explicit Idempotency-Key already bound to a v2 run is not rebound to v3 (409
+  idempotency_conflict, zero new rows).
+- No pipeline selector was added to the request/response schemas; OpenAPI/generated contracts are
+  untouched.
+
+### Public read compatibility
+
+- `_evidence_result` accepts the extraction result envelope only for trusted v2/v3 runs; v1
+  evidence-only behavior unchanged.
+- `_candidate_summary` exposes a candidate only for trusted v2/v3 runs (explicit pipeline gate
+  added), retaining all existing exact result keys, artifact-slot/hash bindings, strict Pydantic
+  validation and fail-closed behavior. Version is never inferred from response content or artifact
+  bytes.
+- GET-one, GET-list and `has_conflicts` filtering expose the same `PdfEvidenceSummary`/
+  `PdfCandidateSummary` shape for complete v2 and v3 runs; no raw CCEF, provider content, CAS path
+  or API key becomes public.
+- Malformed/misbound/incomplete v2 or v3 results still yield `evidence=null`, `candidate=null` and
+  `has_conflicts=false`; forged v1/unsupported-pipeline envelopes are never exposed as candidates.
+
+### Review compatibility boundary (read-only)
+
+- `pdf_review.py` is untouched; its existing pipeline gate
+  (`run.pipeline_version != PDF_EXTRACTION_PIPELINE_VERSION` -> sanitized
+  `ServiceError("ambiguous_context", 409, "PDF extraction review is not available")`) already covers
+  v3 before any CCEF package parse/inspection.
+- New focused test proves both `read_document` and `read_page` return the exact sanitized 409
+  (code/status/message/details=None/__cause__=None) for a v3 run; v2 reviews remain readable
+  exactly as before; v1 stays unavailable; 404/503/page behavior unchanged.
+
+### Focused oracle (44 tests, all pass; existing suites unchanged and green)
+
+- POST queues v3 with the exact deterministic v6 run ID and exact v3 Job payload; replay stable.
+- Pre-existing same-input v2 run distinct; POST v3 not a replay of it.
+- Explicit idempotency key bound to v2 not rebound to v3 (existing 409 semantics).
+- Complete committed v2 and v3 runs expose identical-shaped evidence/candidate summaries via
+  detail/list and participate correctly in `has_conflicts` filtering (both listed under true,
+  neither under false).
+- Forged v1 and unsupported-pipeline result envelopes expose no candidate/evidence.
+- Malformed/missing slots (deleted rendered page) fail closed for a v2 run; the existing committed-
+  summary test (now a v3 run) covers v3.
+- v3 review returns the sanitized 409 for both `read_document` and `read_page` without parsing.
+- The updated `expected_run_id` helper independently mirrors the frozen v5/v6 fingerprint identity
+  without calling the production private fingerprint helper.
+
+### Focused acceptance commands (packet-verbatim, all green)
+
+```
+uv run --project backend --locked pytest -c backend/pyproject.toml -o addopts='' \
+  backend/tests/test_pdf_api.py backend/tests/test_stage8d_review_read_service.py
+                                       → 44 passed (17 API + 27 review)
+uv run --project backend --locked ruff format --check (3 files)
+                                       → 3 files already formatted
+uv run --project backend --locked ruff check (3 files)
+                                       → All checks passed!
+uv run --project backend --locked mypy --config-file backend/pyproject.toml (3 files)
+                                       → Success: no issues found in 3 source files
+git diff --check                       → clean
+```
+
+### Assumptions
+
+- The pre-existing `expected_run_id` helper was missing the frozen `extraction_fingerprint_version`
+  field, so the exact-job test failed at baseline; the packet-required helper update (v5/v6
+  selection + explicit pipeline literal) fixes it and is now covered by the new v3 exact-run-id
+  assertion.
+- The committed-result shape is identical for v2 and v3 (same result schema, same summary keys), so
+  the API layer needs no content inspection beyond the trusted pipeline gate.
+
+### Remaining risks
+
+- v3 review consumption (inspection/read/UI) is deliberately deferred to 8D-3D5; until then v3 runs
+  stay sanitized 409 at the review boundary. The offline JSON checkpoint (3D4) remains a later step.
+
+### Status
+
+**Pending Codex review.** 8D-3D4/8D-3D5/8D-4 not started; no commit created.
+
+## Codex final review: DS-STAGE8-ANNOTATED-READ-COMPAT-01 accepted
+
+Codex inspected the actual B3 diff. The HTTP create route explicitly passes v3 while the
+persistence service remains untouched with its v2 default. Public extraction reads admit only the
+trusted v2/v3 pipeline identities through the unchanged summary/artifact binding checks. The
+review loader is untouched and rejects v3 before parsing CCEF, preserving v2 review behavior.
+
+Independent focused verification:
+
+```text
+pytest test_pdf_api.py test_stage8d_review_read_service.py -> 44 passed in 19.87s
+ruff format --check -> clean
+ruff check -> clean
+mypy --config-file backend/pyproject.toml -> clean
+git diff --check -> clean
+```
+
+No blocking finding remains. 8D-3D2 producer wiring is complete. PLANS now activates
+`DS-STAGE8-ANNOTATED-OFFLINE-INSPECTOR-01 (8D-3D4A)`, a provider-free extension of the existing
+inspection CLI. It will add explicit CCEF 1.1 parsing, annotation/reading-flow/branch metrics and a
+canonical comparison against a committed normalized artifact while preserving the default 1.0
+CLI/report behavior. Only after that tool is reviewed should 3D4B make a real pages 319–323 v3
+request and inspect local pretty JSON. No commit was created.
+
+## DS-STAGE8-ANNOTATED-OFFLINE-INSPECTOR-01 (8D-3D4A) completion
+
+### Files changed
+
+- `scripts/inspect_ccef_consolidation.py` — version-explicit offline inspector extension.
+- `backend/tests/test_inspect_ccef_consolidation_v1_1.py` (new) — 6 focused subprocess tests.
+- `docs/agent/HANDOFF.md` — this evidence.
+
+No production extraction module changed; no provider/network/database access; no `data/books`,
+`data/database` or secret read; no commit/stage/unstage/reset; no probe files.
+
+### Frozen CLI surface
+
+- Existing positional/options preserved: `inspect_ccef_consolidation.py RAW_CCEF --evidence PAGE
+  ... --output OUT --report REPORT`.
+- Added `--ccef-version {1.0,1.1}` (default `1.0` for backward compatibility) and
+  `--committed-normalized PATH` (optional verified comparison input).
+- Selection comes only from `--ccef-version`: 1.0 -> `ExtractionPackage` +
+  `consolidate_move_sequences`; 1.1 -> `ExtractionPackageV1_1` +
+  `consolidate_move_sequences_v1_1`. Version is never inferred from JSON content; a document whose
+  literal schema version does not match the selected mode fails cleanly (exit 2, sanitized stderr)
+  with no silent upgrade/downgrade or parser fallback.
+- Existing evidence loading, pretty normalized output and exit convention unchanged for the
+  default path; inputs are never modified; no provider content, API key or filesystem path appears
+  in the report.
+
+### 1.0 compatibility
+
+The default 1.0 report retains the exact previous key set (`raw`, `normalized`, `gate_passed`
+with the exact nested keys), counts, `gate_passed` conditions, JSON shape and exit status (0/1).
+The 1.0-only facts never leak into default output; `committed_matches_offline` appears only when
+`--committed-normalized` is supplied, and for 1.0 it is reported without changing `gate_passed`.
+
+### 1.1 inspection report
+
+The 1.1 report keeps all existing raw/normalized metrics and adds deterministic facts derived
+only from the validated package: `annotation_count`, `reading_flow_entry_count`,
+`reading_flow_move_ref_count`, `reading_flow_annotation_ref_count`, `variation_start_count`
+(nodes with `sibling_order > 0`), `annotation_anchor_counts` split into
+`move_node`/`position`/`null`, per-sequence `annotation_count`/`reading_flow_count` alongside the
+existing `leaf_lines`, and a top-level `committed_matches_offline` (`true`/`false`/`null` when not
+supplied).
+
+The 1.1 `gate_passed` requires all existing legality/no-duplicate/evidence-preservation gates plus
+explicitly: every normalized node `valid` (invalid/ambiguous/unvalidated count zero), flow move
+references equal the normalized move-node count, flow annotation references equal the normalized
+annotation count, and (when `--committed-normalized` is supplied) the committed canonical value
+matches the offline recomputation. Contract validation remains authoritative for exact-cover/
+reference validity.
+
+### Focused synthetic oracle (6 tests, all pass)
+
+- 1.1 mode on an invented tree (continuous main line, interleaved annotation, earlier-parent local
+  variation n12, nested variation n15, later main-line continuation n16) reports exact counts
+  (annotation 2, flow entries 18, move refs 16, annotation refs 2, variation starts 2, anchors
+  `{move_node: 1, position: 0, null: 1}`), gate passed, exit 0, and the pretty output preserves
+  exact parent IDs, sibling orders, annotations and reading-flow order.
+- `--committed-normalized` reports true and gate stays true for the equivalent canonical
+  normalized package; a different-but-valid package reports false and flips the gate (exit 1).
+- Literal version mismatch is rejected in both directions (1.1 doc under default 1.0, 1.0 doc under
+  `--ccef-version 1.1`) with exit 2 and no report file written.
+- Inputs (raw, evidence, committed) remain byte-identical after the run.
+- Default-1.0 regression: exact old report key set, counts and exit convention; explicit
+  `--ccef-version 1.0` produces the identical report; 1.0 committed comparison reports the fact
+  without changing the gate.
+
+### Focused acceptance commands (packet-verbatim, all green)
+
+```
+uv run --project backend --locked pytest -c backend/pyproject.toml -o addopts='' \
+  backend/tests/test_inspect_ccef_consolidation_v1_1.py
+                                       → 6 passed
+uv run --project backend --locked ruff format --check (2 files)
+                                       → 2 files already formatted
+uv run --project backend --locked ruff check (2 files)
+                                       → All checks passed!
+uv run --project backend --locked mypy --config-file backend/pyproject.toml (2 files)
+                                       → Success: no issues found in 2 source files
+git diff --check                       → clean
+```
+
+### Assumptions
+
+- The committed-normalized artifact is compared as a canonical `model_dump(mode="json")` value
+  with the same selected public model; formatting differences are irrelevant.
+- Version-mismatch rejection is handled as a clean exit-2 with a sanitized stderr message (the
+  previous uncaught-traceback path only applied to invalid inputs, not the frozen valid-input
+  behavior).
+
+### Remaining risks
+
+- The tool is an inspection aid, not a semantic claim about the model's real branch-parent choice;
+  the real pages 319-323 v3 checkpoint (3D4B) and v3 review consumption (3D5) remain later steps.
+
+### Status
+
+**Pending Codex review.** 3D4B/3D5/8D-4 not started; no commit created.
+
+## Codex final review: DS-STAGE8-ANNOTATED-OFFLINE-INSPECTOR-01 accepted
+
+Codex inspected the actual 3D4A diff. Version selection is driven only by the explicit CLI option;
+the default 1.0 report/gate shape is frozen by a regression test. The 1.1 path uses the accepted
+public model/consolidator, reports deterministic annotation/flow/branch facts and compares a
+committed package by canonical model value. The synthetic tree proves an earlier-parent variation,
+nested variation, interleaved annotation and later main-line continuation without source-specific
+data.
+
+Independent focused verification:
+
+```text
+pytest test_inspect_ccef_consolidation_v1_1.py -> 6 passed in 3.05s
+ruff format --check -> clean
+ruff check -> clean
+mypy --config-file backend/pyproject.toml -> clean
+git diff --check -> clean
+```
+
+No blocking finding remains. PLANS now activates
+`DS-STAGE8-ANNOTATED-REAL-CHECKPOINT-01 (8D-3D4B)`. It authorizes one existing-policy v3 Job for
+the already-registered pages 319–323 asset, with a strict preflight preventing unrelated queued
+work and an immediate stop on balance/credit/quota errors. Only verified raw/normalized/evidence
+artifacts may be copied into gitignored `data/debug`; provider response and secret contents must
+never be opened or printed. The inspector machine gate and six semantic pretty-JSON checks must
+both pass before 3D5. No commit was created.
+
+## DS-STAGE8-ANNOTATED-REAL-CHECKPOINT-01 (8D-3D4B) — stopped before preflight
+
+### Status: STOPPED (preflight unexecutable), pending Codex review
+
+Per the operator's decision, the task was paused because the local preflight could not be
+executed: every attempt to start the local API server through the project's existing means
+(`uv run --project backend --locked python -m chess_workbench`) was denied by the tool sandbox
+(background run + localhost network binding), so the required public asset/extraction preflight
+state could not be inspected through the API.
+
+### What was and was not done
+
+- **No v3 run was created**; no `pdf-extraction:v3` Job was enqueued; no worker was enabled; no
+  provider call was made; no DeepSeek balance/credit/quota was consumed.
+- No runtime database/CAS change; no artifacts were exported to `data/debug`; no secret file,
+  `.env` content, `provider_response`, HTTP request/response body or key content was read, printed
+  or copied (only env-variable *existence* probes and config-file default reads were performed).
+- No tracked source/test/contract/script/plan file was modified in this packet; no commit/stage/
+  unstage/reset; no delete.
+- Sanitized environment facts recorded: `CHESS_WORKBENCH_DEEPSEEK_API_KEY_FILE` and
+  `CHESS_WORKBENCH_DATABASE_URL` are unset in the operator shell (`.env` exists and would be loaded
+  by the server); defaults resolve to `data/database/chess-workbench.db` and `data/` storage.
+
+### Next step for the operator
+
+Start the API server manually (e.g. `CHESS_WORKBENCH_ENGINE_WORKER_ENABLED=false uv run --project
+backend --locked python -m chess_workbench`), then resume 8D-3D4B from the frozen preflight: list
+assets/extractions via the API, confirm the Smerdon Scandinavian pages 319–323 asset and the prior
+v2 run profile, verify zero unrelated queued/running Jobs, POST exactly one v3 request, enable the
+normal worker, then run the frozen inspector command and the six semantic checks. The debug
+filenames under `data/debug/stage8d-v3-pages-319-323.*` remain the authorized export target.
+
+### Status
+
+**Stopped before preflight — pending Codex review / operator action.** 3D5/8D-4 not started; no
+commit created.
+
+## 8D-3D4B preflight aborted — API unreachable from tool sandbox (resume attempt)
+
+The operator confirmed the API is running at http://127.0.0.1:8000 (worker disabled), but every
+`curl`/HTTP probe from this tool session to `http://127.0.0.1:8000/api/health` was denied by the
+tool sandbox (network side effect rejected). Per the frozen stop condition ("if the API cannot be
+reached, stop immediately and report the connection error; do not start another service or modify
+the database directly"), the preflight/registration was NOT executed:
+
+- no asset/extraction listing performed; no Smerdon Scandinavian asset ID/profile recorded;
+- no queued/running Job check performed; no v3 POST issued; no v3 run/Job created;
+- no worker enabled, no provider call, zero API cost;
+- no secrets/.env/provider_response/book content read or printed.
+
+3D4B remains NOT completed. To resume, the operator needs to allow localhost HTTP access from the
+tool sandbox (or run the preflight commands themselves and share sanitized results). Status:
+STOPPED at preflight, pending Codex review / operator action. No commit created.
+
+## Codex execution: DS-STAGE8-ANNOTATED-REAL-CHECKPOINT-01 (8D-3D4B) failed semantic gate
+
+Codex resumed the operational checkpoint with explicit operator authorization. The API was first
+started with the SQL worker disabled. Public metadata identified exactly one registered target
+asset, `2ca70ce3-8b6a-4a92-95c6-b67a02cf7b8a` (the Smerdon Scandinavian PDF, 672 pages), and the
+successful pages 319–323 v2 runs all used the exact empty profile `{}`. A read-only global Job
+query returned no queued/running rows before registration.
+
+Exactly one v3 request was posted. It created (not replayed) run
+`0d38fbfe-24af-56c0-8d2e-5eacec837458` and Job
+`524317c4-1848-4b95-979f-5e11fd11e4f4`. A second queue check showed that target as the sole queued
+Job. The normal worker was then enabled only for this run and stopped immediately after terminal
+success. Final status was `succeeded`, attempt count 2/3. Attempt 1 produced the sanitized
+`ccef_invalid_json` error; the existing retry policy performed attempt 2 successfully. No second
+run or manual retry was created. The final public result exposes no token-usage counts.
+
+The allowed selected artifact slots were exact and each CAS blob passed registered byte-size and
+SHA-256 verification before export:
+
+- `raw_ccef`, page null: 24,546 bytes, `3fc70f7b99d2...`
+- `normalized_ccef`, page null: 28,168 bytes, `373d2772851b...`
+- `ocr_fragment`, page 319: 6,339 bytes, `2c6e9b45473d...`
+- `ocr_fragment`, page 320: 14,720 bytes, `e7d0542bcfcf...`
+- `ocr_fragment`, page 321: 7,048 bytes, `4e0669976473...`
+- `ocr_fragment`, page 322: 7,531 bytes, `e851dc376d57...`
+- `ocr_fragment`, page 323: 7,775 bytes, `1db420f2dca5...`
+
+The provider-response artifact and secret file were never opened, copied or printed. The local
+exports are gitignored files named:
+
+- `data/debug/stage8d-v3-pages-319-323.raw.json`
+- `data/debug/stage8d-v3-pages-319-323.committed.normalized.json`
+- `data/debug/stage8d-v3-pages-319-323.evidence-{319,320,321,322,323}.json`
+- `data/debug/stage8d-v3-pages-319-323.normalized.pretty.json`
+- `data/debug/stage8d-v3-pages-319-323.report.json`
+
+The accepted 1.1 inspector exited 0. Machine facts: `gate_passed=true`,
+`committed_matches_offline=true`, 23 items, one sequence, 32/32 valid nodes, zero duplicate UCI
+paths, complete 32/32 move-flow coverage, zero annotations/annotation references and no missing raw
+non-move item IDs. Machine validity therefore passed, but the required source-semantic checkpoint
+failed:
+
+1. **PASS (structure only):** `move-sequence-1` is one 32-node sequence rather than several
+   repeated-prefix sequences; duplicate path count is zero.
+2. **FAIL:** the main-line nodes `n11` (`6.Be3`) and `n12` (`6...O-O-O`) are adjacent in both the
+   parent chain and reading flow. No explanatory annotation or local variation is interleaved.
+3. **FAIL:** the local `6.O-O` move is `n13` with parent `n12`; it should be an alternative child
+   of the real `5...Nc6` parent `n10`. `variation_start_count` is zero and there is no nested
+   variation structure.
+4. **FAIL:** `annotation_count` is zero. The explanatory material remains the monolithic page-321
+   top-level item `prose-7`, with no atomic move/position-anchored annotations.
+5. **PASS:** introductory plan discussion remains prose and the normalized timeline contains no
+   additional plan-only candidate moves beyond the extracted score.
+6. **FAIL (traceability quality):** all five pages and all 23 non-move items remain represented,
+   but every CCEF evidence reference has a null fragment hash/offset. In addition, nodes `n1`–`n8`
+   carry only page-319 evidence even though the single sequence is placed after the page-321 Game
+   13 headings, so the Game 13 prefix is not reliably traceable to its source occurrence.
+
+Overall 3D4B status: **FAILED semantic gate**. The debug artifacts are retained for diagnosis.
+Per the frozen stop condition, 3D5/8D-4 were not started, no source-specific workaround was added,
+and no new provider run was enqueued. The next action belongs to Codex architecture/prompt diagnosis,
+not the review UI.
+
+## Codex correction: retain failed semantic-v4 generations for fine-grained diagnosis
+
+The operator explicitly superseded the earlier provider-response non-inspection rule for failed
+future semantic-v4 attempts: do not discard a failed model generation; retain it locally and first
+understand why it failed. No API, worker or real provider was run during this correction.
+
+### Implemented behavior
+
+- Added `services/ccef_failure_debug.py`. A failed semantic-v4 response is stored exactly as UTF-8
+  text below the gitignored, server-owned CAS namespace
+  `debug/extraction-failures/<run-id>/attempt-<attempt-count>/`. A separate canonical JSON sidecar
+  records only stable run/job/attempt identity, response digest/size, provider/model/finish reason,
+  token usage, fixed failure code/message and sanitized diagnostics. Files retain the existing CAS
+  atomic-write/hash-verification/0600 guarantees.
+- Failed captures are deliberately not `ExtractionArtifact` rows, do not produce `candidate`, and
+  are not exposed by HTTP/review UI. The sidecar contains no request, API key, raw HTTP body,
+  model-generated content or filesystem path. The exact response is a separate local-only file.
+- JSON failures now report only safe shape facts: syntax line/column, duplicate member,
+  non-standard constant, excessive nesting, non-object root, or at most 20 CCEF field/error-type
+  entries. Arbitrary model-owned keys are replaced by `<field>` before logging or persistence.
+- Semantic evidence failures report aggregate counts only: evidence references, bbox repairs,
+  missing locators, unmatched locators and ambiguous bboxes. A supplied-but-wrong fragment hash is
+  rejected and counted as unmatched; bbox recovery is allowed only when the hash is absent and the
+  bbox uniquely identifies one trusted fragment.
+- After capturing a semantic-v4 decode/binding failure, the error is non-retryable so the worker
+  stops for inspection instead of immediately buying another opaque attempt. Existing v2/v3 retry
+  semantics are unchanged. If capture itself fails, the job exposes a sanitized
+  `ccef_failure_capture_failed` error rather than pretending the original output was retained.
+
+### Focused verification
+
+Only directly relevant checks were run. The first candidate selection exposed the unsafe behavior
+where an explicit wrong hash was silently replaced from bbox; that behavior was corrected rather
+than weakening its oracle. Final focused results:
+
+- candidate-binding + capture tests: 17/17 passed;
+- decoder-v1.1 + capture tests: 16/16 passed;
+- final local capture plus two scripted end-to-end semantic-v4 failure paths (invalid CCEF and valid
+  CCEF with unbound evidence): 5/5 passed outside the sandbox in 1.43s. Both integration paths
+  retained exact responses, wrote sanitized reports, created zero official CCEF candidate rows and
+  returned non-retryable errors;
+- the initial sandbox run hung before the changed behavior in temporary SQLite `_setup`; the exact
+  same two-test selection passed outside the sandbox. No network or model was involved;
+- focused Ruff/MyPy and `git diff --check` were run after implementation; see the current agent
+  report for their final result.
+
+### Remaining state
+
+The already-discarded historical failed model responses cannot be recovered. The next real
+semantic-v4 run is still not authorized by this correction; when explicitly authorized, its first
+failure (if any) will be available locally for direct structural inspection. 8D-3D4B remains open;
+3D5 and 8D-4 have not started. No commit was created.
+
+## Codex execution: semantic-v4 fingerprint v11 failed before the original capture boundary
+
+The operator authorized one new pages-319–323 semantic-v4 attempt. Codex first bumped only the
+semantic extraction fingerprint from v10 to v11 so cancelled historical identities could not be
+replayed. Focused fingerprint/replay tests passed 2/2. Preflight again identified asset
+`2ca70ce3-8b6a-4a92-95c6-b67a02cf7b8a`, empty profile `{}` and no unrelated queued/running work.
+
+Exactly one run and one provider call were made:
+
+- run `be1f911c-8a5e-5f16-a451-260d75491721`;
+- Job `ae399f4a-8adb-4009-90a8-ac63032c1726`;
+- pipeline `pdf-extraction:v4`, final Job status `failed`, attempt count 1;
+- `last_error_code=invalid_response`, fixed message `DeepSeek returned an invalid response`;
+- evidence/render artifacts exist for all five pages, but zero provider-response/raw-CCEF/
+  normalized-CCEF artifacts exist.
+
+The API/worker were stopped after the terminal result. There was no manual retry or second run and
+no secret/provider content was printed. The adapter's error mapping proves this was a 2xx response
+that failed JSON/required-field/port mapping rather than an HTTP/auth/rate-limit/timeout failure.
+However, the response failed before `StructuredGenerationResponse` construction, while the first
+debug recorder lived after that construction. Therefore no failure-debug file was produced and
+the exact historical HTTP body cannot be recovered. The most likely explanation is a nullable or
+empty final `message.content` after a thinking response exhausted/truncated its 48,000-token output
+budget; this remains an inference, not a fact, because the discarded body and finish reason are
+unavailable.
+
+## Codex correction: provider-boundary invalid-response retention
+
+No further provider call was made. The DeepSeek adapter now accepts an optional async recorder and
+invokes it before returning the same sanitized non-retryable `invalid_response` error whenever a
+2xx body is invalid JSON, has a missing/null/blank/wrong-type required field, has an unsupported
+finish reason, or cannot form the provider-neutral response. The recorder is injected only for
+the real semantic-v4 service path. It stores exact HTTP response bytes as `.bin` plus a sanitized
+content-addressed JSON sidecar under
+`data/debug/extraction-failures/<run-id>/attempt-<attempt-count>/`; it never stores headers,
+requests, API keys or decoded provider-owned values and never registers an official extraction
+artifact. If capture itself fails, the adapter keeps the frozen `invalid_response` code and emits
+a fixed non-sensitive capture-failure message.
+
+Focused verification only:
+
+- `test_ccef_failure_debug.py` + `test_extraction_deepseek.py`: 98 passed;
+- focused Ruff: clean;
+- focused MyPy on five changed source/test files: clean;
+- `git diff --check`: clean.
+
+The mocked oracles prove exact byte retention for malformed JSON and nullable content with
+`finish_reason=length`, bounded diagnostic labels, sidecar non-disclosure, 0600 files, idempotent
+CAS reuse, empty-body retention and sanitized recorder failure. No full Stage/acceptance suite was
+run. 3D4B remains open; 3D5/8D-4 are not started; no commit was created.
+
+## Codex follow-up: expand semantic-v4 reasoning/completion budget
+
+Official DeepSeek V4 documentation was rechecked before changing the request. The API exposes only
+`high` and `max` reasoning effort; it does not provide a separate numeric reasoning-token budget.
+`max_tokens` limits the whole generated completion and usage separately reports the reasoning
+subset. Therefore increasing effort alone could make the suspected final-content starvation worse.
+
+The next semantic-v4 identity is now fingerprint v12 and uses the paired change:
+
+- `reasoning_effort=max` with thinking explicitly enabled;
+- semantic request `max_tokens=min(configured limit, 128_000)` instead of 48,000;
+- no internal 600-second clamp on the configured provider timeout.
+
+The global default timeout remains 600 seconds. A future explicitly authorized real checkpoint
+must start the service with `CHESS_WORKBENCH_CCEF_PROVIDER_TIMEOUT_SECONDS=1200`; no secret or
+tracked configuration file needs to change. No provider call was made in this follow-up.
+
+Focused verification only: semantic prompt budget/ceiling, max-effort request mapping and nullable
+content capture passed; the two v2/v3/v4 identity/replay tests passed 2/2 outside the tool sandbox
+after the in-sandbox SQLite run hung without a failure. Focused Ruff/MyPy and diff checks are
+recorded in the current Codex report. No full suite was run and no commit was created.
+
+## Codex real checkpoint: semantic-v4 fingerprint v12 accepted
+
+The operator explicitly authorized one new five-page v12 recognition. Worker-disabled preflight
+confirmed the single 672-page target asset `2ca70ce3-8b6a-4a92-95c6-b67a02cf7b8a`, pages 319–323,
+profile `{}`, and zero queued/running Jobs. One POST created (not replayed) run
+`4b33f70a-b623-5ec3-bc8e-5ed6a2a28e4a` and Job
+`510d478c-6ee7-4e06-aff0-c8da7225c343`; it was the sole queued Job before enabling the worker.
+
+The worker ran with `CHESS_WORKBENCH_CCEF_PROVIDER_TIMEOUT_SECONDS=1200`. Final state was
+`succeeded`, attempt count 1/3, with no last error and no retry. The worker/API were stopped
+immediately afterward. No secret or provider response was opened or printed. Because the run
+succeeded, no failure-debug capture exists for this run. The public result does not expose token
+usage.
+
+Verified selected artifacts before local export:
+
+- raw CCEF: 99,341 bytes, `b72948d0e9e2...`;
+- committed normalized CCEF: 111,977 bytes, `e52c27b2a9eb...`;
+- evidence page 319: 6,339 bytes, `499ec4399720...`;
+- evidence page 320: 14,720 bytes, `42ad361482f7...`;
+- evidence page 321: 7,048 bytes, `d03e8ee87528...`;
+- evidence page 322: 7,531 bytes, `55b5e974084d...`;
+- evidence page 323: 7,775 bytes, `c38da1b418ec...`.
+
+The inspector exited 0 with `gate_passed=true` and `committed_matches_offline=true`. Machine
+metrics: 16 items (4 headings, 9 prose, 2 move sequences, 1 figure), 120/120 valid nodes, 7
+annotations, 127 exact-cover reading-flow entries, 11 variation starts, zero duplicate UCI paths,
+and 105/105 raw evidence fragment hashes preserved. `has_conflicts=true` is solely the expected
+retained figure; warning/error/invalid/ambiguous/unresolved counts are all zero.
+
+Frozen semantic checkpoint:
+
+1. PASS — Game 13 is one 112-node shared-prefix sequence; the separate eight-node introduction is
+   source-ordered before its prose and is not a duplicated Game 13 prefix.
+2. PASS — reading flow contains `n11` (`6.Be3`), an anchored note and its displayed local branch,
+   then main-line `n30` (`6...O-O-O`); the parent chain remains continuous through `n11 -> n30`.
+3. PASS — `n11` (`6.Be3`, sibling 0) and `n12` (`6.O-O`, sibling 1) are both children of `n10`
+   (`5...Nc6`). The variation continuation `n13` (`6...O-O-O`) is a child of `n12`; the main-line
+   continuation `n30` is independently a child of `n11`. Later nested branches likewise produce
+   11 explicit variation starts without copied roots.
+4. PASS — seven source-ordered annotations are interleaved in reading flow, each has a move-node
+   anchor and trusted evidence. General chapter/game narrative remains top-level prose.
+5. PASS — the chapter plan discussion remains prose; the formal Game 13 tree contains only the
+   extracted score/variations and all 120 nodes validate locally.
+6. PASS — every referenced fragment has a non-null trusted hash; all 105 raw references and all
+   non-move items survive consolidation. Game 13 prefix nodes `n1`–`n12` correctly cite page 321.
+
+Gitignored local files:
+
+- `data/debug/stage8d-v12-pages-319-323.raw.json`;
+- `data/debug/stage8d-v12-pages-319-323.committed.normalized.json`;
+- `data/debug/stage8d-v12-pages-319-323.evidence-{319,320,321,322,323}.json`;
+- `data/debug/stage8d-v12-pages-319-323.normalized.pretty.json`;
+- `data/debug/stage8d-v12-pages-319-323.report.json`.
+
+8D-3D4B is accepted. 8D-3D5 may now start; 8D-4 remains blocked until 3D5 completes. No broad
+suite was run and no commit was created.
+
+## Codex implementation: 8D-3D5 review consumption ready for operator browser check
+
+The accepted v12 candidate is now readable through the existing review route without converting
+or overwriting its CCEF 1.1 artifact. The review package response is a `schema_version`-discriminated
+union: v2 continues to require CCEF 1.0, while annotated v3 and semantic v4 require CCEF 1.1. The
+loader keeps the existing result/slot/media/size/hash/manifest/CAS binding chain and still returns
+the same sanitized 409 for a pipeline/package mismatch. Inspection now counts 1.1 nodes, annotation
+warnings and position-anchor ambiguity; no provider response, raw CCEF or filesystem path is added
+to the public surface.
+
+The browser review page now treats topology and presentation separately as required by ADR 0017.
+It computes variation depth from `parent_id + sibling_order`, but consumes `reading_flow` for visual
+order. Atomic annotations interrupt a pending move row, render as readable in-score notes, retain
+their evidence-page controls and can move the board to their explicit before/after move-node or FEN
+anchor. CCEF 1.0 keeps its previous two-ply row behavior.
+
+Focused evidence only:
+
+- backend inspection/schema/loader selection: 74 passed outside the sandbox (temporary SQLite
+  hangs in the tool sandbox); review HTTP: 7 passed;
+- frontend move projection/review component: 25 passed; focused TypeScript check clean;
+- focused Ruff/MyPy clean and generated contracts are up to date;
+- direct real-v12 loader returned CCEF 1.1, pages 319–323, 16 items, two sequences, 120 nodes,
+  seven annotations and 127 flow entries. Its sole blocking issue is the already expected retained
+  source figure;
+- live localhost GET returned a 114,490-byte review JSON document and a valid 1275×1651 PNG for
+  page 321. API is running at port 8000 with the application job worker disabled; Vite is running
+  at port 5173.
+
+The remaining 8D-3D5 action is the operator's real-browser judgment at
+`/sources/pdf-extractions/4b33f70a-b623-5ec3-bc8e-5ed6a2a28e4a/review`. Do not mark 3D5 complete
+or begin 8D-4 until that interaction checkpoint is accepted. No full suite or commit was run.

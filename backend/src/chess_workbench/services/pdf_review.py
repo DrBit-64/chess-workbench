@@ -1,6 +1,6 @@
 """Server-side read-only review loader (packet DS-STAGE8D-REVIEW-LOADER-01).
 
-Loads one completed v2 extraction's normalized CCEF and rendered-page registry
+Loads one completed reviewable extraction's normalized CCEF and rendered-page registry
 from immutable CAS, verifies their bindings, and returns the accepted 8D-2A
 document/page values.  This module adds no HTTP route, schema, SQL model,
 migration, frontend or generated contract, never accepts a caller-supplied
@@ -20,7 +20,7 @@ from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from chess_workbench.config import Settings
-from chess_workbench.extraction.contracts import ExtractionPackage
+from chess_workbench.extraction.contracts import ExtractionPackage, ExtractionPackageV1_1
 from chess_workbench.extraction.evidence import MAX_PNG_BYTES
 from chess_workbench.review.inspection import ReviewInspection, inspect_review_candidate
 from chess_workbench.schemas.review import PdfReviewDocumentRead, PdfReviewPageRead
@@ -30,7 +30,9 @@ from chess_workbench.services.pdf_extraction import (
     PDF_EXTRACTION_RESULT_SCHEMA,
 )
 from chess_workbench.services.pdf_persistence import (
+    PDF_ANNOTATED_EXTRACTION_PIPELINE_VERSION,
     PDF_EXTRACTION_PIPELINE_VERSION,
+    PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION,
     PdfExtractionView,
     PdfPersistenceService,
 )
@@ -113,7 +115,7 @@ class _ResolvedReview:
     first_page: int
     last_page: int
     normalized_ccef_sha256: str
-    package: ExtractionPackage
+    package: ExtractionPackage | ExtractionPackageV1_1
     inspection: ReviewInspection
     rendered_by_page: dict[int, ExtractionArtifact]
 
@@ -131,7 +133,7 @@ def _page_missing() -> ServiceError:
 
 
 class PdfReviewReadService:
-    """Read-only loader of one completed v2 review document and its pages."""
+    """Read-only loader of one completed review document and its pages."""
 
     def __init__(self, session: AsyncSession, settings: Settings) -> None:
         self.session = session
@@ -188,7 +190,15 @@ class PdfReviewReadService:
             raise _missing() from None
         run = view.run
         job = view.job
-        if run.pipeline_version != PDF_EXTRACTION_PIPELINE_VERSION or job.status != "succeeded":
+        if (
+            run.pipeline_version
+            not in (
+                PDF_EXTRACTION_PIPELINE_VERSION,
+                PDF_ANNOTATED_EXTRACTION_PIPELINE_VERSION,
+                PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION,
+            )
+            or job.status != "succeeded"
+        ):
             raise _unavailable() from None
         result = job.result
         if not isinstance(result, dict):
@@ -303,7 +313,7 @@ class PdfReviewReadService:
         normalized_bytes = await self._read_artifact_bytes(
             normalized_artifact, _MAX_JSON_ARTIFACT_BYTES
         )
-        package = _parse_package(normalized_bytes)
+        package = _parse_package(normalized_bytes, pipeline_version=run.pipeline_version)
         if package is None:
             raise _unavailable() from None
         source_range = package.source.page_range
@@ -382,9 +392,18 @@ def _parse_json_object(raw_bytes: bytes) -> dict[str, Any] | None:
     return cast(dict[str, Any], document)
 
 
-def _parse_package(raw_bytes: bytes) -> ExtractionPackage | None:
+def _parse_package(
+    raw_bytes: bytes, *, pipeline_version: str
+) -> ExtractionPackage | ExtractionPackageV1_1 | None:
     try:
-        return ExtractionPackage.model_validate_json(raw_bytes)
+        if pipeline_version == PDF_EXTRACTION_PIPELINE_VERSION:
+            return ExtractionPackage.model_validate_json(raw_bytes)
+        if pipeline_version in (
+            PDF_ANNOTATED_EXTRACTION_PIPELINE_VERSION,
+            PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION,
+        ):
+            return ExtractionPackageV1_1.model_validate_json(raw_bytes)
+        return None
     except (ValidationError, UnicodeDecodeError, ValueError):
         return None
 

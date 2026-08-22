@@ -17,8 +17,6 @@ from typing import Any, cast
 from uuid import UUID
 
 import pytest
-from pydantic import ValidationError
-
 from chess_workbench.api.contracts import openapi_schema
 from chess_workbench.extraction.contracts import ExtractionPackage
 from chess_workbench.extraction.validation import normalize_chess_moves
@@ -31,6 +29,7 @@ from chess_workbench.schemas.review import (
     PdfReviewPageRead,
     ReviewPageContentPath,
 )
+from pydantic import ValidationError
 
 RUN_ID = UUID("11111111-1111-4111-8111-111111111111")
 RUN_ID_PATH = str(RUN_ID)
@@ -435,8 +434,12 @@ def test_openapi_schema_is_standalone_openapi_30() -> None:
 
 def test_openapi_schema_keeps_the_nested_ccef_discriminator() -> None:
     schema = openapi_schema(PdfReviewDocumentRead)
-    item_union = schema["properties"]["package"]["properties"]["items"]["items"]
-    assert item_union["discriminator"]["propertyName"] == "kind"
+    package_union = schema["properties"]["package"]
+    assert package_union["discriminator"]["propertyName"] == "schema_version"
+    assert len(package_union["oneOf"]) == 2
+    for package_schema in package_union["oneOf"]:
+        item_union = package_schema["properties"]["items"]["items"]
+        assert item_union["discriminator"]["propertyName"] == "kind"
 
 
 def test_openapi_schema_rejects_huge_page_range_with_constant_memory() -> None:
