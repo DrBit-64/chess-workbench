@@ -27,6 +27,7 @@ import type {
   PdfAssetEnvelope,
   PdfAssetListResponse,
   PdfExtraction,
+  PdfExtractionDocumentListResponse,
   PdfExtractionEnvelope,
   PdfExtractionListResponse,
   Source,
@@ -120,9 +121,21 @@ export function SourcesPage() {
           ? 2000
           : 0,
     });
+  const { data: documentList } = useSWR<PdfExtractionDocumentListResponse>(
+    '/api/pdf-extraction-documents',
+    fetchJson,
+  );
 
   const assets = assetList?.items ?? [];
-  const runs = runList?.items ?? [];
+  const documents = documentList?.items ?? [];
+  const groupedRunIds = new Set(
+    documents.flatMap((document) =>
+      document.segments.map((segment) => segment.run_id),
+    ),
+  );
+  const runs = (runList?.items ?? []).filter(
+    (run) => !groupedRunIds.has(run.id),
+  );
   const selectedAsset = assets.find((item) => item.id === assetId) ?? null;
   const assetsById = new Map(assets.map((item) => [item.id, item]));
 
@@ -413,6 +426,43 @@ export function SourcesPage() {
               本页面仅展示后端任务的真实状态，不估算识别进度。
             </Typography.Text>
           </Space>
+          {documents.length ? (
+            <div className="divide-y divide-gray-200" role="list">
+              {documents.map((document) => {
+                const asset = assetsById.get(document.pdf_asset_id);
+                return (
+                  <div className="py-3" key={document.id} role="listitem">
+                    <div className="flex w-full flex-col gap-1">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <Space orientation="vertical" size={0}>
+                          <Typography.Text strong>
+                            {asset?.title ?? document.pdf_asset_id}
+                          </Typography.Text>
+                          <Typography.Text type="secondary">
+                            第 {document.first_page}–{document.last_page} 页 ·{' '}
+                            {document.segments.length} 段增量提取
+                          </Typography.Text>
+                        </Space>
+                        <Tag color="green">连续文档 v{document.version}</Tag>
+                      </div>
+                      <Typography.Text>
+                        已合并为一个审核条目；规范 CCEF{' '}
+                        {document.normalized_ccef_sha256.slice(0, 12)}…
+                      </Typography.Text>
+                      <Link
+                        to={`/sources/pdf-extractions/${encodeURIComponent(
+                          document.id,
+                        )}/review`}
+                        className="text-sm text-blue-600 hover:underline"
+                      >
+                        打开合并审核页面
+                      </Link>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : null}
           {runs.length ? (
             <div className="divide-y divide-gray-200" role="list">
               {runs.map((run) => {
@@ -519,7 +569,7 @@ export function SourcesPage() {
                 );
               })}
             </div>
-          ) : (
+          ) : documents.length ? null : (
             <Empty description="还没有识别任务" />
           )}
         </Space>

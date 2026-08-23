@@ -5621,3 +5621,450 @@ Focused evidence only:
 The remaining 8D-3D5 action is the operator's real-browser judgment at
 `/sources/pdf-extractions/4b33f70a-b623-5ec3-bc8e-5ed6a2a28e4a/review`. Do not mark 3D5 complete
 or begin 8D-4 until that interaction checkpoint is accepted. No full suite or commit was run.
+
+## Codex architecture: incremental extraction gate before 8D-4
+
+The operator accepted the v12 pages-319–323 browser result as having no material extraction error;
+minor text defects are explicitly deferred to later human editing. 8D-3D5 is therefore accepted.
+The next requirement is extraction only, not translation: reuse that immutable v12 run as the first
+segment, extract only physical pages 324–328, and expose the combined material as one Sources/review
+entry. No real provider call is authorized by this design step.
+
+ADR 0018 is now authoritative and supersedes ADR 0014's whole-range default for new incremental
+work. CCEF 1.1 remains unchanged. A consumer-side PDF extraction document owns ordered immutable
+runs and immutable aggregate revisions. Each append binds the exact predecessor aggregate hash and
+expected version, permits only an adjacent page range on the same asset, and advances the document
+head only after the new run and deterministic aggregate commit succeed. Failed/cancelled work leaves
+the previous head readable. Translation, automatic/parallel splitting and multi-source documents are
+deferred.
+
+Cross-segment chess continuity is explicit rather than inferred by title or FEN. A versioned internal
+continuation context catalogs every eligible locally-valid baseline sequence/root/node in source
+order, with distinct IDs even for transposed positions, canonical FEN and an at-most-eight-move path
+tail. The future provider delta may bind only to those hash-bound anchors; a deterministic compositor
+will revalidate the selected edge, remap IDs/evidence/annotations/reading flow and produce a new
+aggregate normalized hash without overwriting any provider/raw/segment-normalized artifact. Formal
+review sessions for incremental documents must bind an exact aggregate revision, so 8D-4 remains
+paused through 8D-3E.
+
+The active bounded worker packet is `DS-STAGE8-INCREMENTAL-CONTEXT-01` in `PLANS.md`. It may edit
+only a new pure `extraction/incremental.py`, its focused synthetic test, and append completion evidence
+here. It must not touch CCEF contracts/Schema, provider/prompt, persistence/API/UI or call a real
+model. Codex review is mandatory before 8D-3E1 can be accepted.
+
+### Automatic worker stopped at operator request
+
+Codex started the automatic DeepCode launcher for `DS-STAGE8-INCREMENTAL-CONTEXT-01`, then the
+operator restored the earlier manual relay workflow and explicitly requested termination. The
+launcher was interrupted with SIGINT (exit 130), and no DeepCode tmux session remains. The worker
+left an untracked 294-line `backend/src/chess_workbench/extraction/incremental.py`; it had not created
+`backend/tests/test_extraction_incremental.py`, had not run the packet gates, had not appended its own
+completion report and had not committed. Treat that module as unreviewed partial work, not a completed
+packet. `git diff --check` is clean. The next manually launched DeepCode turn should resume the exact
+packet in `PLANS.md`, inspect and correct the partial module, add all frozen tests, run only the listed
+focused commands, append completion evidence, stop before 8D-3E2 and report `pending Codex review`.
+
+## DS-STAGE8-INCREMENTAL-CONTEXT-01 (8D-3E1) completion
+
+Status: **pending Codex review** — not started 8D-3E2, no commit/stage/unstage/reset.
+
+### Actual files changed
+- `backend/src/chess_workbench/extraction/incremental.py` (untracked, previously partial/unreviewed): audited item-by-item against the frozen packet (9 required behaviors); the existing module already satisfied the frozen API (model field shapes, strict/frozen/extra=forbid config, exact-type TypeErrors, fixed ValueError messages, locally-normalized oracle via `normalize_chess_moves_v1_1` + `model_dump(mode="json")` equality, item-order projection, root/node anchors, at-most-8 tail cap, global contiguous `anchor-N` ids, distinct transposition anchors, no input mutation). **No production edits were required** — the module stands as written.
+- `backend/tests/test_extraction_incremental.py` (new, 19 tests): frozen focused oracles — exact mainline projection (17 anchors, mirror loop against normalized package), long-line tail capped at final 8 (Ruy), transposed equal FENs remain distinct anchors, invalid/ambiguous/ineligible exclusion with eligible branches kept, raw/tampered rejection, null baseline range / overlap / gap / page>20000 / malformed SHA / exact-type misuse, every sequence/context relation rejection (duplicate seq id, non-contiguous/duplicate anchor ids, anchor/container mismatch, root-not-first, two roots, duplicate after_node_id, root-with-tail, node-with-empty/mismatched tail), model shape/strict/frozen/extra=forbid/JSON round trip, determinism + input non-mutation, multi-sequence order/titles/global ids, import-purity subprocess proof (contracts+validation+incremental only; no Sanic/SQLAlchemy/store/services/provider/prompting/candidates/consolidation; python-chess allowed).
+- `docs/agent/HANDOFF.md` (this append only).
+
+### Acceptance commands and results (packet-verbatim)
+1. `uv run --project backend --locked pytest -c backend/pyproject.toml -o addopts='' backend/tests/test_extraction_incremental.py backend/tests/test_extraction_validation_v1_1.py` → **28 passed** (19 new + 9 v1.1 validation)
+2. `uv run --project backend --locked ruff format --check backend/src/chess_workbench/extraction/incremental.py backend/tests/test_extraction_incremental.py` → **2 files already formatted**
+3. `uv run --project backend --locked ruff check backend/src/chess_workbench/extraction/incremental.py backend/tests/test_extraction_incremental.py` → **All checks passed**
+4. `uv run --project backend --locked mypy --config-file backend/pyproject.toml backend/src/chess_workbench/extraction/incremental.py backend/tests/test_extraction_incremental.py` → **Success: no issues found in 2 source files**
+5. `git diff --check` → **clean**
+6. `git diff --stat` → both files untracked (`??`); nothing else touched.
+
+### Assumptions
+- "root FEN shared by eligible valid roots" interpreted strictly: first eligible valid root's `fen_before` wins; other eligible valid roots must match it (parents never guessed by FEN).
+- Empty `sequences` is permitted by the frozen shape; projection emits only `MoveSequenceItemV1_1` items with at least one eligible valid root, in source item order.
+- Transpositions to identical canonical FENs remain distinct anchors (different ids/tails), as frozen.
+
+### Remaining risks
+- Continuation context is consumer-side pure value model only; stitching/merge/trust/I/O are out of scope and must land in later 8D-3E packets.
+- The 8D-3E1 oracle relies on the existing normalizer's canonical FENs (`en_passant="fen"`), which was verified against synthetic trees only.
+
+## Codex review: DS-STAGE8-INCREMENTAL-CONTEXT-01 changes requested
+
+Codex independently reproduced 28/28 focused tests, clean Ruff format/lint and configured MyPy
+(using workspace-local uv cache after the sandbox correctly rejected the default home cache).
+Anchor projection, normalized-baseline equality, parent-chain/FEN filtering, source/global order,
+eight-ply tails, transposition identity, strict/frozen shapes and import purity match the frozen
+packet. No broad suite or real provider call ran.
+
+Two protocol blockers remain, so 8D-3E1 is not accepted and 8D-3E2 must not start:
+
+1. The builder accepts a deliberately different but syntactically valid 64-hex SHA instead of
+   comparing it with the canonical normalized package bytes. Independent output:
+   `fake_hash_accepted True True` (the stored hash equals the fake and differs from the independently
+   computed accepted candidate hash). This contradicts ADR 0018's exact hash-bound context.
+2. Direct construction/JSON parsing of `CcefContinuationContext` accepts overlapping, gapped or
+   over-20,000 page ranges because those checks exist only in the builder. Independent output:
+   `overlap_context_accepted True`. A later serialized prompt/binder value therefore cannot rely on
+   the strict model alone.
+
+`PLANS.md` now contains the bounded correction packet
+`DS-STAGE8-INCREMENTAL-CONTEXT-01-R1`: compute/verify the accepted canonical CCEF SHA locally with a
+fixed non-leaking mismatch error, centralize the page relation helper in model + builder, and add
+focused valid-hash/Unicode/direct-model range regressions. The original files, behavior and 19 tests
+must be preserved. Status: pending DeepCode R1; no commit.
+
+## DS-STAGE8-INCREMENTAL-CONTEXT-01 R1 completion
+
+R1 correction packet executed inside the original permitted edit boundary
+(`backend/src/chess_workbench/extraction/incremental.py`,
+`backend/tests/test_extraction_incremental.py`, this HANDOFF append-only).
+
+Files changed:
+- `backend/src/chess_workbench/extraction/incremental.py` — added `import hashlib`,
+  `import json`; new private `_canonical_package_bytes(package)` implementing the frozen
+  canonical CCEF bytes (`json.dumps(model_dump(mode="json"), ensure_ascii=False,
+  allow_nan=False, sort_keys=True, separators=(",", ":")).encode("utf-8") + b"\n"`);
+  new private `_check_page_relations(base_range, next_range)` with frozen check order
+  (overlap first, then non-adjacency/gap, then end_page <= 20_000, fixed messages),
+  now called from both the `CcefContinuationContext` model validator and the builder
+  (no drift); builder docstring updated; builder now recomputes the canonical SHA-256 of
+  the proven normalized package and rejects a well-formed-but-wrong supplied hash with the
+  fixed content-free `ValueError("base normalized CCEF SHA-256 does not match package")`;
+  malformed SHA remains a Pydantic `ValidationError` (context constructed before
+  comparison). No new public export; `__all__` unchanged; frozen fields, anchor
+  generation, ordering, tails and CCEF 1.0/1.1 contracts untouched.
+- `backend/tests/test_extraction_incremental.py` — added `import hashlib`; new
+  independent `_canonical_sha(package)` test helper (formula mirrored, not imported from
+  production); `_build` default `sha` now `None` → independently computed real canonical
+  SHA (placeholder `SHA_64` no longer used for successful builds); existing 19 tests
+  preserved (updated only where they previously passed the placeholder hash). New R1
+  regressions: wrong-but-well-formed hash rejected with fixed non-leaking message (omits
+  package text, ids, both hash values); Unicode/multibyte package accepted with canonical
+  hash and raw-bytes proof of `ensure_ascii=False` + single trailing newline; direct
+  `CcefContinuationContext` construction rejects overlap / gap / end_page 20_001 via the
+  model validator.
+
+Results (packet acceptance commands, run in repo root):
+1. `uv run --project backend --locked pytest -c backend/pyproject.toml -o addopts='' backend/tests/test_extraction_incremental.py backend/tests/test_extraction_validation_v1_1.py` → **31 passed** (22 incremental incl. 3 new R1 regressions + 9 validation v1.1).
+2. `uv run --project backend --locked ruff format --check backend/src/chess_workbench/extraction/incremental.py backend/tests/test_extraction_incremental.py` → clean (2 files already formatted).
+3. `uv run --project backend --locked ruff check backend/src/chess_workbench/extraction/incremental.py backend/tests/test_extraction_incremental.py` → clean (one UP012 auto-fixed in test file).
+4. `uv run --project backend --locked mypy --config-file backend/pyproject.toml backend/src/chess_workbench/extraction/incremental.py backend/tests/test_extraction_incremental.py` → Success, no issues.
+5. `git diff --check` → clean.
+6. `git diff --stat` → no tracked diff for these files (both are untracked: `??` in git status; HANDOFF is tracked and modified only by this append).
+
+Assumptions / remaining risks:
+- Canonical hash comparison happens after normalization-equality proof; the supplied hash is
+  validated by constructing the strict model first so malformed SHA stays a Pydantic
+  `ValidationError` (shape check) while a valid-but-wrong hash becomes the fixed `ValueError`.
+- `_check_page_relations` is private and duplicated nowhere; model and builder share it.
+- No production modules other than `incremental.py` were touched; no commit/stage/reset;
+  8D-3E2 not started; no provider/network calls; all fixtures remain invented synthetic chess.
+
+Status: **pending Codex re-review** (8D-3E1 R1). No commit created.
+
+## Codex implementation: 8D-3E2A document persistence/API core
+
+Status: **core complete; pending mechanical 8D-3E2B contract/oracle packet**. No commit, provider,
+worker or real-book operation ran.
+
+Codex froze the detailed persistence boundary in ADR 0018 and `PLANS.md`. A logical document is the
+only mutable head projection. Successful segment memberships and aggregate revisions are immutable;
+append attempts are separate immutable receipts whose linked Job remains the sole status source.
+Failed/cancelled attempts do not become segments or advance the head. The new Job kind
+`pdf_incremental_extraction` is intentionally absent from the current worker handler map until
+8D-3E3.
+
+Core files added/changed:
+
+- `backend/src/chess_workbench/store/models/extraction.py`, model exports and Alembic env: document,
+  segment, revision and append identities with RESTRICT FKs/uniques/checks;
+- `backend/migrations/versions/20260822_0012_incremental_pdf_documents.py`: portable migration;
+- `backend/src/chess_workbench/services/pdf_documents.py`: verified CCEF 1.1 first-run adoption with
+  CAS reuse, deterministic identity, hash/version-bound adjacent append registration, idempotent
+  replay, active-attempt exclusion and failed-attempt retry;
+- `backend/src/chess_workbench/schemas/pdf_documents.py` and `api/pdf.py`: strict create/list/get/
+  append public contracts and routes; no CAS path/provider/raw/key disclosure;
+- `backend/tests/test_pdf_documents.py`: three focused synthetic functional oracles covering adopt,
+  append, replay, stale/non-adjacent/parallel rejection, failed retry, worker-kind isolation and the
+  HTTP grouped read path.
+
+Focused evidence:
+
+- `test_pdf_documents.py` → **3 passed** (sandbox-external only because the tool sandbox could not
+  start even a bare aiosqlite `:memory:` worker thread; the same command completed in 2.96 s outside);
+- existing `test_stage8_models.py` → **7 passed**;
+- dedicated temporary SQLite migration `base -> head -> 0011`, then `0011 -> head` +
+  `alembic check` → clean, `No new upgrade operations detected`;
+- changed-file Ruff check and configured MyPy → clean; `git diff --check` → clean.
+
+No broad suite or generated-contract command ran. The active bounded Flash packet
+`DS-STAGE8-INCREMENTAL-DOCUMENT-ORACLES-01` may only add model/OpenAPI oracle tests and regenerate
+OpenAPI/TypeScript; it must stop instead of editing the Codex-owned core. 8D-3E3 has not started.
+
+## Codex final re-review: 8D-3E1 accepted
+
+Codex independently ran the exact focused suite with the workspace-local uv cache: 31/31 passed
+(22 incremental + 9 existing CCEF 1.1 validation), Ruff format/check clean and configured MyPy
+clean. A separate adversarial invocation now returns only the fixed errors
+`base normalized CCEF SHA-256 does not match package` for a different valid 64-hex hash and
+`next page range overlaps the base page range` for direct invalid context construction. Review of
+the actual module confirms the accepted candidate canonical UTF-8/sorted/compact/single-newline
+formula, shared page relation helper, unchanged frozen field/API shape and no new dependency or
+forbidden import.
+
+8D-3E1 is accepted. No full suite, provider call or commit ran. The next step is 8D-3E2, but its
+document identity, migration, append transaction, optimistic concurrency and public API are
+Codex-owned high-risk work; do not give that unsplit step to DeepCode. Codex must first freeze and
+own those boundaries, then may delegate separately bounded mechanical tests/UI work.
+
+Chronology note: Codex subsequently completed the 8D-3E2A core described in the preceding
+`Codex implementation: 8D-3E2A` section. The current next action is the read-only/mechanical
+`DS-STAGE8-INCREMENTAL-DOCUMENT-ORACLES-01` packet in `PLANS.md`; 8D-3E3 remains unstarted.
+
+## DS-STAGE8-INCREMENTAL-DOCUMENT-ORACLES-01 (8D-3E2B) — STOPPED at model oracle prep: MySQL constraint-name length invariant violated
+
+Per the packet stop-and-report rule ("如果测试发现 Codex 核心实现或迁移存在问题，不要自行修复生产代码，
+也不要弱化测试；立即停止并报告"), the mechanical oracle prep STOPPED before writing the oracle test
+files because the frozen invariant "constraint identifiers ≤64 characters" is violated by the
+Codex-owned core (models + migration 0012). No production file was edited; no oracle was weakened;
+no commit was created.
+
+- **Failed command (the probe that would be asserted by `test_pdf_document_models.py`)**: compiling the
+  four new tables with the MySQL dialect and measuring named-constraint lengths, i.e.:
+  `CreateTable(t).compile(dialect=mysql.dialect())` for `pdf_extraction_documents`,
+  `pdf_extraction_document_segments`, `pdf_extraction_document_revisions`,
+  `pdf_extraction_document_appends`, then `max(len(c.name))`.
+- **Full error**: 8 foreign-key constraint names exceed MySQL's 64-character identifier limit
+  (ER_TOO_LONG_IDENT / error 1059 would be raised on MySQL 8); max length is 94 chars:
+  - 71 fk_pdf_extraction_document_appends_document_id_pdf_extraction_documents
+  - 68 fk_pdf_extraction_document_appends_extraction_run_id_extraction_runs
+  - 92 fk_pdf_extraction_document_appends_predecessor_revision_id_pdf_extraction_document_revisions
+  - 73 fk_pdf_extraction_document_revisions_document_id_pdf_extraction_documents
+  - 94 fk_pdf_extraction_document_revisions_predecessor_revision_id_pdf_extraction_document_revisions
+  - 89 fk_pdf_extraction_document_revisions_terminal_segment_id_pdf_extraction_document_segments
+  - 72 fk_pdf_extraction_document_segments_document_id_pdf_extraction_documents
+  - 69 fk_pdf_extraction_document_segments_extraction_run_id_extraction_runs
+  (42 named constraints total on the four tables; other invariants verified OK: ENGINE=InnoDB 4,
+  ON DELETE RESTRICT 9, ascii_bin present, utf8mb4_bin present.)
+- **Minimal suspected production files**:
+  1. `backend/migrations/versions/20260822_0012_incremental_pdf_documents.py` — the 8 too-long
+     `op.f(...)` FK constraint names appear in `create_foreign_key`/`create_table` calls.
+  2. `backend/src/chess_workbench/store/models/extraction.py` — the four model classes inherit the
+     shared naming convention and produce the identical too-long names in metadata.
+  3. `backend/src/chess_workbench/store/base.py` — `NAMING_CONVENTION["fk"] =
+     "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s"` is the root pattern that
+     generates names >64 chars for long table names (changing it globally would affect all tables,
+     so the likely fix is explicit short `ForeignKeyConstraint` names in models + matching
+     `op.f(...)` names in the migration, keeping `compare_metadata` in sync).
+- **Frozen invariant believed violated**: 8D-3E2B model oracle — "Compile just the four new tables
+  for MySQL: prove InnoDB, binary ASCII hash/key identity, case-sensitive revision paths, RESTRICT
+  foreign keys, and **constraint identifiers ≤ 64 characters**."
+
+Status: **STOPPED — awaiting Codex to fix the constraint-name lengths in the frozen core (models +
+migration 0012) before the mechanical oracle tests can be written green**. 8D-3E3 not started; no
+commit created.
+
+## Codex correction: 8D-3E2B MySQL FK identifier blocker resolved
+
+Codex accepted the stop report. The probe was valid: the shared naming convention produced eight
+new FK names over MySQL's 64-character limit even though SQLite migration and Alembic drift checks
+were green. The global convention and all historical tables were deliberately left unchanged.
+
+Only the Codex-owned 8D-3E2 core was corrected:
+
+- `backend/src/chess_workbench/store/models/extraction.py`: all nine new document/segment/revision/
+  append FKs now carry explicit stable `fk_pdf_doc_*` names;
+- `backend/migrations/versions/20260822_0012_incremental_pdf_documents.py`: the same nine names are
+  frozen in migration metadata.
+
+Independent verification:
+
+- MySQL `CreateTable` probe: `ENGINE=InnoDB` 4, `ON DELETE RESTRICT` 9, over-64 identifiers `[]`,
+  maximum named-constraint length 63;
+- focused `test_stage8_models.py`: 7 passed;
+- focused `test_pdf_documents.py`: 3 passed;
+- fresh temporary SQLite `base -> head`, `alembic check`, `head -> 0011`: passed with no drift;
+- changed-file Ruff/MyPy and `git diff --check`: clean.
+
+Actual workspace inspection also shows `backend/openapi.json` and
+`frontend/src/types/api.generated.ts` modified with the new routes, despite the stopped report saying
+`make contracts` was not run. These bytes are preserved as unverified user/agent work. The resumed
+packet must regenerate and verify them rather than assuming either the report or current diff is
+authoritative. No oracle test files exist yet. Resume the same
+`DS-STAGE8-INCREMENTAL-DOCUMENT-ORACLES-01` packet; production remains read-only and 8D-3E3 remains
+unstarted.
+
+## DS-STAGE8-INCREMENTAL-DOCUMENT-ORACLES-01 (8D-3E2B) — completion
+
+Resumed the packet from the beginning after Codex's FK-name fix. Treated the previously modified
+`backend/openapi.json` / `frontend/src/types/api.generated.ts` as unverified and regenerated them.
+
+Files changed (all inside the permitted edit boundary):
+- `backend/openapi.json` — regenerated via `make contracts` (new routes confirmed).
+- `frontend/src/types/api.generated.ts` — regenerated via `make contracts`.
+- `backend/tests/test_pdf_document_models.py` (new) — model/migration oracle for the four new tables:
+  exact column sets; UUID + aware-UTC round trips; mutable lifecycle (`version`/`updated_at`)
+  only on `PdfExtractionDocument` while segment/revision/append stay immutable receipts; SQLite
+  CHECK/UNIQUE/RESTRICT rejection proofs (FK enforcement enabled via PRAGMA listener); MySQL DDL
+  compile (ENGINE=InnoDB ×4, ON DELETE RESTRICT ×9, ascii_bin hashes, utf8mb4_bin revision path,
+  DATETIME(6), constraint identifiers ≤ 64, max observed 63); migration↔metadata parity via
+  `compare_metadata == []`; offline MySQL downgrade contains no `DROP INDEX` before the four new
+  tables' `DROP TABLE` statements.
+- `backend/tests/test_pdf_document_contracts.py` (new) — OpenAPI contract oracle: exactly the four
+  frozen operation IDs at frozen `/api/pdf-extraction-documents...` paths; create 200/201 (body
+  requires `initial_run_id`), list 200, get 200/404 (required `document_id` path param), append
+  200/202/404/409/422 with optional `Idempotency-Key` header and body requiring
+  `expected_version >= 1`, `first_page`/`last_page` 1..20000, optional `profile`; read schema is
+  grouped (segments/revisions/append_attempts with Job status) and leak-free (no CAS
+  `relative_path`, provider/raw response fields, API keys, or OCR text); error responses reuse the
+  shared `ErrorResponse` schema; generated TypeScript contains the three document path keys.
+- `docs/agent/HANDOFF.md` — this completion evidence (append only).
+
+Acceptance command results (packet-verbatim):
+- `make contracts` — OK, contracts regenerated.
+- pytest `test_pdf_document_models.py test_pdf_document_contracts.py test_pdf_documents.py`
+  — **18 passed** (7 model + 8 contract + 3 existing functional).
+- `ruff format --check` (two new test files) — clean.
+- `ruff check` (two new test files) — clean.
+- `mypy --config-file backend/pyproject.toml` (two new test files) — success.
+- `make check-contracts` — "generated contracts are up to date".
+- `pnpm --dir frontend typecheck` — exit 0 (Node engine WARN only, non-blocking).
+- `git diff --check` — clean.
+
+Assumptions / remaining risks:
+- Alembic `compare_metadata` does not compare FK names, so the FK-name divergence between migration
+  0010/0012 and model metadata (`fk_pdf_doc_asset` vs convention names) is invisible to the
+  migration-parity oracle. It is not a MySQL schema-global collision (each universe's names are
+  unique); flagging for Codex awareness only.
+- 8D-3E3 (worker wiring for `pdf_incremental_extraction`) intentionally not started.
+
+Status: **pending Codex review** (8D-3E3 未开始). No commit created.
+
+## Codex minimum incremental database/browser delivery (2026-08-23)
+
+Operator request: connect the already-verified pages-324–328 JSON to the smallest database commit
+and merge flow so pages 319–328 appear as one browser entry. DeepCode remains disabled; no provider
+call was made and no broad suite/acceptance gate was run.
+
+Implemented:
+
+- `backend/src/chess_workbench/extraction/incremental.py`: added deterministic
+  `compose_incremental_ccef`. It rebuilds and verifies the hash-bound continuation context, requires
+  a locally normalized adjacent package, attaches bound roots only to declared anchors, remaps
+  node/annotation/flow IDs, retains independent items and produces a CCEF 1.1 document package.
+- `backend/src/chess_workbench/services/pdf_documents.py`: added replay-safe
+  `commit_verified_append`, which requires the registered segment normalized artifact, stores
+  canonical aggregate JSON in CAS, creates immutable segment/revision rows and atomically advances
+  the optimistic-lock document head.
+- `backend/src/chess_workbench/services/pdf_review.py`: when an extraction run ID is absent, the
+  same read-only review endpoint now resolves a document ID, verifies its head revision, continuous
+  segments, aggregate CAS bytes and exactly one rendered PNG for every covered physical page.
+- `scripts/commit_incremental_ccef.py`: no-provider operator command that adopts the accepted v12
+  run, registers/replays the adjacent append, renders/stores pages 324–328, stores the verified
+  segment JSON, composes and commits revision 2, and marks the exact append Job succeeded.
+- `frontend/src/logic/api/types.ts` and `frontend/src/app/SourcesPage.tsx`: load grouped document
+  contracts, show one `连续文档` card and hide its constituent extraction-run cards; the card reuses
+  the existing review route with the document ID.
+
+Real local result:
+
+- pre-migration backup: gitignored
+  `data/debug/chess-workbench-before-incremental-20260823.db`;
+- database upgraded from `20260811_0011` to `20260822_0012`;
+- document ID `b08ebf6d-856d-587f-9293-aa89eb81e573`, append run
+  `76011064-aa16-517e-852f-2908f6283d95`, version 2, segments 319–323 + 324–328;
+- aggregate SHA-256 `720b60b27d6f94f84d9185ffb6760e113c855a1070e34cf3eb7475bb87678120`;
+- aggregate shape: 20 items; `seq_intro_classical` 8 nodes, `seq_game_13` 233 nodes/24
+  annotations, `seq_game14` 24 nodes/3 annotations; 265 nodes total, zero non-valid nodes;
+- review service returned document ID identity, all page descriptors 319..328 and a verified PNG
+  page 328 (556,638 bytes); inspection has one expected blocking issue for the existing non-chess
+  player photo on page 322, not a move/composition defect;
+- real HTTP checks returned the one grouped document, 10-page aggregate JSON and page-328 PNG;
+- system-Chrome Playwright spot check: one grouped card, one grouped review link, 10 page-switch
+  buttons, page-328 image present, correct document review URL.
+
+Focused verification only: changed Python Ruff format/lint, changed-file MyPy, frontend typecheck,
+offline real-package composition, live service read, live HTTP read and one browser path. The first
+Playwright attempt used the package-managed browser and stopped because its binary was not
+installed; the next attempt used existing `/usr/bin/google-chrome`. A locator was then scoped to
+the page-switch region because evidence buttons legitimately repeat `第 328 页`; the scoped real
+browser check passed. Temporary API/Vite processes were stopped afterward.
+
+Remaining boundary: the reusable queued-worker handler for generic future incremental jobs is not
+installed (8D-3E3 remains open). The current accepted JSON is fully committed and browser-visible;
+exercise this product path before expanding worker plumbing or tests. No commit was created.
+
+## Codex review: 8D-3E2B completion requires one test-only R1
+
+Codex inspected the actual diff instead of accepting the completion report. The 18 focused tests
+were green, but the stated FK-name divergence was a real blocker rather than a harmless remaining
+risk: `fk_pdf_doc_asset` had been attached to historical `ExtractionRun.pdf_asset_id`, while the new
+`PdfExtractionDocument.pdf_asset_id` still used the automatic convention. The existing oracle only
+checked name length/count, and Alembic `compare_metadata` does not compare constraint names, so both
+missed the name-to-relation mismatch.
+
+Codex corrected only the two ORM declarations in
+`backend/src/chess_workbench/store/models/extraction.py`: the historical `ExtractionRun` FK is again
+unnamed and the new document-to-asset FK now explicitly uses `fk_pdf_doc_asset`, matching migration
+0012. A direct metadata probe enumerated the intended nine `fk_pdf_doc_*` mappings with the correct
+table, local column and target relation.
+
+Independent focused verification after the correction:
+
+- pytest `test_pdf_document_models.py test_pdf_document_contracts.py test_pdf_documents.py`:
+  **18 passed**;
+- changed-file Ruff format/lint and MyPy: clean;
+- `make check-contracts`: generated contracts up to date;
+- frontend typecheck and `git diff --check`: clean.
+
+The completion remains **pending 8D-3E2B R1**. `PLANS.md` now freezes a test-only DeepCode packet to
+assert the exact nine ORM mappings, the exact migration-0012 MySQL DDL mappings and the historical
+`ExtractionRun` non-hijack regression. Production/migrations/generated contracts are read-only for
+R1. 8D-3E3 has not started; no commit was created.
+
+## Operator scope reset and real incremental JSON checkpoint
+
+The operator disabled all subsequent DeepCode delegation because of DeepSeek API pricing and made
+the product-development policy explicit: this is primarily a personal site, so iterative work must
+prove the real artifact/browser outcome first; tests must be proportional to actual risk and broad
+proof/coverage gates wait for Stage closure. `AGENTS.md` now records both durable rules. The planned
+test-only 8D-3E2B FK R1 was cancelled; Codex had already enumerated the corrected mappings and the
+18 focused tests were green.
+
+Codex added `scripts/run_incremental_ccef_probe.py`, an operator-only output-first probe. It:
+
+- loads accepted v12 run `4b33f70a-b623-5ec3-bc8e-5ed6a2a28e4a` and verifies canonical baseline
+  hash `e52c27b2a9ebd4662b4edd75b8071a4abdda4f00374d667b5dd1bdd78384ac74`;
+- builds the existing bounded 122-anchor continuation context for pages 324–328;
+- renders 52 embedded-text fragments from the same verified PDF and makes at most the one explicitly
+  acknowledged paid call;
+- preserves request/context/provider response/decoded/raw/normalized/report artifacts under
+  gitignored `data/debug/stage8d-incremental-pages-324-328.*`.
+
+Offline prepare succeeded with an 88,523-character message. Exactly one DeepSeek call then returned
+`finish_reason=stop`, usage 43,199 input / 80,084 output / 123,283 total tokens. No retry or second
+paid call occurred. The original local gate rejected one redundant provider FEN: the model selected
+correct `anchor-122` and emitted first move `17.Rae1` as White, but copied the anchor side-to-move as
+`b` instead of trusted `w`. The raw provider response and error were retained. Codex generalized the
+binder so the model chooses only a valid hash-bound anchor ID and the trusted local anchor supplies
+the authoritative FEN before chess validation, matching the existing trusted evidence-binding
+principle rather than adding book/page/move-specific handling.
+
+Reprocessing the same saved response, without another provider call, produced:
+
+- 6 items, 3 sequences, 145 move nodes, 20 annotations;
+- Game 13 alternative: 7 valid nodes, bound to `anchor-121` after baseline node `n111`;
+- Game 13 continuation: 114 valid nodes, bound to `anchor-122` after baseline node `n112`; 92-ply
+  main line from `17.Rae1` through `62...Bh4` plus 7 correctly parented local variations;
+- Game 14: independent start-position sequence, 24 valid nodes; 15-ply main line through `8.c3`
+  plus 3 correctly parented variations;
+- 0 invalid, 0 ambiguous, and all 183 EvidenceRefs bound exactly to pages 324–328 fragments.
+
+Only the probe file received Ruff format/check and `py_compile`; both passed. No feature/full suite,
+acceptance, smoke, worker, database write, aggregate composition or UI work ran. Remaining boundary:
+this is a validated local segment JSON, not yet a persisted incremental Job artifact, aggregate
+revision or browser-visible grouped document. Next work should connect this proven request/binder to
+the minimal worker + composition path and verify the real browser result before adding tests. No
+commit was created.

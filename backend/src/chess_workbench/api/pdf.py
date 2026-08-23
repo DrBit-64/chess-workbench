@@ -27,9 +27,25 @@ from chess_workbench.schemas.pdf import (
     PdfExtractionList,
     PdfExtractionRead,
 )
+from chess_workbench.schemas.pdf_documents import (
+    PdfExtractionDocumentAppendCreate,
+    PdfExtractionDocumentAppendEnvelope,
+    PdfExtractionDocumentAppendRead,
+    PdfExtractionDocumentCreate,
+    PdfExtractionDocumentEnvelope,
+    PdfExtractionDocumentList,
+    PdfExtractionDocumentRead,
+    PdfExtractionDocumentRevisionRead,
+    PdfExtractionDocumentSegmentRead,
+)
 from chess_workbench.schemas.review import PdfReviewDocumentRead
 from chess_workbench.services.jobs import job_read
 from chess_workbench.services.pdf import prepare_pdf_asset
+from chess_workbench.services.pdf_documents import (
+    PdfDocumentAppendView,
+    PdfDocumentService,
+    PdfDocumentView,
+)
 from chess_workbench.services.pdf_extraction import PDF_EXTRACTION_RESULT_SCHEMA
 from chess_workbench.services.pdf_persistence import (
     PDF_ANNOTATED_EXTRACTION_PIPELINE_VERSION,
@@ -221,6 +237,121 @@ async def list_pdf_extractions(request: Request) -> HTTPResponse:
     return json(payload.model_dump(mode="json"))
 
 
+@pdf_blueprint.post("/pdf-extraction-documents", name="create_pdf_extraction_document")
+@openapi.operation("createPdfExtractionDocument")
+@openapi.summary("Adopt one verified CCEF 1.1 run as an incremental document")
+@openapi.tag("pdf")
+@openapi.body(_media(PdfExtractionDocumentCreate), required=True)
+@openapi.response(201, _media(PdfExtractionDocumentEnvelope), "PDF extraction document created")
+@openapi.response(200, _media(PdfExtractionDocumentEnvelope), "Existing document replayed")
+@openapi.response(404, ERROR_SCHEMA, "PDF extraction run not found")
+@openapi.response(409, ERROR_SCHEMA, "PDF extraction run is not compatible")
+@openapi.response(503, ERROR_SCHEMA, "Source storage unavailable")
+async def create_pdf_extraction_document(request: Request) -> HTTPResponse:
+    body = parse_body(request, PdfExtractionDocumentCreate)
+    database = cast(Database, request.app.ctx.database)
+    async with request.app.ctx.pdf_persistence_lock, database.session() as session, session.begin():
+        service = PdfDocumentService(session, request.app.ctx.settings)
+        outcome = await service.adopt_run(body.initial_run_id)
+        view = await service.get_document(outcome.document.id)
+        if view is None:
+            raise RuntimeError("registered PDF extraction document is missing")
+        envelope = PdfExtractionDocumentEnvelope(
+            replayed=outcome.replayed,
+            document=_pdf_document_read(view),
+        )
+    status = 200 if outcome.replayed else 201
+    return json(
+        envelope.model_dump(mode="json"),
+        status=status,
+        headers={
+            "Location": f"/api/pdf-extraction-documents/{outcome.document.id}",
+            "Idempotency-Replayed": "true" if outcome.replayed else "false",
+        },
+    )
+
+
+@pdf_blueprint.get("/pdf-extraction-documents", name="list_pdf_extraction_documents")
+@openapi.operation("listPdfExtractionDocuments")
+@openapi.summary("List grouped incremental PDF extraction documents")
+@openapi.tag("pdf")
+@openapi.response(200, _media(PdfExtractionDocumentList), "PDF extraction documents")
+async def list_pdf_extraction_documents(request: Request) -> HTTPResponse:
+    database = cast(Database, request.app.ctx.database)
+    async with database.session() as session:
+        views = await PdfDocumentService(session, request.app.ctx.settings).list_documents()
+    payload = PdfExtractionDocumentList(items=[_pdf_document_read(view) for view in views])
+    return json(payload.model_dump(mode="json"))
+
+
+@pdf_blueprint.get(
+    "/pdf-extraction-documents/<document_id:uuid>", name="get_pdf_extraction_document"
+)
+@openapi.operation("getPdfExtractionDocument")
+@openapi.summary("Read one grouped incremental PDF extraction document")
+@openapi.tag("pdf")
+@openapi.response(200, _media(PdfExtractionDocumentRead), "PDF extraction document")
+@openapi.response(404, ERROR_SCHEMA, "PDF extraction document not found")
+async def get_pdf_extraction_document(request: Request, document_id: UUID) -> HTTPResponse:
+    database = cast(Database, request.app.ctx.database)
+    async with database.session() as session:
+        view = await PdfDocumentService(session, request.app.ctx.settings).get_document(document_id)
+    if view is None:
+        raise ApiError(404, "not_found", "PDF extraction document not found")
+    return json(_pdf_document_read(view).model_dump(mode="json"))
+
+
+@pdf_blueprint.post(
+    "/pdf-extraction-documents/<document_id:uuid>/appends",
+    name="create_pdf_extraction_document_append",
+)
+@openapi.operation("createPdfExtractionDocumentAppend")
+@openapi.summary("Register one adjacent hash-bound incremental extraction attempt")
+@openapi.tag("pdf")
+@openapi.parameter("Idempotency-Key", str, "header", required=False)
+@openapi.body(_media(PdfExtractionDocumentAppendCreate), required=True)
+@openapi.response(202, _media(PdfExtractionDocumentAppendEnvelope), "Append attempt queued")
+@openapi.response(200, _media(PdfExtractionDocumentAppendEnvelope), "Append attempt replayed")
+@openapi.response(404, ERROR_SCHEMA, "PDF extraction document not found")
+@openapi.response(409, ERROR_SCHEMA, "Stale, conflicting or active append")
+@openapi.response(422, ERROR_SCHEMA, "Invalid append request")
+async def create_pdf_extraction_document_append(
+    request: Request, document_id: UUID
+) -> HTTPResponse:
+    body = parse_body(request, PdfExtractionDocumentAppendCreate)
+    database = cast(Database, request.app.ctx.database)
+    async with request.app.ctx.pdf_persistence_lock, database.session() as session, session.begin():
+        service = PdfDocumentService(session, request.app.ctx.settings)
+        outcome = await service.register_append(
+            document_id=document_id,
+            expected_version=body.expected_version,
+            first_page=body.first_page,
+            last_page=body.last_page,
+            profile=body.profile,
+            idempotency_key=request.headers.get("idempotency-key"),
+        )
+        view = await service.get_document(document_id)
+        if view is None:
+            raise RuntimeError("registered PDF extraction document is missing")
+        append_view = next(
+            item for item in view.append_attempts if item.append.id == outcome.append.id
+        )
+        envelope = PdfExtractionDocumentAppendEnvelope(
+            replayed=outcome.replayed,
+            append=_pdf_document_append_read(append_view),
+            document=_pdf_document_read(view),
+        )
+    status = 200 if outcome.replayed else 202
+    return json(
+        envelope.model_dump(mode="json"),
+        status=status,
+        headers={
+            "Location": f"/api/pdf-extractions/{outcome.run.id}",
+            "Idempotency-Replayed": "true" if outcome.replayed else "false",
+        },
+    )
+
+
 @pdf_blueprint.get("/pdf-extractions/<run_id:uuid>/review", name="get_pdf_extraction_review")
 @openapi.operation("getPdfExtractionReview")
 @openapi.summary("Read one verified PDF extraction review document")
@@ -384,6 +515,63 @@ def _extraction_read(view: PdfExtractionView) -> PdfExtractionRead:
         candidate=candidate,
         has_conflicts=candidate.has_conflicts if candidate is not None else False,
         created_at=view.run.created_at,
+    )
+
+
+def _pdf_document_read(view: PdfDocumentView) -> PdfExtractionDocumentRead:
+    return PdfExtractionDocumentRead(
+        id=view.document.id,
+        pdf_asset_id=view.document.pdf_asset_id,
+        version=view.document.version,
+        first_page=view.document.first_page,
+        last_page=view.document.last_page,
+        normalized_ccef_sha256=view.document.normalized_ccef_sha256,
+        segments=[
+            PdfExtractionDocumentSegmentRead(
+                id=item.id,
+                run_id=item.extraction_run_id,
+                ordinal=item.ordinal,
+                first_page=item.first_page,
+                last_page=item.last_page,
+                normalized_ccef_sha256=item.normalized_ccef_sha256,
+                created_at=item.created_at,
+            )
+            for item in view.segments
+        ],
+        revisions=[
+            PdfExtractionDocumentRevisionRead(
+                id=item.id,
+                predecessor_revision_id=item.predecessor_revision_id,
+                terminal_segment_id=item.terminal_segment_id,
+                revision_number=item.revision_number,
+                segment_count=item.segment_count,
+                first_page=item.first_page,
+                last_page=item.last_page,
+                algorithm_version=item.algorithm_version,
+                normalized_ccef_sha256=item.normalized_ccef_sha256,
+                created_at=item.created_at,
+            )
+            for item in view.revisions
+        ],
+        append_attempts=[_pdf_document_append_read(item) for item in view.append_attempts],
+        created_at=view.document.created_at,
+        updated_at=view.document.updated_at,
+    )
+
+
+def _pdf_document_append_read(view: PdfDocumentAppendView) -> PdfExtractionDocumentAppendRead:
+    return PdfExtractionDocumentAppendRead(
+        id=view.append.id,
+        run_id=view.run.id,
+        predecessor_revision_id=view.append.predecessor_revision_id,
+        expected_version=view.append.expected_version,
+        predecessor_normalized_ccef_sha256=view.append.predecessor_normalized_ccef_sha256,
+        first_page=view.append.first_page,
+        last_page=view.append.last_page,
+        pipeline_version=view.run.pipeline_version,
+        profile=cast(dict[str, Any], view.append.profile),
+        job=job_read(view.job),
+        created_at=view.append.created_at,
     )
 
 

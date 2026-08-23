@@ -12443,6 +12443,3086 @@
         ]
       }
     },
+    "/api/pdf-extraction-documents": {
+      "get": {
+        "operationId": "listPdfExtractionDocuments",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "items": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "append_attempts": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "created_at": {
+                                  "format": "date-time",
+                                  "title": "Created At",
+                                  "type": "string"
+                                },
+                                "expected_version": {
+                                  "minimum": 1,
+                                  "title": "Expected Version",
+                                  "type": "integer"
+                                },
+                                "first_page": {
+                                  "minimum": 1,
+                                  "title": "First Page",
+                                  "type": "integer"
+                                },
+                                "id": {
+                                  "format": "uuid",
+                                  "title": "Id",
+                                  "type": "string"
+                                },
+                                "job": {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "attempt_count": {
+                                      "title": "Attempt Count",
+                                      "type": "integer"
+                                    },
+                                    "cancel_requested_at": {
+                                      "format": "date-time",
+                                      "nullable": true,
+                                      "title": "Cancel Requested At",
+                                      "type": "string"
+                                    },
+                                    "created_at": {
+                                      "format": "date-time",
+                                      "title": "Created At",
+                                      "type": "string"
+                                    },
+                                    "id": {
+                                      "format": "uuid",
+                                      "title": "Id",
+                                      "type": "string"
+                                    },
+                                    "kind": {
+                                      "minLength": 1,
+                                      "title": "Kind",
+                                      "type": "string"
+                                    },
+                                    "last_error_code": {
+                                      "nullable": true,
+                                      "title": "Last Error Code",
+                                      "type": "string"
+                                    },
+                                    "last_error_message": {
+                                      "nullable": true,
+                                      "title": "Last Error Message",
+                                      "type": "string"
+                                    },
+                                    "max_attempts": {
+                                      "title": "Max Attempts",
+                                      "type": "integer"
+                                    },
+                                    "payload": {
+                                      "additionalProperties": true,
+                                      "title": "Payload",
+                                      "type": "object"
+                                    },
+                                    "result": {
+                                      "additionalProperties": true,
+                                      "nullable": true,
+                                      "title": "Result",
+                                      "type": "object"
+                                    },
+                                    "status": {
+                                      "enum": [
+                                        "queued",
+                                        "running",
+                                        "succeeded",
+                                        "failed",
+                                        "cancelled"
+                                      ],
+                                      "title": "Status",
+                                      "type": "string"
+                                    },
+                                    "updated_at": {
+                                      "format": "date-time",
+                                      "title": "Updated At",
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "kind",
+                                    "status",
+                                    "payload",
+                                    "result",
+                                    "attempt_count",
+                                    "max_attempts",
+                                    "cancel_requested_at",
+                                    "last_error_code",
+                                    "last_error_message",
+                                    "created_at",
+                                    "updated_at"
+                                  ],
+                                  "title": "JobRead",
+                                  "type": "object"
+                                },
+                                "last_page": {
+                                  "minimum": 1,
+                                  "title": "Last Page",
+                                  "type": "integer"
+                                },
+                                "pipeline_version": {
+                                  "maxLength": 32,
+                                  "minLength": 1,
+                                  "title": "Pipeline Version",
+                                  "type": "string"
+                                },
+                                "predecessor_normalized_ccef_sha256": {
+                                  "pattern": "^[0-9a-f]{64}$",
+                                  "title": "Predecessor Normalized Ccef Sha256",
+                                  "type": "string"
+                                },
+                                "predecessor_revision_id": {
+                                  "format": "uuid",
+                                  "title": "Predecessor Revision Id",
+                                  "type": "string"
+                                },
+                                "profile": {
+                                  "additionalProperties": {},
+                                  "title": "Profile",
+                                  "type": "object"
+                                },
+                                "run_id": {
+                                  "format": "uuid",
+                                  "title": "Run Id",
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "run_id",
+                                "predecessor_revision_id",
+                                "expected_version",
+                                "predecessor_normalized_ccef_sha256",
+                                "first_page",
+                                "last_page",
+                                "pipeline_version",
+                                "profile",
+                                "job",
+                                "created_at"
+                              ],
+                              "title": "PdfExtractionDocumentAppendRead",
+                              "type": "object"
+                            },
+                            "title": "Append Attempts",
+                            "type": "array"
+                          },
+                          "created_at": {
+                            "format": "date-time",
+                            "title": "Created At",
+                            "type": "string"
+                          },
+                          "first_page": {
+                            "minimum": 1,
+                            "title": "First Page",
+                            "type": "integer"
+                          },
+                          "id": {
+                            "format": "uuid",
+                            "title": "Id",
+                            "type": "string"
+                          },
+                          "last_page": {
+                            "minimum": 1,
+                            "title": "Last Page",
+                            "type": "integer"
+                          },
+                          "normalized_ccef_sha256": {
+                            "pattern": "^[0-9a-f]{64}$",
+                            "title": "Normalized Ccef Sha256",
+                            "type": "string"
+                          },
+                          "pdf_asset_id": {
+                            "format": "uuid",
+                            "title": "Pdf Asset Id",
+                            "type": "string"
+                          },
+                          "revisions": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "algorithm_version": {
+                                  "maxLength": 64,
+                                  "minLength": 1,
+                                  "title": "Algorithm Version",
+                                  "type": "string"
+                                },
+                                "created_at": {
+                                  "format": "date-time",
+                                  "title": "Created At",
+                                  "type": "string"
+                                },
+                                "first_page": {
+                                  "minimum": 1,
+                                  "title": "First Page",
+                                  "type": "integer"
+                                },
+                                "id": {
+                                  "format": "uuid",
+                                  "title": "Id",
+                                  "type": "string"
+                                },
+                                "last_page": {
+                                  "minimum": 1,
+                                  "title": "Last Page",
+                                  "type": "integer"
+                                },
+                                "normalized_ccef_sha256": {
+                                  "pattern": "^[0-9a-f]{64}$",
+                                  "title": "Normalized Ccef Sha256",
+                                  "type": "string"
+                                },
+                                "predecessor_revision_id": {
+                                  "format": "uuid",
+                                  "nullable": true,
+                                  "title": "Predecessor Revision Id",
+                                  "type": "string"
+                                },
+                                "revision_number": {
+                                  "minimum": 1,
+                                  "title": "Revision Number",
+                                  "type": "integer"
+                                },
+                                "segment_count": {
+                                  "minimum": 1,
+                                  "title": "Segment Count",
+                                  "type": "integer"
+                                },
+                                "terminal_segment_id": {
+                                  "format": "uuid",
+                                  "title": "Terminal Segment Id",
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "predecessor_revision_id",
+                                "terminal_segment_id",
+                                "revision_number",
+                                "segment_count",
+                                "first_page",
+                                "last_page",
+                                "algorithm_version",
+                                "normalized_ccef_sha256",
+                                "created_at"
+                              ],
+                              "title": "PdfExtractionDocumentRevisionRead",
+                              "type": "object"
+                            },
+                            "title": "Revisions",
+                            "type": "array"
+                          },
+                          "segments": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "created_at": {
+                                  "format": "date-time",
+                                  "title": "Created At",
+                                  "type": "string"
+                                },
+                                "first_page": {
+                                  "minimum": 1,
+                                  "title": "First Page",
+                                  "type": "integer"
+                                },
+                                "id": {
+                                  "format": "uuid",
+                                  "title": "Id",
+                                  "type": "string"
+                                },
+                                "last_page": {
+                                  "minimum": 1,
+                                  "title": "Last Page",
+                                  "type": "integer"
+                                },
+                                "normalized_ccef_sha256": {
+                                  "pattern": "^[0-9a-f]{64}$",
+                                  "title": "Normalized Ccef Sha256",
+                                  "type": "string"
+                                },
+                                "ordinal": {
+                                  "minimum": 1,
+                                  "title": "Ordinal",
+                                  "type": "integer"
+                                },
+                                "run_id": {
+                                  "format": "uuid",
+                                  "title": "Run Id",
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "run_id",
+                                "ordinal",
+                                "first_page",
+                                "last_page",
+                                "normalized_ccef_sha256",
+                                "created_at"
+                              ],
+                              "title": "PdfExtractionDocumentSegmentRead",
+                              "type": "object"
+                            },
+                            "title": "Segments",
+                            "type": "array"
+                          },
+                          "updated_at": {
+                            "format": "date-time",
+                            "title": "Updated At",
+                            "type": "string"
+                          },
+                          "version": {
+                            "minimum": 1,
+                            "title": "Version",
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "pdf_asset_id",
+                          "version",
+                          "first_page",
+                          "last_page",
+                          "normalized_ccef_sha256",
+                          "segments",
+                          "revisions",
+                          "append_attempts",
+                          "created_at",
+                          "updated_at"
+                        ],
+                        "title": "PdfExtractionDocumentRead",
+                        "type": "object"
+                      },
+                      "title": "Items",
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ],
+                  "title": "PdfExtractionDocumentList",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "PDF extraction documents"
+          }
+        },
+        "summary": "List grouped incremental PDF extraction documents",
+        "tags": [
+          "pdf"
+        ]
+      },
+      "post": {
+        "operationId": "createPdfExtractionDocument",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "initial_run_id": {
+                    "format": "uuid",
+                    "title": "Initial Run Id",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "initial_run_id"
+                ],
+                "title": "PdfExtractionDocumentCreate",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "document": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "append_attempts": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "created_at": {
+                                "format": "date-time",
+                                "title": "Created At",
+                                "type": "string"
+                              },
+                              "expected_version": {
+                                "minimum": 1,
+                                "title": "Expected Version",
+                                "type": "integer"
+                              },
+                              "first_page": {
+                                "minimum": 1,
+                                "title": "First Page",
+                                "type": "integer"
+                              },
+                              "id": {
+                                "format": "uuid",
+                                "title": "Id",
+                                "type": "string"
+                              },
+                              "job": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "attempt_count": {
+                                    "title": "Attempt Count",
+                                    "type": "integer"
+                                  },
+                                  "cancel_requested_at": {
+                                    "format": "date-time",
+                                    "nullable": true,
+                                    "title": "Cancel Requested At",
+                                    "type": "string"
+                                  },
+                                  "created_at": {
+                                    "format": "date-time",
+                                    "title": "Created At",
+                                    "type": "string"
+                                  },
+                                  "id": {
+                                    "format": "uuid",
+                                    "title": "Id",
+                                    "type": "string"
+                                  },
+                                  "kind": {
+                                    "minLength": 1,
+                                    "title": "Kind",
+                                    "type": "string"
+                                  },
+                                  "last_error_code": {
+                                    "nullable": true,
+                                    "title": "Last Error Code",
+                                    "type": "string"
+                                  },
+                                  "last_error_message": {
+                                    "nullable": true,
+                                    "title": "Last Error Message",
+                                    "type": "string"
+                                  },
+                                  "max_attempts": {
+                                    "title": "Max Attempts",
+                                    "type": "integer"
+                                  },
+                                  "payload": {
+                                    "additionalProperties": true,
+                                    "title": "Payload",
+                                    "type": "object"
+                                  },
+                                  "result": {
+                                    "additionalProperties": true,
+                                    "nullable": true,
+                                    "title": "Result",
+                                    "type": "object"
+                                  },
+                                  "status": {
+                                    "enum": [
+                                      "queued",
+                                      "running",
+                                      "succeeded",
+                                      "failed",
+                                      "cancelled"
+                                    ],
+                                    "title": "Status",
+                                    "type": "string"
+                                  },
+                                  "updated_at": {
+                                    "format": "date-time",
+                                    "title": "Updated At",
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "kind",
+                                  "status",
+                                  "payload",
+                                  "result",
+                                  "attempt_count",
+                                  "max_attempts",
+                                  "cancel_requested_at",
+                                  "last_error_code",
+                                  "last_error_message",
+                                  "created_at",
+                                  "updated_at"
+                                ],
+                                "title": "JobRead",
+                                "type": "object"
+                              },
+                              "last_page": {
+                                "minimum": 1,
+                                "title": "Last Page",
+                                "type": "integer"
+                              },
+                              "pipeline_version": {
+                                "maxLength": 32,
+                                "minLength": 1,
+                                "title": "Pipeline Version",
+                                "type": "string"
+                              },
+                              "predecessor_normalized_ccef_sha256": {
+                                "pattern": "^[0-9a-f]{64}$",
+                                "title": "Predecessor Normalized Ccef Sha256",
+                                "type": "string"
+                              },
+                              "predecessor_revision_id": {
+                                "format": "uuid",
+                                "title": "Predecessor Revision Id",
+                                "type": "string"
+                              },
+                              "profile": {
+                                "additionalProperties": {},
+                                "title": "Profile",
+                                "type": "object"
+                              },
+                              "run_id": {
+                                "format": "uuid",
+                                "title": "Run Id",
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "run_id",
+                              "predecessor_revision_id",
+                              "expected_version",
+                              "predecessor_normalized_ccef_sha256",
+                              "first_page",
+                              "last_page",
+                              "pipeline_version",
+                              "profile",
+                              "job",
+                              "created_at"
+                            ],
+                            "title": "PdfExtractionDocumentAppendRead",
+                            "type": "object"
+                          },
+                          "title": "Append Attempts",
+                          "type": "array"
+                        },
+                        "created_at": {
+                          "format": "date-time",
+                          "title": "Created At",
+                          "type": "string"
+                        },
+                        "first_page": {
+                          "minimum": 1,
+                          "title": "First Page",
+                          "type": "integer"
+                        },
+                        "id": {
+                          "format": "uuid",
+                          "title": "Id",
+                          "type": "string"
+                        },
+                        "last_page": {
+                          "minimum": 1,
+                          "title": "Last Page",
+                          "type": "integer"
+                        },
+                        "normalized_ccef_sha256": {
+                          "pattern": "^[0-9a-f]{64}$",
+                          "title": "Normalized Ccef Sha256",
+                          "type": "string"
+                        },
+                        "pdf_asset_id": {
+                          "format": "uuid",
+                          "title": "Pdf Asset Id",
+                          "type": "string"
+                        },
+                        "revisions": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "algorithm_version": {
+                                "maxLength": 64,
+                                "minLength": 1,
+                                "title": "Algorithm Version",
+                                "type": "string"
+                              },
+                              "created_at": {
+                                "format": "date-time",
+                                "title": "Created At",
+                                "type": "string"
+                              },
+                              "first_page": {
+                                "minimum": 1,
+                                "title": "First Page",
+                                "type": "integer"
+                              },
+                              "id": {
+                                "format": "uuid",
+                                "title": "Id",
+                                "type": "string"
+                              },
+                              "last_page": {
+                                "minimum": 1,
+                                "title": "Last Page",
+                                "type": "integer"
+                              },
+                              "normalized_ccef_sha256": {
+                                "pattern": "^[0-9a-f]{64}$",
+                                "title": "Normalized Ccef Sha256",
+                                "type": "string"
+                              },
+                              "predecessor_revision_id": {
+                                "format": "uuid",
+                                "nullable": true,
+                                "title": "Predecessor Revision Id",
+                                "type": "string"
+                              },
+                              "revision_number": {
+                                "minimum": 1,
+                                "title": "Revision Number",
+                                "type": "integer"
+                              },
+                              "segment_count": {
+                                "minimum": 1,
+                                "title": "Segment Count",
+                                "type": "integer"
+                              },
+                              "terminal_segment_id": {
+                                "format": "uuid",
+                                "title": "Terminal Segment Id",
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "predecessor_revision_id",
+                              "terminal_segment_id",
+                              "revision_number",
+                              "segment_count",
+                              "first_page",
+                              "last_page",
+                              "algorithm_version",
+                              "normalized_ccef_sha256",
+                              "created_at"
+                            ],
+                            "title": "PdfExtractionDocumentRevisionRead",
+                            "type": "object"
+                          },
+                          "title": "Revisions",
+                          "type": "array"
+                        },
+                        "segments": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "created_at": {
+                                "format": "date-time",
+                                "title": "Created At",
+                                "type": "string"
+                              },
+                              "first_page": {
+                                "minimum": 1,
+                                "title": "First Page",
+                                "type": "integer"
+                              },
+                              "id": {
+                                "format": "uuid",
+                                "title": "Id",
+                                "type": "string"
+                              },
+                              "last_page": {
+                                "minimum": 1,
+                                "title": "Last Page",
+                                "type": "integer"
+                              },
+                              "normalized_ccef_sha256": {
+                                "pattern": "^[0-9a-f]{64}$",
+                                "title": "Normalized Ccef Sha256",
+                                "type": "string"
+                              },
+                              "ordinal": {
+                                "minimum": 1,
+                                "title": "Ordinal",
+                                "type": "integer"
+                              },
+                              "run_id": {
+                                "format": "uuid",
+                                "title": "Run Id",
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "run_id",
+                              "ordinal",
+                              "first_page",
+                              "last_page",
+                              "normalized_ccef_sha256",
+                              "created_at"
+                            ],
+                            "title": "PdfExtractionDocumentSegmentRead",
+                            "type": "object"
+                          },
+                          "title": "Segments",
+                          "type": "array"
+                        },
+                        "updated_at": {
+                          "format": "date-time",
+                          "title": "Updated At",
+                          "type": "string"
+                        },
+                        "version": {
+                          "minimum": 1,
+                          "title": "Version",
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "pdf_asset_id",
+                        "version",
+                        "first_page",
+                        "last_page",
+                        "normalized_ccef_sha256",
+                        "segments",
+                        "revisions",
+                        "append_attempts",
+                        "created_at",
+                        "updated_at"
+                      ],
+                      "title": "PdfExtractionDocumentRead",
+                      "type": "object"
+                    },
+                    "replayed": {
+                      "title": "Replayed",
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "replayed",
+                    "document"
+                  ],
+                  "title": "PdfExtractionDocumentEnvelope",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Existing document replayed"
+          },
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "document": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "append_attempts": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "created_at": {
+                                "format": "date-time",
+                                "title": "Created At",
+                                "type": "string"
+                              },
+                              "expected_version": {
+                                "minimum": 1,
+                                "title": "Expected Version",
+                                "type": "integer"
+                              },
+                              "first_page": {
+                                "minimum": 1,
+                                "title": "First Page",
+                                "type": "integer"
+                              },
+                              "id": {
+                                "format": "uuid",
+                                "title": "Id",
+                                "type": "string"
+                              },
+                              "job": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "attempt_count": {
+                                    "title": "Attempt Count",
+                                    "type": "integer"
+                                  },
+                                  "cancel_requested_at": {
+                                    "format": "date-time",
+                                    "nullable": true,
+                                    "title": "Cancel Requested At",
+                                    "type": "string"
+                                  },
+                                  "created_at": {
+                                    "format": "date-time",
+                                    "title": "Created At",
+                                    "type": "string"
+                                  },
+                                  "id": {
+                                    "format": "uuid",
+                                    "title": "Id",
+                                    "type": "string"
+                                  },
+                                  "kind": {
+                                    "minLength": 1,
+                                    "title": "Kind",
+                                    "type": "string"
+                                  },
+                                  "last_error_code": {
+                                    "nullable": true,
+                                    "title": "Last Error Code",
+                                    "type": "string"
+                                  },
+                                  "last_error_message": {
+                                    "nullable": true,
+                                    "title": "Last Error Message",
+                                    "type": "string"
+                                  },
+                                  "max_attempts": {
+                                    "title": "Max Attempts",
+                                    "type": "integer"
+                                  },
+                                  "payload": {
+                                    "additionalProperties": true,
+                                    "title": "Payload",
+                                    "type": "object"
+                                  },
+                                  "result": {
+                                    "additionalProperties": true,
+                                    "nullable": true,
+                                    "title": "Result",
+                                    "type": "object"
+                                  },
+                                  "status": {
+                                    "enum": [
+                                      "queued",
+                                      "running",
+                                      "succeeded",
+                                      "failed",
+                                      "cancelled"
+                                    ],
+                                    "title": "Status",
+                                    "type": "string"
+                                  },
+                                  "updated_at": {
+                                    "format": "date-time",
+                                    "title": "Updated At",
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "kind",
+                                  "status",
+                                  "payload",
+                                  "result",
+                                  "attempt_count",
+                                  "max_attempts",
+                                  "cancel_requested_at",
+                                  "last_error_code",
+                                  "last_error_message",
+                                  "created_at",
+                                  "updated_at"
+                                ],
+                                "title": "JobRead",
+                                "type": "object"
+                              },
+                              "last_page": {
+                                "minimum": 1,
+                                "title": "Last Page",
+                                "type": "integer"
+                              },
+                              "pipeline_version": {
+                                "maxLength": 32,
+                                "minLength": 1,
+                                "title": "Pipeline Version",
+                                "type": "string"
+                              },
+                              "predecessor_normalized_ccef_sha256": {
+                                "pattern": "^[0-9a-f]{64}$",
+                                "title": "Predecessor Normalized Ccef Sha256",
+                                "type": "string"
+                              },
+                              "predecessor_revision_id": {
+                                "format": "uuid",
+                                "title": "Predecessor Revision Id",
+                                "type": "string"
+                              },
+                              "profile": {
+                                "additionalProperties": {},
+                                "title": "Profile",
+                                "type": "object"
+                              },
+                              "run_id": {
+                                "format": "uuid",
+                                "title": "Run Id",
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "run_id",
+                              "predecessor_revision_id",
+                              "expected_version",
+                              "predecessor_normalized_ccef_sha256",
+                              "first_page",
+                              "last_page",
+                              "pipeline_version",
+                              "profile",
+                              "job",
+                              "created_at"
+                            ],
+                            "title": "PdfExtractionDocumentAppendRead",
+                            "type": "object"
+                          },
+                          "title": "Append Attempts",
+                          "type": "array"
+                        },
+                        "created_at": {
+                          "format": "date-time",
+                          "title": "Created At",
+                          "type": "string"
+                        },
+                        "first_page": {
+                          "minimum": 1,
+                          "title": "First Page",
+                          "type": "integer"
+                        },
+                        "id": {
+                          "format": "uuid",
+                          "title": "Id",
+                          "type": "string"
+                        },
+                        "last_page": {
+                          "minimum": 1,
+                          "title": "Last Page",
+                          "type": "integer"
+                        },
+                        "normalized_ccef_sha256": {
+                          "pattern": "^[0-9a-f]{64}$",
+                          "title": "Normalized Ccef Sha256",
+                          "type": "string"
+                        },
+                        "pdf_asset_id": {
+                          "format": "uuid",
+                          "title": "Pdf Asset Id",
+                          "type": "string"
+                        },
+                        "revisions": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "algorithm_version": {
+                                "maxLength": 64,
+                                "minLength": 1,
+                                "title": "Algorithm Version",
+                                "type": "string"
+                              },
+                              "created_at": {
+                                "format": "date-time",
+                                "title": "Created At",
+                                "type": "string"
+                              },
+                              "first_page": {
+                                "minimum": 1,
+                                "title": "First Page",
+                                "type": "integer"
+                              },
+                              "id": {
+                                "format": "uuid",
+                                "title": "Id",
+                                "type": "string"
+                              },
+                              "last_page": {
+                                "minimum": 1,
+                                "title": "Last Page",
+                                "type": "integer"
+                              },
+                              "normalized_ccef_sha256": {
+                                "pattern": "^[0-9a-f]{64}$",
+                                "title": "Normalized Ccef Sha256",
+                                "type": "string"
+                              },
+                              "predecessor_revision_id": {
+                                "format": "uuid",
+                                "nullable": true,
+                                "title": "Predecessor Revision Id",
+                                "type": "string"
+                              },
+                              "revision_number": {
+                                "minimum": 1,
+                                "title": "Revision Number",
+                                "type": "integer"
+                              },
+                              "segment_count": {
+                                "minimum": 1,
+                                "title": "Segment Count",
+                                "type": "integer"
+                              },
+                              "terminal_segment_id": {
+                                "format": "uuid",
+                                "title": "Terminal Segment Id",
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "predecessor_revision_id",
+                              "terminal_segment_id",
+                              "revision_number",
+                              "segment_count",
+                              "first_page",
+                              "last_page",
+                              "algorithm_version",
+                              "normalized_ccef_sha256",
+                              "created_at"
+                            ],
+                            "title": "PdfExtractionDocumentRevisionRead",
+                            "type": "object"
+                          },
+                          "title": "Revisions",
+                          "type": "array"
+                        },
+                        "segments": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "created_at": {
+                                "format": "date-time",
+                                "title": "Created At",
+                                "type": "string"
+                              },
+                              "first_page": {
+                                "minimum": 1,
+                                "title": "First Page",
+                                "type": "integer"
+                              },
+                              "id": {
+                                "format": "uuid",
+                                "title": "Id",
+                                "type": "string"
+                              },
+                              "last_page": {
+                                "minimum": 1,
+                                "title": "Last Page",
+                                "type": "integer"
+                              },
+                              "normalized_ccef_sha256": {
+                                "pattern": "^[0-9a-f]{64}$",
+                                "title": "Normalized Ccef Sha256",
+                                "type": "string"
+                              },
+                              "ordinal": {
+                                "minimum": 1,
+                                "title": "Ordinal",
+                                "type": "integer"
+                              },
+                              "run_id": {
+                                "format": "uuid",
+                                "title": "Run Id",
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "run_id",
+                              "ordinal",
+                              "first_page",
+                              "last_page",
+                              "normalized_ccef_sha256",
+                              "created_at"
+                            ],
+                            "title": "PdfExtractionDocumentSegmentRead",
+                            "type": "object"
+                          },
+                          "title": "Segments",
+                          "type": "array"
+                        },
+                        "updated_at": {
+                          "format": "date-time",
+                          "title": "Updated At",
+                          "type": "string"
+                        },
+                        "version": {
+                          "minimum": 1,
+                          "title": "Version",
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "pdf_asset_id",
+                        "version",
+                        "first_page",
+                        "last_page",
+                        "normalized_ccef_sha256",
+                        "segments",
+                        "revisions",
+                        "append_attempts",
+                        "created_at",
+                        "updated_at"
+                      ],
+                      "title": "PdfExtractionDocumentRead",
+                      "type": "object"
+                    },
+                    "replayed": {
+                      "title": "Replayed",
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "replayed",
+                    "document"
+                  ],
+                  "title": "PdfExtractionDocumentEnvelope",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "PDF extraction document created"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error",
+                        "payload_too_large",
+                        "unsupported_media_type",
+                        "invalid_pgn",
+                        "pgn_limit_exceeded",
+                        "idempotency_conflict",
+                        "course_mode_conflict",
+                        "pgn_not_exportable",
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "PDF extraction run not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error",
+                        "payload_too_large",
+                        "unsupported_media_type",
+                        "invalid_pgn",
+                        "pgn_limit_exceeded",
+                        "idempotency_conflict",
+                        "course_mode_conflict",
+                        "pgn_not_exportable",
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "PDF extraction run is not compatible"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error",
+                        "payload_too_large",
+                        "unsupported_media_type",
+                        "invalid_pgn",
+                        "pgn_limit_exceeded",
+                        "idempotency_conflict",
+                        "course_mode_conflict",
+                        "pgn_not_exportable",
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Source storage unavailable"
+          }
+        },
+        "summary": "Adopt one verified CCEF 1.1 run as an incremental document",
+        "tags": [
+          "pdf"
+        ]
+      }
+    },
+    "/api/pdf-extraction-documents/{document_id}": {
+      "get": {
+        "operationId": "getPdfExtractionDocument",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "append_attempts": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "created_at": {
+                            "format": "date-time",
+                            "title": "Created At",
+                            "type": "string"
+                          },
+                          "expected_version": {
+                            "minimum": 1,
+                            "title": "Expected Version",
+                            "type": "integer"
+                          },
+                          "first_page": {
+                            "minimum": 1,
+                            "title": "First Page",
+                            "type": "integer"
+                          },
+                          "id": {
+                            "format": "uuid",
+                            "title": "Id",
+                            "type": "string"
+                          },
+                          "job": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "attempt_count": {
+                                "title": "Attempt Count",
+                                "type": "integer"
+                              },
+                              "cancel_requested_at": {
+                                "format": "date-time",
+                                "nullable": true,
+                                "title": "Cancel Requested At",
+                                "type": "string"
+                              },
+                              "created_at": {
+                                "format": "date-time",
+                                "title": "Created At",
+                                "type": "string"
+                              },
+                              "id": {
+                                "format": "uuid",
+                                "title": "Id",
+                                "type": "string"
+                              },
+                              "kind": {
+                                "minLength": 1,
+                                "title": "Kind",
+                                "type": "string"
+                              },
+                              "last_error_code": {
+                                "nullable": true,
+                                "title": "Last Error Code",
+                                "type": "string"
+                              },
+                              "last_error_message": {
+                                "nullable": true,
+                                "title": "Last Error Message",
+                                "type": "string"
+                              },
+                              "max_attempts": {
+                                "title": "Max Attempts",
+                                "type": "integer"
+                              },
+                              "payload": {
+                                "additionalProperties": true,
+                                "title": "Payload",
+                                "type": "object"
+                              },
+                              "result": {
+                                "additionalProperties": true,
+                                "nullable": true,
+                                "title": "Result",
+                                "type": "object"
+                              },
+                              "status": {
+                                "enum": [
+                                  "queued",
+                                  "running",
+                                  "succeeded",
+                                  "failed",
+                                  "cancelled"
+                                ],
+                                "title": "Status",
+                                "type": "string"
+                              },
+                              "updated_at": {
+                                "format": "date-time",
+                                "title": "Updated At",
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "kind",
+                              "status",
+                              "payload",
+                              "result",
+                              "attempt_count",
+                              "max_attempts",
+                              "cancel_requested_at",
+                              "last_error_code",
+                              "last_error_message",
+                              "created_at",
+                              "updated_at"
+                            ],
+                            "title": "JobRead",
+                            "type": "object"
+                          },
+                          "last_page": {
+                            "minimum": 1,
+                            "title": "Last Page",
+                            "type": "integer"
+                          },
+                          "pipeline_version": {
+                            "maxLength": 32,
+                            "minLength": 1,
+                            "title": "Pipeline Version",
+                            "type": "string"
+                          },
+                          "predecessor_normalized_ccef_sha256": {
+                            "pattern": "^[0-9a-f]{64}$",
+                            "title": "Predecessor Normalized Ccef Sha256",
+                            "type": "string"
+                          },
+                          "predecessor_revision_id": {
+                            "format": "uuid",
+                            "title": "Predecessor Revision Id",
+                            "type": "string"
+                          },
+                          "profile": {
+                            "additionalProperties": {},
+                            "title": "Profile",
+                            "type": "object"
+                          },
+                          "run_id": {
+                            "format": "uuid",
+                            "title": "Run Id",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "run_id",
+                          "predecessor_revision_id",
+                          "expected_version",
+                          "predecessor_normalized_ccef_sha256",
+                          "first_page",
+                          "last_page",
+                          "pipeline_version",
+                          "profile",
+                          "job",
+                          "created_at"
+                        ],
+                        "title": "PdfExtractionDocumentAppendRead",
+                        "type": "object"
+                      },
+                      "title": "Append Attempts",
+                      "type": "array"
+                    },
+                    "created_at": {
+                      "format": "date-time",
+                      "title": "Created At",
+                      "type": "string"
+                    },
+                    "first_page": {
+                      "minimum": 1,
+                      "title": "First Page",
+                      "type": "integer"
+                    },
+                    "id": {
+                      "format": "uuid",
+                      "title": "Id",
+                      "type": "string"
+                    },
+                    "last_page": {
+                      "minimum": 1,
+                      "title": "Last Page",
+                      "type": "integer"
+                    },
+                    "normalized_ccef_sha256": {
+                      "pattern": "^[0-9a-f]{64}$",
+                      "title": "Normalized Ccef Sha256",
+                      "type": "string"
+                    },
+                    "pdf_asset_id": {
+                      "format": "uuid",
+                      "title": "Pdf Asset Id",
+                      "type": "string"
+                    },
+                    "revisions": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "algorithm_version": {
+                            "maxLength": 64,
+                            "minLength": 1,
+                            "title": "Algorithm Version",
+                            "type": "string"
+                          },
+                          "created_at": {
+                            "format": "date-time",
+                            "title": "Created At",
+                            "type": "string"
+                          },
+                          "first_page": {
+                            "minimum": 1,
+                            "title": "First Page",
+                            "type": "integer"
+                          },
+                          "id": {
+                            "format": "uuid",
+                            "title": "Id",
+                            "type": "string"
+                          },
+                          "last_page": {
+                            "minimum": 1,
+                            "title": "Last Page",
+                            "type": "integer"
+                          },
+                          "normalized_ccef_sha256": {
+                            "pattern": "^[0-9a-f]{64}$",
+                            "title": "Normalized Ccef Sha256",
+                            "type": "string"
+                          },
+                          "predecessor_revision_id": {
+                            "format": "uuid",
+                            "nullable": true,
+                            "title": "Predecessor Revision Id",
+                            "type": "string"
+                          },
+                          "revision_number": {
+                            "minimum": 1,
+                            "title": "Revision Number",
+                            "type": "integer"
+                          },
+                          "segment_count": {
+                            "minimum": 1,
+                            "title": "Segment Count",
+                            "type": "integer"
+                          },
+                          "terminal_segment_id": {
+                            "format": "uuid",
+                            "title": "Terminal Segment Id",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "predecessor_revision_id",
+                          "terminal_segment_id",
+                          "revision_number",
+                          "segment_count",
+                          "first_page",
+                          "last_page",
+                          "algorithm_version",
+                          "normalized_ccef_sha256",
+                          "created_at"
+                        ],
+                        "title": "PdfExtractionDocumentRevisionRead",
+                        "type": "object"
+                      },
+                      "title": "Revisions",
+                      "type": "array"
+                    },
+                    "segments": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "created_at": {
+                            "format": "date-time",
+                            "title": "Created At",
+                            "type": "string"
+                          },
+                          "first_page": {
+                            "minimum": 1,
+                            "title": "First Page",
+                            "type": "integer"
+                          },
+                          "id": {
+                            "format": "uuid",
+                            "title": "Id",
+                            "type": "string"
+                          },
+                          "last_page": {
+                            "minimum": 1,
+                            "title": "Last Page",
+                            "type": "integer"
+                          },
+                          "normalized_ccef_sha256": {
+                            "pattern": "^[0-9a-f]{64}$",
+                            "title": "Normalized Ccef Sha256",
+                            "type": "string"
+                          },
+                          "ordinal": {
+                            "minimum": 1,
+                            "title": "Ordinal",
+                            "type": "integer"
+                          },
+                          "run_id": {
+                            "format": "uuid",
+                            "title": "Run Id",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "run_id",
+                          "ordinal",
+                          "first_page",
+                          "last_page",
+                          "normalized_ccef_sha256",
+                          "created_at"
+                        ],
+                        "title": "PdfExtractionDocumentSegmentRead",
+                        "type": "object"
+                      },
+                      "title": "Segments",
+                      "type": "array"
+                    },
+                    "updated_at": {
+                      "format": "date-time",
+                      "title": "Updated At",
+                      "type": "string"
+                    },
+                    "version": {
+                      "minimum": 1,
+                      "title": "Version",
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "pdf_asset_id",
+                    "version",
+                    "first_page",
+                    "last_page",
+                    "normalized_ccef_sha256",
+                    "segments",
+                    "revisions",
+                    "append_attempts",
+                    "created_at",
+                    "updated_at"
+                  ],
+                  "title": "PdfExtractionDocumentRead",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "PDF extraction document"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error",
+                        "payload_too_large",
+                        "unsupported_media_type",
+                        "invalid_pgn",
+                        "pgn_limit_exceeded",
+                        "idempotency_conflict",
+                        "course_mode_conflict",
+                        "pgn_not_exportable",
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "PDF extraction document not found"
+          }
+        },
+        "summary": "Read one grouped incremental PDF extraction document",
+        "tags": [
+          "pdf"
+        ]
+      }
+    },
+    "/api/pdf-extraction-documents/{document_id}/appends": {
+      "post": {
+        "operationId": "createPdfExtractionDocumentAppend",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "expected_version": {
+                    "minimum": 1,
+                    "title": "Expected Version",
+                    "type": "integer"
+                  },
+                  "first_page": {
+                    "maximum": 20000,
+                    "minimum": 1,
+                    "title": "First Page",
+                    "type": "integer"
+                  },
+                  "last_page": {
+                    "maximum": 20000,
+                    "minimum": 1,
+                    "title": "Last Page",
+                    "type": "integer"
+                  },
+                  "profile": {
+                    "additionalProperties": {},
+                    "title": "Profile",
+                    "type": "object"
+                  }
+                },
+                "required": [
+                  "expected_version",
+                  "first_page",
+                  "last_page"
+                ],
+                "title": "PdfExtractionDocumentAppendCreate",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "append": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "created_at": {
+                          "format": "date-time",
+                          "title": "Created At",
+                          "type": "string"
+                        },
+                        "expected_version": {
+                          "minimum": 1,
+                          "title": "Expected Version",
+                          "type": "integer"
+                        },
+                        "first_page": {
+                          "minimum": 1,
+                          "title": "First Page",
+                          "type": "integer"
+                        },
+                        "id": {
+                          "format": "uuid",
+                          "title": "Id",
+                          "type": "string"
+                        },
+                        "job": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "attempt_count": {
+                              "title": "Attempt Count",
+                              "type": "integer"
+                            },
+                            "cancel_requested_at": {
+                              "format": "date-time",
+                              "nullable": true,
+                              "title": "Cancel Requested At",
+                              "type": "string"
+                            },
+                            "created_at": {
+                              "format": "date-time",
+                              "title": "Created At",
+                              "type": "string"
+                            },
+                            "id": {
+                              "format": "uuid",
+                              "title": "Id",
+                              "type": "string"
+                            },
+                            "kind": {
+                              "minLength": 1,
+                              "title": "Kind",
+                              "type": "string"
+                            },
+                            "last_error_code": {
+                              "nullable": true,
+                              "title": "Last Error Code",
+                              "type": "string"
+                            },
+                            "last_error_message": {
+                              "nullable": true,
+                              "title": "Last Error Message",
+                              "type": "string"
+                            },
+                            "max_attempts": {
+                              "title": "Max Attempts",
+                              "type": "integer"
+                            },
+                            "payload": {
+                              "additionalProperties": true,
+                              "title": "Payload",
+                              "type": "object"
+                            },
+                            "result": {
+                              "additionalProperties": true,
+                              "nullable": true,
+                              "title": "Result",
+                              "type": "object"
+                            },
+                            "status": {
+                              "enum": [
+                                "queued",
+                                "running",
+                                "succeeded",
+                                "failed",
+                                "cancelled"
+                              ],
+                              "title": "Status",
+                              "type": "string"
+                            },
+                            "updated_at": {
+                              "format": "date-time",
+                              "title": "Updated At",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "kind",
+                            "status",
+                            "payload",
+                            "result",
+                            "attempt_count",
+                            "max_attempts",
+                            "cancel_requested_at",
+                            "last_error_code",
+                            "last_error_message",
+                            "created_at",
+                            "updated_at"
+                          ],
+                          "title": "JobRead",
+                          "type": "object"
+                        },
+                        "last_page": {
+                          "minimum": 1,
+                          "title": "Last Page",
+                          "type": "integer"
+                        },
+                        "pipeline_version": {
+                          "maxLength": 32,
+                          "minLength": 1,
+                          "title": "Pipeline Version",
+                          "type": "string"
+                        },
+                        "predecessor_normalized_ccef_sha256": {
+                          "pattern": "^[0-9a-f]{64}$",
+                          "title": "Predecessor Normalized Ccef Sha256",
+                          "type": "string"
+                        },
+                        "predecessor_revision_id": {
+                          "format": "uuid",
+                          "title": "Predecessor Revision Id",
+                          "type": "string"
+                        },
+                        "profile": {
+                          "additionalProperties": {},
+                          "title": "Profile",
+                          "type": "object"
+                        },
+                        "run_id": {
+                          "format": "uuid",
+                          "title": "Run Id",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "run_id",
+                        "predecessor_revision_id",
+                        "expected_version",
+                        "predecessor_normalized_ccef_sha256",
+                        "first_page",
+                        "last_page",
+                        "pipeline_version",
+                        "profile",
+                        "job",
+                        "created_at"
+                      ],
+                      "title": "PdfExtractionDocumentAppendRead",
+                      "type": "object"
+                    },
+                    "document": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "append_attempts": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "created_at": {
+                                "format": "date-time",
+                                "title": "Created At",
+                                "type": "string"
+                              },
+                              "expected_version": {
+                                "minimum": 1,
+                                "title": "Expected Version",
+                                "type": "integer"
+                              },
+                              "first_page": {
+                                "minimum": 1,
+                                "title": "First Page",
+                                "type": "integer"
+                              },
+                              "id": {
+                                "format": "uuid",
+                                "title": "Id",
+                                "type": "string"
+                              },
+                              "job": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "attempt_count": {
+                                    "title": "Attempt Count",
+                                    "type": "integer"
+                                  },
+                                  "cancel_requested_at": {
+                                    "format": "date-time",
+                                    "nullable": true,
+                                    "title": "Cancel Requested At",
+                                    "type": "string"
+                                  },
+                                  "created_at": {
+                                    "format": "date-time",
+                                    "title": "Created At",
+                                    "type": "string"
+                                  },
+                                  "id": {
+                                    "format": "uuid",
+                                    "title": "Id",
+                                    "type": "string"
+                                  },
+                                  "kind": {
+                                    "minLength": 1,
+                                    "title": "Kind",
+                                    "type": "string"
+                                  },
+                                  "last_error_code": {
+                                    "nullable": true,
+                                    "title": "Last Error Code",
+                                    "type": "string"
+                                  },
+                                  "last_error_message": {
+                                    "nullable": true,
+                                    "title": "Last Error Message",
+                                    "type": "string"
+                                  },
+                                  "max_attempts": {
+                                    "title": "Max Attempts",
+                                    "type": "integer"
+                                  },
+                                  "payload": {
+                                    "additionalProperties": true,
+                                    "title": "Payload",
+                                    "type": "object"
+                                  },
+                                  "result": {
+                                    "additionalProperties": true,
+                                    "nullable": true,
+                                    "title": "Result",
+                                    "type": "object"
+                                  },
+                                  "status": {
+                                    "enum": [
+                                      "queued",
+                                      "running",
+                                      "succeeded",
+                                      "failed",
+                                      "cancelled"
+                                    ],
+                                    "title": "Status",
+                                    "type": "string"
+                                  },
+                                  "updated_at": {
+                                    "format": "date-time",
+                                    "title": "Updated At",
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "kind",
+                                  "status",
+                                  "payload",
+                                  "result",
+                                  "attempt_count",
+                                  "max_attempts",
+                                  "cancel_requested_at",
+                                  "last_error_code",
+                                  "last_error_message",
+                                  "created_at",
+                                  "updated_at"
+                                ],
+                                "title": "JobRead",
+                                "type": "object"
+                              },
+                              "last_page": {
+                                "minimum": 1,
+                                "title": "Last Page",
+                                "type": "integer"
+                              },
+                              "pipeline_version": {
+                                "maxLength": 32,
+                                "minLength": 1,
+                                "title": "Pipeline Version",
+                                "type": "string"
+                              },
+                              "predecessor_normalized_ccef_sha256": {
+                                "pattern": "^[0-9a-f]{64}$",
+                                "title": "Predecessor Normalized Ccef Sha256",
+                                "type": "string"
+                              },
+                              "predecessor_revision_id": {
+                                "format": "uuid",
+                                "title": "Predecessor Revision Id",
+                                "type": "string"
+                              },
+                              "profile": {
+                                "additionalProperties": {},
+                                "title": "Profile",
+                                "type": "object"
+                              },
+                              "run_id": {
+                                "format": "uuid",
+                                "title": "Run Id",
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "run_id",
+                              "predecessor_revision_id",
+                              "expected_version",
+                              "predecessor_normalized_ccef_sha256",
+                              "first_page",
+                              "last_page",
+                              "pipeline_version",
+                              "profile",
+                              "job",
+                              "created_at"
+                            ],
+                            "title": "PdfExtractionDocumentAppendRead",
+                            "type": "object"
+                          },
+                          "title": "Append Attempts",
+                          "type": "array"
+                        },
+                        "created_at": {
+                          "format": "date-time",
+                          "title": "Created At",
+                          "type": "string"
+                        },
+                        "first_page": {
+                          "minimum": 1,
+                          "title": "First Page",
+                          "type": "integer"
+                        },
+                        "id": {
+                          "format": "uuid",
+                          "title": "Id",
+                          "type": "string"
+                        },
+                        "last_page": {
+                          "minimum": 1,
+                          "title": "Last Page",
+                          "type": "integer"
+                        },
+                        "normalized_ccef_sha256": {
+                          "pattern": "^[0-9a-f]{64}$",
+                          "title": "Normalized Ccef Sha256",
+                          "type": "string"
+                        },
+                        "pdf_asset_id": {
+                          "format": "uuid",
+                          "title": "Pdf Asset Id",
+                          "type": "string"
+                        },
+                        "revisions": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "algorithm_version": {
+                                "maxLength": 64,
+                                "minLength": 1,
+                                "title": "Algorithm Version",
+                                "type": "string"
+                              },
+                              "created_at": {
+                                "format": "date-time",
+                                "title": "Created At",
+                                "type": "string"
+                              },
+                              "first_page": {
+                                "minimum": 1,
+                                "title": "First Page",
+                                "type": "integer"
+                              },
+                              "id": {
+                                "format": "uuid",
+                                "title": "Id",
+                                "type": "string"
+                              },
+                              "last_page": {
+                                "minimum": 1,
+                                "title": "Last Page",
+                                "type": "integer"
+                              },
+                              "normalized_ccef_sha256": {
+                                "pattern": "^[0-9a-f]{64}$",
+                                "title": "Normalized Ccef Sha256",
+                                "type": "string"
+                              },
+                              "predecessor_revision_id": {
+                                "format": "uuid",
+                                "nullable": true,
+                                "title": "Predecessor Revision Id",
+                                "type": "string"
+                              },
+                              "revision_number": {
+                                "minimum": 1,
+                                "title": "Revision Number",
+                                "type": "integer"
+                              },
+                              "segment_count": {
+                                "minimum": 1,
+                                "title": "Segment Count",
+                                "type": "integer"
+                              },
+                              "terminal_segment_id": {
+                                "format": "uuid",
+                                "title": "Terminal Segment Id",
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "predecessor_revision_id",
+                              "terminal_segment_id",
+                              "revision_number",
+                              "segment_count",
+                              "first_page",
+                              "last_page",
+                              "algorithm_version",
+                              "normalized_ccef_sha256",
+                              "created_at"
+                            ],
+                            "title": "PdfExtractionDocumentRevisionRead",
+                            "type": "object"
+                          },
+                          "title": "Revisions",
+                          "type": "array"
+                        },
+                        "segments": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "created_at": {
+                                "format": "date-time",
+                                "title": "Created At",
+                                "type": "string"
+                              },
+                              "first_page": {
+                                "minimum": 1,
+                                "title": "First Page",
+                                "type": "integer"
+                              },
+                              "id": {
+                                "format": "uuid",
+                                "title": "Id",
+                                "type": "string"
+                              },
+                              "last_page": {
+                                "minimum": 1,
+                                "title": "Last Page",
+                                "type": "integer"
+                              },
+                              "normalized_ccef_sha256": {
+                                "pattern": "^[0-9a-f]{64}$",
+                                "title": "Normalized Ccef Sha256",
+                                "type": "string"
+                              },
+                              "ordinal": {
+                                "minimum": 1,
+                                "title": "Ordinal",
+                                "type": "integer"
+                              },
+                              "run_id": {
+                                "format": "uuid",
+                                "title": "Run Id",
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "run_id",
+                              "ordinal",
+                              "first_page",
+                              "last_page",
+                              "normalized_ccef_sha256",
+                              "created_at"
+                            ],
+                            "title": "PdfExtractionDocumentSegmentRead",
+                            "type": "object"
+                          },
+                          "title": "Segments",
+                          "type": "array"
+                        },
+                        "updated_at": {
+                          "format": "date-time",
+                          "title": "Updated At",
+                          "type": "string"
+                        },
+                        "version": {
+                          "minimum": 1,
+                          "title": "Version",
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "pdf_asset_id",
+                        "version",
+                        "first_page",
+                        "last_page",
+                        "normalized_ccef_sha256",
+                        "segments",
+                        "revisions",
+                        "append_attempts",
+                        "created_at",
+                        "updated_at"
+                      ],
+                      "title": "PdfExtractionDocumentRead",
+                      "type": "object"
+                    },
+                    "replayed": {
+                      "title": "Replayed",
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "replayed",
+                    "append",
+                    "document"
+                  ],
+                  "title": "PdfExtractionDocumentAppendEnvelope",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Append attempt replayed"
+          },
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "append": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "created_at": {
+                          "format": "date-time",
+                          "title": "Created At",
+                          "type": "string"
+                        },
+                        "expected_version": {
+                          "minimum": 1,
+                          "title": "Expected Version",
+                          "type": "integer"
+                        },
+                        "first_page": {
+                          "minimum": 1,
+                          "title": "First Page",
+                          "type": "integer"
+                        },
+                        "id": {
+                          "format": "uuid",
+                          "title": "Id",
+                          "type": "string"
+                        },
+                        "job": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "attempt_count": {
+                              "title": "Attempt Count",
+                              "type": "integer"
+                            },
+                            "cancel_requested_at": {
+                              "format": "date-time",
+                              "nullable": true,
+                              "title": "Cancel Requested At",
+                              "type": "string"
+                            },
+                            "created_at": {
+                              "format": "date-time",
+                              "title": "Created At",
+                              "type": "string"
+                            },
+                            "id": {
+                              "format": "uuid",
+                              "title": "Id",
+                              "type": "string"
+                            },
+                            "kind": {
+                              "minLength": 1,
+                              "title": "Kind",
+                              "type": "string"
+                            },
+                            "last_error_code": {
+                              "nullable": true,
+                              "title": "Last Error Code",
+                              "type": "string"
+                            },
+                            "last_error_message": {
+                              "nullable": true,
+                              "title": "Last Error Message",
+                              "type": "string"
+                            },
+                            "max_attempts": {
+                              "title": "Max Attempts",
+                              "type": "integer"
+                            },
+                            "payload": {
+                              "additionalProperties": true,
+                              "title": "Payload",
+                              "type": "object"
+                            },
+                            "result": {
+                              "additionalProperties": true,
+                              "nullable": true,
+                              "title": "Result",
+                              "type": "object"
+                            },
+                            "status": {
+                              "enum": [
+                                "queued",
+                                "running",
+                                "succeeded",
+                                "failed",
+                                "cancelled"
+                              ],
+                              "title": "Status",
+                              "type": "string"
+                            },
+                            "updated_at": {
+                              "format": "date-time",
+                              "title": "Updated At",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "kind",
+                            "status",
+                            "payload",
+                            "result",
+                            "attempt_count",
+                            "max_attempts",
+                            "cancel_requested_at",
+                            "last_error_code",
+                            "last_error_message",
+                            "created_at",
+                            "updated_at"
+                          ],
+                          "title": "JobRead",
+                          "type": "object"
+                        },
+                        "last_page": {
+                          "minimum": 1,
+                          "title": "Last Page",
+                          "type": "integer"
+                        },
+                        "pipeline_version": {
+                          "maxLength": 32,
+                          "minLength": 1,
+                          "title": "Pipeline Version",
+                          "type": "string"
+                        },
+                        "predecessor_normalized_ccef_sha256": {
+                          "pattern": "^[0-9a-f]{64}$",
+                          "title": "Predecessor Normalized Ccef Sha256",
+                          "type": "string"
+                        },
+                        "predecessor_revision_id": {
+                          "format": "uuid",
+                          "title": "Predecessor Revision Id",
+                          "type": "string"
+                        },
+                        "profile": {
+                          "additionalProperties": {},
+                          "title": "Profile",
+                          "type": "object"
+                        },
+                        "run_id": {
+                          "format": "uuid",
+                          "title": "Run Id",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "run_id",
+                        "predecessor_revision_id",
+                        "expected_version",
+                        "predecessor_normalized_ccef_sha256",
+                        "first_page",
+                        "last_page",
+                        "pipeline_version",
+                        "profile",
+                        "job",
+                        "created_at"
+                      ],
+                      "title": "PdfExtractionDocumentAppendRead",
+                      "type": "object"
+                    },
+                    "document": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "append_attempts": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "created_at": {
+                                "format": "date-time",
+                                "title": "Created At",
+                                "type": "string"
+                              },
+                              "expected_version": {
+                                "minimum": 1,
+                                "title": "Expected Version",
+                                "type": "integer"
+                              },
+                              "first_page": {
+                                "minimum": 1,
+                                "title": "First Page",
+                                "type": "integer"
+                              },
+                              "id": {
+                                "format": "uuid",
+                                "title": "Id",
+                                "type": "string"
+                              },
+                              "job": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "attempt_count": {
+                                    "title": "Attempt Count",
+                                    "type": "integer"
+                                  },
+                                  "cancel_requested_at": {
+                                    "format": "date-time",
+                                    "nullable": true,
+                                    "title": "Cancel Requested At",
+                                    "type": "string"
+                                  },
+                                  "created_at": {
+                                    "format": "date-time",
+                                    "title": "Created At",
+                                    "type": "string"
+                                  },
+                                  "id": {
+                                    "format": "uuid",
+                                    "title": "Id",
+                                    "type": "string"
+                                  },
+                                  "kind": {
+                                    "minLength": 1,
+                                    "title": "Kind",
+                                    "type": "string"
+                                  },
+                                  "last_error_code": {
+                                    "nullable": true,
+                                    "title": "Last Error Code",
+                                    "type": "string"
+                                  },
+                                  "last_error_message": {
+                                    "nullable": true,
+                                    "title": "Last Error Message",
+                                    "type": "string"
+                                  },
+                                  "max_attempts": {
+                                    "title": "Max Attempts",
+                                    "type": "integer"
+                                  },
+                                  "payload": {
+                                    "additionalProperties": true,
+                                    "title": "Payload",
+                                    "type": "object"
+                                  },
+                                  "result": {
+                                    "additionalProperties": true,
+                                    "nullable": true,
+                                    "title": "Result",
+                                    "type": "object"
+                                  },
+                                  "status": {
+                                    "enum": [
+                                      "queued",
+                                      "running",
+                                      "succeeded",
+                                      "failed",
+                                      "cancelled"
+                                    ],
+                                    "title": "Status",
+                                    "type": "string"
+                                  },
+                                  "updated_at": {
+                                    "format": "date-time",
+                                    "title": "Updated At",
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "kind",
+                                  "status",
+                                  "payload",
+                                  "result",
+                                  "attempt_count",
+                                  "max_attempts",
+                                  "cancel_requested_at",
+                                  "last_error_code",
+                                  "last_error_message",
+                                  "created_at",
+                                  "updated_at"
+                                ],
+                                "title": "JobRead",
+                                "type": "object"
+                              },
+                              "last_page": {
+                                "minimum": 1,
+                                "title": "Last Page",
+                                "type": "integer"
+                              },
+                              "pipeline_version": {
+                                "maxLength": 32,
+                                "minLength": 1,
+                                "title": "Pipeline Version",
+                                "type": "string"
+                              },
+                              "predecessor_normalized_ccef_sha256": {
+                                "pattern": "^[0-9a-f]{64}$",
+                                "title": "Predecessor Normalized Ccef Sha256",
+                                "type": "string"
+                              },
+                              "predecessor_revision_id": {
+                                "format": "uuid",
+                                "title": "Predecessor Revision Id",
+                                "type": "string"
+                              },
+                              "profile": {
+                                "additionalProperties": {},
+                                "title": "Profile",
+                                "type": "object"
+                              },
+                              "run_id": {
+                                "format": "uuid",
+                                "title": "Run Id",
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "run_id",
+                              "predecessor_revision_id",
+                              "expected_version",
+                              "predecessor_normalized_ccef_sha256",
+                              "first_page",
+                              "last_page",
+                              "pipeline_version",
+                              "profile",
+                              "job",
+                              "created_at"
+                            ],
+                            "title": "PdfExtractionDocumentAppendRead",
+                            "type": "object"
+                          },
+                          "title": "Append Attempts",
+                          "type": "array"
+                        },
+                        "created_at": {
+                          "format": "date-time",
+                          "title": "Created At",
+                          "type": "string"
+                        },
+                        "first_page": {
+                          "minimum": 1,
+                          "title": "First Page",
+                          "type": "integer"
+                        },
+                        "id": {
+                          "format": "uuid",
+                          "title": "Id",
+                          "type": "string"
+                        },
+                        "last_page": {
+                          "minimum": 1,
+                          "title": "Last Page",
+                          "type": "integer"
+                        },
+                        "normalized_ccef_sha256": {
+                          "pattern": "^[0-9a-f]{64}$",
+                          "title": "Normalized Ccef Sha256",
+                          "type": "string"
+                        },
+                        "pdf_asset_id": {
+                          "format": "uuid",
+                          "title": "Pdf Asset Id",
+                          "type": "string"
+                        },
+                        "revisions": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "algorithm_version": {
+                                "maxLength": 64,
+                                "minLength": 1,
+                                "title": "Algorithm Version",
+                                "type": "string"
+                              },
+                              "created_at": {
+                                "format": "date-time",
+                                "title": "Created At",
+                                "type": "string"
+                              },
+                              "first_page": {
+                                "minimum": 1,
+                                "title": "First Page",
+                                "type": "integer"
+                              },
+                              "id": {
+                                "format": "uuid",
+                                "title": "Id",
+                                "type": "string"
+                              },
+                              "last_page": {
+                                "minimum": 1,
+                                "title": "Last Page",
+                                "type": "integer"
+                              },
+                              "normalized_ccef_sha256": {
+                                "pattern": "^[0-9a-f]{64}$",
+                                "title": "Normalized Ccef Sha256",
+                                "type": "string"
+                              },
+                              "predecessor_revision_id": {
+                                "format": "uuid",
+                                "nullable": true,
+                                "title": "Predecessor Revision Id",
+                                "type": "string"
+                              },
+                              "revision_number": {
+                                "minimum": 1,
+                                "title": "Revision Number",
+                                "type": "integer"
+                              },
+                              "segment_count": {
+                                "minimum": 1,
+                                "title": "Segment Count",
+                                "type": "integer"
+                              },
+                              "terminal_segment_id": {
+                                "format": "uuid",
+                                "title": "Terminal Segment Id",
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "predecessor_revision_id",
+                              "terminal_segment_id",
+                              "revision_number",
+                              "segment_count",
+                              "first_page",
+                              "last_page",
+                              "algorithm_version",
+                              "normalized_ccef_sha256",
+                              "created_at"
+                            ],
+                            "title": "PdfExtractionDocumentRevisionRead",
+                            "type": "object"
+                          },
+                          "title": "Revisions",
+                          "type": "array"
+                        },
+                        "segments": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "created_at": {
+                                "format": "date-time",
+                                "title": "Created At",
+                                "type": "string"
+                              },
+                              "first_page": {
+                                "minimum": 1,
+                                "title": "First Page",
+                                "type": "integer"
+                              },
+                              "id": {
+                                "format": "uuid",
+                                "title": "Id",
+                                "type": "string"
+                              },
+                              "last_page": {
+                                "minimum": 1,
+                                "title": "Last Page",
+                                "type": "integer"
+                              },
+                              "normalized_ccef_sha256": {
+                                "pattern": "^[0-9a-f]{64}$",
+                                "title": "Normalized Ccef Sha256",
+                                "type": "string"
+                              },
+                              "ordinal": {
+                                "minimum": 1,
+                                "title": "Ordinal",
+                                "type": "integer"
+                              },
+                              "run_id": {
+                                "format": "uuid",
+                                "title": "Run Id",
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "run_id",
+                              "ordinal",
+                              "first_page",
+                              "last_page",
+                              "normalized_ccef_sha256",
+                              "created_at"
+                            ],
+                            "title": "PdfExtractionDocumentSegmentRead",
+                            "type": "object"
+                          },
+                          "title": "Segments",
+                          "type": "array"
+                        },
+                        "updated_at": {
+                          "format": "date-time",
+                          "title": "Updated At",
+                          "type": "string"
+                        },
+                        "version": {
+                          "minimum": 1,
+                          "title": "Version",
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "pdf_asset_id",
+                        "version",
+                        "first_page",
+                        "last_page",
+                        "normalized_ccef_sha256",
+                        "segments",
+                        "revisions",
+                        "append_attempts",
+                        "created_at",
+                        "updated_at"
+                      ],
+                      "title": "PdfExtractionDocumentRead",
+                      "type": "object"
+                    },
+                    "replayed": {
+                      "title": "Replayed",
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "replayed",
+                    "append",
+                    "document"
+                  ],
+                  "title": "PdfExtractionDocumentAppendEnvelope",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Append attempt queued"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error",
+                        "payload_too_large",
+                        "unsupported_media_type",
+                        "invalid_pgn",
+                        "pgn_limit_exceeded",
+                        "idempotency_conflict",
+                        "course_mode_conflict",
+                        "pgn_not_exportable",
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "PDF extraction document not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error",
+                        "payload_too_large",
+                        "unsupported_media_type",
+                        "invalid_pgn",
+                        "pgn_limit_exceeded",
+                        "idempotency_conflict",
+                        "course_mode_conflict",
+                        "pgn_not_exportable",
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Stale, conflicting or active append"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error",
+                        "payload_too_large",
+                        "unsupported_media_type",
+                        "invalid_pgn",
+                        "pgn_limit_exceeded",
+                        "idempotency_conflict",
+                        "course_mode_conflict",
+                        "pgn_not_exportable",
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Invalid append request"
+          }
+        },
+        "summary": "Register one adjacent hash-bound incremental extraction attempt",
+        "tags": [
+          "pdf"
+        ]
+      }
+    },
     "/api/pdf-extractions": {
       "get": {
         "operationId": "listPdfExtractions",

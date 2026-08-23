@@ -10,6 +10,7 @@ from __future__ import annotations
 from uuid import UUID
 
 from sqlalchemy import (
+    JSON,
     CheckConstraint,
     ForeignKey,
     Index,
@@ -21,7 +22,12 @@ from sqlalchemy.dialects import mysql
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from chess_workbench.store.base import Base
-from chess_workbench.store.models.mixins import UTCCreatedAtMixin, UUIDPrimaryKeyMixin
+from chess_workbench.store.models.mixins import (
+    UTCCreatedAtMixin,
+    UTCTimestampMixin,
+    UUIDPrimaryKeyMixin,
+    VersionMixin,
+)
 
 
 def _ascii_string(length: int) -> String:
@@ -71,6 +77,9 @@ class PdfAsset(UUIDPrimaryKeyMixin, UTCCreatedAtMixin, Base):
     )
 
     runs: Mapped[list[ExtractionRun]] = relationship(back_populates="pdf_asset")
+    extraction_documents: Mapped[list[PdfExtractionDocument]] = relationship(
+        back_populates="pdf_asset"
+    )
 
 
 class ExtractionRun(UUIDPrimaryKeyMixin, UTCCreatedAtMixin, Base):
@@ -102,6 +111,179 @@ class ExtractionRun(UUIDPrimaryKeyMixin, UTCCreatedAtMixin, Base):
 
     pdf_asset: Mapped[PdfAsset] = relationship(back_populates="runs")
     artifacts: Mapped[list[ExtractionArtifact]] = relationship(back_populates="run")
+
+
+class PdfExtractionDocument(UUIDPrimaryKeyMixin, UTCTimestampMixin, VersionMixin, Base):
+    """Mutable head projection for one incrementally extracted PDF document."""
+
+    __tablename__ = "pdf_extraction_documents"
+    __table_args__ = (
+        CheckConstraint("first_page >= 1", name="first_page_positive"),
+        CheckConstraint("last_page >= first_page", name="page_range_valid"),
+        CheckConstraint("length(normalized_ccef_sha256) = 64", name="sha256_length"),
+        CheckConstraint("version >= 1", name="version_positive"),
+        Index("ix_pdf_extraction_documents_asset_updated", "pdf_asset_id", "updated_at"),
+        {"mysql_engine": "InnoDB"},
+    )
+
+    pdf_asset_id: Mapped[UUID] = mapped_column(
+        ForeignKey("pdf_assets.id", name="fk_pdf_doc_asset", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    first_page: Mapped[int] = mapped_column(Integer, nullable=False)
+    last_page: Mapped[int] = mapped_column(Integer, nullable=False)
+    normalized_ccef_sha256: Mapped[str] = mapped_column(_ascii_string(64), nullable=False)
+
+    pdf_asset: Mapped[PdfAsset] = relationship(back_populates="extraction_documents")
+    segments: Mapped[list[PdfExtractionDocumentSegment]] = relationship(back_populates="document")
+    revisions: Mapped[list[PdfExtractionDocumentRevision]] = relationship(
+        back_populates="document",
+        foreign_keys="PdfExtractionDocumentRevision.document_id",
+    )
+    append_attempts: Mapped[list[PdfExtractionDocumentAppend]] = relationship(
+        back_populates="document"
+    )
+
+
+class PdfExtractionDocumentSegment(UUIDPrimaryKeyMixin, UTCCreatedAtMixin, Base):
+    """Immutable successful run membership in a logical extraction document."""
+
+    __tablename__ = "pdf_extraction_document_segments"
+    __table_args__ = (
+        CheckConstraint("ordinal >= 1", name="ordinal_positive"),
+        CheckConstraint("first_page >= 1", name="first_page_positive"),
+        CheckConstraint("last_page >= first_page", name="page_range_valid"),
+        CheckConstraint("length(normalized_ccef_sha256) = 64", name="sha256_length"),
+        UniqueConstraint(
+            "document_id", "ordinal", name="uq_pdf_extraction_document_segments_ordinal"
+        ),
+        UniqueConstraint("extraction_run_id", name="uq_pdf_extraction_document_segments_run"),
+        {"mysql_engine": "InnoDB"},
+    )
+
+    document_id: Mapped[UUID] = mapped_column(
+        ForeignKey("pdf_extraction_documents.id", name="fk_pdf_doc_seg_doc", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    extraction_run_id: Mapped[UUID] = mapped_column(
+        ForeignKey("extraction_runs.id", name="fk_pdf_doc_seg_run", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    ordinal: Mapped[int] = mapped_column(Integer, nullable=False)
+    first_page: Mapped[int] = mapped_column(Integer, nullable=False)
+    last_page: Mapped[int] = mapped_column(Integer, nullable=False)
+    normalized_ccef_sha256: Mapped[str] = mapped_column(_ascii_string(64), nullable=False)
+
+    document: Mapped[PdfExtractionDocument] = relationship(back_populates="segments")
+
+
+class PdfExtractionDocumentRevision(UUIDPrimaryKeyMixin, UTCCreatedAtMixin, Base):
+    """Immutable verified aggregate prefix and its content-addressed bytes."""
+
+    __tablename__ = "pdf_extraction_document_revisions"
+    __table_args__ = (
+        CheckConstraint("revision_number >= 1", name="revision_number_positive"),
+        CheckConstraint("segment_count >= 1", name="segment_count_positive"),
+        CheckConstraint("first_page >= 1", name="first_page_positive"),
+        CheckConstraint("last_page >= first_page", name="page_range_valid"),
+        CheckConstraint("length(algorithm_version) > 0", name="algorithm_version_nonempty"),
+        CheckConstraint("length(relative_path) > 0", name="relative_path_nonempty"),
+        CheckConstraint("length(media_type) > 0", name="media_type_nonempty"),
+        CheckConstraint("byte_size > 0", name="byte_size_positive"),
+        CheckConstraint("length(normalized_ccef_sha256) = 64", name="sha256_length"),
+        UniqueConstraint(
+            "document_id", "revision_number", name="uq_pdf_extraction_document_revisions_number"
+        ),
+        UniqueConstraint(
+            "terminal_segment_id",
+            name="uq_pdf_extraction_document_revisions_terminal_segment",
+        ),
+        {"mysql_engine": "InnoDB"},
+    )
+
+    document_id: Mapped[UUID] = mapped_column(
+        ForeignKey("pdf_extraction_documents.id", name="fk_pdf_doc_rev_doc", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    predecessor_revision_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey(
+            "pdf_extraction_document_revisions.id",
+            name="fk_pdf_doc_rev_prev",
+            ondelete="RESTRICT",
+        ),
+        nullable=True,
+    )
+    terminal_segment_id: Mapped[UUID] = mapped_column(
+        ForeignKey(
+            "pdf_extraction_document_segments.id",
+            name="fk_pdf_doc_rev_terminal_seg",
+            ondelete="RESTRICT",
+        ),
+        nullable=False,
+    )
+    revision_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    segment_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    first_page: Mapped[int] = mapped_column(Integer, nullable=False)
+    last_page: Mapped[int] = mapped_column(Integer, nullable=False)
+    algorithm_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    relative_path: Mapped[str] = mapped_column(_case_sensitive_string(512), nullable=False)
+    media_type: Mapped[str] = mapped_column(String(255), nullable=False)
+    byte_size: Mapped[int] = mapped_column(Integer, nullable=False)
+    normalized_ccef_sha256: Mapped[str] = mapped_column(_ascii_string(64), nullable=False)
+
+    document: Mapped[PdfExtractionDocument] = relationship(
+        back_populates="revisions", foreign_keys=[document_id]
+    )
+
+
+class PdfExtractionDocumentAppend(UUIDPrimaryKeyMixin, UTCCreatedAtMixin, Base):
+    """Immutable append-attempt receipt; its linked Job owns lifecycle state."""
+
+    __tablename__ = "pdf_extraction_document_appends"
+    __table_args__ = (
+        CheckConstraint("expected_version >= 1", name="expected_version_positive"),
+        CheckConstraint("first_page >= 1", name="first_page_positive"),
+        CheckConstraint("last_page >= first_page", name="page_range_valid"),
+        CheckConstraint("length(predecessor_normalized_ccef_sha256) = 64", name="sha256_length"),
+        CheckConstraint("length(logical_fingerprint) = 64", name="fingerprint_length"),
+        CheckConstraint("length(effective_key_hash) = 64", name="key_hash_length"),
+        UniqueConstraint("extraction_run_id", name="uq_pdf_extraction_document_appends_run"),
+        UniqueConstraint(
+            "effective_key_hash", name="uq_pdf_extraction_document_appends_effective_key"
+        ),
+        Index("ix_pdf_extraction_document_appends_document_created", "document_id", "created_at"),
+        {"mysql_engine": "InnoDB"},
+    )
+
+    document_id: Mapped[UUID] = mapped_column(
+        ForeignKey(
+            "pdf_extraction_documents.id", name="fk_pdf_doc_append_doc", ondelete="RESTRICT"
+        ),
+        nullable=False,
+    )
+    predecessor_revision_id: Mapped[UUID] = mapped_column(
+        ForeignKey(
+            "pdf_extraction_document_revisions.id",
+            name="fk_pdf_doc_append_prev",
+            ondelete="RESTRICT",
+        ),
+        nullable=False,
+    )
+    extraction_run_id: Mapped[UUID] = mapped_column(
+        ForeignKey("extraction_runs.id", name="fk_pdf_doc_append_run", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    expected_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    predecessor_normalized_ccef_sha256: Mapped[str] = mapped_column(
+        _ascii_string(64), nullable=False
+    )
+    first_page: Mapped[int] = mapped_column(Integer, nullable=False)
+    last_page: Mapped[int] = mapped_column(Integer, nullable=False)
+    profile: Mapped[dict[str, object]] = mapped_column(JSON, nullable=False)
+    logical_fingerprint: Mapped[str] = mapped_column(_ascii_string(64), nullable=False)
+    effective_key_hash: Mapped[str] = mapped_column(_ascii_string(64), nullable=False)
+
+    document: Mapped[PdfExtractionDocument] = relationship(back_populates="append_attempts")
 
 
 class ExtractionArtifact(UUIDPrimaryKeyMixin, UTCCreatedAtMixin, Base):

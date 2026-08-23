@@ -24,6 +24,10 @@ from chess_workbench.store.models.extraction import (
     ExtractionArtifact,
     ExtractionRun,
     PdfAsset,
+    PdfExtractionDocument,
+    PdfExtractionDocumentAppend,
+    PdfExtractionDocumentRevision,
+    PdfExtractionDocumentSegment,
 )
 from chess_workbench.store.models.graph import MoveEdge, Position
 from chess_workbench.store.models.mixins import (
@@ -63,6 +67,10 @@ __all__ = [
     "MoveEdge",
     "ModulePublication",
     "PdfAsset",
+    "PdfExtractionDocument",
+    "PdfExtractionDocumentAppend",
+    "PdfExtractionDocumentRevision",
+    "PdfExtractionDocumentSegment",
     "Position",
     "PgnAsset",
     "PgnImport",

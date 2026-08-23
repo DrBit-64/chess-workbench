@@ -61,10 +61,17 @@ chess-workbench/
    acceptance, smoke or unrelated checks merely for reassurance. Run the broader Stage/full gates
    only when the user requests them, the change genuinely crosses those boundaries, or the user is
    closing a Stage for acceptance.
-2. Review `git diff --stat` for unintended changes.
-3. Update `docs/agent/HANDOFF.md`.
-4. Summarize: files changed, tests run and results, failures, assumptions, remaining risks.
-5. Do **not** commit, rebase, reset, or delete files without explicit permission.
+2. This is primarily a personal, local-first site. During feature discovery, prove the concrete
+   user-visible or artifact-level outcome before expanding defensive coverage. Test volume must be
+   proportional to the implementation and actual risk: prefer one focused regression for a bug or
+   critical persisted-data invariant, and do not build exhaustive combinatorial or cross-dialect
+   proof suites merely to anticipate hypothetical future failures. It is acceptable to fix
+   non-critical product bugs as they are encountered. Coverage and broad acceptance gates remain
+   end-of-Stage/CI checks, not an iterative development ritual.
+3. Review `git diff --stat` for unintended changes.
+4. Update `docs/agent/HANDOFF.md`.
+5. Summarize: files changed, tests run and results, failures, assumptions, remaining risks.
+6. Do **not** commit, rebase, reset, or delete files without explicit permission.
 
 ## Commands
 
@@ -131,6 +138,10 @@ All commands run from the repository root.
 22. Tests must be deterministic; random/property tests must print and fix their seed.
 
 ## Agent division
+
+Current operator override: all subsequent repository work is performed by Codex because the
+DeepSeek API price has increased. Do not invoke DeepCode, `$delegate-deepcode`, or prepare manual
+DeepCode packets unless the operator explicitly reverses this rule.
 
 - **Deep Code (DeepSeek-V4-Flash)**: executes small, bounded work after the behavior and acceptance
   oracle are already defined — local code search/explanation, documentation, formatting, type

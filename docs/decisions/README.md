@@ -19,3 +19,4 @@ ADR 记录会长期影响数据兼容性、模块边界或运维方式的决定�
 - [0015：Stage 8C 候选棋谱确定性规范化与去重](0015-stage-8c-candidate-consolidation.md)
 - [0016：Stage 8D 人工审核与草稿发布边界](0016-stage-8d-review-and-publication-boundary.md)
 - [0017：带原子注释的棋谱树与独立阅读流](0017-annotated-move-tree-and-reading-flow.md)
+- [0018：增量 PDF 提取文档、分段续接与不可变聚合修订](0018-incremental-pdf-extraction-documents.md)

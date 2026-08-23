@@ -43,6 +43,12 @@ export type PdfExtraction = PdfExtractionListResponse['items'][number];
 export type PdfExtractionEnvelope =
   paths['/api/pdf-extractions']['post']['responses'][202]['content']['application/json'];
 
+export type PdfExtractionDocumentListResponse =
+  paths['/api/pdf-extraction-documents']['get']['responses'][200]['content']['application/json'];
+
+export type PdfExtractionDocument =
+  PdfExtractionDocumentListResponse['items'][number];
+
 export type PdfReviewDocument =
   paths['/api/pdf-extractions/{run_id}/review']['get']['responses'][200]['content']['application/json'];
 

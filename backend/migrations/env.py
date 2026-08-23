@@ -26,6 +26,10 @@ from chess_workbench.store.models import (
     KnowledgeNoteCitation,
     MoveEdge,
     PdfAsset,
+    PdfExtractionDocument,
+    PdfExtractionDocumentAppend,
+    PdfExtractionDocumentRevision,
+    PdfExtractionDocumentSegment,
     Position,
     Source,
     SourceFile,
@@ -54,6 +58,10 @@ _REGISTERED_MODELS = (
     InvalidationEvent,
     Job,
     PdfAsset,
+    PdfExtractionDocument,
+    PdfExtractionDocumentAppend,
+    PdfExtractionDocumentRevision,
+    PdfExtractionDocumentSegment,
 )
 
 config = context.config

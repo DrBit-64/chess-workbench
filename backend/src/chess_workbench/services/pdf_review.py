@@ -17,6 +17,7 @@ from typing import Any, Literal, cast
 from uuid import UUID
 
 from pydantic import ValidationError
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from chess_workbench.config import Settings
@@ -37,7 +38,13 @@ from chess_workbench.services.pdf_persistence import (
     PdfPersistenceService,
 )
 from chess_workbench.services.source_storage import read_verified_content_addressed_bytes
-from chess_workbench.store.models import ExtractionArtifact, PdfAsset
+from chess_workbench.store.models import (
+    ExtractionArtifact,
+    PdfAsset,
+    PdfExtractionDocument,
+    PdfExtractionDocumentRevision,
+    PdfExtractionDocumentSegment,
+)
 
 _REVIEW_NOT_FOUND = "PDF extraction review was not found"
 _REVIEW_UNAVAILABLE = "PDF extraction review is not available"
@@ -187,7 +194,7 @@ class PdfReviewReadService:
         persistence = PdfPersistenceService(self.session)
         view = await persistence.get_extraction(run_id)
         if view is None:
-            raise _missing() from None
+            return await self._resolve_document_review(run_id)
         run = view.run
         job = view.job
         if (
@@ -334,6 +341,113 @@ class PdfReviewReadService:
             first_page=first_page,
             last_page=last_page,
             normalized_ccef_sha256=normalized_ccef_sha256,
+            package=package,
+            inspection=inspection,
+            rendered_by_page=rendered_by_page,
+        )
+
+    async def _resolve_document_review(self, document_id: UUID) -> _ResolvedReview:
+        document = await self.session.get(PdfExtractionDocument, document_id)
+        if document is None:
+            raise _missing() from None
+        revision = await self.session.scalar(
+            select(PdfExtractionDocumentRevision).where(
+                PdfExtractionDocumentRevision.document_id == document.id,
+                PdfExtractionDocumentRevision.revision_number == document.version,
+            )
+        )
+        segments = tuple(
+            await self.session.scalars(
+                select(PdfExtractionDocumentSegment)
+                .where(PdfExtractionDocumentSegment.document_id == document.id)
+                .order_by(PdfExtractionDocumentSegment.ordinal)
+            )
+        )
+        if (
+            revision is None
+            or revision.normalized_ccef_sha256 != document.normalized_ccef_sha256
+            or revision.first_page != document.first_page
+            or revision.last_page != document.last_page
+            or len(segments) != document.version
+        ):
+            raise _unavailable() from None
+        expected_first = document.first_page
+        run_ids: list[UUID] = []
+        for ordinal, segment in enumerate(segments, start=1):
+            if (
+                segment.ordinal != ordinal
+                or segment.first_page != expected_first
+                or segment.last_page < segment.first_page
+            ):
+                raise _unavailable() from None
+            expected_first = segment.last_page + 1
+            run_ids.append(segment.extraction_run_id)
+        if expected_first != document.last_page + 1:
+            raise _unavailable() from None
+
+        rendered = tuple(
+            await self.session.scalars(
+                select(ExtractionArtifact).where(
+                    ExtractionArtifact.run_id.in_(run_ids),
+                    ExtractionArtifact.kind == "rendered_page",
+                )
+            )
+        )
+        rendered_by_page: dict[int, ExtractionArtifact] = {}
+        for artifact in rendered:
+            page = artifact.page_number
+            if (
+                type(page) is not int
+                or page in rendered_by_page
+                or page < document.first_page
+                or page > document.last_page
+                or artifact.media_type != "image/png"
+                or artifact.byte_size <= 0
+                or artifact.byte_size > MAX_PNG_BYTES
+                or _SHA256_PATTERN.fullmatch(artifact.content_sha256) is None
+            ):
+                raise _unavailable() from None
+            rendered_by_page[page] = artifact
+        expected_pages = set(range(document.first_page, document.last_page + 1))
+        if set(rendered_by_page) != expected_pages:
+            raise _unavailable() from None
+
+        try:
+            normalized_bytes = await asyncio.to_thread(
+                read_verified_content_addressed_bytes,
+                self.settings.source_storage_root,
+                relative_path=revision.relative_path,
+                expected_sha256=revision.normalized_ccef_sha256,
+                expected_size=revision.byte_size,
+                max_bytes=_MAX_JSON_ARTIFACT_BYTES,
+            )
+        except ServiceError:
+            raise
+        except (TypeError, ValueError):
+            raise _unavailable() from None
+        package = _parse_package(
+            normalized_bytes,
+            pipeline_version=PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION,
+        )
+        if not isinstance(package, ExtractionPackageV1_1):
+            raise _unavailable() from None
+        source_range = package.source.page_range
+        if (
+            package.package_id != document.id
+            or source_range is None
+            or source_range.start_page != document.first_page
+            or source_range.end_page != document.last_page
+        ):
+            raise _unavailable() from None
+        try:
+            inspection = inspect_review_candidate(package)
+        except ValueError:
+            raise _unavailable() from None
+        return _ResolvedReview(
+            run_id=document.id,
+            first_page=document.first_page,
+            last_page=document.last_page,
+            normalized_ccef_sha256=document.normalized_ccef_sha256,
             package=package,
             inspection=inspection,
             rendered_by_page=rendered_by_page,
