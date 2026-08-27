@@ -45,6 +45,7 @@ vi.mock('react-chessboard', () => ({
     id?: string;
     position?: string;
     arePiecesDraggable?: boolean;
+    onPieceDrop?: (source: string, target: string) => boolean;
   }) => (
     <div
       data-testid={`board-${props.id ?? 'default'}`}
@@ -52,6 +53,11 @@ vi.mock('react-chessboard', () => ({
       data-draggable={String(props.arePiecesDraggable ?? true)}
     >
       棋盘
+      <button
+        type="button"
+        aria-label="模拟落子 c7c6"
+        onClick={() => props.onPieceDrop?.('c7', 'c6')}
+      />
     </div>
   ),
 }));
@@ -490,6 +496,39 @@ function baseDocument(overrides?: {
   };
 }
 
+function reviewSession(version = 1) {
+  return {
+    id: '33333333-3333-4333-8333-333333333333',
+    target_kind: 'extraction_run' as const,
+    target_id: RUN_ID,
+    baseline_normalized_ccef_sha256: 'a'.repeat(64),
+    status: 'open' as const,
+    version,
+    revisions: Array.from({ length: version }, (_, index) => ({
+      id: `${index + 1}`.padStart(8, '0') + '-3333-4333-8333-333333333333',
+      parent_revision_id:
+        index === 0
+          ? null
+          : `${index}`.padStart(8, '0') + '-3333-4333-8333-333333333333',
+      revision_number: index + 1,
+      package_sha256: 'a'.repeat(64),
+      created_at: '2026-08-24T12:00:00Z',
+    })),
+    events: Array.from({ length: version }, (_, index) => ({
+      id: `${index + 1}`.padStart(8, '0') + '-4444-4444-8444-444444444444',
+      revision_id:
+        `${index + 1}`.padStart(8, '0') + '-3333-4333-8333-333333333333',
+      parent_version: index,
+      resulting_version: index + 1,
+      kind: index === 0 ? ('created' as const) : ('edited' as const),
+      decisions: {},
+      created_at: '2026-08-24T12:00:00Z',
+    })),
+    created_at: '2026-08-24T12:00:00Z',
+    updated_at: '2026-08-24T12:00:00Z',
+  };
+}
+
 describe('Stage 8D review page (8D-3A)', () => {
   it('fetches the exact review URL and shows an accessible busy state', async () => {
     let resolveFetch!: (value: Response) => void;
@@ -565,7 +604,7 @@ describe('Stage 8D review page (8D-3A)', () => {
     expect(screen.getByText('物理页 6')).toBeTruthy();
   });
 
-  it('selects pages from evidence and ignores out-of-document evidence pages', async () => {
+  it('jumps to move evidence on right click without permanent move-page badges', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(() => json(baseDocument())),
@@ -577,12 +616,22 @@ describe('Stage 8D review page (8D-3A)', () => {
     ).toBe(pageUrl(5));
 
     const sequence = screen.getByText('王翼进攻').closest('section')!;
-    fireEvent.click(
-      within(sequence).getAllByRole('button', { name: '第 6 页' })[0],
+    expect(
+      within(sequence).queryByRole('button', { name: '第 6 页' }),
+    ).toBeNull();
+    fireEvent.contextMenu(
+      within(sequence).getByRole('button', { name: 'e5' }),
+      {
+        clientX: 300,
+        clientY: 200,
+      },
     );
     expect(screen.getByAltText('物理页 6 图片').getAttribute('src')).toBe(
       pageUrl(6),
     );
+    expect(
+      screen.getByRole('menuitem', { name: '来源：第 6 页' }),
+    ).toBeTruthy();
 
     // Out-of-document evidence page 99 (heading h2): clicking changes nothing.
     fireEvent.click(screen.getAllByRole('button', { name: '第 99 页' })[0]);
@@ -688,11 +737,22 @@ describe('Stage 8D review page (8D-3A)', () => {
     // Invalid and ambiguous nodes are visible but not navigable buttons.
     expect(screen.queryByRole('button', { name: 'Nf3' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'd4' })).toBeNull();
-    expect(screen.getByText('非法')).toBeTruthy();
-    expect(screen.getByText('歧义')).toBeTruthy();
+    expect(screen.queryByText('非法')).toBeNull();
+    expect(screen.queryByText('歧义')).toBeNull();
 
-    const invalidNode = screen.getByText('Nf3').closest('span')!;
+    const invalidNode = screen
+      .getByText('Nf3')
+      .closest('[data-validation-status]')!;
     expect(invalidNode.getAttribute('aria-disabled')).toBe('true');
+    expect(invalidNode.getAttribute('data-validation-status')).toBe('invalid');
+    expect(invalidNode.className).toContain('bg-red-100');
+    const ambiguousNode = screen
+      .getByText('d4')
+      .closest('[data-validation-status]')!;
+    expect(ambiguousNode.getAttribute('data-validation-status')).toBe(
+      'ambiguous',
+    );
+    expect(ambiguousNode.className).toContain('bg-amber-100');
     expect(board.getAttribute('data-position')).toBe(START_FEN);
   });
 
@@ -779,7 +839,7 @@ describe('Stage 8D review page (8D-3A)', () => {
     );
   });
 
-  it('renders branching move rows in source order with status, NAG and variation indentation', async () => {
+  it('renders compact mainline rows and explicit branch lines without status or page badges', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(() => json(baseDocument())),
@@ -806,42 +866,41 @@ describe('Stage 8D review page (8D-3A)', () => {
       .getByText('e5')
       .closest('[data-variation-depth]') as HTMLElement;
     expect(pairRow.getAttribute('data-variation-depth')).toBe('0');
-    expect(pairRow.style.paddingLeft).toBe('0px');
     expect(within(pairRow).getByText('e4')).toBeTruthy();
-    expect(within(pairRow).getByText('1.')).toBeTruthy();
+    expect(within(pairRow).getByText('1')).toBeTruthy();
 
-    // c5 is a black-only alternative row at depth 1 with a 1... gutter.
+    // Every alternative, including a single shallow branch, gets an explicit
+    // branch line and a stable branch path rather than parentheses.
     const c5Row = within(sequence)
       .getByText('c5')
       .closest('[data-variation-depth]') as HTMLElement;
     expect(c5Row.getAttribute('data-variation-depth')).toBe('1');
-    expect(c5Row.style.paddingLeft).toBe('16px');
+    expect(c5Row.getAttribute('data-variation-path')).toBe('n3');
+    expect(c5Row.querySelectorAll('[data-branch-rail]')).toHaveLength(1);
     expect(within(c5Row).getByText('1...')).toBeTruthy();
 
-    // Nf3 is a fallback row (depth 0); d4 a fallback row (depth 1).
+    // Nf3 is a mainline fallback; d4 is a separate alternative root.
     const nf3Row = within(sequence)
       .getByText('Nf3')
       .closest('[data-variation-depth]') as HTMLElement;
     expect(nf3Row.getAttribute('data-variation-depth')).toBe('0');
-    expect(nf3Row.style.paddingLeft).toBe('0px');
     const d4Row = within(sequence)
       .getByText('d4')
       .closest('[data-variation-depth]') as HTMLElement;
     expect(d4Row.getAttribute('data-variation-depth')).toBe('1');
-    expect(d4Row.style.paddingLeft).toBe('16px');
+    expect(d4Row.getAttribute('data-variation-path')).toBe('n5');
 
-    expect(within(sequence).getAllByText('合法')).toHaveLength(3);
-    expect(within(sequence).getByText('非法')).toBeTruthy();
-    expect(within(sequence).getByText('歧义')).toBeTruthy();
-    expect(within(sequence).getByText('NAG 1')).toBeTruthy();
-    expect(within(sequence).getByText('NAG 1 2')).toBeTruthy();
-
+    expect(within(sequence).queryByText('合法')).toBeNull();
+    expect(within(sequence).queryByText('非法')).toBeNull();
+    expect(within(sequence).queryByText('歧义')).toBeNull();
+    expect(within(sequence).getByText('!')).toBeTruthy();
+    expect(within(sequence).getByText('!?')).toBeTruthy();
     expect(
-      within(sequence).getAllByRole('button', { name: '第 5 页' }).length,
-    ).toBeGreaterThan(0);
+      within(sequence).queryByRole('button', { name: '第 5 页' }),
+    ).toBeNull();
     expect(
-      within(sequence).getAllByRole('button', { name: '第 6 页' }).length,
-    ).toBeGreaterThan(0);
+      within(sequence).queryByRole('button', { name: '第 6 页' }),
+    ).toBeNull();
   });
 
   it('renders backend issues in order with exact counts and scoped evidence navigation', async () => {
@@ -895,7 +954,7 @@ describe('Stage 8D review page (8D-3A)', () => {
     ).toBeTruthy();
   });
 
-  it('renders no edit/approve/publish controls and never mutates', async () => {
+  it('offers the explicit edit entry without mutating during read-only browsing', async () => {
     const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       void input;
       void init;
@@ -906,7 +965,8 @@ describe('Stage 8D review page (8D-3A)', () => {
 
     await screen.findByText('第1章 引言');
 
-    for (const forbidden of ['批准', '拒绝', '发布', '编辑', '保存', '删除']) {
+    expect(screen.getByRole('button', { name: '开始编辑审核' })).toBeTruthy();
+    for (const forbidden of ['批准', '拒绝', '发布', '保存', '删除']) {
       expect(
         screen.queryByRole('button', { name: new RegExp(forbidden) }),
       ).toBeNull();
@@ -925,7 +985,142 @@ describe('Stage 8D review page (8D-3A)', () => {
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
   });
 
-  it('renders a linear white/black pair on one row with a single page control', async () => {
+  it('opens a review session and sends the Lichess-style promote command', async () => {
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const target = String(input);
+      if (target.endsWith('/review/session')) {
+        return json({ replayed: false, session: reviewSession() }, 201);
+      }
+      if (target.endsWith('/commands')) {
+        return json({ session: reviewSession(2), document: baseDocument() });
+      }
+      void init;
+      return json(baseDocument());
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderPage();
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: '开始编辑审核' }),
+    );
+    expect(await screen.findByText('审核中 · 版本 1')).toBeTruthy();
+
+    fireEvent.contextMenu(screen.getByRole('button', { name: 'c5' }), {
+      clientX: 300,
+      clientY: 200,
+    });
+    const promote = screen.getByRole('menuitem', { name: '提升变招' });
+    expect((promote as HTMLButtonElement).disabled).toBe(false);
+    fireEvent.click(promote);
+
+    await waitFor(() =>
+      expect(
+        fetchMock.mock.calls.some(([input]) =>
+          String(input).endsWith('/commands'),
+        ),
+      ).toBe(true),
+    );
+    const commandCall = fetchMock.mock.calls.find(([input]) =>
+      String(input).endsWith('/commands'),
+    )!;
+    expect(JSON.parse(String(commandCall[1]?.body))).toEqual({
+      expected_version: 1,
+      command: {
+        kind: 'edit',
+        operation: {
+          kind: 'promote_variation',
+          sequence_id: 'seq1',
+          node_id: 'n3',
+        },
+      },
+    });
+    expect(await screen.findByText('审核中 · 版本 2')).toBeTruthy();
+  });
+
+  it('moves annotation source and editing into its right-click menu', async () => {
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      if (String(input).endsWith('/review/session')) {
+        return json({ replayed: false, session: reviewSession() }, 201);
+      }
+      return json(annotatedDocument());
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderPage();
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: '开始编辑审核' }),
+    );
+    await screen.findByText('审核中 · 版本 1');
+
+    const annotation = screen
+      .getByText('变化结论')
+      .closest('[data-annotation-id]') as HTMLElement;
+    expect(
+      within(annotation).queryByRole('button', { name: '第 6 页' }),
+    ).toBeNull();
+    fireEvent.contextMenu(annotation, { clientX: 360, clientY: 240 });
+
+    expect(screen.getByAltText('物理页 6 图片')).toBeTruthy();
+    expect(
+      screen.getByRole('menuitem', { name: '来源：第 6 页' }),
+    ).toBeTruthy();
+    fireEvent.click(screen.getByRole('menuitem', { name: '编辑注释' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(
+      (within(dialog).getByRole('textbox') as HTMLTextAreaElement).value,
+    ).toBe('**变化结论**');
+  });
+
+  it('records a board move as a new variation from the selected position', async () => {
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const target = String(input);
+      if (target.endsWith('/review/session')) {
+        return json({ replayed: false, session: reviewSession() }, 201);
+      }
+      if (target.endsWith('/commands')) {
+        return json({ session: reviewSession(2), document: baseDocument() });
+      }
+      void init;
+      return json(baseDocument());
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderPage();
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: '开始编辑审核' }),
+    );
+    await screen.findByText('审核中 · 版本 1');
+    fireEvent.click(screen.getByRole('button', { name: 'e4' }));
+    fireEvent.click(screen.getByRole('button', { name: '模拟落子 c7c6' }));
+    expect(await screen.findByText(/待保存线路：c6/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: '保存线路' }));
+
+    await waitFor(() =>
+      expect(
+        fetchMock.mock.calls.some(([input]) =>
+          String(input).endsWith('/commands'),
+        ),
+      ).toBe(true),
+    );
+    const commandCall = fetchMock.mock.calls.find(([input]) =>
+      String(input).endsWith('/commands'),
+    )!;
+    expect(JSON.parse(String(commandCall[1]?.body))).toEqual({
+      expected_version: 1,
+      command: {
+        kind: 'edit',
+        operation: {
+          kind: 'add_line',
+          sequence_id: 'seq1',
+          parent_node_id: 'n1',
+          moves: ['c7c6'],
+          evidence_page: 5,
+        },
+      },
+    });
+  });
+
+  it('renders a linear white/black pair on one dense row with source in its context menu', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(() =>
@@ -946,24 +1141,24 @@ describe('Stage 8D review page (8D-3A)', () => {
     const row = e5.closest('[data-variation-depth]') as HTMLElement;
     expect(row.contains(e4)).toBe(true);
     expect(row.getAttribute('data-variation-depth')).toBe('0');
-    expect(row.style.paddingLeft).toBe('0px');
-    expect(within(row).getByText('1.')).toBeTruthy();
+    expect(within(row).getByText('1')).toBeTruthy();
 
-    // Same-page pair exposes exactly one row-level page control (no per-ply).
+    expect(within(row).queryByText('合法')).toBeNull();
+    expect(within(row).queryByRole('button', { name: '第 5 页' })).toBeNull();
+    fireEvent.contextMenu(e4, { clientX: 320, clientY: 220 });
     expect(
-      within(row).getAllByRole('button', { name: '第 5 页' }),
-    ).toHaveLength(1);
+      screen.getByRole('menuitem', { name: '来源：第 5 页' }),
+    ).toBeTruthy();
 
-    // Board navigation, status and NAG display are preserved on the pair row.
+    // Board navigation and compact symbolic NAGs are preserved.
     fireEvent.click(e4);
     expect(
       screen
         .getByTestId('board-pdf-review-board')
         .getAttribute('data-position'),
     ).toBe(FEN_AFTER_E4);
-    expect(within(row).getAllByText('合法')).toHaveLength(2);
-    expect(within(row).getByText('NAG 1')).toBeTruthy();
-    expect(within(row).getByText('NAG 1 2')).toBeTruthy();
+    expect(within(row).getByText('!')).toBeTruthy();
+    expect(within(row).getByText('!?')).toBeTruthy();
   });
 
   it('renders CCEF 1.1 annotations in reading-flow order and navigates their anchors', async () => {
@@ -997,22 +1192,26 @@ describe('Stage 8D review page (8D-3A)', () => {
     ).toEqual(['a1', 'a2']);
 
     const board = screen.getByTestId('board-pdf-review-board');
-    const anchorButtons = within(sequence).getAllByRole('button', {
-      name: '定位注释局面',
-    });
-    fireEvent.click(anchorButtons[0]);
+    fireEvent.click(within(sequence).getByText('第一条原子说明'));
     expect(board.getAttribute('data-position')).toBe(FEN_AFTER_E4);
-    fireEvent.click(anchorButtons[1]);
+    fireEvent.click(within(sequence).getByText('变化结论'));
     expect(board.getAttribute('data-position')).toBe(FEN_AFTER_C5);
 
-    fireEvent.click(
-      within(annotations[1] as HTMLElement).getByRole('button', {
+    expect(
+      within(annotations[1] as HTMLElement).queryByRole('button', {
         name: '第 6 页',
       }),
-    );
+    ).toBeNull();
+    fireEvent.contextMenu(annotations[1] as HTMLElement, {
+      clientX: 360,
+      clientY: 240,
+    });
     expect(screen.getByAltText('物理页 6 图片').getAttribute('src')).toBe(
       pageUrl(6),
     );
+    expect(
+      screen.getByRole('menuitem', { name: '来源：第 6 页' }),
+    ).toBeTruthy();
   });
 
   it('scopes wide screens to independent scroll panes with accessible labels', async () => {
@@ -1034,7 +1233,7 @@ describe('Stage 8D review page (8D-3A)', () => {
     expect(candidate.className).toContain('lg:h-full');
 
     const root = source.parentElement!;
-    expect(root.className).toContain('lg:h-[calc(100vh-9rem)]');
+    expect(root.className).toContain('lg:h-[calc(100vh-12rem)]');
     expect(root.className).toContain('lg:grid-cols-3');
     expect(root.className).toContain('lg:overflow-hidden');
 

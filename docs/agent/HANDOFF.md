@@ -5996,6 +5996,50 @@ Remaining boundary: the reusable queued-worker handler for generic future increm
 installed (8D-3E3 remains open). The current accepted JSON is fully committed and browser-visible;
 exercise this product path before expanding worker plumbing or tests. No commit was created.
 
+## Codex source-library refactor (2026-08-23)
+
+The operator clarified that a PDF book is the durable library identity, while one book may own any
+number of extraction outcomes: disjoint ranges, overlapping ranges and repeated requests for the
+same range must all remain visible. Codex implemented the smallest front-end/API slice without a
+new SQL identity:
+
+- `frontend/src/app/SourcesPage.tsx` now renders one card per immutable `PdfAsset`. Opening the card
+  shows one management drawer containing every standalone extraction run plus every incremental
+  document for that asset. Runs committed as document segments are shown inside their document and
+  are not duplicated as top-level outcomes; equal page ranges are never deduplicated.
+- Every user-requested standalone extraction and exact-range retry sends a fresh visible-ASCII
+  `Idempotency-Key`, so the existing API creates a distinct immutable run even when asset, page
+  range and profile match an older run.
+- A successful standalone candidate can be adopted as an incremental document. Existing documents
+  expose the registered adjacent-append API from the same action menu; the real 319–328 document
+  correctly opens an append form fixed to page 329 with a five-page default through page 333.
+- Review links remain available for committed standalone candidates and aggregate documents.
+  Modify and delete/archive are intentionally visible but disabled: modification belongs to the
+  Stage 8D review-revision boundary, and deletion must be implemented as authoritative archiving,
+  not a front-end-only or hard-delete shortcut.
+- `frontend/src/logic/api/types.ts` adds generated response aliases only. `PLANS.md` records the
+  active slice, and ADR 0018 now makes `PdfAsset` the top-level library identity with multiple
+  independent run/document outcomes below it.
+
+Focused verification only:
+
+- Prettier wrote the two changed TypeScript files; changed-file ESLint passed with zero warnings;
+- frontend TypeScript build/typecheck passed (only the existing Node 24 vs required Node 22 engine
+  warning);
+- real API + Vite + system Chrome showed one book card for the local asset, 13 distinct extraction
+  outcomes in its drawer, the 319–328 aggregate with its 319–323 and 324–328 segments, and the
+  expected management controls;
+- a Playwright route interception (no backend mutation/provider call) proved exact-range retry for
+  319–323 carries a fresh `Idempotency-Key`; another read-only browser check proved the append form
+  starts at 329 and defaults to 333;
+- `git diff --check` was clean before this append. No feature/full suite, provider call, database
+  write, commit, reset or deletion was performed.
+
+Recommended next action: let the operator interact with the library drawer. Then choose one narrow
+follow-up: (a) authoritative archive/delete for extraction outcomes, (b) the missing reusable
+incremental worker so drawer-created append jobs execute automatically, or (c) Stage 8D-4 review
+revision persistence for real content editing. Do not combine those boundaries.
+
 ## Codex review: 8D-3E2B completion requires one test-only R1
 
 Codex inspected the actual diff instead of accepting the completion report. The 18 focused tests
@@ -6068,3 +6112,426 @@ this is a validated local segment JSON, not yet a persisted incremental Job arti
 revision or browser-visible grouped document. Next work should connect this proven request/binder to
 the minimal worker + composition path and verify the real browser result before adding tests. No
 commit was created.
+
+## Codex generic incremental worker completion (2026-08-23)
+
+The operator asked for the smallest path that makes a drawer-created append run instead of staying
+queued. Codex installed `process_pdf_incremental_extraction_job` and registered it under the
+existing API worker's distinct `pdf_incremental_extraction` kind. The handler reuses the ordinary
+PDF renderer/OCR artifact pipeline, builds the existing bounded continuation context, performs one
+thinking-enabled CCEF 1.1 request, binds evidence and trusted continuation anchors, stores immutable
+provider/raw/normalized artifacts, composes the aggregate and calls the existing atomic document
+commit. A retry with a complete normalized artifact skips the provider call.
+
+Compatibility behavior is general rather than source-specific: older operator-created segments
+that lack an `ocr_fragment` for their terminal page obtain context-only tail text by rendering that
+page from the verified original PDF. No production code contains a book name, fixed page number,
+move, node count or content hash. `SourcesPage` no longer claims that the incremental executor is
+missing. `PLANS.md` and ADR 0018 now mark 8D-3E3 installed.
+
+Real outcome-first verification used the append the operator had already submitted for pages
+329–332. The original attempt failed before any provider call because the historical pages-324–328
+operator segment had no terminal OCR artifact; it remains an immutable failed attempt. A new retry
+run `96d8f8b6-8d4c-5238-a82e-4a6149c2297a` made exactly one paid request and retained all artifacts.
+Its first commit encountered a transient SQLite heartbeat/write collision; the Job returned to
+queued, and the new bounded commit retry then reused the saved CCEF without a second provider call.
+Job `84cee502-8dc4-460a-9881-cb098b8c1420` succeeded on attempt 2. Document
+`b08ebf6d-856d-587f-9293-aa89eb81e573` is revision 3 with continuous pages 319–332 and aggregate
+hash `962c5def7110bd73f05855d52ac697f624e73f3a785383edc1a756d6d319a00c`.
+
+The new segment is valid CCEF 1.1: 4 items, 2 sequences, 86 move nodes, 23 atomic annotations,
+0 invalid/ambiguous nodes and evidence only on pages 329–332. One 70-node sequence continues a
+trusted prior anchor; the other is an independent Game 15 start-position score. The aggregate has
+23 items, 4 sequences, 351 valid nodes and evidence pages 319–332. The review service loaded all
+14 page descriptors; its sole issue is the already-known unsupported non-chess figure from the
+earlier segment.
+
+Focused checks only: Ruff check and changed-file MyPy passed for the three backend files; the API
+app imported successfully; Prettier check passed for `SourcesPage.tsx`; canonical segment/aggregate
+model validation, offline inspection, persisted Job/document/segment queries and a direct review
+service read all passed. No unit/full/acceptance suite ran. The local HTTP check could not run
+because no API process was listening on port 8000; restart `make dev-api` to load the new handler,
+and run `make dev-web` as usual. No commit was created.
+
+## Codex incremental pages 333–341 failure diagnosis and prevention (2026-08-24)
+
+The operator submitted two browser-created incremental requests for pages 333–341 and asked for
+diagnosis plus a generic fix without any retry. No Job, worker run or provider call was created by
+Codex during this work.
+
+- Run `444a4e29-75dd-5cfe-a72e-a6966d458b1e` / Job
+  `dda95a5a-022e-4643-b90d-97d978d8b040` received a complete 108,813-byte CCEF 1.1 JSON response
+  with `finish_reason=stop`. Strict local validation rejected it because sequence
+  `seq_game15_cont_333` reused node ID `g15p333_v15Be5` for two different `Be5!` nodes on different
+  parents. This was an opaque-identity collision, not missing continuation context or truncation.
+- Run `fd802a39-f8c0-5ff1-b340-b6751ed40a7a` / Job
+  `58d3b38c-a0cb-42f0-9820-e286a1ff27e4` received HTTP 200 and `finish_reason=stop`, but the formal
+  assistant `content` was empty. The provider placed an approximately 87,046-character JSON-looking
+  document in private `reasoning_content`; all 32,173 completion tokens were reported as reasoning
+  tokens. The adapter correctly rejected the response instead of treating chain-of-thought as
+  application data. DeepSeek's official JSON Output guide documents occasional empty content, and
+  its Thinking Mode guide defines `reasoning_content` as CoT and `content` as the final answer.
+
+The incremental prompt now explicitly requires opaque, mutually unique node/annotation IDs and a
+final distinct-ID plus ordered-reading-flow audit. The first mitigation disabled thinking so JSON
+would be requested directly in the formal final channel; the strict provider boundary continued to
+ignore private reasoning fields. This mitigation was evaluated by the next real operator request
+and then replaced by the follow-up recorded below. No retry was initiated by Codex.
+
+## Codex incremental pages 333–341 third failure and revised transport fix (2026-08-24)
+
+After the operator restarted and submitted another browser request, run
+`2ab9d13a-89d3-5351-a35e-39a43def2711` / Job
+`02cba45a-4209-48ab-a7f0-33fc06d1657c` failed once with `ccef_invalid_package`. Its formal
+`content` was non-empty and contained no duplicate local IDs, so the immediately preceding prompt
+and channel fixes addressed both earlier failure signatures. The new strict diagnostics showed
+that all 181 move nodes carried the redundant forbidden field `kind: "move"`. Offline removal of
+only that field exposed another schema error, `initial_position={"kind":"startpos","startpos":{}}`.
+More importantly, the non-thinking response had split one continuing score into 36 move sequences,
+35 bound to the same anchor, so silently stripping fields would have accepted materially poorer
+topology and was rejected as a repair strategy.
+
+The prior `thinking_enabled=False` mitigation was therefore replaced. Incremental requests again
+use thinking mode with max effort, but opt out of DeepSeek's provider-side `response_format` JSON
+Output switch, whose official guide documents occasional empty final content. The existing
+deterministic system instruction still supplies the complete caller-owned JSON Schema and demands
+one raw JSON object; the existing strict JSON/CCEF decoder remains unchanged. The generic DeepSeek
+adapter gained a default-on `json_output_enabled` constructor switch, so every non-incremental
+caller retains its previous wire request. Private `reasoning_content` remains ignored and is never
+promoted into application data. The previously added unique-ID audit remains in the incremental
+prompt.
+
+Focused verification only: two DeepSeek transport tests passed (normal thinking profile plus the
+new thinking-without-response-format case), Ruff format/check passed for the four touched backend
+files, and MyPy passed for the three production files. No full suite, database write, worker run,
+provider call or retry was performed. The failed run and capture remain unchanged; the operator
+will restart the API and submit the next request manually. No commit was created.
+
+## Codex trusted evidence-selector boundary (C+D) (2026-08-24)
+
+The newest browser append failed at strict CCEF decoding even though the provider returned a
+complete, semantically useful result. Run `83e2dea7-d267-5b2b-8326-c7171246d87f` / Job
+`490a2327-ca00-48b4-bb42-0383ff7d330e` contained 310 EvidenceRefs. Every one of their
+`physical_page + fragment_sha256` selectors resolved to a fragment supplied in the trusted prompt,
+but 304 provider bboxes used the wrong component order and 159 therefore violated the positive-area
+box invariant. The prior pipeline attempted strict model validation before its local evidence
+binder, so the authoritative fragment hashes never got a chance to repair provider-owned geometry.
+
+The evidence boundary now uses the generic C+D design. The provider owns only the semantic
+selector `(physical_page, fragment_sha256)`. Before full CCEF validation, local code walks only
+defined EvidenceRef slots, discards provider bbox/text offsets unconditionally, resolves the exact
+trusted OCR fragment, writes its canonical `[x0, y0, x1, y1]` normalized bbox and leaves offsets
+null. Missing or unknown hashes and trusted-key collisions still reject the candidate. There is no
+coordinate-order guessing, approximate-bbox lookup, axis swap, or book/page/move special case. The
+incremental service uses the same boundary before continuation binding, and semantic prompt version
+1.6 instructs providers to emit only the selector.
+
+The saved failed response was processed offline through the new trusted binding, metadata and
+continuation checks, chess normalization and deterministic document composition, with no provider
+call or database write. It produced 3 items, 1 sequence, 210 valid nodes, 42 annotations and a
+319–341 aggregate with 25 items; all 310 evidence references bound by exact fragment hash. This
+proves the current response is reusable rather than semantically lost. The persisted document was
+not advanced and the failed Job was not retried or mutated.
+
+Focused verification only: four semantic candidate/prompt tests passed; Ruff format/check passed
+for the five directly touched files; MyPy passed for the three production files. The broader worker
+integration test was intentionally not rerun after it twice stalled in its existing aiosqlite
+cleanup path; the real saved-response offline chain is the outcome-level verification for this
+change. ADR 0018 now records the trust boundary. No full suite, network/provider call, database
+write, retry or commit was performed.
+
+## Codex retained-response topology repair (2026-08-24)
+
+Incremental v5 now has a bounded repair path for complete CCEF 1.1 responses whose only structural
+failure is the exact-order projection between a move sequence's arrays and `reading_flow`. The
+original response is retained. A compact second request grants the provider authority only over
+existing-node `parent_id`/`sibling_order`; it includes projection counts, forward-parent conflicts,
+python-chess frontier failures, locally computed legal preceding-parent candidates and only the
+trusted OCR fragments cited by the affected sequence. Local code then compacts sibling-order gaps,
+reorders arrays to the unchanged reading flow and reruns CCEF, evidence, metadata, continuation,
+python-chess and composition gates. Repair is attempted once and its failure is non-retryable.
+
+The operator script `scripts/repair_incremental_capture.py` prepares, executes or replays this
+protocol without SQL writes. It writes a paid repair response before applying any local gate, so a
+bad repair is still diagnosable. Transport-invalid HTTP bodies use the existing retained-response
+recorder. The normal online incremental worker uses the same protocol; the repair call uses direct
+JSON/non-thinking mode because the local diagnostics have already reduced the task to a small
+patch, avoiding another long reasoning-only response.
+
+Real replay used failed run `3d997da3-f630-5698-82be-ae2353f25716` / Job
+`21e91952-3767-49da-913b-4029adbcd80e` and its retained 83,208-byte response. The repair request
+identified one affected sequence, 13 downstream chess failures, three forward-parent conflicts and
+legal-parent hints that pointed the page-335 alternatives back to the page-334 `...c5` position.
+One earlier thinking-mode tool attempt was interrupted before a response could be retained; a
+second thinking-mode call returned an invalid provider envelope, but the offline runner had not yet
+wired the transport-invalid recorder, so its exact rejected shape and usage are unavailable. After
+switching the bounded repair to non-thinking JSON mode, the real response completed
+with 50,260 input + 271 output = 50,531 tokens, versus 207,508 tokens for the original full
+extraction. It selected the three correct parent changes but naturally left a sibling-order gap;
+generic local compaction (not a book/page/move special case) resolved that mechanical consequence.
+
+Replaying that exact saved DeepSeek response passed: 316/316 EvidenceRefs bound by trusted fragment
+hash, all 218 segment move nodes normalized `valid`, and composition produced 25 aggregate items
+covering physical pages 319–341. Debug outputs are gitignored under
+`data/debug/incremental-repair-3d997da3-f630-5698-82be-ae2353f25716.*`. No database row, document
+head or failed Job was changed; no full extraction retry occurred. Focused Ruff and MyPy checks for
+the three implementation files passed. No full/unit/acceptance suite was run and no commit was
+created.
+
+## Codex Stage 8D-4 review ledger (2026-08-24)
+
+Stage 8D-4 is complete in the worktree. ADR 0016 and PLANS now freeze a review session as the pair
+of one target identity (standalone extraction run or incremental document) and the exact normalized
+CCEF hash verified when the session is opened. A later incremental document head creates a separate
+hash-bound session; it never moves an existing review baseline.
+
+Migration `20260824_0013` adds `pdf_review_sessions` as the only mutable review head and immutable
+`pdf_review_revisions` / `pdf_review_events`. Revision 1 points at the already verified normalized
+CCEF CAS object (run artifact or document aggregate revision) and event 1 records the 0 -> 1
+`created` transition. The schema is ready for 8D-5 expected-version commands, but 8D-4 deliberately
+does not implement edit/acknowledge/approve/reject/reopen or frontend controls. The same migration
+adds `SourceSpan.fragment_sha256`; page locators can now retain bbox plus optional paired text
+offsets, while non-page locators cannot misuse the fragment hash.
+
+Public operations are `POST /api/pdf-extractions/{target_id}/review/session` (create or replay the
+session for the currently verified candidate) and `GET /api/pdf-review-sessions/{session_id}`
+(ledger metadata). Responses include target/hash/status/version plus ordered revision/event facts,
+but exclude CAS paths, CCEF contents, provider/raw response data and secrets. OpenAPI and generated
+TypeScript were regenerated.
+
+Focused verification only: the new ledger/migration/evidence tests plus the existing strict
+SourceSpan schema test passed (4 total); the migration chain matched runtime metadata; direct MySQL
+DDL compilation produced three InnoDB tables with maximum constraint-name length 47; focused Ruff
+and MyPy passed; `make check-contracts` and frontend TypeScript typecheck passed. The first attempted
+aiosqlite integration test stalled in the repository's known worker-thread cleanup/runtime issue,
+so the accepted focused service oracle uses a deterministic fake session while the migration is
+verified synchronously against SQLite. No full/Stage acceptance suite was run.
+
+No production database migration or service restart occurred during this work. The concurrently
+running incremental Job `abf97e58-eea2-42da-818b-66ad6d8d687a` was never touched; it independently
+finished as `failed` with `ccef_invalid_package` at 2026-08-23 18:46:28 UTC. The new migration will
+be applied automatically by the next `make dev-api`. No commit was created. Next delivery item is
+8D-5 review commands.
+
+## Codex generic retained-response repair (2026-08-24)
+
+The topology-only admission gate has been superseded by a generic bounded repair protocol. A
+complete JSON response is scanned into at most 32 structured diagnostics spanning Pydantic/CCEF
+shape errors, duplicate/forward identities, sibling numbering, reading-flow projections,
+annotation anchors, trusted evidence selectors and later pipeline failures. At most eight affected
+items plus their cited trusted fragments and incremental context are sent in one repair request.
+The provider returns a `chess-workbench/ccef-repair/2.0` JSON patch bound to the exact original
+response hash, rather than regenerating the extraction.
+
+The patch boundary allows `add`/`remove`/`replace` on existing package fields but forbids replacing
+the whole package or resizing item/node/annotation/evidence collections. It limits operations,
+bytes and source-text delta, requires the exact trusted metadata after repair, and rejects every
+evidence selector not present in the prompt context. The incremental worker now offers this repair
+for any parseable small validation failure, calls the provider at most once, then reruns its normal
+trusted evidence, metadata, continuation, chess normalization and composition chain. Successful
+artifacts retain the original response, repair response and repaired-content hash; repair failure
+remains non-retryable and never advances the document head.
+
+The newest retained pages-333–341 response now produces an actionable diagnostic at
+`/items/0/nodes/204/sibling_order` for node `g15c_v727`, in addition to the bounded root contract
+diagnostic; it is no longer rejected as `not_repairable`. Applying that exact one-field change to a
+copy of the retained response passes strict CCEF 1.1 validation with 3 items and 218 move nodes. A
+synthetic patch for the same invariant and a non-topology forbidden-field removal both pass the
+generic boundary; destructive node removal and invented evidence are rejected. The three focused
+repair tests pass; focused Ruff and MyPy pass for the repair module, incremental worker, operator
+script and test. The API app imports successfully.
+
+An attempted provider-free replay through the existing database-backed operator script was stopped
+after the repository's known aiosqlite read/cleanup path made no progress; it reached only
+`Loading failed extraction run...`, made no provider call and did not write SQL or mutate the failed
+Job. The retained-response diagnostic itself and synthetic full contract application are verified;
+the next browser-created failure will exercise the online provider call. No full/Stage suite ran,
+no service was started and no commit was created.
+
+## Codex generic repair correction after run 17f667bd (2026-08-24)
+
+The next operator-created pages-333–341 append, run
+`17f667bd-35fa-5d08-bddf-20775a4fa2f1` / Job
+`426e4ca7-84e7-48a6-a95d-08aa7d9ff414`, exposed two defects in the new generic repair path. The
+116,229-byte original response was complete JSON and had exactly five strict errors: duplicate NAG
+values at five nodes. The repair prompt nevertheless sent all eight items and the full continuation
+context because package-level Pydantic locations did not populate `item_index`. It also copied the
+discriminated-union label `move_sequence` into patch paths, producing paths such as
+`/items/1/move_sequence/nodes/3/nags`; those keys do not exist in the JSON document. The 625-byte
+repair response therefore failed with `CCEF repair path does not exist`. It also left four duplicate
+NAG arrays unchanged. The repair call consumed 125,426 tokens, more input than the original request,
+so the old path reduced neither cost nor failure risk.
+
+`general_repair.py` now normalizes Pydantic locations into real JSON Pointers before deriving item
+and node identities. Non-topology prompts include only the diagnosed nodes/annotations and nearby
+reading-flow entries; full sequences and trusted continuation context are reserved for topology or
+continuation failures. A narrow deterministic pass runs before any paid repair and currently handles
+only one semantics-free canonicalization: duplicate integer NAGs are removed in first-occurrence
+order. It does not choose parents, alter wording/evidence or inspect book/page/move identities. The
+online worker and offline retained-response tool both validate this local candidate through their
+normal pipeline first and skip the repair provider if it succeeds. Provider-response audit chains
+record the deterministic rule/path list and, when a model patch is still needed, the exact repair
+base hash.
+
+Outcome verification used the saved original response only, with no Job retry or provider call. It
+now yields exactly five diagnostics at the real paths
+`/items/{1,6,7}/nodes/{3,6,20,36,41}/nags`, five deterministic operations, a strict-valid CCEF 1.1
+package with 8 items and 97 move nodes, and a successful `normalize_chess_moves_v1_1` pass. Four
+focused generic-repair tests pass, including real-pointer/item/node attribution, prompt slicing and
+NAG canonicalization; focused Ruff and MyPy are clean for the production modules. A database-backed
+operator replay was stopped after 40 seconds at its first aiosqlite read (the known local async DB
+stall); it made no provider call and no SQL mutation. The pure retained-file gate already proves the
+exact failed payload is locally repairable. No full/Stage suite, new extraction, retry or commit was
+performed.
+
+## Codex repair-flow hardening after two further failures (2026-08-24)
+
+Two retained failures exposed separate issues. Incremental run
+`59ef4f98-6360-50f5-9f4a-7532a08686c9` (pages 342–345) contained 10 items and 98 move nodes; its
+only content defect was an order mismatch between one sequence's node array and reading flow. Both
+sides contained the same 33 unique node IDs, and reading-flow order remained parent-before-child.
+The former model-repair prompt wrapped exact entries as `{flow_index, entry}` records; the model
+copied those wrappers into 30 replacement operations, so local union validation rejected the paid
+repair. Standalone v4 run `b3401df0-87de-5dd9-9182-1b18a56d0559` returned HTTP 200 with 81,547
+characters of private reasoning but null/blank formal content. It had no parseable candidate for a
+local patch and must not treat private reasoning as application data.
+
+The deterministic repair pass now also aligns node or annotation arrays to an exact-cover reading
+flow when identities are unique and the projected node array stays topological. It never edits
+reading flow, parent IDs, evidence or text. Applying it to the retained pages-342–345 response
+produced one audited `align_nodes_to_reading_flow` operation (15 positions moved) and a strict-valid
+CCEF 1.1 package with the same 10 items and 98 nodes, with no provider call. Model-repair excerpts
+now map real JSON Pointer strings directly to exact original values, omit continuation context
+unless the diagnostic is a continuation-binding failure, and forbid replacing/adding/removing a
+whole reading-flow entry. This removes the wrapper-copy failure mode and substantially bounds
+ordinary topology repair prompts.
+
+Standalone semantic v4 requests keep thinking enabled but now omit DeepSeek's provider-side JSON
+Output switch, matching the already working incremental v5 transport profile. Null or blank final
+content is still captured, maps to the existing `invalid_response` provider code with the explicit
+message `DeepSeek returned no final content; retry manually`, and remains `retryable=false`; no
+automatic retry was added.
+
+Focused verification: 12 selected repair/transport tests passed; focused Ruff format/lint and MyPy
+passed for the three production modules. The retained pages-342–345 response passed strict CCEF
+validation and chess normalization after the deterministic repair; all 98 nodes normalized as
+valid. A database-backed full offline replay was
+stopped after its known aiosqlite read path stalled at `Loading failed extraction run...`; it made
+no provider/network call and was interrupted without SQL writes. No full or Stage suite, browser
+retry, service start or commit was performed.
+
+## Codex shared CCEF 1.1 pre-validation canonicalization (2026-08-24)
+
+The operator correctly identified that standalone semantic extraction and incremental extraction
+should not own separate ordering rules. `canonicalize_ccef_response` is now the named shared
+pre-validation boundary. It treats `reading_flow` as source reading order and may reorder the
+parallel `nodes` or `annotations` arrays only when both projections contain exactly the same unique
+IDs; node projection is additionally required to remain parent-before-child. It preserves IDs,
+parents, sibling orders, reading flow, evidence and source text. The former
+`apply_deterministic_ccef_repairs` name remains a compatibility wrapper for the offline tool/tests.
+
+Both CCEF 1.1 standalone candidate assemblers (including semantic v4 trusted-evidence binding) and
+the incremental v5 handler now call that boundary before their first strict CCEF validation. The
+standalone provider artifact changes to the existing `ccef-repair-chain/2.1` audit shape only when
+canonicalization actually occurs, retaining the exact original response plus deterministic
+operation/path and repaired-content hash. An unchanged response retains the existing
+`provider-response/1.1` artifact bytes and schema.
+
+The saved standalone run `1b1de1ac-0ef6-5f08-85ce-03922f03e806` (pages 6–14) was replayed through
+the real semantic candidate assembler using its committed OCR fragments, without provider or SQL
+writes. The shared boundary moved three positions in `/items/5/nodes`; exact evidence binding,
+strict CCEF 1.1 validation and consolidation then succeeded with 6 items and 208/208 valid move
+nodes, with no conflicts. This proves the previously failed paid response is acceptable under the
+new shared path. The latest incremental run `22879234-69a9-5d64-a31b-129dc3546169` had already
+proved the same algorithm online for an annotation projection mismatch and advanced the document
+to pages 319–345/version 5 without a model repair call.
+
+Focused verification only: 23 tests passed across generic repair and CCEF 1.1 candidate assembly;
+focused Ruff and MyPy passed for the three production modules. No full/Stage suite, new extraction,
+provider call, Job mutation, service start or commit was performed.
+
+## Codex Stage 8D-5 review commands and interactive editing (2026-08-24)
+
+Stage 8D-5 is complete in the worktree. The public command boundary is
+`POST /api/pdf-review-sessions/{session_id}/commands`; every request carries `expected_version` and
+one discriminated `edit/acknowledge/approve/reject/reopen` command. Successful commands append a
+new immutable review revision/event and advance the mutable session head exactly once. Edited CCEF
+is written to the `review-revisions` CAS namespace; state-only revisions reuse the current verified
+CAS object. `GET /api/pdf-extractions/{target_id}/review` now serves the latest hash-bound review
+revision when one exists, while the baseline extraction artifact remains unchanged.
+
+Chess edits are implemented in the pure `review/editing.py` boundary. Board-entered UCI lines
+traverse an identical existing child or allocate new legal nodes, using priority zero when the
+position was a leaf and the last sibling priority otherwise. The other commands explicitly delete
+a subtree, promote one sibling priority, make an entire selected path the mainline, choose zero or
+one NAG, and edit heading/prose/in-score annotation text. Structural edits rebuild parent-before-
+child node order and the exact-cover CCEF 1.1 reading flow, then run the existing python-chess
+normalizer and strict CCEF validation. Delete decisions record removed node/annotation counts; old
+revisions remain recoverable.
+
+The browser review page opens/replays a session only when the user starts editing. Clicking a score
+move selects its after-position; board moves either enter an existing child or build a pending line
+with the currently visible PDF page as evidence. The pending line has explicit save/undo controls.
+Each move exposes Lichess-style `提升变招`, `设为主线`, `设置评价` and `从此处开始删除`; heading,
+prose and sequence annotations have a text editor. Current warnings can be acknowledged
+individually or together. Approval is disabled and rejected server-side while blockers or current
+unacknowledged warnings remain; reject/reopen are explicit audited transitions.
+
+Focused verification only: backend review editing/ledger selection passed 8 tests, including one
+CAS/ledger command chain through edit -> acknowledge -> approve -> reopen -> reject. The review UI
+passed 21 focused tests, including a real generated request for variation promotion and a board-
+entered new branch. Focused Ruff/MyPy, frontend ESLint/TypeScript and generated contract drift were
+checked; no full suite, Stage acceptance, service/worker start, provider call, extraction mutation
+or commit was performed. The persistence test replaces `asyncio.to_thread` with a direct test
+adapter to avoid the repository's known aiosqlite/thread shutdown delay; production still uses the
+verified threaded filesystem boundary. Next delivery item is 8D-6 atomic publication into a draft
+Course/Knowledge mapping.
+
+## Codex Stage 8D-5 first-session FK ordering fix (2026-08-24)
+
+The browser's `开始审核` failure was reproduced from the supplied API log. SQLite rejected the
+initial `pdf_review_events` INSERT because the service added the new session, revision and event in
+one flush while the models intentionally expose no ORM relationships; SQLAlchemy therefore had no
+unit-of-work dependency edge requiring the referenced session/revision rows to be inserted first.
+The same ordering risk existed for later command revisions.
+
+`PdfReviewLedgerService` now flushes each foreign-key layer explicitly: session, then revision,
+then event for creation; revision, then event for later commands. Transaction ownership remains at
+the API boundary, so any failure still rolls the whole operation back. Focused ledger/editing tests
+passed (8 tests), and Ruff format/lint plus single-file MyPy passed. A temporary local API with the
+engine worker disabled then retried the exact failing target
+`86294c50-bbe7-568f-b51f-deb44df88e28`: POST review/session returned HTTP 201 with an open version-1
+session, one created revision and one created event. The temporary API was stopped afterwards. No
+full suite or unrelated checks ran; no provider/extraction worker ran and no commit was created.
+
+## Codex Stage 8D-5 compact score and context-menu UI (2026-08-27)
+
+The review score was rebuilt around a compact Lichess-inspired presentation without changing the
+CCEF contract, ledger commands or backend. The implementation consulted the official Lichess
+`ui/analyse/src/treeView` sources for its paired mainline columns, recursive inline alternatives
+and viewport-aware context-menu separation; no Lichess controller or source code was copied. The
+project deliberately differs from Lichess's shallow-parentheses heuristic: every actual
+alternative has visible branch rails, and nested alternatives draw all ancestor rails.
+
+`reviewMoveLayout.ts` now projects a stable alternative lineage from the existing parent/sibling
+topology. Adjacent rows with the exact same lineage are grouped into one dense variation line;
+different sibling branches and nested branches cannot be merged accidentally. Mainline rows remain
+one fullmove per white/black row. CCEF 1.1 annotations remain in authoritative reading-flow order
+but render as plain, unboxed text lines at their branch depth.
+
+`PdfReviewPage.tsx` removes permanent per-move validity tags, row evidence badges and ellipsis
+menus. Invalid nodes use a red background, ambiguous nodes amber and unvalidated nodes neutral;
+common NAGs use compact chess glyphs. Right-clicking any move or in-score annotation immediately
+navigates the PDF pane to its first evidence page and opens a viewport-clamped menu listing all
+source pages. In edit mode the move menu contains promote/make-mainline/set-NAG/delete, while the
+annotation menu contains locate/edit. Single-click board navigation and all existing semantic
+commands remain intact.
+
+Focused verification only: `reviewMoveLayout.test.ts` and `PdfReviewPage.test.tsx` passed 28 tests.
+The tests cover paired mainline rows, dense same-line variations, distinct/nested branch lineage,
+visible branch rails, invalid/ambiguous styling, absence of permanent status/page badges, source
+auto-navigation and both move/annotation context-menu actions. Focused Prettier and ESLint passed;
+the frontend TypeScript build passed. The shell used Node 24 rather than the repository-requested
+Node 22 and emitted pnpm's existing non-blocking engine warning. No backend, provider, extraction,
+database, full-suite or Stage acceptance command ran, and no commit was created. Browser visual
+inspection at the operator's real viewport remains the next useful check.

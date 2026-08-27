@@ -1,19 +1,37 @@
-import { Alert, Spin, Tag } from 'antd';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Alert, Input, Modal, Spin, Tag, message } from 'antd';
+import { Chess, type Square } from 'chess.js';
+import {
+  type MouseEvent as ReactMouseEvent,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { Chessboard } from 'react-chessboard';
 import ReactMarkdown from 'react-markdown';
 import rehypeSanitize from 'rehype-sanitize';
 import useSWR from 'swr';
 
-import { ApiError, fetchJson } from '../logic/api/client';
-import type { PdfReviewDocument } from '../logic/api/types';
-import { FAST_MOVE_ANIMATION_MS } from './boardInteraction';
+import { ApiError, fetchJson, requestJson } from '../logic/api/client';
+import type {
+  PdfReviewCommandEnvelope,
+  PdfReviewCommandRequest,
+  PdfReviewDocument,
+  PdfReviewSession,
+  PdfReviewSessionEnvelope,
+} from '../logic/api/types';
+import {
+  FAST_MOVE_ANIMATION_MS,
+  lichessSquareStyles,
+} from './boardInteraction';
 import {
   buildReviewMoveRows,
   buildReviewReadingFlow,
+  compactReviewBlocks,
 } from './reviewMoveLayout';
 import type {
   AnnotatedMoveSequenceItem,
+  CompactReviewBlock,
   MoveNode,
   ReviewMoveRow,
   ReviewReadingBlock,
@@ -26,13 +44,46 @@ type ReviewItem = NonNullable<PdfReviewDocument['package']['items']>[number];
 type MoveSequenceItem = Extract<ReviewItem, { kind: 'move_sequence' }>;
 type ProseItem = Extract<ReviewItem, { kind: 'prose' }>;
 type EvidenceRef = ReviewItem['evidence'][number];
+type ReviewCommand = PdfReviewCommandRequest['command'];
+type ReviewEditOperation = Extract<
+  ReviewCommand,
+  { kind: 'edit' }
+>['operation'];
 
-const VALIDATION_LABELS: Record<MoveNode['validation_status'], string> = {
-  valid: '合法',
-  invalid: '非法',
-  ambiguous: '歧义',
-  unvalidated: '未验证',
-};
+interface BoardContext {
+  sequenceId: string;
+  parentNodeId: string | null;
+}
+
+interface PendingLine {
+  context: BoardContext;
+  startFen: string;
+  moves: string[];
+  san: string[];
+}
+
+interface TextEditorState {
+  itemId: string;
+  annotationId: string | null;
+  text: string;
+  textFormat: 'plain' | 'markdown' | null;
+}
+
+interface ContextMenuAction {
+  key: string;
+  label: string;
+  disabled?: boolean;
+  danger?: boolean;
+  onSelect: () => void;
+}
+
+interface ReviewContextMenuState {
+  x: number;
+  y: number;
+  title: string;
+  pages: number[];
+  actions: ContextMenuAction[];
+}
 
 const HEADING_TAGS = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'] as const;
 
@@ -69,15 +120,31 @@ function uniqueEvidencePages(evidence: EvidenceRef[]): number[] {
 
 export function PdfReviewPage({ runId }: { runId: string }) {
   const url = `/api/pdf-extractions/${encodeURIComponent(runId)}/review`;
-  const { data, error, isLoading } = useSWR<PdfReviewDocument>(url, fetchJson);
+  const { data, error, isLoading, mutate } = useSWR<PdfReviewDocument>(
+    url,
+    fetchJson,
+  );
 
   const [selectedPage, setSelectedPage] = useState<number | null>(null);
   const [boardFen, setBoardFen] = useState<string>(START_FEN);
+  const [selectedSquare, setSelectedSquare] = useState<string>();
+  const [boardContext, setBoardContext] = useState<BoardContext | null>(null);
+  const [pendingLine, setPendingLine] = useState<PendingLine | null>(null);
+  const [reviewSession, setReviewSession] = useState<PdfReviewSession | null>(
+    null,
+  );
+  const [editing, setEditing] = useState(false);
+  const [commandBusy, setCommandBusy] = useState(false);
+  const [currentDocument, setCurrentDocument] =
+    useState<PdfReviewDocument | null>(null);
+  const [textEditor, setTextEditor] = useState<TextEditorState | null>(null);
   const initializedRunId = useRef<string | null>(null);
 
-  const pages = data?.pages ?? [];
+  const document = currentDocument ?? data;
 
-  const items = useMemo(() => data?.package.items ?? [], [data]);
+  const pages = document?.pages ?? [];
+
+  const items = useMemo(() => document?.package.items ?? [], [document]);
 
   const initialBoardFen = useMemo(() => {
     const firstSequence = items.find((item) => item.kind === 'move_sequence');
@@ -87,7 +154,7 @@ export function PdfReviewPage({ runId }: { runId: string }) {
   }, [items]);
 
   useEffect(() => {
-    if (data === undefined || initializedRunId.current === runId) {
+    if (document === undefined || initializedRunId.current === runId) {
       return;
     }
     // First verified document for this run identity: initialize both the
@@ -95,8 +162,17 @@ export function PdfReviewPage({ runId }: { runId: string }) {
     // previous run's guard satisfied and must not reset user navigation.
     initializedRunId.current = runId;
     setBoardFen(initialBoardFen);
-    setSelectedPage(data.pages[0]?.physical_page ?? null);
-  }, [data, runId, initialBoardFen]);
+    setSelectedPage(document.pages[0]?.physical_page ?? null);
+  }, [document, runId, initialBoardFen]);
+
+  useEffect(() => {
+    setCurrentDocument(null);
+    setReviewSession(null);
+    setEditing(false);
+    setPendingLine(null);
+    setBoardContext(null);
+    initializedRunId.current = null;
+  }, [runId]);
 
   const activeDescriptor =
     pages.find((page) => page.physical_page === selectedPage) ?? pages[0];
@@ -107,10 +183,50 @@ export function PdfReviewPage({ runId }: { runId: string }) {
     }
   }
 
-  function selectNode(node: MoveNode) {
+  const boardSquareStyles = useMemo(
+    () => lichessSquareStyles(boardFen, selectedSquare, null),
+    [boardFen, selectedSquare],
+  );
+
+  const acknowledgedIssueIds = useMemo(() => {
+    const acknowledged = new Set<string>();
+    for (const event of reviewSession?.events ?? []) {
+      if (event.kind === 'edited') {
+        acknowledged.clear();
+      } else if (event.kind === 'acknowledged') {
+        const issueIds = event.decisions.issue_ids;
+        if (Array.isArray(issueIds)) {
+          for (const issueId of issueIds) {
+            if (typeof issueId === 'string') acknowledged.add(issueId);
+          }
+        }
+      }
+    }
+    return acknowledged;
+  }, [reviewSession]);
+
+  function sequenceById(sequenceId: string): MoveSequenceItem | undefined {
+    const item = items.find(
+      (candidate) =>
+        candidate.kind === 'move_sequence' && candidate.id === sequenceId,
+    );
+    return item?.kind === 'move_sequence' ? item : undefined;
+  }
+
+  function selectNode(sequence: MoveSequenceItem, node: MoveNode) {
     if (node.validation_status === 'valid' && node.fen_after !== null) {
       setBoardFen(node.fen_after);
+      setBoardContext({ sequenceId: sequence.id, parentNodeId: node.id });
+      setPendingLine(null);
+      setSelectedSquare(undefined);
     }
+  }
+
+  function selectSequenceStart(sequence: MoveSequenceItem) {
+    setBoardFen(sequenceStartFen(sequence));
+    setBoardContext({ sequenceId: sequence.id, parentNodeId: null });
+    setPendingLine(null);
+    setSelectedSquare(undefined);
   }
 
   function selectProseAnchor(item: ProseItem) {
@@ -120,6 +236,7 @@ export function PdfReviewPage({ runId }: { runId: string }) {
     }
     if (anchor.kind === 'position') {
       setBoardFen(anchor.fen);
+      setBoardContext(null);
       return;
     }
     const sequence = items.find(
@@ -139,6 +256,7 @@ export function PdfReviewPage({ runId }: { runId: string }) {
       node.fen_after !== null
     ) {
       setBoardFen(node.fen_after);
+      setBoardContext({ sequenceId: sequence.id, parentNodeId: node.id });
     }
   }
 
@@ -152,6 +270,7 @@ export function PdfReviewPage({ runId }: { runId: string }) {
     }
     if (anchor.kind === 'position') {
       setBoardFen(anchor.fen);
+      setBoardContext(null);
       return;
     }
     const node = sequence.nodes.find(
@@ -163,7 +282,260 @@ export function PdfReviewPage({ runId }: { runId: string }) {
     const fen = anchor.relation === 'before' ? node.fen_before : node.fen_after;
     if (fen !== null) {
       setBoardFen(fen);
+      setBoardContext({
+        sequenceId: sequence.id,
+        parentNodeId: anchor.relation === 'after' ? node.id : node.parent_id,
+      });
     }
+  }
+
+  async function beginEditing() {
+    setCommandBusy(true);
+    try {
+      const envelope = await requestJson<PdfReviewSessionEnvelope>(
+        `/api/pdf-extractions/${encodeURIComponent(runId)}/review/session`,
+        { method: 'POST' },
+      );
+      setReviewSession(envelope.session);
+      setEditing(envelope.session.status === 'open');
+      if (envelope.session.status !== 'open') {
+        void message.info('该审核已经结束；重新打开后才能继续编辑');
+      }
+    } catch (requestError) {
+      void message.error(
+        requestError instanceof Error ? requestError.message : '无法开始审核',
+      );
+    } finally {
+      setCommandBusy(false);
+    }
+  }
+
+  async function applyCommand(command: ReviewCommand) {
+    if (reviewSession === null) return;
+    setCommandBusy(true);
+    try {
+      const envelope = await requestJson<PdfReviewCommandEnvelope>(
+        `/api/pdf-review-sessions/${encodeURIComponent(reviewSession.id)}/commands`,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            expected_version: reviewSession.version,
+            command,
+          } satisfies PdfReviewCommandRequest),
+        },
+      );
+      setReviewSession(envelope.session);
+      setCurrentDocument(envelope.document);
+      await mutate(envelope.document, { revalidate: false });
+      setPendingLine(null);
+      setTextEditor(null);
+      if (envelope.session.status !== 'open') setEditing(false);
+      void message.success('审核修改已保存');
+    } catch (requestError) {
+      void message.error(
+        requestError instanceof Error
+          ? requestError.message
+          : '保存审核修改失败',
+      );
+    } finally {
+      setCommandBusy(false);
+    }
+  }
+
+  function applyEdit(operation: ReviewEditOperation) {
+    return applyCommand({ kind: 'edit', operation });
+  }
+
+  function submitBoardMove(source: string, target: string): boolean {
+    if (!editing || boardContext === null || activeDescriptor === undefined) {
+      return false;
+    }
+    const game = new Chess(boardFen);
+    let move;
+    try {
+      const piece = game.get(source as Square);
+      const promotes =
+        piece?.type === 'p' && (target.endsWith('1') || target.endsWith('8'));
+      const requestedPromotion = promotes
+        ? window
+            .prompt('升变为 q（后）、r（车）、b（象）或 n（马）', 'q')
+            ?.trim()
+            .toLowerCase()
+        : undefined;
+      if (
+        promotes &&
+        requestedPromotion !== 'q' &&
+        requestedPromotion !== 'r' &&
+        requestedPromotion !== 'b' &&
+        requestedPromotion !== 'n'
+      ) {
+        return false;
+      }
+      move = game.move({
+        from: source,
+        to: target,
+        promotion: requestedPromotion,
+      });
+    } catch {
+      return false;
+    }
+    if (!move) return false;
+    const uci = `${source}${target}${move.promotion ?? ''}`;
+
+    if (pendingLine === null) {
+      const sequence = sequenceById(boardContext.sequenceId);
+      const existing = sequence?.nodes.find(
+        (node) =>
+          node.parent_id === boardContext.parentNodeId &&
+          node.validation_status === 'valid' &&
+          node.uci_candidate === uci,
+      );
+      if (sequence !== undefined && existing !== undefined) {
+        selectNode(sequence, existing);
+        return true;
+      }
+      setPendingLine({
+        context: boardContext,
+        startFen: boardFen,
+        moves: [uci],
+        san: [move.san],
+      });
+    } else {
+      setPendingLine({
+        ...pendingLine,
+        moves: [...pendingLine.moves, uci],
+        san: [...pendingLine.san, move.san],
+      });
+    }
+    setBoardFen(game.fen());
+    setSelectedSquare(undefined);
+    return true;
+  }
+
+  function selectOwnPiece(square: string) {
+    try {
+      const game = new Chess(boardFen);
+      const piece = game.get(square as Square);
+      setSelectedSquare(piece?.color === game.turn() ? square : undefined);
+    } catch {
+      setSelectedSquare(undefined);
+    }
+  }
+
+  function onSquareClick(square: string) {
+    if (!editing) return;
+    if (!selectedSquare) {
+      selectOwnPiece(square);
+      return;
+    }
+    if (selectedSquare === square) {
+      setSelectedSquare(undefined);
+      return;
+    }
+    if (!submitBoardMove(selectedSquare, square)) selectOwnPiece(square);
+  }
+
+  function cancelPendingLine() {
+    if (pendingLine !== null) setBoardFen(pendingLine.startFen);
+    setPendingLine(null);
+    setSelectedSquare(undefined);
+  }
+
+  function savePendingLine() {
+    if (pendingLine === null || activeDescriptor === undefined) return;
+    void applyEdit({
+      kind: 'add_line',
+      sequence_id: pendingLine.context.sequenceId,
+      parent_node_id: pendingLine.context.parentNodeId,
+      moves: pendingLine.moves,
+      evidence_page: activeDescriptor.physical_page,
+    });
+  }
+
+  function deleteFromHere(sequence: MoveSequenceItem, node: MoveNode) {
+    if (!window.confirm(`从 ${node.move_text} 开始删除这条分支及全部后续？`)) {
+      return;
+    }
+    if (node.fen_before !== null) setBoardFen(node.fen_before);
+    setBoardContext({
+      sequenceId: sequence.id,
+      parentNodeId: node.parent_id,
+    });
+    void applyEdit({
+      kind: 'delete_subtree',
+      sequence_id: sequence.id,
+      node_id: node.id,
+    });
+  }
+
+  function promoteVariation(sequence: MoveSequenceItem, node: MoveNode) {
+    void applyEdit({
+      kind: 'promote_variation',
+      sequence_id: sequence.id,
+      node_id: node.id,
+    });
+  }
+
+  function makeMainline(sequence: MoveSequenceItem, node: MoveNode) {
+    void applyEdit({
+      kind: 'make_mainline',
+      sequence_id: sequence.id,
+      node_id: node.id,
+    });
+  }
+
+  function setNag(sequence: MoveSequenceItem, node: MoveNode) {
+    const entered = window.prompt(
+      '输入 NAG 数字 0–255；留空表示清除',
+      node.nags?.[0]?.toString() ?? '',
+    );
+    if (entered === null) return;
+    const nag = entered.trim() === '' ? null : Number(entered);
+    if (nag !== null && (!Number.isInteger(nag) || nag < 0 || nag > 255)) {
+      void message.error('NAG 必须是 0–255 的整数');
+      return;
+    }
+    void applyEdit({
+      kind: 'set_nag',
+      sequence_id: sequence.id,
+      node_id: node.id,
+      nag,
+    });
+  }
+
+  function openTextEditor(
+    itemId: string,
+    annotationId: string | null,
+    text: string,
+    textFormat: 'plain' | 'markdown' | null,
+  ) {
+    setTextEditor({ itemId, annotationId, text, textFormat });
+  }
+
+  function saveTextEditor() {
+    if (textEditor === null) return;
+    void applyEdit({
+      kind: 'edit_text',
+      item_id: textEditor.itemId,
+      annotation_id: textEditor.annotationId,
+      text: textEditor.text,
+      text_format: textEditor.textFormat,
+    });
+  }
+
+  function acknowledgeIssues(issueIds: string[]) {
+    if (issueIds.length === 0) return;
+    void applyCommand({ kind: 'acknowledge', issue_ids: issueIds });
+  }
+
+  function rejectReview() {
+    const reason = window.prompt('请简要说明拒绝原因');
+    if (reason === null || reason.trim() === '') return;
+    void applyCommand({ kind: 'reject', reason });
+  }
+
+  function reopenReview() {
+    void applyCommand({ kind: 'reopen', reason: null });
   }
 
   if (isLoading) {
@@ -174,7 +546,7 @@ export function PdfReviewPage({ runId }: { runId: string }) {
     );
   }
 
-  if (error !== undefined || data === undefined) {
+  if (error !== undefined || document === undefined) {
     return (
       <Alert
         type="error"
@@ -185,99 +557,279 @@ export function PdfReviewPage({ runId }: { runId: string }) {
     );
   }
 
+  const unacknowledgedWarnings = document.inspection.issues.filter(
+    (issue) => !issue.blocking && !acknowledgedIssueIds.has(issue.issue_id),
+  );
+
   return (
-    <div className="grid grid-cols-1 gap-6 p-6 lg:h-[calc(100vh-9rem)] lg:grid-cols-3 lg:overflow-hidden">
-      <section
-        aria-label="原书页面"
-        className="min-w-0 lg:h-full lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain"
-      >
-        <div className="mb-3 flex flex-wrap gap-2" aria-label="页面切换">
-          {pages.map((page) => (
-            <button
-              key={page.physical_page}
-              type="button"
-              onClick={() => setSelectedPage(page.physical_page)}
-              className="rounded border border-stone-300 bg-white px-2 py-1 text-sm"
-              aria-pressed={
-                page.physical_page === (activeDescriptor?.physical_page ?? null)
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-2 px-6">
+        {reviewSession === null ? (
+          <button
+            type="button"
+            disabled={commandBusy}
+            onClick={() => void beginEditing()}
+            className="rounded bg-emerald-800 px-3 py-1.5 text-sm text-white disabled:opacity-50"
+          >
+            开始编辑审核
+          </button>
+        ) : (
+          <>
+            <Tag
+              color={
+                reviewSession.status === 'open'
+                  ? 'blue'
+                  : reviewSession.status === 'approved'
+                    ? 'green'
+                    : 'red'
               }
             >
-              第 {page.physical_page} 页
-            </button>
-          ))}
-        </div>
-        {activeDescriptor !== undefined ? (
-          <figure className="min-w-0">
-            <img
-              src={activeDescriptor.content_url}
-              alt={`物理页 ${activeDescriptor.physical_page} 图片`}
-              className="max-w-full"
-            />
-            <figcaption className="mt-1 text-sm text-stone-600">
-              物理页 {activeDescriptor.physical_page}
-            </figcaption>
-          </figure>
+              {reviewSession.status === 'open'
+                ? `审核中 · 版本 ${reviewSession.version}`
+                : reviewSession.status === 'approved'
+                  ? `已批准 · 版本 ${reviewSession.version}`
+                  : `已拒绝 · 版本 ${reviewSession.version}`}
+            </Tag>
+            {reviewSession.status === 'open' ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setEditing((value) => !value)}
+                  className="rounded border border-stone-300 bg-white px-3 py-1.5 text-sm"
+                >
+                  {editing ? '暂停编辑' : '继续编辑'}
+                </button>
+                <button
+                  type="button"
+                  disabled={commandBusy || unacknowledgedWarnings.length === 0}
+                  onClick={() =>
+                    acknowledgeIssues(
+                      unacknowledgedWarnings.map((issue) => issue.issue_id),
+                    )
+                  }
+                  className="rounded border border-stone-300 bg-white px-3 py-1.5 text-sm disabled:opacity-40"
+                >
+                  确认全部警告
+                </button>
+                <button
+                  type="button"
+                  disabled={
+                    commandBusy ||
+                    document.inspection.blocking_issue_count > 0 ||
+                    unacknowledgedWarnings.length > 0
+                  }
+                  onClick={() => void applyCommand({ kind: 'approve' })}
+                  className="rounded bg-emerald-800 px-3 py-1.5 text-sm text-white disabled:opacity-40"
+                >
+                  批准
+                </button>
+                <button
+                  type="button"
+                  disabled={commandBusy}
+                  onClick={rejectReview}
+                  className="rounded border border-red-300 bg-white px-3 py-1.5 text-sm text-red-700"
+                >
+                  拒绝
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                disabled={commandBusy}
+                onClick={reopenReview}
+                className="rounded border border-stone-300 bg-white px-3 py-1.5 text-sm"
+              >
+                重新打开
+              </button>
+            )}
+          </>
+        )}
+        {editing ? (
+          <span className="text-sm text-stone-600">
+            点击棋谱选择局面，然后直接在棋盘走棋
+          </span>
         ) : null}
-      </section>
+      </div>
+      <div className="grid grid-cols-1 gap-6 px-6 pb-6 lg:h-[calc(100vh-12rem)] lg:grid-cols-3 lg:overflow-hidden">
+        <section
+          aria-label="原书页面"
+          className="min-w-0 lg:h-full lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain"
+        >
+          <div className="mb-3 flex flex-wrap gap-2" aria-label="页面切换">
+            {pages.map((page) => (
+              <button
+                key={page.physical_page}
+                type="button"
+                onClick={() => setSelectedPage(page.physical_page)}
+                className="rounded border border-stone-300 bg-white px-2 py-1 text-sm"
+                aria-pressed={
+                  page.physical_page ===
+                  (activeDescriptor?.physical_page ?? null)
+                }
+              >
+                第 {page.physical_page} 页
+              </button>
+            ))}
+          </div>
+          {activeDescriptor !== undefined ? (
+            <figure className="min-w-0">
+              <img
+                src={activeDescriptor.content_url}
+                alt={`物理页 ${activeDescriptor.physical_page} 图片`}
+                className="max-w-full"
+              />
+              <figcaption className="mt-1 text-sm text-stone-600">
+                物理页 {activeDescriptor.physical_page}
+              </figcaption>
+            </figure>
+          ) : null}
+        </section>
 
-      <section className="min-w-0">
-        <div className="mx-auto max-w-[560px]">
-          <Chessboard
-            id="pdf-review-board"
-            position={boardFen}
-            animationDuration={FAST_MOVE_ANIMATION_MS}
-            arePiecesDraggable={false}
-            customBoardStyle={{
-              borderRadius: '8px',
-              boxShadow: '0 12px 30px rgba(28,25,23,.16)',
-            }}
-          />
-        </div>
-      </section>
-
-      <section
-        aria-label="候选内容与自动检查"
-        tabIndex={0}
-        className="min-w-0 lg:h-full lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain"
-      >
-        <div className="max-w-prose space-y-4">
-          {items.map((item) => (
-            <ReviewItemView
-              key={item.id}
-              item={item}
-              onSelectPage={selectPage}
-              onSelectNode={selectNode}
-              onSelectAnchor={selectProseAnchor}
-              onSelectAnnotation={selectSequenceAnnotation}
-              onSelectSequenceStart={(sequence) =>
-                setBoardFen(sequenceStartFen(sequence))
-              }
+        <section className="min-w-0">
+          <div className="mx-auto max-w-[560px]">
+            <Chessboard
+              id="pdf-review-board"
+              position={boardFen}
+              animationDuration={FAST_MOVE_ANIMATION_MS}
+              arePiecesDraggable={editing && boardContext !== null}
+              onPieceDrop={(source, target) => submitBoardMove(source, target)}
+              onPieceDragBegin={(_, source) => selectOwnPiece(source)}
+              onPieceDragEnd={() => setSelectedSquare(undefined)}
+              onSquareClick={onSquareClick}
+              customSquareStyles={boardSquareStyles}
+              customBoardStyle={{
+                borderRadius: '8px',
+                boxShadow: '0 12px 30px rgba(28,25,23,.16)',
+              }}
             />
-          ))}
-        </div>
-        <IssuesView document={data} onSelectPage={selectPage} />
-      </section>
+            {editing && boardContext === null ? (
+              <Alert
+                className="mt-3"
+                type="info"
+                title="先点击一条棋谱的起点或棋步，再从该局面录入"
+              />
+            ) : null}
+            {pendingLine !== null ? (
+              <div className="mt-3 rounded border border-emerald-300 bg-emerald-50 p-3">
+                <p className="text-sm text-stone-800">
+                  待保存线路：{pendingLine.san.join(' ')} · 来源第{' '}
+                  {activeDescriptor?.physical_page} 页
+                </p>
+                <div className="mt-2 flex gap-2">
+                  <button
+                    type="button"
+                    disabled={commandBusy}
+                    onClick={savePendingLine}
+                    className="rounded bg-emerald-800 px-3 py-1 text-sm text-white"
+                  >
+                    保存线路
+                  </button>
+                  <button
+                    type="button"
+                    disabled={commandBusy}
+                    onClick={cancelPendingLine}
+                    className="rounded border border-stone-300 bg-white px-3 py-1 text-sm"
+                  >
+                    撤销本次录入
+                  </button>
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </section>
+
+        <section
+          aria-label="候选内容与自动检查"
+          tabIndex={0}
+          className="min-w-0 lg:h-full lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain"
+        >
+          <div className="max-w-prose space-y-4">
+            {items.map((item) => (
+              <ReviewItemView
+                key={item.id}
+                item={item}
+                editable={editing && !commandBusy}
+                onSelectPage={selectPage}
+                onSelectNode={selectNode}
+                onSelectAnchor={selectProseAnchor}
+                onSelectAnnotation={selectSequenceAnnotation}
+                onSelectSequenceStart={selectSequenceStart}
+                onDeleteFromHere={deleteFromHere}
+                onPromoteVariation={promoteVariation}
+                onMakeMainline={makeMainline}
+                onSetNag={setNag}
+                onEditText={openTextEditor}
+              />
+            ))}
+          </div>
+          <IssuesView
+            document={document}
+            acknowledgedIssueIds={acknowledgedIssueIds}
+            editable={editing && !commandBusy}
+            onAcknowledge={(issueId) => acknowledgeIssues([issueId])}
+            onSelectPage={selectPage}
+          />
+        </section>
+      </div>
+      <Modal
+        title="编辑文字"
+        open={textEditor !== null}
+        confirmLoading={commandBusy}
+        okText="保存"
+        cancelText="取消"
+        onOk={saveTextEditor}
+        onCancel={() => setTextEditor(null)}
+      >
+        <Input.TextArea
+          autoSize={{ minRows: 5, maxRows: 16 }}
+          value={textEditor?.text ?? ''}
+          onChange={(event) =>
+            setTextEditor((current) =>
+              current === null
+                ? null
+                : { ...current, text: event.target.value },
+            )
+          }
+        />
+      </Modal>
     </div>
   );
 }
 
 function ReviewItemView({
   item,
+  editable,
   onSelectPage,
   onSelectNode,
   onSelectAnchor,
   onSelectAnnotation,
   onSelectSequenceStart,
+  onDeleteFromHere,
+  onPromoteVariation,
+  onMakeMainline,
+  onSetNag,
+  onEditText,
 }: {
   item: ReviewItem;
+  editable: boolean;
   onSelectPage: (page: number) => void;
-  onSelectNode: (node: MoveNode) => void;
+  onSelectNode: (sequence: MoveSequenceItem, node: MoveNode) => void;
   onSelectAnchor: (item: ProseItem) => void;
   onSelectAnnotation: (
     sequence: AnnotatedMoveSequenceItem,
     annotation: SequenceAnnotation,
   ) => void;
   onSelectSequenceStart: (item: MoveSequenceItem) => void;
+  onDeleteFromHere: (sequence: MoveSequenceItem, node: MoveNode) => void;
+  onPromoteVariation: (sequence: MoveSequenceItem, node: MoveNode) => void;
+  onMakeMainline: (sequence: MoveSequenceItem, node: MoveNode) => void;
+  onSetNag: (sequence: MoveSequenceItem, node: MoveNode) => void;
+  onEditText: (
+    itemId: string,
+    annotationId: string | null,
+    text: string,
+    textFormat: 'plain' | 'markdown' | null,
+  ) => void;
 }) {
   switch (item.kind) {
     case 'heading': {
@@ -287,6 +839,11 @@ function ReviewItemView({
         <Heading className="mt-4 mb-2 font-semibold text-stone-900">
           {item.text}
           <EvidencePages evidence={item.evidence} onSelectPage={onSelectPage} />
+          {editable ? (
+            <EditTextButton
+              onClick={() => onEditText(item.id, null, item.text, null)}
+            />
+          ) : null}
         </Heading>
       );
     }
@@ -314,6 +871,18 @@ function ReviewItemView({
               evidence={item.evidence}
               onSelectPage={onSelectPage}
             />
+            {editable ? (
+              <EditTextButton
+                onClick={() =>
+                  onEditText(
+                    item.id,
+                    null,
+                    item.text,
+                    item.text_format ?? 'plain',
+                  )
+                }
+              />
+            ) : null}
           </span>
         </article>
       );
@@ -322,10 +891,16 @@ function ReviewItemView({
       return (
         <MoveSequenceView
           item={item}
+          editable={editable}
           onSelectPage={onSelectPage}
           onSelectNode={onSelectNode}
           onSelectAnnotation={onSelectAnnotation}
           onSelectStart={onSelectSequenceStart}
+          onDeleteFromHere={onDeleteFromHere}
+          onPromoteVariation={onPromoteVariation}
+          onMakeMainline={onMakeMainline}
+          onSetNag={onSetNag}
+          onEditText={onEditText}
         />
       );
     }
@@ -379,67 +954,196 @@ function ReviewItemView({
 
 function MoveSequenceView({
   item,
+  editable,
   onSelectPage,
   onSelectNode,
   onSelectAnnotation,
   onSelectStart,
+  onDeleteFromHere,
+  onPromoteVariation,
+  onMakeMainline,
+  onSetNag,
+  onEditText,
 }: {
   item: MoveSequenceItem;
+  editable: boolean;
   onSelectPage: (page: number) => void;
-  onSelectNode: (node: MoveNode) => void;
+  onSelectNode: (sequence: MoveSequenceItem, node: MoveNode) => void;
   onSelectAnnotation: (
     sequence: AnnotatedMoveSequenceItem,
     annotation: SequenceAnnotation,
   ) => void;
   onSelectStart: (item: MoveSequenceItem) => void;
+  onDeleteFromHere: (sequence: MoveSequenceItem, node: MoveNode) => void;
+  onPromoteVariation: (sequence: MoveSequenceItem, node: MoveNode) => void;
+  onMakeMainline: (sequence: MoveSequenceItem, node: MoveNode) => void;
+  onSetNag: (sequence: MoveSequenceItem, node: MoveNode) => void;
+  onEditText: (
+    itemId: string,
+    annotationId: string | null,
+    text: string,
+    textFormat: 'plain' | 'markdown' | null,
+  ) => void;
 }) {
-  const blocks = useMemo<ReviewReadingBlock[]>(() => {
+  const blocks = useMemo<CompactReviewBlock[]>(() => {
+    let readingBlocks: ReviewReadingBlock[];
     if (isAnnotatedMoveSequence(item)) {
-      return buildReviewReadingFlow(item);
+      readingBlocks = buildReviewReadingFlow(item);
+    } else {
+      readingBlocks = buildReviewMoveRows(item.nodes).map((row) => ({
+        kind: 'move_row' as const,
+        key: `move:${row.key}`,
+        row,
+      }));
     }
-    return buildReviewMoveRows(item.nodes).map((row) => ({
-      kind: 'move_row' as const,
-      key: `move:${row.key}`,
-      row,
-    }));
+    return compactReviewBlocks(readingBlocks);
   }, [item]);
+  const [contextMenu, setContextMenu] = useState<ReviewContextMenuState | null>(
+    null,
+  );
+
+  function openContextMenu(
+    event: ReactMouseEvent,
+    title: string,
+    evidence: EvidenceRef[],
+    actions: ContextMenuAction[],
+  ) {
+    event.preventDefault();
+    event.stopPropagation();
+    const pages = uniqueEvidencePages(evidence);
+    if (pages[0] !== undefined) onSelectPage(pages[0]);
+    const width = 224;
+    const estimatedHeight = 76 + (pages.length + actions.length) * 34;
+    setContextMenu({
+      x: Math.max(8, Math.min(event.clientX, window.innerWidth - width - 8)),
+      y: Math.max(
+        8,
+        Math.min(event.clientY, window.innerHeight - estimatedHeight - 8),
+      ),
+      title,
+      pages,
+      actions,
+    });
+  }
+
+  function openMoveContextMenu(event: ReactMouseEvent, node: MoveNode) {
+    const actions: ContextMenuAction[] = [];
+    if (editable) {
+      actions.push(
+        {
+          key: 'promote',
+          label: '提升变招',
+          disabled: node.sibling_order === 0,
+          onSelect: () => onPromoteVariation(item, node),
+        },
+        {
+          key: 'mainline',
+          label: '设为主线',
+          disabled: isNodeOnMainline(item, node),
+          onSelect: () => onMakeMainline(item, node),
+        },
+        {
+          key: 'nag',
+          label: '设置评价',
+          onSelect: () => onSetNag(item, node),
+        },
+        {
+          key: 'delete',
+          label: '从此处开始删除',
+          danger: true,
+          onSelect: () => onDeleteFromHere(item, node),
+        },
+      );
+    }
+    openContextMenu(event, moveDisplayName(node), node.evidence, actions);
+  }
+
+  function openAnnotationContextMenu(
+    event: ReactMouseEvent,
+    annotation: SequenceAnnotation,
+  ) {
+    const actions: ContextMenuAction[] = [];
+    if (annotation.anchor !== null && isAnnotatedMoveSequence(item)) {
+      actions.push({
+        key: 'locate',
+        label: '定位注释局面',
+        onSelect: () => onSelectAnnotation(item, annotation),
+      });
+    }
+    if (editable) {
+      actions.push({
+        key: 'edit',
+        label: '编辑注释',
+        onSelect: () =>
+          onEditText(
+            item.id,
+            annotation.id,
+            annotation.text,
+            annotation.text_format ?? 'plain',
+          ),
+      });
+    }
+    openContextMenu(event, '谱内注释', annotation.evidence, actions);
+  }
+
   return (
-    <section className="rounded border border-stone-200 bg-white p-3">
-      <header className="mb-2 flex flex-wrap items-center gap-2">
+    <section className="overflow-hidden border-y border-stone-200 bg-white">
+      <header className="flex flex-wrap items-center gap-2 border-b border-stone-200 px-2 py-1.5">
         <h3 className="font-semibold text-stone-900">{item.title ?? '棋谱'}</h3>
         <button
           type="button"
           onClick={() => onSelectStart(item)}
-          className="rounded border border-stone-300 bg-white px-2 py-0.5 text-xs"
+          className="rounded px-2 py-0.5 text-xs text-stone-600 hover:bg-stone-100"
         >
           回到初始局面
         </button>
-        <EvidencePages evidence={item.evidence} onSelectPage={onSelectPage} />
       </header>
-      <div className="space-y-1">
-        {blocks.map((block) =>
-          block.kind === 'move_row' ? (
-            <MoveRow
-              key={block.key}
-              row={block.row}
-              onSelectPage={onSelectPage}
-              onSelectNode={onSelectNode}
-            />
-          ) : (
+      <div>
+        {blocks.map((block) => {
+          if (block.kind === 'mainline_row') {
+            return (
+              <MainlineMoveRow
+                key={block.key}
+                sequence={item}
+                row={block.row}
+                onSelectNode={onSelectNode}
+                onContextMenu={openMoveContextMenu}
+              />
+            );
+          }
+          if (block.kind === 'variation_line') {
+            return (
+              <VariationLine
+                key={block.key}
+                sequence={item}
+                block={block}
+                onSelectNode={onSelectNode}
+                onContextMenu={openMoveContextMenu}
+              />
+            );
+          }
+          return (
             <SequenceAnnotationView
               key={block.key}
               annotation={block.annotation}
               variationDepth={block.variationDepth}
-              onSelectPage={onSelectPage}
               onSelectAnchor={() => {
                 if (isAnnotatedMoveSequence(item)) {
                   onSelectAnnotation(item, block.annotation);
                 }
               }}
+              onContextMenu={(event) =>
+                openAnnotationContextMenu(event, block.annotation)
+              }
             />
-          ),
-        )}
+          );
+        })}
       </div>
+      <ReviewContextMenu
+        menu={contextMenu}
+        onSelectPage={onSelectPage}
+        onClose={() => setContextMenu(null)}
+      />
     </section>
   );
 }
@@ -447,155 +1151,397 @@ function MoveSequenceView({
 function SequenceAnnotationView({
   annotation,
   variationDepth,
-  onSelectPage,
   onSelectAnchor,
+  onContextMenu,
 }: {
   annotation: SequenceAnnotation;
   variationDepth: number;
-  onSelectPage: (page: number) => void;
   onSelectAnchor: () => void;
+  onContextMenu: (event: ReactMouseEvent) => void;
 }) {
-  const visualDepth = Math.min(4, variationDepth);
+  const visualDepth = Math.min(5, variationDepth);
+  const content =
+    annotation.text_format === 'markdown' ? (
+      <ReactMarkdown rehypePlugins={[rehypeSanitize]}>
+        {annotation.text}
+      </ReactMarkdown>
+    ) : (
+      <span className="whitespace-pre-wrap">{annotation.text}</span>
+    );
   return (
-    <aside
+    <div
       data-annotation-id={annotation.id}
       data-variation-depth={variationDepth}
-      style={{ marginLeft: `${visualDepth * 16}px` }}
-      className="rounded border-l-4 border-emerald-400 bg-emerald-50 px-3 py-2 text-sm text-stone-800"
+      style={
+        variationDepth > 0
+          ? { paddingLeft: `${visualDepth * 14 + 8}px` }
+          : undefined
+      }
+      onContextMenu={onContextMenu}
+      className={`relative py-1 pr-2 text-sm leading-5 text-stone-700 ${
+        variationDepth > 0 ? '' : 'border-b border-stone-100 pl-9'
+      }`}
     >
-      {annotation.text_format === 'markdown' ? (
-        <ReactMarkdown rehypePlugins={[rehypeSanitize]}>
-          {annotation.text}
-        </ReactMarkdown>
+      <BranchRails depth={visualDepth} />
+      {annotation.anchor !== null ? (
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={onSelectAnchor}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' || event.key === ' ') onSelectAnchor();
+          }}
+          className="block w-full text-left italic hover:text-stone-950"
+        >
+          {content}
+        </div>
       ) : (
-        <p className="whitespace-pre-wrap">{annotation.text}</p>
+        <div className="italic">{content}</div>
       )}
-      <div className="mt-1 flex flex-wrap items-center gap-1">
-        <Tag color="green">谱内注释</Tag>
-        {annotation.anchor !== null ? (
-          <button
-            type="button"
-            onClick={onSelectAnchor}
-            className="rounded border border-stone-300 bg-white px-2 py-0.5 text-xs"
-          >
-            定位注释局面
-          </button>
-        ) : null}
-        <EvidencePages
-          evidence={annotation.evidence}
-          onSelectPage={onSelectPage}
-        />
-      </div>
-    </aside>
+    </div>
   );
 }
 
-function MoveRow({
+function MainlineMoveRow({
+  sequence,
   row,
-  onSelectPage,
   onSelectNode,
+  onContextMenu,
 }: {
+  sequence: MoveSequenceItem;
   row: ReviewMoveRow;
-  onSelectPage: (page: number) => void;
-  onSelectNode: (node: MoveNode) => void;
+  onSelectNode: (sequence: MoveSequenceItem, node: MoveNode) => void;
+  onContextMenu: (event: ReactMouseEvent, node: MoveNode) => void;
 }) {
-  const visualDepth = Math.min(4, row.variationDepth);
-  const gutter =
-    row.fallback === null && row.moveNumber !== null
-      ? row.white === null
-        ? `${row.moveNumber}...`
-        : `${row.moveNumber}.`
-      : '';
   return (
     <div
       data-variation-depth={row.variationDepth}
-      style={{ paddingLeft: `${visualDepth * 16}px` }}
-      className={
-        row.variationDepth > 0
-          ? 'rounded border-l-2 border-amber-300 bg-amber-50/40 px-1 py-1'
-          : 'py-1'
-      }
+      className="grid min-h-8 grid-cols-[2.25rem_1fr_1fr] items-stretch border-b border-stone-100 last:border-b-0"
     >
-      <div className="grid grid-cols-[2.5rem_1fr_1fr] items-center gap-2">
-        <span className="font-mono text-xs text-stone-500">{gutter}</span>
-        {row.fallback !== null ? (
-          <div className="col-span-2">
-            <MoveCell node={row.fallback} onSelectNode={onSelectNode} />
-          </div>
-        ) : (
-          <>
-            <div className="min-w-0">
-              {row.white !== null ? (
-                <MoveCell node={row.white} onSelectNode={onSelectNode} />
-              ) : null}
-            </div>
-            <div className="min-w-0">
-              {row.black !== null ? (
-                <MoveCell node={row.black} onSelectNode={onSelectNode} />
-              ) : null}
-            </div>
-          </>
-        )}
-      </div>
-      {row.evidencePages.length > 0 ? (
-        <div className="mt-0.5">
-          <EvidencePages
-            evidence={rowEvidenceRefs(row.evidencePages)}
-            onSelectPage={onSelectPage}
+      <span className="flex items-center justify-center bg-stone-50 font-mono text-xs text-stone-400">
+        {mainlineGutter(row)}
+      </span>
+      {row.fallback !== null ? (
+        <div className="col-span-2 min-w-0">
+          <MoveCell
+            sequence={sequence}
+            node={row.fallback}
+            onSelectNode={onSelectNode}
+            onContextMenu={onContextMenu}
+            fullWidth
           />
+        </div>
+      ) : (
+        <>
+          <div className="min-w-0 border-l border-stone-100">
+            {row.white !== null ? (
+              <MoveCell
+                sequence={sequence}
+                node={row.white}
+                onSelectNode={onSelectNode}
+                onContextMenu={onContextMenu}
+                fullWidth
+              />
+            ) : null}
+          </div>
+          <div className="min-w-0 border-l border-stone-100">
+            {row.black !== null ? (
+              <MoveCell
+                sequence={sequence}
+                node={row.black}
+                onSelectNode={onSelectNode}
+                onContextMenu={onContextMenu}
+                fullWidth
+              />
+            ) : null}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function VariationLine({
+  sequence,
+  block,
+  onSelectNode,
+  onContextMenu,
+}: {
+  sequence: MoveSequenceItem;
+  block: Extract<CompactReviewBlock, { kind: 'variation_line' }>;
+  onSelectNode: (sequence: MoveSequenceItem, node: MoveNode) => void;
+  onContextMenu: (event: ReactMouseEvent, node: MoveNode) => void;
+}) {
+  const visualDepth = Math.min(5, block.variationDepth);
+  return (
+    <div
+      data-variation-depth={block.variationDepth}
+      data-variation-path={block.variationPath.join('/')}
+      style={{ paddingLeft: `${visualDepth * 14 + 8}px` }}
+      className="relative py-1 pr-2 text-sm leading-6"
+    >
+      <BranchRails depth={visualDepth} />
+      <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0">
+        {block.rows.map((row) => (
+          <span key={row.key} className="inline-flex items-baseline gap-1">
+            {row.moveNumber !== null ? (
+              <span className="font-mono text-xs text-stone-400">
+                {variationGutter(row)}
+              </span>
+            ) : null}
+            {row.fallback !== null ? (
+              <MoveCell
+                sequence={sequence}
+                node={row.fallback}
+                onSelectNode={onSelectNode}
+                onContextMenu={onContextMenu}
+              />
+            ) : (
+              <>
+                {row.white !== null ? (
+                  <MoveCell
+                    sequence={sequence}
+                    node={row.white}
+                    onSelectNode={onSelectNode}
+                    onContextMenu={onContextMenu}
+                  />
+                ) : null}
+                {row.black !== null ? (
+                  <MoveCell
+                    sequence={sequence}
+                    node={row.black}
+                    onSelectNode={onSelectNode}
+                    onContextMenu={onContextMenu}
+                  />
+                ) : null}
+              </>
+            )}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function BranchRails({ depth }: { depth: number }) {
+  if (depth === 0) return null;
+  return (
+    <span aria-hidden="true">
+      {Array.from({ length: depth }, (_, index) => (
+        <span
+          key={index}
+          data-branch-rail={index + 1}
+          style={{ left: `${index * 14}px` }}
+          className="absolute inset-y-0 border-l-2 border-stone-300"
+        />
+      ))}
+      <span
+        style={{ left: `${(depth - 1) * 14}px` }}
+        className="absolute top-3 w-3 border-t-2 border-stone-300"
+      />
+    </span>
+  );
+}
+
+function MoveCell({
+  sequence,
+  node,
+  onSelectNode,
+  onContextMenu,
+  fullWidth = false,
+}: {
+  sequence: MoveSequenceItem;
+  node: MoveNode;
+  onSelectNode: (sequence: MoveSequenceItem, node: MoveNode) => void;
+  onContextMenu: (event: ReactMouseEvent, node: MoveNode) => void;
+  fullWidth?: boolean;
+}) {
+  const isNavigable =
+    node.validation_status === 'valid' && node.fen_after !== null;
+  const validationClass = moveValidationClass(node.validation_status);
+  const content = (
+    <>
+      <span>{node.move_text}</span>
+      {node.nags !== undefined && node.nags.length > 0 ? (
+        <span className="ml-1 font-semibold text-amber-700">
+          {node.nags.map(nagLabel).join('')}
+        </span>
+      ) : null}
+    </>
+  );
+  return isNavigable ? (
+    <button
+      type="button"
+      aria-label={node.move_text}
+      data-validation-status={node.validation_status}
+      onClick={() => onSelectNode(sequence, node)}
+      onContextMenu={(event) => onContextMenu(event, node)}
+      className={`${fullWidth ? 'flex h-full w-full' : 'inline-flex'} min-w-0 items-center rounded-sm px-1.5 py-0.5 text-left text-sm leading-5 hover:bg-emerald-100 ${validationClass}`}
+    >
+      {content}
+    </button>
+  ) : (
+    <span
+      aria-disabled="true"
+      tabIndex={0}
+      data-validation-status={node.validation_status}
+      onContextMenu={(event) => onContextMenu(event, node)}
+      className={`${fullWidth ? 'flex h-full w-full' : 'inline-flex'} min-w-0 items-center rounded-sm px-1.5 py-0.5 text-sm leading-5 ${validationClass}`}
+    >
+      {content}
+    </span>
+  );
+}
+
+function ReviewContextMenu({
+  menu,
+  onSelectPage,
+  onClose,
+}: {
+  menu: ReviewContextMenuState | null;
+  onSelectPage: (page: number) => void;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    if (menu === null) return;
+    const close = () => onClose();
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    document.addEventListener('click', close);
+    window.addEventListener('resize', close);
+    document.addEventListener('keydown', closeOnEscape);
+    return () => {
+      document.removeEventListener('click', close);
+      window.removeEventListener('resize', close);
+      document.removeEventListener('keydown', closeOnEscape);
+    };
+  }, [menu, onClose]);
+
+  if (menu === null) return null;
+  return (
+    <div
+      role="menu"
+      aria-label={`${menu.title} 操作菜单`}
+      style={{ left: menu.x, top: menu.y }}
+      onClick={(event) => event.stopPropagation()}
+      onContextMenu={(event) => event.preventDefault()}
+      className="fixed z-50 w-56 overflow-hidden rounded-md border border-stone-300 bg-white py-1 text-sm shadow-xl"
+    >
+      <p className="truncate border-b border-stone-100 px-3 py-1.5 font-semibold text-stone-800">
+        {menu.title}
+      </p>
+      {menu.pages.length > 0 ? (
+        menu.pages.map((page) => (
+          <button
+            key={page}
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              onSelectPage(page);
+              onClose();
+            }}
+            className="block w-full px-3 py-1.5 text-left text-stone-600 hover:bg-stone-100"
+          >
+            来源：第 {page} 页
+          </button>
+        ))
+      ) : (
+        <p className="px-3 py-1.5 text-stone-400">无来源页</p>
+      )}
+      {menu.actions.length > 0 ? (
+        <div className="border-t border-stone-100 pt-1">
+          {menu.actions.map((action) => (
+            <button
+              key={action.key}
+              type="button"
+              role="menuitem"
+              disabled={action.disabled}
+              onClick={() => {
+                action.onSelect();
+                onClose();
+              }}
+              className={`block w-full px-3 py-1.5 text-left hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-35 ${
+                action.danger
+                  ? 'text-red-700 hover:bg-red-50'
+                  : 'text-stone-800'
+              }`}
+            >
+              {action.label}
+            </button>
+          ))}
         </div>
       ) : null}
     </div>
   );
 }
 
-function MoveCell({
-  node,
-  onSelectNode,
-}: {
-  node: MoveNode;
-  onSelectNode: (node: MoveNode) => void;
-}) {
-  const isNavigable =
-    node.validation_status === 'valid' && node.fen_after !== null;
+function mainlineGutter(row: ReviewMoveRow): string {
+  if (row.fallback !== null || row.moveNumber === null) return '';
+  return row.white === null ? `${row.moveNumber}...` : String(row.moveNumber);
+}
+
+function variationGutter(row: ReviewMoveRow): string {
+  if (row.moveNumber === null) return '';
+  return row.white === null ? `${row.moveNumber}...` : `${row.moveNumber}.`;
+}
+
+function moveDisplayName(node: MoveNode): string {
+  if (node.move_number === null || node.side_to_move === null) {
+    return node.move_text;
+  }
+  const prefix =
+    node.side_to_move === 'w'
+      ? `${node.move_number}.`
+      : `${node.move_number}...`;
+  return `${prefix} ${node.move_text}`;
+}
+
+function moveValidationClass(status: MoveNode['validation_status']): string {
+  if (status === 'invalid') return 'bg-red-100 text-red-800';
+  if (status === 'ambiguous') return 'bg-amber-100 text-amber-900';
+  if (status === 'unvalidated') return 'bg-stone-200 text-stone-600';
+  return 'text-stone-800';
+}
+
+function nagLabel(nag: number): string {
   return (
-    <span className="inline-flex flex-wrap items-center gap-1">
-      {isNavigable ? (
-        <button
-          type="button"
-          onClick={() => onSelectNode(node)}
-          className="rounded border border-stone-300 bg-white px-2 py-0.5 text-sm"
-        >
-          {node.move_text}
-        </button>
-      ) : (
-        <span
-          aria-disabled="true"
-          className="rounded border border-stone-200 bg-stone-100 px-2 py-0.5 text-sm text-stone-400"
-        >
-          {node.move_text}
-        </span>
-      )}
-      <Tag color={node.validation_status === 'valid' ? 'green' : 'default'}>
-        {VALIDATION_LABELS[node.validation_status]}
-      </Tag>
-      {node.nags !== undefined && node.nags.length > 0 ? (
-        <span className="font-mono text-xs text-stone-500">
-          NAG {node.nags.join(' ')}
-        </span>
-      ) : null}
-    </span>
+    {
+      1: '!',
+      2: '?',
+      3: '!!',
+      4: '??',
+      5: '!?',
+      6: '?!',
+    }[nag] ?? `$${nag}`
   );
 }
 
-function rowEvidenceRefs(pages: number[]): EvidenceRef[] {
-  return pages.map((page) => ({
-    page,
-    bbox: null,
-    start_offset: null,
-    end_offset: null,
-    fragment_sha256: null,
-  }));
+function isNodeOnMainline(
+  sequence: MoveSequenceItem,
+  selected: MoveNode,
+): boolean {
+  let node: MoveNode | undefined = selected;
+  while (node !== undefined) {
+    if (node.sibling_order > 0) return false;
+    node =
+      node.parent_id === null
+        ? undefined
+        : sequence.nodes.find((candidate) => candidate.id === node?.parent_id);
+  }
+  return true;
+}
+
+function EditTextButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="ml-1 rounded border border-stone-300 bg-white px-2 py-0.5 text-xs font-normal"
+    >
+      编辑文字
+    </button>
+  );
 }
 
 function EvidencePages({
@@ -627,9 +1573,15 @@ function EvidencePages({
 
 function IssuesView({
   document,
+  acknowledgedIssueIds,
+  editable,
+  onAcknowledge,
   onSelectPage,
 }: {
   document: PdfReviewDocument;
+  acknowledgedIssueIds: Set<string>;
+  editable: boolean;
+  onAcknowledge: (issueId: string) => void;
   onSelectPage: (page: number) => void;
 }) {
   const { inspection } = document;
@@ -666,6 +1618,19 @@ function IssuesView({
                 evidence={issue.evidence}
                 onSelectPage={onSelectPage}
               />
+              {!issue.blocking ? (
+                acknowledgedIssueIds.has(issue.issue_id) ? (
+                  <Tag color="green">已确认</Tag>
+                ) : editable ? (
+                  <button
+                    type="button"
+                    onClick={() => onAcknowledge(issue.issue_id)}
+                    className="ml-2 rounded border border-stone-300 bg-white px-2 py-0.5 text-xs"
+                  >
+                    确认此警告
+                  </button>
+                ) : null
+              ) : null}
             </li>
           ))}
         </ol>

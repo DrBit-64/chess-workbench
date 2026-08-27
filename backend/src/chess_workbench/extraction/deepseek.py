@@ -5,8 +5,9 @@ official DeepSeek OpenAI-compatible Chat Completions endpoint (packet
 DS-STAGE8-DEEPSEEK-ADAPTER-01).  It is transport only:
 
 - fixed to model ``deepseek-v4-flash`` with an explicit, constructor-owned thinking mode;
-- requests JSON Object output and injects the caller-owned JSON Schema as a
-  deterministic system instruction;
+- requests JSON Object output by default, while allowing a caller to omit the
+  provider-side switch when it conflicts with thinking mode, and always injects
+  the caller-owned JSON Schema as a deterministic system instruction;
 - preserves the raw assistant content for the later decoder;
 - maps transport/API failures into the provider-neutral error contract.
 
@@ -42,6 +43,7 @@ _MAX_OUTPUT_TOKENS_LIMIT_MIN = 1
 _MAX_OUTPUT_TOKENS_LIMIT_MAX = 384_000
 
 _INVALID_RESPONSE_MESSAGE = "DeepSeek returned an invalid response"
+_EMPTY_FINAL_CONTENT_MESSAGE = "DeepSeek returned no final content; retry manually"
 _OUTPUT_LIMIT_MESSAGE = "Requested output tokens exceed the configured DeepSeek output limit"
 _TIMEOUT_MESSAGE = "DeepSeek request timed out"
 _UNAVAILABLE_MESSAGE = "DeepSeek transport unavailable"
@@ -77,6 +79,12 @@ def _system_instruction(request: StructuredGenerationRequest) -> str:
 
 def _invalid_response_error() -> StructuredGenerationProviderError:
     return StructuredGenerationProviderError("invalid_response", _INVALID_RESPONSE_MESSAGE, False)
+
+
+def _empty_final_content_error() -> StructuredGenerationProviderError:
+    return StructuredGenerationProviderError(
+        "invalid_response", _EMPTY_FINAL_CONTENT_MESSAGE, False
+    )
 
 
 def _invalid_shape(diagnostic: str) -> _InvalidResponseShapeError:
@@ -202,6 +210,7 @@ class DeepSeekV4FlashProvider:
         timeout_seconds: float = 600.0,
         max_output_tokens_limit: int = 128_000,
         thinking_enabled: bool = False,
+        json_output_enabled: bool = True,
         transport: httpx.AsyncBaseTransport | None = None,
         invalid_response_recorder: DeepSeekInvalidResponseRecorder | None = None,
     ) -> None:
@@ -229,6 +238,9 @@ class DeepSeekV4FlashProvider:
         if type(thinking_enabled) is not bool:
             raise TypeError("thinking_enabled must be an actual boolean")
         self._thinking_enabled = thinking_enabled
+        if type(json_output_enabled) is not bool:
+            raise TypeError("json_output_enabled must be an actual boolean")
+        self._json_output_enabled = json_output_enabled
         self._transport = transport
         if invalid_response_recorder is not None and not callable(invalid_response_recorder):
             raise TypeError("invalid_response_recorder must be callable")
@@ -252,10 +264,11 @@ class DeepSeekV4FlashProvider:
             "model": _MODEL,
             "messages": messages,
             "thinking": {"type": "enabled" if self._thinking_enabled else "disabled"},
-            "response_format": {"type": "json_object"},
             "max_tokens": request.max_output_tokens,
             "stream": False,
         }
+        if self._json_output_enabled:
+            payload["response_format"] = {"type": "json_object"}
         if self._thinking_enabled:
             payload["reasoning_effort"] = "max"
         headers = {
@@ -310,6 +323,11 @@ class DeepSeekV4FlashProvider:
         if invalid_diagnostics is not None:
             # Pydantic errors include the rejected provider values; detach them for the same reason.
             await self._record_invalid_response(response, invalid_diagnostics)
+            if invalid_diagnostics[0] in {"content_blank", "content_null"}:
+                # A successful HTTP response without final assistant content is retained for
+                # diagnosis, but deliberately remains a manual-retry condition.  Retrying the
+                # same expensive request automatically is unlikely to improve it.
+                raise _empty_final_content_error() from None
             raise _invalid_response_error() from None
         assert mapped_response is not None
         return mapped_response

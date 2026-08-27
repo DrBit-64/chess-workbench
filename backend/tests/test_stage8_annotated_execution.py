@@ -336,14 +336,10 @@ class _Provider:
             package = envelope["package"]
             if package["schema_version"] == "chess-content-extraction/1.1":
                 package["items"] = _annotated_items()
-                if envelope["prompt_version"] == "chess-workbench/ccef-prompt/1.5":
+                if envelope["prompt_version"] == "chess-workbench/ccef-prompt/1.6":
                     fragment = envelope["evidence_pages"][0]["fragments"][0]["fragment"]
-                    box = fragment["box"]
                     evidence = {
                         "page": fragment["physical_page"],
-                        "bbox": [box["x0"], box["y0"], box["x1"], box["y1"]],
-                        "start_offset": None,
-                        "end_offset": None,
                         "fragment_sha256": fragment["fragment_sha256"],
                     }
 
@@ -671,7 +667,7 @@ async def test_v4_job_uses_semantic_prompt_and_exact_fragment_bindings(tmp_path:
             provider=provider,
         )
         envelope = json.loads(provider.calls[0].messages[-1].content.split("\n", 1)[1])
-        assert envelope["prompt_version"] == "chess-workbench/ccef-prompt/1.5"
+        assert envelope["prompt_version"] == "chess-workbench/ccef-prompt/1.6"
         assert result["candidate"]["summary"]["move_node_count"] == 16
 
         normalized_row = next(

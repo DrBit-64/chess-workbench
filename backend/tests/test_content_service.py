@@ -4,6 +4,8 @@ from pathlib import Path
 
 import chess
 import pytest
+from sqlalchemy import func, select
+
 from chess_workbench.schemas.domain import (
     CourseContentBlockCreate,
     CourseContentBlockUpdate,
@@ -11,8 +13,10 @@ from chess_workbench.schemas.domain import (
     CourseModuleCreate,
     KnowledgeNoteCreate,
     KnowledgeNoteUpdate,
+    NormalizedBoundingBox,
     OccurrenceMoveCreate,
     OccurrenceNoteTarget,
+    PageSpan,
     RootOccurrenceCreate,
     SourceCreate,
     SourceFileCreate,
@@ -25,7 +29,6 @@ from chess_workbench.services import ContentService, ServiceError
 from chess_workbench.store.base import Base
 from chess_workbench.store.database import Database
 from chess_workbench.store.models import CourseOccurrence, KnowledgeNote, MoveEdge, Position
-from sqlalchemy import func, select
 
 
 async def create_schema(database: Database) -> None:
@@ -138,6 +141,23 @@ async def test_sources_citations_optimistic_lock_and_archive_are_service_owned(
                     locator=WholeSpan(),
                 )
             )
+            evidence_span = await service.create_source_span(
+                SourceSpanCreate(
+                    source_version_id=version.id,
+                    source_file_id=source_file.id,
+                    locator=PageSpan(
+                        page_number=12,
+                        bbox=NormalizedBoundingBox(x0=0.1, y0=0.2, x1=0.8, y1=0.9),
+                        start_offset=20,
+                        end_offset=44,
+                        fragment_sha256="b" * 64,
+                    ),
+                )
+            )
+            assert isinstance(evidence_span.locator, PageSpan)
+            assert evidence_span.locator.start_offset == 20
+            assert evidence_span.locator.end_offset == 44
+            assert evidence_span.locator.fragment_sha256 == "b" * 64
 
             course = await service.create_course(CourseCreate(title="Course"))
             module = await service.create_module(

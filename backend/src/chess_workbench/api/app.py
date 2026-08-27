@@ -20,6 +20,9 @@ from chess_workbench.config import Settings
 from chess_workbench.services import ServiceError
 from chess_workbench.services.engine import process_analysis_job
 from chess_workbench.services.pdf_extraction import process_pdf_extraction_job
+from chess_workbench.services.pdf_incremental_extraction import (
+    process_pdf_incremental_extraction_job,
+)
 from chess_workbench.services.worker import JobHandler, SqlWorker
 from chess_workbench.store.database import Database
 
@@ -85,7 +88,10 @@ def create_app(settings: Settings | None = None) -> ChessWorkbenchApp:
     @app.before_server_start
     async def start_worker(starting_app: ChessWorkbenchApp) -> None:
         if starting_app.ctx.settings.engine_worker_enabled:
-            handlers: dict[str, JobHandler] = {"pdf_extraction": process_pdf_extraction_job}
+            handlers: dict[str, JobHandler] = {
+                "pdf_extraction": process_pdf_extraction_job,
+                "pdf_incremental_extraction": process_pdf_incremental_extraction_job,
+            }
             if starting_app.ctx.settings.stockfish_path.is_file():
                 handlers["engine_analysis"] = process_analysis_job
             worker = SqlWorker(

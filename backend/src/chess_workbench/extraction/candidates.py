@@ -19,7 +19,6 @@ from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
 from .consolidation import consolidate_move_sequences, consolidate_move_sequences_v1_1
 from .contracts import (
-    EvidenceRef,
     ExtractionPackage,
     ExtractionPackageV1_1,
     FigureItem,
@@ -28,7 +27,16 @@ from .contracts import (
     PageRange,
     UnresolvedItem,
 )
-from .decoder import decode_extraction_response, decode_extraction_response_v1_1
+from .decoder import (
+    _parse_payload,
+    _validate_payload,
+    decode_extraction_response,
+    decode_extraction_response_v1_1,
+)
+from .general_repair import (
+    canonicalize_ccef_response,
+    ccef_repair_chain_document,
+)
 from .prompting import (
     CcefPromptContext,
     build_ccef_generation_request,
@@ -161,25 +169,59 @@ def _package_matches_context(
     return package.extensions == {}
 
 
-def _iter_evidence_refs(value: Any) -> Iterator[EvidenceRef]:
-    if isinstance(value, EvidenceRef):
-        yield value
-        return
-    if isinstance(value, BaseModel):
-        for field_name in type(value).model_fields:
-            yield from _iter_evidence_refs(getattr(value, field_name))
-        return
-    if isinstance(value, (list, tuple)):
-        for item in value:
-            yield from _iter_evidence_refs(item)
+def _iter_raw_owner_evidence(owner: dict[str, Any]) -> Iterator[dict[str, Any]]:
+    evidence = owner.get("evidence")
+    if isinstance(evidence, list):
+        for reference in evidence:
+            if isinstance(reference, dict):
+                yield reference
+    warnings = owner.get("warnings")
+    if isinstance(warnings, list):
+        for warning in warnings:
+            if isinstance(warning, dict):
+                yield from _iter_raw_owner_evidence(warning)
 
 
-def _bind_fragment_evidence(
-    package: ExtractionPackageV1_1,
+def _iter_raw_evidence_refs(payload: dict[str, Any]) -> Iterator[dict[str, Any]]:
+    """Yield only CCEF-owned EvidenceRef slots, never similarly named extensions."""
+
+    items = payload.get("items")
+    if isinstance(items, list):
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            yield from _iter_raw_owner_evidence(item)
+            if item.get("kind") != "move_sequence":
+                continue
+            for member_name in ("nodes", "annotations"):
+                members = item.get(member_name)
+                if not isinstance(members, list):
+                    continue
+                for member in members:
+                    if isinstance(member, dict):
+                        yield from _iter_raw_owner_evidence(member)
+    diagnostics = payload.get("diagnostics")
+    if isinstance(diagnostics, list):
+        for diagnostic in diagnostics:
+            if isinstance(diagnostic, dict):
+                yield from _iter_raw_owner_evidence(diagnostic)
+
+
+def _decode_fragment_bound_response_v1_1(
+    response: StructuredGenerationResponse,
     context: CcefPromptContext,
-) -> tuple[ExtractionPackageV1_1 | None, tuple[str, ...]]:
+) -> tuple[ExtractionPackageV1_1, tuple[str, ...], bool]:
+    """Turn provider evidence selectors into authoritative CCEF references.
+
+    The provider owns only ``page + fragment_sha256``. Coordinates and text
+    offsets are local source metadata, so they are replaced before the strict
+    CCEF model sees them. Unknown fields, malformed package structure and all
+    chess trust-boundary checks remain the decoder's responsibility.
+    """
+
+    payload = _parse_payload(response)
     supplied: dict[tuple[int, str], list[float]] = {}
-    supplied_by_page: dict[int, list[tuple[str, list[float]]]] = {}
+    trusted_fragment_key_collision = 0
     for page in context.pages:
         for entry in page.fragments:
             key = (entry.fragment.physical_page, entry.fragment.fragment_sha256)
@@ -191,66 +233,51 @@ def _bind_fragment_evidence(
             ]
             previous = supplied.get(key)
             if previous is not None and previous != box:
-                return None, ("trusted_fragment_key_collision=1",)
-            if previous is not None:
+                trusted_fragment_key_collision += 1
                 continue
             supplied[key] = box
-            supplied_by_page.setdefault(entry.fragment.physical_page, []).append(
-                (entry.fragment.fragment_sha256, box)
-            )
 
-    bound_package = copy.deepcopy(package)
-    evidence_refs = list(_iter_evidence_refs(bound_package))
-    if not evidence_refs:
-        return None, ("evidence_refs=0",)
-    repaired_by_bbox = 0
+    evidence_refs = list(_iter_raw_evidence_refs(payload))
+    bound_by_fragment_hash = 0
     missing_locator = 0
     unmatched_locator = 0
-    ambiguous_bbox = 0
     for evidence in evidence_refs:
-        bbox_was_ambiguous = False
-        trusted_hash = evidence.fragment_sha256
-        trusted_box = None if trusted_hash is None else supplied.get((evidence.page, trusted_hash))
-        if trusted_hash is None and evidence.bbox is not None:
-            matches = [
-                (fragment_hash, fragment_box)
-                for fragment_hash, fragment_box in supplied_by_page.get(evidence.page, [])
-                if max(
-                    abs(actual - expected)
-                    for actual, expected in zip(evidence.bbox, fragment_box, strict=True)
-                )
-                <= 0.001
-            ]
-            if len(matches) == 1:
-                trusted_hash, trusted_box = matches[0]
-                repaired_by_bbox += 1
-            elif len(matches) > 1:
-                bbox_was_ambiguous = True
-                ambiguous_bbox += 1
-        if trusted_hash is None or trusted_box is None:
-            if evidence.fragment_sha256 is None and evidence.bbox is None:
-                missing_locator += 1
-            elif not bbox_was_ambiguous:
-                unmatched_locator += 1
+        # These fields are not part of the provider proposal. Discard them
+        # unconditionally rather than guessing a coordinate convention or
+        # trusting model-generated substring boundaries.
+        evidence["bbox"] = None
+        evidence["start_offset"] = None
+        evidence["end_offset"] = None
+        provider_page = evidence.get("page")
+        fragment_sha256 = evidence.get("fragment_sha256")
+        if fragment_sha256 is None:
+            missing_locator += 1
             continue
-        # The model selects a trusted fragment by digest or an approximate box.
-        # Hashes and coordinates are authoritative OCR metadata, so copy both
-        # from the prompt context instead of trusting model-generated values.
-        evidence.fragment_sha256 = trusted_hash
-        evidence.bbox = list(trusted_box)
+        trusted_box = (
+            supplied.get((provider_page, fragment_sha256))
+            if type(provider_page) is int and type(fragment_sha256) is str
+            else None
+        )
+        if trusted_box is None:
+            unmatched_locator += 1
+            continue
+        evidence["bbox"] = list(trusted_box)
+        bound_by_fragment_hash += 1
+
+    package = _validate_payload(payload, ExtractionPackageV1_1)
     diagnostics = (
         f"evidence_refs={len(evidence_refs)}",
-        f"repaired_by_bbox={repaired_by_bbox}",
+        f"bound_by_fragment_hash={bound_by_fragment_hash}",
+        "repaired_by_bbox=0",
         f"missing_locator={missing_locator}",
         f"unmatched_locator={unmatched_locator}",
-        f"ambiguous_bbox={ambiguous_bbox}",
+        "ambiguous_bbox=0",
+        f"trusted_fragment_key_collision={trusted_fragment_key_collision}",
     )
-    if missing_locator or unmatched_locator or ambiguous_bbox:
-        return None, diagnostics
-    return (
-        ExtractionPackageV1_1.model_validate(bound_package.model_dump(mode="json")),
-        diagnostics,
+    complete = bool(evidence_refs) and not (
+        missing_locator or unmatched_locator or trusted_fragment_key_collision
     )
+    return package, diagnostics, complete
 
 
 def _sequence_warning_count(sequence: MoveSequenceItem | MoveSequenceItemV1_1) -> int:
@@ -391,10 +418,10 @@ def _assemble_ccef_candidate_artifacts_v1_1(
     """Assemble deterministic CCEF 1.1 candidate artifacts from one trusted run.
 
     Version-explicit twin of ``assemble_ccef_candidate_artifacts``: rebuilds
-    the trusted request with the 1.1 prompt builder, decodes only through the
-    1.1 decoder, binds context metadata with adapter version ``1.1``, runs the
-    1.1 consolidator and emits a separately versioned provider-response
-    artifact carrying an explicit ``ccef_schema_version`` binding. Never
+    the trusted request with the 1.1 prompt builder, first canonicalizes safe
+    exact-cover node/annotation projections to the source reading flow, then
+    decodes through the 1.1 contract, binds trusted context metadata, runs the
+    1.1 consolidator and emits an auditable provider-response artifact. Never
     dispatches by response content, never mutates its inputs and performs no
     I/O or provider call.
     """
@@ -409,22 +436,32 @@ def _assemble_ccef_candidate_artifacts_v1_1(
     if request != expected:
         raise CcefCandidateError("binding_mismatch", _BINDING_ERROR_MESSAGE)
 
-    decoded = decode_extraction_response_v1_1(response)
+    original_response = response
+    response, deterministic_operations = canonicalize_ccef_response(response)
+
+    binding_diagnostics: tuple[str, ...] = ()
+    fragment_bindings_complete = True
+    if require_fragment_bindings:
+        decoded, binding_diagnostics, fragment_bindings_complete = (
+            _decode_fragment_bound_response_v1_1(response, context)
+        )
+    else:
+        decoded = decode_extraction_response_v1_1(response)
     if not _package_matches_context(decoded, context, _ADAPTER_VERSION_1_1):
         raise CcefCandidateError("binding_mismatch", _BINDING_ERROR_MESSAGE)
     if require_fragment_bindings:
-        raw_package, binding_diagnostics = _bind_fragment_evidence(decoded, context)
-        if raw_package is None:
+        if not fragment_bindings_complete:
             raise CcefCandidateError(
                 "semantic_incomplete",
                 _SEMANTIC_ERROR_MESSAGE,
                 diagnostics=binding_diagnostics,
             )
+        raw_package = decoded
     else:
         raw_package = copy.deepcopy(decoded)
 
     request_sha256 = _sha256_hex(_compact_json_bytes(request.model_dump(mode="json")))
-    response_sha256 = _sha256_hex(response.content.encode("utf-8"))
+    response_sha256 = _sha256_hex(original_response.content.encode("utf-8"))
 
     # Locally bind provenance on a fresh deep copy; decoded/context/request/
     # response are never mutated.
@@ -439,17 +476,26 @@ def _assemble_ccef_candidate_artifacts_v1_1(
     raw_ccef_bytes = _canonical_ccef_bytes(raw_package)
     normalized_ccef_bytes = _canonical_ccef_bytes(normalized_package)
 
-    provider_response_doc = {
-        "artifact_schema": CCEF_PROVIDER_RESPONSE_ARTIFACT_SCHEMA_1_1,
-        "ccef_schema_version": "chess-content-extraction/1.1",
-        "request_sha256": request_sha256,
-        "response_sha256": response_sha256,
-        "provider": response.provider,
-        "model": response.model,
-        "finish_reason": response.finish_reason,
-        "usage": response.usage.model_dump(mode="json"),
-        "content": response.content,
-    }
+    if deterministic_operations:
+        provider_response_doc = ccef_repair_chain_document(
+            original_response,
+            response,
+            deterministic_operations=deterministic_operations,
+        )
+        provider_response_doc["request_sha256"] = request_sha256
+        provider_response_doc["ccef_schema_version"] = "chess-content-extraction/1.1"
+    else:
+        provider_response_doc = {
+            "artifact_schema": CCEF_PROVIDER_RESPONSE_ARTIFACT_SCHEMA_1_1,
+            "ccef_schema_version": "chess-content-extraction/1.1",
+            "request_sha256": request_sha256,
+            "response_sha256": response_sha256,
+            "provider": response.provider,
+            "model": response.model,
+            "finish_reason": response.finish_reason,
+            "usage": response.usage.model_dump(mode="json"),
+            "content": response.content,
+        }
     provider_response_bytes = _compact_json_bytes(provider_response_doc) + b"\n"
 
     return CcefCandidateArtifacts(

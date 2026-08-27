@@ -1,6 +1,9 @@
 import {
   Button,
   Card,
+  Descriptions,
+  Drawer,
+  Dropdown,
   Empty,
   Form,
   Input,
@@ -24,9 +27,13 @@ import {
 } from '../logic/api/client';
 import type {
   CitableSource,
+  PdfAsset,
   PdfAssetEnvelope,
   PdfAssetListResponse,
   PdfExtraction,
+  PdfExtractionDocument,
+  PdfExtractionDocumentAppendEnvelope,
+  PdfExtractionDocumentEnvelope,
   PdfExtractionDocumentListResponse,
   PdfExtractionEnvelope,
   PdfExtractionListResponse,
@@ -46,21 +53,6 @@ const kinds = [
 
 type RunStatus = PdfExtraction['job']['status'];
 
-const statusOptions: { value: string; label: string }[] = [
-  { value: 'all', label: '全部状态' },
-  { value: 'queued', label: '排队中' },
-  { value: 'running', label: '识别中' },
-  { value: 'succeeded', label: '已完成' },
-  { value: 'failed', label: '已失败' },
-  { value: 'cancelled', label: '已取消' },
-];
-
-const conflictOptions = [
-  { value: 'all', label: '全部冲突' },
-  { value: 'none', label: '无冲突' },
-  { value: 'conflict', label: '有冲突' },
-];
-
 const statusLabels: Record<RunStatus, string> = {
   queued: '排队中',
   running: '识别中',
@@ -69,12 +61,37 @@ const statusLabels: Record<RunStatus, string> = {
   cancelled: '已取消',
 };
 
+const statusColors: Record<RunStatus, string> = {
+  queued: 'blue',
+  running: 'processing',
+  succeeded: 'success',
+  failed: 'error',
+  cancelled: 'default',
+};
+
 const activeStatuses: RunStatus[] = ['queued', 'running'];
+
+function requestKey() {
+  return globalThis.crypto.randomUUID();
+}
+
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat('zh-CN', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(new Date(value));
+}
+
+function runCanStartDocument(run: PdfExtraction) {
+  return run.job.status === 'succeeded' && run.candidate !== null;
+}
 
 export function SourcesPage() {
   const [query, setQuery] = useState('');
   const [kind, setKind] = useState<string>();
-  const [open, setOpen] = useState(false);
+  const [manualOpen, setManualOpen] = useState(false);
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const [selectedAssetId, setSelectedAssetId] = useState<string>();
   const [form] = Form.useForm();
 
   const [file, setFile] = useState<File | null>(null);
@@ -85,14 +102,14 @@ export function SourcesPage() {
   const [uploading, setUploading] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
 
-  const [assetId, setAssetId] = useState<string>();
   const [firstPage, setFirstPage] = useState<number>();
   const [lastPage, setLastPage] = useState<number>();
   const [runError, setRunError] = useState<string>();
   const [creatingRun, setCreatingRun] = useState(false);
-
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [conflictFilter, setConflictFilter] = useState('all');
+  const [busyResultId, setBusyResultId] = useState<string>();
+  const [appendDocumentId, setAppendDocumentId] = useState<string>();
+  const [appendLastPage, setAppendLastPage] = useState<number>();
+  const [appendError, setAppendError] = useState<string>();
 
   const key = useMemo(() => {
     const params = new URLSearchParams();
@@ -101,19 +118,11 @@ export function SourcesPage() {
     return `/api/sources${params.size ? `?${params.toString()}` : ''}`;
   }, [kind, query]);
 
-  const runsKey = useMemo(() => {
-    const params = new URLSearchParams();
-    if (statusFilter !== 'all') params.set('status', statusFilter);
-    if (conflictFilter === 'none') params.set('has_conflicts', 'false');
-    else if (conflictFilter === 'conflict') params.set('has_conflicts', 'true');
-    return `/api/pdf-extractions${params.size ? `?${params.toString()}` : ''}`;
-  }, [conflictFilter, statusFilter]);
-
   const { data: sources = [], mutate } = useSWR<Source[]>(key, fetchJson);
   const { data: assetList, mutate: mutateAssets } =
     useSWR<PdfAssetListResponse>('/api/pdf-assets', fetchJson);
   const { data: runList, mutate: mutateRuns } =
-    useSWR<PdfExtractionListResponse>(runsKey, fetchJson, {
+    useSWR<PdfExtractionListResponse>('/api/pdf-extractions', fetchJson, {
       refreshInterval: (latest) =>
         (latest?.items ?? []).some((item) =>
           activeStatuses.includes(item.job.status),
@@ -121,23 +130,92 @@ export function SourcesPage() {
           ? 2000
           : 0,
     });
-  const { data: documentList } = useSWR<PdfExtractionDocumentListResponse>(
-    '/api/pdf-extraction-documents',
-    fetchJson,
+  const { data: documentList, mutate: mutateDocuments } =
+    useSWR<PdfExtractionDocumentListResponse>(
+      '/api/pdf-extraction-documents',
+      fetchJson,
+      {
+        refreshInterval: (latest) =>
+          (latest?.items ?? []).some((document) =>
+            document.append_attempts.some((attempt) =>
+              activeStatuses.includes(attempt.job.status),
+            ),
+          )
+            ? 2000
+            : 0,
+      },
+    );
+
+  const assets = useMemo(() => assetList?.items ?? [], [assetList]);
+  const runs = useMemo(() => runList?.items ?? [], [runList]);
+  const documents = useMemo(() => documentList?.items ?? [], [documentList]);
+  const selectedAsset =
+    assets.find((item) => item.id === selectedAssetId) ?? null;
+  const appendDocument =
+    documents.find((item) => item.id === appendDocumentId) ?? null;
+
+  const groupedRunIds = useMemo(
+    () =>
+      new Set(
+        documents.flatMap((document) =>
+          document.segments.map((segment) => segment.run_id),
+        ),
+      ),
+    [documents],
   );
 
-  const assets = assetList?.items ?? [];
-  const documents = documentList?.items ?? [];
-  const groupedRunIds = new Set(
-    documents.flatMap((document) =>
-      document.segments.map((segment) => segment.run_id),
-    ),
+  const filteredAssets = useMemo(() => {
+    const needle = query.trim().toLocaleLowerCase();
+    if (!needle) return assets;
+    return assets.filter((asset) =>
+      [asset.title, asset.author, asset.edition, asset.filename]
+        .filter((value): value is string => Boolean(value))
+        .some((value) => value.toLocaleLowerCase().includes(needle)),
+    );
+  }, [assets, query]);
+
+  const selectedRuns = useMemo(
+    () =>
+      runs.filter(
+        (run) =>
+          run.pdf_asset_id === selectedAssetId && !groupedRunIds.has(run.id),
+      ),
+    [groupedRunIds, runs, selectedAssetId],
   );
-  const runs = (runList?.items ?? []).filter(
-    (run) => !groupedRunIds.has(run.id),
+  const selectedDocuments = useMemo(
+    () =>
+      documents.filter((document) => document.pdf_asset_id === selectedAssetId),
+    [documents, selectedAssetId],
   );
-  const selectedAsset = assets.find((item) => item.id === assetId) ?? null;
-  const assetsById = new Map(assets.map((item) => [item.id, item]));
+  const selectedResults = useMemo(
+    () =>
+      [
+        ...selectedDocuments.map((document) => ({
+          kind: 'document' as const,
+          createdAt: document.created_at,
+          document,
+        })),
+        ...selectedRuns.map((run) => ({
+          kind: 'run' as const,
+          createdAt: run.created_at,
+          run,
+        })),
+      ].sort((left, right) => right.createdAt.localeCompare(left.createdAt)),
+    [selectedDocuments, selectedRuns],
+  );
+
+  const pdfSourceIds = new Set(assets.map((asset) => asset.source_id));
+  const otherSources = sources.filter((source) => !pdfSourceIds.has(source.id));
+
+  function resultsForAsset(assetId: string) {
+    const documentCount = documents.filter(
+      (document) => document.pdf_asset_id === assetId,
+    ).length;
+    const standaloneCount = runs.filter(
+      (run) => run.pdf_asset_id === assetId && !groupedRunIds.has(run.id),
+    ).length;
+    return documentCount + standaloneCount;
+  }
 
   async function createSource(values: {
     kind: string;
@@ -148,7 +226,7 @@ export function SourcesPage() {
       method: 'POST',
       body: JSON.stringify(values),
     });
-    setOpen(false);
+    setManualOpen(false);
     form.resetFields();
     await mutate();
     void message.success('资料已添加');
@@ -188,12 +266,13 @@ export function SourcesPage() {
       setTitle('');
       setAuthor('');
       setEdition('');
-      setAssetId(envelope.asset.id);
+      setUploadOpen(false);
+      setSelectedAssetId(envelope.asset.id);
       setFirstPage(1);
       setLastPage(envelope.asset.page_count);
       await mutateAssets();
       void message.success(
-        envelope.replayed ? 'PDF 内容已存在，已复用原文件' : 'PDF 上传成功',
+        envelope.replayed ? 'PDF 内容已存在，已打开原文件' : 'PDF 上传成功',
       );
     } catch (error) {
       setUploadError(
@@ -204,19 +283,30 @@ export function SourcesPage() {
     }
   }
 
-  function selectAsset(id: string) {
+  function openAsset(asset: PdfAsset) {
+    setSelectedAssetId(asset.id);
+    setFirstPage(1);
+    setLastPage(asset.page_count);
     setRunError(undefined);
-    setAssetId(id);
-    const asset = assets.find((item) => item.id === id);
-    setFirstPage(asset ? 1 : undefined);
-    setLastPage(asset ? asset.page_count : undefined);
+  }
+
+  async function queueExtraction(
+    asset: PdfAsset,
+    range: { firstPage: number; lastPage: number },
+  ) {
+    return requestJson<PdfExtractionEnvelope>('/api/pdf-extractions', {
+      method: 'POST',
+      headers: { 'Idempotency-Key': requestKey() },
+      body: JSON.stringify({
+        pdf_asset_id: asset.id,
+        first_page: range.firstPage,
+        last_page: range.lastPage,
+      }),
+    });
   }
 
   async function submitExtraction() {
-    if (!selectedAsset) {
-      setRunError('请先选择 PDF 资料');
-      return;
-    }
+    if (!selectedAsset) return;
     if (
       typeof firstPage !== 'number' ||
       !Number.isInteger(firstPage) ||
@@ -241,22 +331,10 @@ export function SourcesPage() {
     }
     try {
       setCreatingRun(true);
-      const envelope = await requestJson<PdfExtractionEnvelope>(
-        '/api/pdf-extractions',
-        {
-          method: 'POST',
-          body: JSON.stringify({
-            pdf_asset_id: selectedAsset.id,
-            first_page: firstPage,
-            last_page: lastPage,
-          }),
-        },
-      );
+      await queueExtraction(selectedAsset, { firstPage, lastPage });
       setRunError(undefined);
       await mutateRuns();
-      void message.success(
-        envelope.replayed ? '识别任务已存在，已复用原任务' : '识别任务已创建',
-      );
+      void message.success('识别任务已创建；相同页段也会保留为独立结果');
     } catch (error) {
       setRunError(
         error instanceof ApiError
@@ -268,344 +346,611 @@ export function SourcesPage() {
     }
   }
 
+  async function repeatExtraction(run: PdfExtraction) {
+    if (!selectedAsset) return;
+    try {
+      setBusyResultId(run.id);
+      await queueExtraction(selectedAsset, {
+        firstPage: run.first_page,
+        lastPage: run.last_page,
+      });
+      await mutateRuns();
+      void message.success(
+        `已新建第 ${run.first_page}–${run.last_page} 页的独立识别任务`,
+      );
+    } catch (error) {
+      void message.error(
+        error instanceof ApiError ? error.message : '重新识别失败',
+      );
+    } finally {
+      setBusyResultId(undefined);
+    }
+  }
+
+  async function adoptRun(run: PdfExtraction) {
+    try {
+      setBusyResultId(run.id);
+      await requestJson<PdfExtractionDocumentEnvelope>(
+        '/api/pdf-extraction-documents',
+        {
+          method: 'POST',
+          body: JSON.stringify({ initial_run_id: run.id }),
+        },
+      );
+      await Promise.all([mutateRuns(), mutateDocuments()]);
+      void message.success('该结果已设为连续提取文档');
+    } catch (error) {
+      void message.error(
+        error instanceof ApiError ? error.message : '创建连续提取文档失败',
+      );
+    } finally {
+      setBusyResultId(undefined);
+    }
+  }
+
+  function openAppend(document: PdfExtractionDocument) {
+    const nextPage = document.last_page + 1;
+    setAppendDocumentId(document.id);
+    setAppendLastPage(
+      selectedAsset
+        ? Math.min(nextPage + 4, selectedAsset.page_count)
+        : nextPage,
+    );
+    setAppendError(undefined);
+  }
+
+  async function submitAppend() {
+    if (!appendDocument || !selectedAsset) return;
+    const nextPage = appendDocument.last_page + 1;
+    if (
+      typeof appendLastPage !== 'number' ||
+      !Number.isInteger(appendLastPage) ||
+      appendLastPage < nextPage ||
+      appendLastPage > selectedAsset.page_count
+    ) {
+      setAppendError(
+        `结束页必须在 ${nextPage} 到 ${selectedAsset.page_count} 之间`,
+      );
+      return;
+    }
+    try {
+      setBusyResultId(appendDocument.id);
+      await requestJson<PdfExtractionDocumentAppendEnvelope>(
+        `/api/pdf-extraction-documents/${encodeURIComponent(
+          appendDocument.id,
+        )}/appends`,
+        {
+          method: 'POST',
+          headers: { 'Idempotency-Key': requestKey() },
+          body: JSON.stringify({
+            expected_version: appendDocument.version,
+            first_page: nextPage,
+            last_page: appendLastPage,
+            profile: {},
+          }),
+        },
+      );
+      setAppendDocumentId(undefined);
+      setAppendError(undefined);
+      await Promise.all([mutateRuns(), mutateDocuments()]);
+      void message.success('增量提取任务已登记');
+    } catch (error) {
+      setAppendError(
+        error instanceof ApiError ? error.message : '登记增量提取失败',
+      );
+    } finally {
+      setBusyResultId(undefined);
+    }
+  }
+
   return (
     <main className="mx-auto max-w-7xl px-6 py-10">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div>
           <Typography.Title className="mb-1!" level={2}>
-            Sources
+            资料库
           </Typography.Title>
           <Typography.Text type="secondary">
-            原始资料、版本、文件与可引用片段
+            一本 PDF 只占一个书籍条目，所有独立或连续提取结果都保存在书籍下面。
           </Typography.Text>
         </div>
-        <Button type="primary" onClick={() => setOpen(true)}>
-          添加手工来源
-        </Button>
+        <Space wrap>
+          <Button onClick={() => setManualOpen(true)}>添加其他资料</Button>
+          <Button type="primary" onClick={() => setUploadOpen(true)}>
+            上传 PDF 棋书
+          </Button>
+        </Space>
       </div>
-      <Space className="mb-6" wrap>
-        <Input.Search
-          aria-label="搜索资料"
-          allowClear
-          className="w-80"
-          placeholder="搜索标题、作者或说明"
-          onSearch={setQuery}
-        />
-        <Select
-          aria-label="资料类型"
-          allowClear
-          className="w-40"
-          placeholder="全部类型"
-          options={kinds}
-          value={kind}
-          onChange={setKind}
-        />
-      </Space>
-      <Card className="mb-6" title="AI 棋书识别">
-        <div className="grid gap-6 lg:grid-cols-2">
-          <Form layout="vertical">
-            <Form.Item label="PDF 文件" required>
-              <input
-                ref={fileInput}
-                aria-label="PDF 文件"
-                accept=".pdf,application/pdf"
-                type="file"
-                onChange={(event) => {
-                  setFile(event.target.files?.[0] ?? null);
-                  setUploadError(undefined);
-                }}
-              />
-            </Form.Item>
-            <Form.Item label="标题（可选）">
-              <Input
-                aria-label="标题（可选）"
-                maxLength={200}
-                value={title}
-                onChange={(event) => setTitle(event.target.value)}
-              />
-            </Form.Item>
-            <Form.Item label="作者（可选）">
-              <Input
-                aria-label="作者（可选）"
-                maxLength={200}
-                value={author}
-                onChange={(event) => setAuthor(event.target.value)}
-              />
-            </Form.Item>
-            <Form.Item label="版本（可选）">
-              <Input
-                aria-label="版本（可选）"
-                maxLength={200}
-                value={edition}
-                onChange={(event) => setEdition(event.target.value)}
-              />
-            </Form.Item>
-            {uploadError ? (
-              <Typography.Paragraph type="danger">
-                {uploadError}
-              </Typography.Paragraph>
-            ) : null}
-            <Button
-              type="primary"
-              loading={uploading}
-              disabled={uploading}
-              onClick={() => void submitUpload()}
-            >
-              上传 PDF
-            </Button>
-          </Form>
-          {assets.length ? (
-            <Form layout="vertical">
-              <Form.Item label="选择 PDF" required>
-                <Select
-                  aria-label="选择 PDF"
-                  placeholder="选择要识别的 PDF"
-                  options={assets.map((asset) => ({
-                    value: asset.id,
-                    label: `${asset.title}（${asset.page_count} 页）`,
-                  }))}
-                  value={assetId}
-                  onChange={selectAsset}
-                />
-              </Form.Item>
-              <Form.Item label="起始物理页">
-                <InputNumber
-                  aria-label="起始物理页"
-                  min={1}
-                  max={selectedAsset?.page_count}
-                  precision={0}
-                  style={{ width: '100%' }}
-                  value={firstPage}
-                  onChange={(value) => setFirstPage(value ?? undefined)}
-                />
-              </Form.Item>
-              <Form.Item label="结束物理页">
-                <InputNumber
-                  aria-label="结束物理页"
-                  min={1}
-                  max={selectedAsset?.page_count}
-                  precision={0}
-                  style={{ width: '100%' }}
-                  value={lastPage}
-                  onChange={(value) => setLastPage(value ?? undefined)}
-                />
-              </Form.Item>
+
+      <Input.Search
+        aria-label="搜索资料"
+        allowClear
+        className="mb-6 max-w-lg"
+        placeholder="搜索书名、作者或文件名"
+        onSearch={setQuery}
+      />
+
+      <section aria-labelledby="pdf-library-heading" className="mb-10">
+        <div className="mb-4 flex items-baseline justify-between gap-4">
+          <Typography.Title id="pdf-library-heading" level={3} className="m-0!">
+            PDF 棋书
+          </Typography.Title>
+          <Typography.Text type="secondary">
+            {filteredAssets.length} 本
+          </Typography.Text>
+        </div>
+        {filteredAssets.length ? (
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {filteredAssets.map((asset) => {
+              const resultCount = resultsForAsset(asset.id);
+              const activeCount = runs.filter(
+                (run) =>
+                  run.pdf_asset_id === asset.id &&
+                  activeStatuses.includes(run.job.status),
+              ).length;
+              return (
+                <Card
+                  key={asset.id}
+                  title={asset.title}
+                  extra={<Tag color="blue">PDF</Tag>}
+                  actions={[
+                    <Button
+                      key="manage"
+                      type="link"
+                      onClick={() => openAsset(asset)}
+                    >
+                      管理提取结果
+                    </Button>,
+                  ]}
+                >
+                  <Space orientation="vertical" size="small">
+                    <Typography.Text>
+                      {asset.author || '未填写作者'}
+                      {asset.edition ? ` · ${asset.edition}` : ''}
+                    </Typography.Text>
+                    <Typography.Text type="secondary">
+                      {asset.filename} · {asset.page_count} 页
+                    </Typography.Text>
+                    <Space wrap>
+                      <Tag>{resultCount} 个提取结果</Tag>
+                      {activeCount ? (
+                        <Tag color="processing">{activeCount} 个处理中</Tag>
+                      ) : null}
+                    </Space>
+                  </Space>
+                </Card>
+              );
+            })}
+          </div>
+        ) : (
+          <Empty description="还没有匹配的 PDF 棋书" />
+        )}
+      </section>
+
+      <section aria-labelledby="other-sources-heading">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
+          <Typography.Title
+            id="other-sources-heading"
+            level={3}
+            className="m-0!"
+          >
+            其他资料
+          </Typography.Title>
+          <Select
+            aria-label="资料类型"
+            allowClear
+            className="w-40"
+            placeholder="全部类型"
+            options={kinds}
+            value={kind}
+            onChange={setKind}
+          />
+        </div>
+        {otherSources.length ? (
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {otherSources.map((source) => (
+              <Card key={source.id} title={source.title}>
+                <Space orientation="vertical">
+                  <Tag>
+                    {kinds.find((item) => item.value === source.kind)?.label ??
+                      source.kind}
+                  </Tag>
+                  <Typography.Text type="secondary">
+                    {source.author || '未填写作者'}
+                  </Typography.Text>
+                  {source.external_url ? (
+                    <a
+                      href={source.external_url}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      打开原始链接
+                    </a>
+                  ) : null}
+                </Space>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <Empty description="还没有其他资料" />
+        )}
+      </section>
+
+      <Drawer
+        title={selectedAsset?.title ?? 'PDF 棋书'}
+        width={760}
+        open={selectedAsset !== null}
+        onClose={() => setSelectedAssetId(undefined)}
+      >
+        {selectedAsset ? (
+          <Space className="w-full" orientation="vertical" size="large">
+            <Descriptions size="small" column={2} bordered>
+              <Descriptions.Item label="作者">
+                {selectedAsset.author || '未填写'}
+              </Descriptions.Item>
+              <Descriptions.Item label="版本">
+                {selectedAsset.edition || '未填写'}
+              </Descriptions.Item>
+              <Descriptions.Item label="文件">
+                {selectedAsset.filename}
+              </Descriptions.Item>
+              <Descriptions.Item label="页数">
+                {selectedAsset.page_count}
+              </Descriptions.Item>
+            </Descriptions>
+
+            <Card size="small" title="新建独立提取">
+              <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+                <Form.Item label="起始物理页" className="mb-0!">
+                  <InputNumber
+                    aria-label="起始物理页"
+                    min={1}
+                    max={selectedAsset.page_count}
+                    precision={0}
+                    className="w-full"
+                    value={firstPage}
+                    onChange={(value) => setFirstPage(value ?? undefined)}
+                  />
+                </Form.Item>
+                <Form.Item label="结束物理页" className="mb-0!">
+                  <InputNumber
+                    aria-label="结束物理页"
+                    min={1}
+                    max={selectedAsset.page_count}
+                    precision={0}
+                    className="w-full"
+                    value={lastPage}
+                    onChange={(value) => setLastPage(value ?? undefined)}
+                  />
+                </Form.Item>
+                <Button
+                  type="primary"
+                  loading={creatingRun}
+                  disabled={creatingRun}
+                  onClick={() => void submitExtraction()}
+                >
+                  创建识别任务
+                </Button>
+              </div>
               {runError ? (
-                <Typography.Paragraph type="danger">
+                <Typography.Paragraph type="danger" className="mt-2! mb-0!">
                   {runError}
                 </Typography.Paragraph>
               ) : null}
-              <Button
-                type="primary"
-                loading={creatingRun}
-                disabled={creatingRun}
-                onClick={() => void submitExtraction()}
-              >
-                创建识别任务
-              </Button>
-            </Form>
-          ) : (
-            <Empty description="还没有 PDF 资料" />
-          )}
-        </div>
-        <Space className="mt-6 w-full" orientation="vertical" size="middle">
-          <Space wrap>
-            <Select
-              aria-label="任务状态"
-              options={statusOptions}
-              value={statusFilter}
-              onChange={setStatusFilter}
-            />
-            <Select
-              aria-label="冲突状态"
-              options={conflictOptions}
-              value={conflictFilter}
-              onChange={setConflictFilter}
-            />
-            <Typography.Text type="secondary">
-              本页面仅展示后端任务的真实状态，不估算识别进度。
-            </Typography.Text>
-          </Space>
-          {documents.length ? (
-            <div className="divide-y divide-gray-200" role="list">
-              {documents.map((document) => {
-                const asset = assetsById.get(document.pdf_asset_id);
-                return (
-                  <div className="py-3" key={document.id} role="listitem">
-                    <div className="flex w-full flex-col gap-1">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <Space orientation="vertical" size={0}>
-                          <Typography.Text strong>
-                            {asset?.title ?? document.pdf_asset_id}
-                          </Typography.Text>
-                          <Typography.Text type="secondary">
-                            第 {document.first_page}–{document.last_page} 页 ·{' '}
-                            {document.segments.length} 段增量提取
-                          </Typography.Text>
-                        </Space>
-                        <Tag color="green">连续文档 v{document.version}</Tag>
-                      </div>
-                      <Typography.Text>
-                        已合并为一个审核条目；规范 CCEF{' '}
-                        {document.normalized_ccef_sha256.slice(0, 12)}…
-                      </Typography.Text>
-                      <Link
-                        to={`/sources/pdf-extractions/${encodeURIComponent(
-                          document.id,
-                        )}/review`}
-                        className="text-sm text-blue-600 hover:underline"
-                      >
-                        打开合并审核页面
-                      </Link>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : null}
-          {runs.length ? (
-            <div className="divide-y divide-gray-200" role="list">
-              {runs.map((run) => {
-                const asset = assetsById.get(run.pdf_asset_id);
-                return (
-                  <div className="py-3" key={run.id} role="listitem">
-                    <div className="flex w-full flex-col gap-1">
-                      <div className="flex w-full flex-wrap items-center justify-between gap-2">
-                        <Space orientation="vertical" size={0}>
-                          <Typography.Text strong>
-                            {asset?.title ?? run.pdf_asset_id}
-                          </Typography.Text>
-                          <Typography.Text type="secondary">
-                            第 {run.first_page}–{run.last_page} 页
-                          </Typography.Text>
-                        </Space>
-                        <Space wrap>
-                          <Tag>{statusLabels[run.job.status]}</Tag>
-                          <Tag
-                            color={run.has_conflicts ? 'warning' : 'default'}
-                          >
-                            {run.has_conflicts ? '有冲突' : '无冲突'}
-                          </Tag>
-                        </Space>
-                      </div>
-                      {run.job.status !== 'succeeded' &&
-                      run.job.last_error_message ? (
-                        <Typography.Text type="danger">
-                          {run.job.last_error_message}
-                        </Typography.Text>
-                      ) : null}
-                      {run.evidence ? (
-                        <div className="flex flex-col gap-0.5">
-                          <Typography.Text>
-                            已提交证据：{run.evidence.page_count} 页 ·{' '}
-                            {run.evidence.fragment_count} 个文本片段 ·{' '}
-                            {run.evidence.warning_count} 个警告
-                          </Typography.Text>
-                          <div className="flex flex-wrap gap-x-4">
-                            <Typography.Text type="secondary">
-                              Manifest 已提交
-                            </Typography.Text>
-                            <Typography.Text type="secondary">
-                              渲染{' '}
-                              {run.evidence.render_manifest_sha256.slice(0, 12)}
-                              …
-                            </Typography.Text>
-                            <Typography.Text type="secondary">
-                              OCR{' '}
-                              {run.evidence.ocr_manifest_sha256.slice(0, 12)}…
-                            </Typography.Text>
-                          </div>
-                        </div>
-                      ) : run.job.status === 'succeeded' ? (
-                        <Typography.Text type="warning">
-                          证据索引尚未完整提交
-                        </Typography.Text>
-                      ) : null}
-                      {run.candidate ? (
-                        <div className="flex flex-col gap-0.5">
-                          <Typography.Text strong>
-                            已生成 CCEF 候选
-                          </Typography.Text>
-                          <Typography.Text>
-                            内容项 {run.candidate.item_count} · 棋步{' '}
-                            {run.candidate.move_node_count} · 未解决{' '}
-                            {run.candidate.unresolved_item_count} · 警告{' '}
-                            {run.candidate.warning_count} · 错误{' '}
-                            {run.candidate.error_count} · 非法棋步{' '}
-                            {run.candidate.invalid_move_count} · 歧义棋步{' '}
-                            {run.candidate.ambiguous_move_count}
-                          </Typography.Text>
-                          <div className="flex flex-wrap gap-x-4">
-                            <Typography.Text type="secondary">
-                              原始 CCEF{' '}
-                              {run.candidate.raw_ccef_sha256.slice(0, 12)}…
-                            </Typography.Text>
-                            <Typography.Text type="secondary">
-                              规范 CCEF{' '}
-                              {run.candidate.normalized_ccef_sha256.slice(
-                                0,
-                                12,
-                              )}
-                              …
-                            </Typography.Text>
-                          </div>
-                          <Link
-                            to={`/sources/pdf-extractions/${encodeURIComponent(
-                              run.id,
-                            )}/review`}
-                            className="text-sm text-blue-600 hover:underline"
-                          >
-                            打开审核页面
-                          </Link>
-                        </div>
-                      ) : run.pipeline_version === 'pdf-extraction:v2' &&
-                        run.job.status === 'succeeded' ? (
-                        <Typography.Text type="warning">
-                          候选索引尚未完整提交
-                        </Typography.Text>
-                      ) : null}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : documents.length ? null : (
-            <Empty description="还没有识别任务" />
-          )}
-        </Space>
-      </Card>
-      {sources.length ? (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {sources.map((source) => (
-            <Card key={source.id} title={source.title}>
-              <Space orientation="vertical">
-                <Tag>
-                  {kinds.find((item) => item.value === source.kind)?.label ??
-                    source.kind}
-                </Tag>
-                <Typography.Text type="secondary">
-                  {source.author || '未填写作者'}
-                </Typography.Text>
-                {source.external_url ? (
-                  <a
-                    href={source.external_url}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    打开原始链接
-                  </a>
-                ) : null}
-              </Space>
+              <Typography.Text type="secondary" className="mt-2 block">
+                重复提交相同页段会创建新的独立结果，不会覆盖旧结果。
+              </Typography.Text>
             </Card>
-          ))}
-        </div>
-      ) : (
-        <Empty description="还没有资料" />
-      )}
+
+            <div>
+              <div className="mb-3 flex items-baseline justify-between">
+                <Typography.Title level={4} className="m-0!">
+                  提取结果
+                </Typography.Title>
+                <Typography.Text type="secondary">
+                  {selectedResults.length} 个
+                </Typography.Text>
+              </div>
+              {selectedResults.length ? (
+                <div className="flex flex-col gap-3" role="list">
+                  {selectedResults.map((result) => {
+                    if (result.kind === 'document') {
+                      const document = result.document;
+                      const latestAttempt = document.append_attempts.at(-1);
+                      const canAppend =
+                        document.last_page < selectedAsset.page_count;
+                      return (
+                        <Card
+                          key={`document-${document.id}`}
+                          size="small"
+                          role="listitem"
+                          title={`连续提取 · 第 ${document.first_page}–${document.last_page} 页`}
+                          extra={<Tag color="green">v{document.version}</Tag>}
+                        >
+                          <div className="flex flex-col gap-2">
+                            <Typography.Text type="secondary">
+                              {document.segments
+                                .map(
+                                  (segment) =>
+                                    `第 ${segment.first_page}–${segment.last_page} 页`,
+                                )
+                                .join(' → ')}
+                            </Typography.Text>
+                            {latestAttempt ? (
+                              <Space wrap>
+                                <Typography.Text>最近增量请求</Typography.Text>
+                                <Tag
+                                  color={statusColors[latestAttempt.job.status]}
+                                >
+                                  {statusLabels[latestAttempt.job.status]}
+                                </Tag>
+                                <Typography.Text type="secondary">
+                                  第 {latestAttempt.first_page}–
+                                  {latestAttempt.last_page} 页
+                                </Typography.Text>
+                              </Space>
+                            ) : null}
+                            <div className="flex items-center justify-between gap-3">
+                              <Typography.Text type="secondary">
+                                更新于 {formatDate(document.updated_at)}
+                              </Typography.Text>
+                              <Dropdown
+                                menu={{
+                                  items: [
+                                    {
+                                      key: 'review',
+                                      label: (
+                                        <Link
+                                          to={`/sources/pdf-extractions/${encodeURIComponent(
+                                            document.id,
+                                          )}/review`}
+                                        >
+                                          打开合并审核页面
+                                        </Link>
+                                      ),
+                                    },
+                                    {
+                                      key: 'append',
+                                      label: '继续增量提取',
+                                      disabled: !canAppend,
+                                    },
+                                    {
+                                      key: 'edit',
+                                      label: '修改（后续接入）',
+                                      disabled: true,
+                                    },
+                                    {
+                                      key: 'delete',
+                                      label: '删除／归档（后续接入）',
+                                      disabled: true,
+                                      danger: true,
+                                    },
+                                  ],
+                                  onClick: ({ key }) => {
+                                    if (key === 'append') openAppend(document);
+                                  },
+                                }}
+                              >
+                                <Button loading={busyResultId === document.id}>
+                                  操作
+                                </Button>
+                              </Dropdown>
+                            </div>
+                          </div>
+                        </Card>
+                      );
+                    }
+
+                    const run = result.run;
+                    return (
+                      <Card
+                        key={`run-${run.id}`}
+                        size="small"
+                        role="listitem"
+                        title={`独立提取 · 第 ${run.first_page}–${run.last_page} 页`}
+                        extra={
+                          <Space wrap>
+                            <Tag color={statusColors[run.job.status]}>
+                              {statusLabels[run.job.status]}
+                            </Tag>
+                            {run.candidate ? (
+                              <Tag
+                                color={
+                                  run.has_conflicts ? 'warning' : 'default'
+                                }
+                              >
+                                {run.has_conflicts ? '有冲突' : '无冲突'}
+                              </Tag>
+                            ) : null}
+                          </Space>
+                        }
+                      >
+                        <div className="flex flex-col gap-2">
+                          {run.job.status === 'failed' &&
+                          run.job.last_error_message ? (
+                            <Typography.Text type="danger">
+                              {run.job.last_error_message}
+                            </Typography.Text>
+                          ) : null}
+                          {run.candidate ? (
+                            <Typography.Text>
+                              内容项 {run.candidate.item_count} · 棋步{' '}
+                              {run.candidate.move_node_count} · 警告{' '}
+                              {run.candidate.warning_count} · 错误{' '}
+                              {run.candidate.error_count}
+                            </Typography.Text>
+                          ) : null}
+                          <div className="flex items-center justify-between gap-3">
+                            <Typography.Text type="secondary">
+                              创建于 {formatDate(run.created_at)}
+                            </Typography.Text>
+                            <Dropdown
+                              menu={{
+                                items: [
+                                  {
+                                    key: 'review',
+                                    label: run.candidate ? (
+                                      <Link
+                                        to={`/sources/pdf-extractions/${encodeURIComponent(
+                                          run.id,
+                                        )}/review`}
+                                      >
+                                        打开审核页面
+                                      </Link>
+                                    ) : (
+                                      '审核页面尚不可用'
+                                    ),
+                                    disabled: run.candidate === null,
+                                  },
+                                  {
+                                    key: 'repeat',
+                                    label: '重新提取同一页段',
+                                  },
+                                  {
+                                    key: 'adopt',
+                                    label: '设为连续提取文档',
+                                    disabled: !runCanStartDocument(run),
+                                  },
+                                  {
+                                    key: 'edit',
+                                    label: '修改（后续接入）',
+                                    disabled: true,
+                                  },
+                                  {
+                                    key: 'delete',
+                                    label: '删除／归档（后续接入）',
+                                    disabled: true,
+                                    danger: true,
+                                  },
+                                ],
+                                onClick: ({ key }) => {
+                                  if (key === 'repeat') {
+                                    void repeatExtraction(run);
+                                  } else if (key === 'adopt') {
+                                    void adoptRun(run);
+                                  }
+                                },
+                              }}
+                            >
+                              <Button loading={busyResultId === run.id}>
+                                操作
+                              </Button>
+                            </Dropdown>
+                          </div>
+                        </div>
+                      </Card>
+                    );
+                  })}
+                </div>
+              ) : (
+                <Empty description="这本书还没有提取结果" />
+              )}
+            </div>
+          </Space>
+        ) : null}
+      </Drawer>
+
       <Modal
-        title="添加资料"
-        open={open}
-        onCancel={() => setOpen(false)}
+        title="上传 PDF 棋书"
+        open={uploadOpen}
+        onCancel={() => setUploadOpen(false)}
+        onOk={() => void submitUpload()}
+        okText="上传"
+        confirmLoading={uploading}
+        destroyOnHidden
+      >
+        <Form layout="vertical">
+          <Form.Item label="PDF 文件" required>
+            <input
+              ref={fileInput}
+              aria-label="PDF 文件"
+              accept=".pdf,application/pdf"
+              type="file"
+              onChange={(event) => {
+                setFile(event.target.files?.[0] ?? null);
+                setUploadError(undefined);
+              }}
+            />
+          </Form.Item>
+          <Form.Item label="标题（可选）">
+            <Input
+              aria-label="标题（可选）"
+              maxLength={200}
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+            />
+          </Form.Item>
+          <Form.Item label="作者（可选）">
+            <Input
+              aria-label="作者（可选）"
+              maxLength={200}
+              value={author}
+              onChange={(event) => setAuthor(event.target.value)}
+            />
+          </Form.Item>
+          <Form.Item label="版本（可选）">
+            <Input
+              aria-label="版本（可选）"
+              maxLength={200}
+              value={edition}
+              onChange={(event) => setEdition(event.target.value)}
+            />
+          </Form.Item>
+          {uploadError ? (
+            <Typography.Paragraph type="danger">
+              {uploadError}
+            </Typography.Paragraph>
+          ) : null}
+        </Form>
+      </Modal>
+
+      <Modal
+        title="继续增量提取"
+        open={appendDocument !== null}
+        onCancel={() => setAppendDocumentId(undefined)}
+        onOk={() => void submitAppend()}
+        okText="登记任务"
+        confirmLoading={busyResultId === appendDocument?.id}
+        destroyOnHidden
+      >
+        {appendDocument && selectedAsset ? (
+          <Form layout="vertical">
+            <Typography.Paragraph type="secondary">
+              当前已覆盖第 {appendDocument.first_page}–
+              {appendDocument.last_page} 页。增量任务必须从下一页连续开始。
+            </Typography.Paragraph>
+            <Form.Item label="起始物理页">
+              <InputNumber
+                aria-label="增量起始物理页"
+                className="w-full"
+                disabled
+                value={appendDocument.last_page + 1}
+              />
+            </Form.Item>
+            <Form.Item label="结束物理页">
+              <InputNumber
+                aria-label="增量结束物理页"
+                className="w-full"
+                min={appendDocument.last_page + 1}
+                max={selectedAsset.page_count}
+                precision={0}
+                value={appendLastPage}
+                onChange={(value) => setAppendLastPage(value ?? undefined)}
+              />
+            </Form.Item>
+            {appendError ? (
+              <Typography.Paragraph type="danger">
+                {appendError}
+              </Typography.Paragraph>
+            ) : null}
+          </Form>
+        ) : null}
+      </Modal>
+
+      <Modal
+        title="添加其他资料"
+        open={manualOpen}
+        onCancel={() => setManualOpen(false)}
         onOk={() => form.submit()}
         okText="添加"
         destroyOnHidden

@@ -49,8 +49,25 @@ export type PdfExtractionDocumentListResponse =
 export type PdfExtractionDocument =
   PdfExtractionDocumentListResponse['items'][number];
 
+export type PdfExtractionDocumentEnvelope =
+  paths['/api/pdf-extraction-documents']['post']['responses'][201]['content']['application/json'];
+
+export type PdfExtractionDocumentAppendEnvelope =
+  paths['/api/pdf-extraction-documents/{document_id}/appends']['post']['responses'][202]['content']['application/json'];
+
 export type PdfReviewDocument =
   paths['/api/pdf-extractions/{run_id}/review']['get']['responses'][200]['content']['application/json'];
+
+export type PdfReviewSessionEnvelope =
+  paths['/api/pdf-extractions/{target_id}/review/session']['post']['responses'][201]['content']['application/json'];
+
+export type PdfReviewSession = PdfReviewSessionEnvelope['session'];
+
+export type PdfReviewCommandRequest =
+  paths['/api/pdf-review-sessions/{session_id}/commands']['post']['requestBody']['content']['application/json'];
+
+export type PdfReviewCommandEnvelope =
+  paths['/api/pdf-review-sessions/{session_id}/commands']['post']['responses'][200]['content']['application/json'];
 
 export type ContentHistory =
   paths['/api/history/{entity_type}/{entity_id}']['get']['responses'][200]['content']['application/json'];

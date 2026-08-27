@@ -7,6 +7,23 @@ then provide a safe human-review read surface, immutable review ledger and comma
 atomic publication into a traditional draft course.
 ADR 0016 is authoritative. Stage 5/6E and Stage 7 remain deferred.
 
+## Active Codex slice: source library information architecture
+
+- [x] Treat an immutable PDF asset as the top-level library/book identity.
+- [x] Show every extraction outcome beneath its book without collapsing equal page ranges:
+  standalone runs remain independent outcomes, while incremental documents remain one outcome with
+  visible constituent segments.
+- [x] Give each book one management surface for new extraction, exact-range re-extraction, review,
+  adopting a successful run as an incremental document and registering the next adjacent append.
+- [ ] Add archive/delete and review-based modification only with their authoritative backend
+  boundaries; the first library slice exposes these future actions as disabled rather than
+  hard-deleting immutable source/run records.
+
+This slice intentionally reuses the existing asset/run/document APIs and adds no SQL identity. A
+fresh client idempotency key is sent for each user-requested extraction so two requests for the same
+asset and page range remain two separately addressable runs. Focused browser/type verification is
+sufficient during this product-layout iteration.
+
 ## Delivery order
 
 1. [x] **8P + 8A accepted:** portable CCEF boundary, immutable PDF/CAS ownership, page-range jobs,
@@ -106,14 +123,60 @@ publication and UI into one delegated task.
    - [x] **8D-3C interaction correction:** independent scrolling and conventional move rows.
    - [x] **8D-3D annotated score correction:** atomic in-score notes, true local branches and an
      independent source reading flow; JSON acceptance precedes UI changes.
-   - [ ] **8D-3E incremental extraction documents:** append immutable adjacent page segments to one
+   - [x] **8D-3E incremental extraction documents:** append immutable adjacent page segments to one
      hash-bound aggregate candidate; ADR 0018 is authoritative.
-4. [ ] **8D-4 review ledger:** review session/revision/event persistence, evidence fidelity and
+   - [x] **8D-3E failure repair:** translate any small, complete JSON/CCEF failure into structured
+     diagnostics; first apply only source-preserving deterministic canonical fixes, then use at
+     most one hash-bound bounded patch call for remaining ambiguity. Rerun every local trust,
+     continuation, chess and composition gate without a full PDF extraction retry.
+     - Exact-cover `nodes`/`annotations` versus `reading_flow` order mismatches are repaired locally
+       only when identities are unique and node reordering remains parent-before-child.
+       The same pre-validation canonicalizer is mandatory for standalone CCEF 1.1 candidates and
+       incremental v5 segments; pipeline-specific code begins only after that shared boundary.
+     - Model excerpts expose exact original values under their real JSON Pointer paths; the model
+       may edit scalar fields inside flow entries but may not replace, add or remove whole entries.
+     - Semantic v4 keeps thinking enabled without DeepSeek JSON Output mode. A null/blank final
+       answer is retained and fails non-retryably with an explicit manual-retry message.
+4. [x] **8D-4 review ledger:** review session/revision/event persistence, evidence fidelity and
    optimistic concurrency.
-5. [ ] **8D-5 review commands:** edit/acknowledge/approve/reject/reopen with immutable audit.
+   - A session is bound to exactly one extraction run or incremental document plus the exact
+     normalized CCEF hash visible when it is opened. A later document head therefore creates a new
+     hash-bound session instead of silently moving an existing review baseline.
+   - Revision 1 reuses the already verified normalized CCEF CAS object; it never overwrites or
+     copies provider/raw artifacts. The mutable session stores only status/version, while revisions
+     and events are append-only facts. Event 1 records the zero-to-one creation transition.
+   - `POST /api/pdf-extractions/{target_id}/review/session` creates or replays the session for the
+     currently verified candidate; `GET /api/pdf-review-sessions/{session_id}` returns the bounded
+     ledger without CAS paths or candidate contents. Edit/acknowledge/approve/reject/reopen remain
+     exclusively in 8D-5.
+   - Source page spans now preserve optional fragment SHA-256 and paired text offsets alongside the
+     physical page/bbox, so later publication can map CCEF evidence without an opaque context blob.
+5. [x] **8D-5 review commands:** edit/acknowledge/approve/reject/reopen with immutable audit.
+   - One discriminated expected-version command boundary appends a revision/event for every
+     successful edit or state transition. Edited CCEF is stored as a new canonical CAS object;
+     acknowledge/approve/reject/reopen revisions reuse the current immutable object.
+   - Chess edits are semantic operations rather than arbitrary JSON replacement: board-entered
+     legal UCI lines, delete-subtree, promote-one-priority, make-mainline and one-NAG selection.
+     The backend owns IDs, parent/sibling topology, SAN/FEN normalization, reading-flow repair and
+     final CCEF/python-chess validation. Duplicate board moves traverse the existing child.
+   - Deletion is an explicit audited decision. It removes the selected subtree and annotations
+     anchored exclusively inside it, while an earlier revision remains recoverable. Text edits
+     cover headings, prose and in-score annotations.
+   - The review page opens/replays a hash-bound session on demand, records new moves from the
+     selected board position with the visible PDF page as evidence, exposes Lichess-style
+     variation commands, supports pending-line undo/save and displays warning acknowledgement plus
+     approve/reject/reopen controls. Approval is impossible with blocking issues or unacknowledged
+     current warnings; any later edit resets warning acknowledgements.
+   - The score presentation uses a compact Lichess-inspired layout: mainline fullmoves occupy one
+     white/black row, consecutive moves in the same alternative are rendered as one dense line,
+     and every alternative (including a sole shallow alternative) keeps explicit nested branch
+     rails instead of parenthetical notation. In-score annotations are unboxed text lines. Move
+     validity is encoded by move styling (invalid red, ambiguous amber) rather than permanent
+     labels; source pages and edit actions live in move/annotation context menus, whose opening
+     also navigates the source pane to the first evidence page.
 6. [ ] **8D-6 draft publication:** atomic idempotent Course/Knowledge draft mapping.
-7. [ ] **8D-7 interactive completion:** editing, explicit conflict resolution, multi-source merge
-   and focused `make acceptance-stage-8` closeout.
+7. [ ] **8D-7 interactive completion:** explicit conflict resolution, multi-source merge and
+   focused `make acceptance-stage-8` closeout.
 
 ## Architecture correction gate before 8D-4
 
@@ -174,9 +237,9 @@ Delivery order is frozen:
    anchor projection from one normalized CCEF 1.1 baseline; no I/O or provider call.
 2. [x] **8D-3E2 document persistence/API:** adopt an existing compatible run, append one adjacent
    segment with optimistic concurrency and expose one grouped Sources identity.
-3. [ ] **8D-3E3 incremental execution:** bounded context-only tail evidence, hash-bound provider
-   bindings and failure-safe segment commit. The accepted 324–328 JSON now has an operator commit
-   path; a reusable queued-worker handler remains optional follow-up before fully closing 3E.
+3. [x] **8D-3E3 incremental execution:** bounded context-only tail evidence, hash-bound provider
+   bindings and failure-safe segment commit. The reusable worker now claims the append Job, reuses
+   immutable evidence/candidate artifacts on retry, composes the aggregate and advances the head.
 4. [x] **8D-3E4 deterministic composition/read:** graft segment sequences at verified anchors,
    preserve all evidence/reading flow and serve an immutable aggregate review revision.
 5. [x] **8D-3E5 grouped UI/real checkpoint:** one Sources entry and aggregate review for existing
@@ -280,10 +343,10 @@ entry/link, navigated to the document review URL, found ten page buttons and dis
 The sole review blocker is the already-known non-chess player photo on page 322, which requires
 human acceptance and is unrelated to incremental composition.
 
-This closes 8D-3E4/3E5 for the real checkpoint. 8D-3E3 remains open only for turning the operator
-commit command into a generally claimable `pdf_incremental_extraction` worker path; the current
-personal-site workflow is already usable and should be exercised before that optional plumbing is
-expanded.
+This closes 8D-3E3/3E4/3E5. The generic `pdf_incremental_extraction` worker was subsequently
+installed and exercised by a browser-created pages-329–332 append: one paid response was retained,
+a transient SQLite heartbeat/write collision retried without a second provider call, and revision
+3 now serves the continuous pages-319–332 aggregate.
 
 ### Cancelled V4-Flash correction packet: DS-STAGE8-INCREMENTAL-DOCUMENT-ORACLES-01-R1 (8D-3E2B)
 

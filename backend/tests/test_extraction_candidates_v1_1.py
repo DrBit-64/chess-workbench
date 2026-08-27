@@ -381,6 +381,90 @@ def test_semantic_profile_requires_exact_fragment_bound_evidence() -> None:
     )
 
 
+def test_semantic_profile_replaces_provider_geometry_from_trusted_fragment_hash() -> None:
+    ctx = context()
+    request = build_ccef_v1_1_semantic_generation_request(ctx)
+    document = _bind_all_evidence(package_document(), ctx)
+
+    def corrupt_provider_geometry(candidate: Any) -> None:
+        if isinstance(candidate, dict):
+            for key, child in candidate.items():
+                if key == "evidence" and isinstance(child, list):
+                    for reference in child:
+                        reference["bbox"] = [0.1, 0.9, 0.2, 0.3]
+                        reference["start_offset"] = 40
+                        reference["end_offset"] = 41
+                else:
+                    corrupt_provider_geometry(child)
+        elif isinstance(candidate, list):
+            for child in candidate:
+                corrupt_provider_geometry(child)
+
+    corrupt_provider_geometry(document)
+    provider_response = response(json.dumps(document))
+    response_snapshot = provider_response.model_dump(mode="json")
+    artifacts = assemble_ccef_candidate_artifacts_v1_1_semantic(
+        ctx,
+        request,
+        provider_response,
+    )
+
+    raw = ExtractionPackageV1_1.model_validate_json(artifacts.raw_ccef_bytes)
+    sequence = next(item for item in raw.items if isinstance(item, MoveSequenceItemV1_1))
+    trusted_box = [0.1, 0.2, 0.9, 0.3]
+    for reference in (
+        raw.items[0].evidence[0],
+        sequence.evidence[0],
+        sequence.nodes[0].evidence[0],
+        sequence.annotations[0].evidence[0],
+    ):
+        assert reference.bbox == trusted_box
+        assert reference.start_offset is None
+        assert reference.end_offset is None
+    assert provider_response.model_dump(mode="json") == response_snapshot
+
+
+def test_semantic_profile_canonicalizes_safe_node_order_before_strict_validation() -> None:
+    ctx = context()
+    request = build_ccef_v1_1_semantic_generation_request(ctx)
+    document = _bind_all_evidence(package_document(), ctx)
+    sequence = document["items"][1]
+    original_nodes = sequence["nodes"]
+    sequence["nodes"] = [*original_nodes[:11], original_nodes[15], *original_nodes[11:15]]
+    provider_response = response(json.dumps(document))
+    response_snapshot = provider_response.model_dump(mode="json")
+
+    artifacts = assemble_ccef_candidate_artifacts_v1_1_semantic(
+        ctx,
+        request,
+        provider_response,
+    )
+
+    raw = ExtractionPackageV1_1.model_validate_json(artifacts.raw_ccef_bytes)
+    raw_sequence = next(item for item in raw.items if isinstance(item, MoveSequenceItemV1_1))
+    move_ids = [
+        entry.node_id for entry in raw_sequence.reading_flow if isinstance(entry, MoveFlowRef)
+    ]
+    assert [node.id for node in raw_sequence.nodes] == move_ids
+    normalized = ExtractionPackageV1_1.model_validate_json(artifacts.normalized_ccef_bytes)
+    normalized_sequence = next(
+        item for item in normalized.items if isinstance(item, MoveSequenceItemV1_1)
+    )
+    assert all(node.validation_status == "valid" for node in normalized_sequence.nodes)
+
+    provider_document = json.loads(artifacts.provider_response_bytes)
+    assert provider_document["artifact_schema"] == "chess-workbench/ccef-repair-chain/2.1"
+    assert provider_document["deterministic_operations"] == [
+        {
+            "rule": "align_nodes_to_reading_flow",
+            "path": "/items/1/nodes",
+            "moved_count": 5,
+        }
+    ]
+    assert provider_document["original_response"] == response_snapshot
+    assert provider_response.model_dump(mode="json") == response_snapshot
+
+
 def test_semantic_profile_rejects_unknown_fragment_hash_without_leaking_it() -> None:
     ctx = context()
     request = build_ccef_v1_1_semantic_generation_request(ctx)

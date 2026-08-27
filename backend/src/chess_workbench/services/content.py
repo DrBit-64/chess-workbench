@@ -2066,10 +2066,14 @@ class ContentService:
             "bbox": None,
             "start_value": None,
             "end_value": None,
+            "fragment_sha256": None,
         }
         if isinstance(locator, PageSpan):
             columns["page_number"] = locator.page_number
             columns["bbox"] = locator.bbox.model_dump(mode="python") if locator.bbox else None
+            columns["start_value"] = locator.start_offset
+            columns["end_value"] = locator.end_offset
+            columns["fragment_sha256"] = locator.fragment_sha256
         elif isinstance(locator, VideoSpan):
             columns["start_value"] = locator.start_ms
             columns["end_value"] = locator.end_ms
@@ -2090,7 +2094,13 @@ class ContentService:
             locator: WholeSpan | PageSpan | VideoSpan | TextSpan = WholeSpan()
         elif row.locator_kind == "page" and row.page_number is not None:
             bbox = NormalizedBoundingBox.model_validate(row.bbox) if row.bbox is not None else None
-            locator = PageSpan(page_number=row.page_number, bbox=bbox)
+            locator = PageSpan(
+                page_number=row.page_number,
+                bbox=bbox,
+                start_offset=row.start_value,
+                end_offset=row.end_value,
+                fragment_sha256=row.fragment_sha256,
+            )
         elif (
             row.locator_kind == "video"
             and row.start_value is not None

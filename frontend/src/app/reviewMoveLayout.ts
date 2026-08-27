@@ -21,6 +21,8 @@ export interface ReviewMoveRow {
   key: string;
   /** Uncapped alternative-branch depth (0 = mainline). */
   variationDepth: number;
+  /** Ordered alternative roots from the outermost branch to this row. */
+  variationPath: string[];
   /** Fullmove number for the gutter; null for fallback rows. */
   moveNumber: number | null;
   /** White ply node, or null for black-only rows. */
@@ -40,7 +42,19 @@ export type ReviewReadingBlock =
       key: string;
       annotation: SequenceAnnotation;
       variationDepth: number;
+      variationPath: string[];
     };
+
+export type CompactReviewBlock =
+  | { kind: 'mainline_row'; key: string; row: ReviewMoveRow }
+  | {
+      kind: 'variation_line';
+      key: string;
+      variationDepth: number;
+      variationPath: string[];
+      rows: ReviewMoveRow[];
+    }
+  | Extract<ReviewReadingBlock, { kind: 'annotation' }>;
 
 /**
  * Project a normalized move sequence into conventional two-ply score rows.
@@ -54,8 +68,8 @@ export type ReviewReadingBlock =
  * by object identity.
  */
 export function buildReviewMoveRows(nodes: MoveNode[]): ReviewMoveRow[] {
-  const depths = variationDepths(nodes);
-  return buildMoveRowsWithDepths(nodes, depths);
+  const paths = variationPaths(nodes);
+  return buildMoveRowsWithPaths(nodes, paths);
 }
 
 /**
@@ -68,7 +82,7 @@ export function buildReviewMoveRows(nodes: MoveNode[]): ReviewMoveRow[] {
 export function buildReviewReadingFlow(
   item: AnnotatedMoveSequenceItem,
 ): ReviewReadingBlock[] {
-  const depths = variationDepths(item.nodes);
+  const paths = variationPaths(item.nodes);
   const nodes = new Map(item.nodes.map((node) => [node.id, node]));
   const annotations = new Map(
     (item.annotations ?? []).map((annotation) => [annotation.id, annotation]),
@@ -77,7 +91,7 @@ export function buildReviewReadingFlow(
   let bufferedMoves: MoveNode[] = [];
 
   function flushMoves() {
-    for (const row of buildMoveRowsWithDepths(bufferedMoves, depths)) {
+    for (const row of buildMoveRowsWithPaths(bufferedMoves, paths)) {
       blocks.push({ kind: 'move_row', key: `move:${row.key}`, row });
     }
     bufferedMoves = [];
@@ -98,54 +112,100 @@ export function buildReviewReadingFlow(
     if (annotation === undefined) {
       throw new Error('review reading flow contains an unknown annotation');
     }
-    const variationDepth =
+    const variationPath =
       annotation.anchor?.kind === 'move_node'
-        ? (depths.get(annotation.anchor.node_id) ?? 0)
-        : 0;
+        ? (paths.get(annotation.anchor.node_id) ?? [])
+        : [];
     blocks.push({
       kind: 'annotation',
       key: `annotation:${annotation.id}`,
       annotation,
-      variationDepth,
+      variationDepth: variationPath.length,
+      variationPath,
     });
   }
   flushMoves();
   return blocks;
 }
 
-function buildMoveRowsWithDepths(
+/** Group adjacent rows of one real variation into a dense inline line. */
+export function compactReviewBlocks(
+  blocks: ReviewReadingBlock[],
+): CompactReviewBlock[] {
+  const compact: CompactReviewBlock[] = [];
+  let pendingRows: ReviewMoveRow[] = [];
+  let pendingPath: string[] = [];
+
+  function flushVariation() {
+    if (pendingRows.length === 0) return;
+    compact.push({
+      kind: 'variation_line',
+      key: `variation:${pendingPath.join('/')}:${pendingRows
+        .map((row) => row.key)
+        .join('+')}`,
+      variationDepth: pendingPath.length,
+      variationPath: pendingPath,
+      rows: pendingRows,
+    });
+    pendingRows = [];
+    pendingPath = [];
+  }
+
+  for (const block of blocks) {
+    if (block.kind === 'annotation') {
+      flushVariation();
+      compact.push(block);
+    } else if (block.row.variationDepth === 0) {
+      flushVariation();
+      compact.push({ kind: 'mainline_row', key: block.key, row: block.row });
+    } else if (
+      pendingRows.length > 0 &&
+      samePath(pendingPath, block.row.variationPath)
+    ) {
+      pendingRows.push(block.row);
+    } else {
+      flushVariation();
+      pendingRows = [block.row];
+      pendingPath = block.row.variationPath;
+    }
+  }
+  flushVariation();
+  return compact;
+}
+
+function buildMoveRowsWithPaths(
   nodes: MoveNode[],
-  depths: Map<string, number>,
+  paths: Map<string, string[]>,
 ): ReviewMoveRow[] {
   const rows: ReviewMoveRow[] = [];
   let pendingWhite: MoveNode | null = null;
-  let pendingWhiteDepth = 0;
+  let pendingWhitePath: string[] = [];
   let pendingWhiteMoveNumber: number | null = null;
 
   function flushWhite() {
     if (pendingWhite !== null) {
       rows.push(
-        makeRow(pendingWhite, null, pendingWhiteDepth, pendingWhiteMoveNumber),
+        makeRow(pendingWhite, null, pendingWhitePath, pendingWhiteMoveNumber),
       );
       pendingWhite = null;
     }
   }
 
   for (const node of nodes) {
-    const depth = depths.get(node.id) ?? 0;
+    const path = paths.get(node.id) ?? [];
     const moveNumber = node.move_number;
     const side = node.side_to_move;
 
     if (side === null || moveNumber === null) {
       flushWhite();
-      rows.push(makeRow(null, null, depth, moveNumber, node));
+      rows.push(makeRow(null, null, path, moveNumber, node));
       continue;
     }
 
     if (side === 'w') {
       flushWhite();
       pendingWhite = node;
-      pendingWhiteDepth = depth;
+      pendingWhitePath = path;
       pendingWhiteMoveNumber = moveNumber;
       continue;
     }
@@ -155,13 +215,13 @@ function buildMoveRowsWithDepths(
       pendingWhiteMoveNumber === moveNumber &&
       node.parent_id === pendingWhite.id &&
       node.sibling_order === 0 &&
-      depth === pendingWhiteDepth;
+      samePath(path, pendingWhitePath);
     if (canPair) {
-      rows.push(makeRow(pendingWhite, node, depth, moveNumber));
+      rows.push(makeRow(pendingWhite, node, path, moveNumber));
       pendingWhite = null;
     } else {
       flushWhite();
-      rows.push(makeRow(null, node, depth, moveNumber));
+      rows.push(makeRow(null, node, path, moveNumber));
     }
   }
 
@@ -169,25 +229,24 @@ function buildMoveRowsWithDepths(
   return rows;
 }
 
-/** Topological variation depth: parent-before-child by CCEF contract. */
-function variationDepths(nodes: MoveNode[]): Map<string, number> {
-  const depths = new Map<string, number>();
+/** Topological variation lineage: parent-before-child by CCEF contract. */
+function variationPaths(nodes: MoveNode[]): Map<string, string[]> {
+  const paths = new Map<string, string[]>();
   for (const node of nodes) {
-    if (node.parent_id === null) {
-      depths.set(node.id, node.sibling_order === 0 ? 0 : 1);
-    } else {
-      const parentDepth = depths.get(node.parent_id);
-      const base = parentDepth === undefined ? 0 : parentDepth;
-      depths.set(node.id, node.sibling_order > 0 ? base + 1 : base);
-    }
+    const parentPath =
+      node.parent_id === null ? [] : (paths.get(node.parent_id) ?? []);
+    paths.set(
+      node.id,
+      node.sibling_order > 0 ? [...parentPath, node.id] : parentPath,
+    );
   }
-  return depths;
+  return paths;
 }
 
 function makeRow(
   white: MoveNode | null,
   black: MoveNode | null,
-  depth: number,
+  variationPath: string[],
   moveNumber: number | null,
   fallback: MoveNode | null = null,
 ): ReviewMoveRow {
@@ -204,11 +263,19 @@ function makeRow(
   }
   return {
     key: contained.map((node) => node.id).join('+'),
-    variationDepth: depth,
+    variationDepth: variationPath.length,
+    variationPath,
     moveNumber,
     white,
     black,
     fallback,
     evidencePages: pages,
   };
+}
+
+function samePath(left: string[], right: string[]): boolean {
+  return (
+    left.length === right.length &&
+    left.every((entry, index) => entry === right[index])
+  );
 }

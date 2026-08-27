@@ -95,6 +95,7 @@ _SUPPORTED_PIPELINES = frozenset(
         PDF_EXTRACTION_PIPELINE_VERSION,
         PDF_ANNOTATED_EXTRACTION_PIPELINE_VERSION,
         PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION,
+        "pdf-extraction:v5",
     }
 )
 _MAX_RUN_FRAGMENTS = 200_000
@@ -178,7 +179,7 @@ def _parse_uuid(value: object) -> UUID:
 def _parse_payload(
     payload: dict[str, Any],
 ) -> tuple[UUID, UUID, int, int, str, dict[str, JsonValue]]:
-    expected_keys = {
+    common_keys = {
         "schema_version",
         "run_id",
         "pdf_asset_id",
@@ -187,6 +188,15 @@ def _parse_payload(
         "pipeline_version",
         "profile",
     }
+    pipeline_version = payload.get("pipeline_version") if type(payload) is dict else None
+    expected_keys = common_keys
+    if pipeline_version == "pdf-extraction:v5":
+        expected_keys = common_keys | {
+            "document_id",
+            "expected_document_version",
+            "predecessor_revision_id",
+            "predecessor_normalized_ccef_sha256",
+        }
     if type(payload) is not dict or set(payload) != expected_keys:
         raise EngineError("invalid_job_payload", "PDF extraction Job payload is invalid")
     if type(payload["schema_version"]) is not int or payload["schema_version"] != 1:
@@ -228,13 +238,18 @@ async def _load_input(database: Database, payload: dict[str, Any]) -> _Extractio
     if row is None:
         raise EngineError("invalid_job_payload", "PDF extraction Job payload is invalid")
     run, asset, source_file, job = row
+    expected_job_kind = (
+        "pdf_incremental_extraction"
+        if pipeline_version == "pdf-extraction:v5"
+        else "pdf_extraction"
+    )
     if (
         asset.id != asset_id
         or run.first_page != first_page
         or run.last_page != last_page
         or run.pipeline_version != pipeline_version
         or pipeline_version not in _SUPPORTED_PIPELINES
-        or job.kind != "pdf_extraction"
+        or job.kind != expected_job_kind
         or job.payload != payload
         or source_file.sha256 != asset.content_sha256
         or source_file.size_bytes != asset.byte_size
@@ -731,6 +746,7 @@ def _active_provider(
     provider: StructuredGenerationProvider | None,
     *,
     thinking_enabled: bool = False,
+    json_output_enabled: bool = True,
     invalid_response_recorder: DeepSeekInvalidResponseRecorder | None = None,
 ) -> StructuredGenerationProvider:
     if provider is not None:
@@ -754,6 +770,7 @@ def _active_provider(
         timeout_seconds=settings.ccef_provider_timeout_seconds,
         max_output_tokens_limit=settings.ccef_max_output_tokens,
         thinking_enabled=thinking_enabled,
+        json_output_enabled=json_output_enabled,
         invalid_response_recorder=invalid_response_recorder,
     )
 
@@ -799,6 +816,7 @@ async def _process_ccef_candidate(
         settings,
         provider,
         thinking_enabled=source.pipeline_version == PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION,
+        json_output_enabled=source.pipeline_version != PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION,
     )
     try:
         response = await active_provider.generate(request)
@@ -945,6 +963,10 @@ async def process_pdf_extraction_job(
     """Render one immutable run, write CAS blobs, then atomically register indexes."""
     source = await _load_input(database, payload)
     active_provider: StructuredGenerationProvider | None = provider
+    if payload["pipeline_version"] == "pdf-extraction:v5":
+        committed = await _load_committed_evidence(database, settings, source)
+        if committed is not None:
+            return committed.result
     if payload["pipeline_version"] in {
         PDF_EXTRACTION_PIPELINE_VERSION,
         PDF_ANNOTATED_EXTRACTION_PIPELINE_VERSION,
@@ -955,6 +977,7 @@ async def process_pdf_extraction_job(
             settings,
             provider,
             thinking_enabled=is_semantic_v4,
+            json_output_enabled=not is_semantic_v4,
             invalid_response_recorder=(
                 _deepseek_invalid_response_recorder(settings, source) if is_semantic_v4 else None
             ),
@@ -1164,7 +1187,10 @@ async def process_pdf_extraction_job(
     committed = await _load_committed_evidence(database, settings, source)
     if committed is None:
         raise RuntimeError("registered evidence artifacts are missing")
-    if payload["pipeline_version"] == PDF_EVIDENCE_PIPELINE_VERSION:
+    if payload["pipeline_version"] in {
+        PDF_EVIDENCE_PIPELINE_VERSION,
+        "pdf-extraction:v5",
+    }:
         return committed.result
     return await _process_ccef_candidate(
         database,

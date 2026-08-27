@@ -32,6 +32,7 @@ from chess_workbench.extraction.provider import (
 REPO_ROOT = Path(__file__).resolve().parents[2]
 ENDPOINT = "https://api.deepseek.com/chat/completions"
 INVALID_RESPONSE_MESSAGE = "DeepSeek returned an invalid response"
+EMPTY_FINAL_CONTENT_MESSAGE = "DeepSeek returned no final content; retry manually"
 OUTPUT_LIMIT_MESSAGE = "Requested output tokens exceed the configured DeepSeek output limit"
 
 _SYSTEM_INSTRUCTION_PREFIX = (
@@ -96,6 +97,12 @@ def _assert_invalid_response_error(error: StructuredGenerationProviderError) -> 
     assert error.code == "invalid_response"
     assert error.retryable is False
     assert error.message == INVALID_RESPONSE_MESSAGE
+
+
+def _assert_empty_response_error(error: StructuredGenerationProviderError) -> None:
+    assert error.code == "invalid_response"
+    assert error.retryable is False
+    assert error.message == EMPTY_FINAL_CONTENT_MESSAGE
 
 
 # ---------------------------------------------------------------------------
@@ -175,6 +182,24 @@ async def test_thinking_profile_is_explicit_and_uses_max_effort() -> None:
     provider = DeepSeekV4FlashProvider(
         api_key="test-key",
         thinking_enabled=True,
+        transport=httpx.MockTransport(handler),
+    )
+    response = await provider.generate(_request())
+    assert response.content == '{"ok": true}'
+
+
+async def test_json_output_can_be_omitted_without_disabling_thinking() -> None:
+    def handler(req: httpx.Request) -> httpx.Response:
+        body = json.loads(req.content)
+        assert body["thinking"] == {"type": "enabled"}
+        assert body["reasoning_effort"] == "max"
+        assert "response_format" not in body
+        return httpx.Response(200, json=_ok_payload())
+
+    provider = DeepSeekV4FlashProvider(
+        api_key="test-key",
+        thinking_enabled=True,
+        json_output_enabled=False,
         transport=httpx.MockTransport(handler),
     )
     response = await provider.generate(_request())
@@ -307,7 +332,7 @@ async def test_empty_or_whitespace_content_is_invalid_response(content: str) -> 
     )
     with pytest.raises(StructuredGenerationProviderError) as excinfo:
         await provider.generate(_request())
-    _assert_invalid_response_error(excinfo.value)
+    _assert_empty_response_error(excinfo.value)
 
 
 # ---------------------------------------------------------------------------
@@ -371,7 +396,7 @@ async def test_invalid_null_content_records_exact_raw_response() -> None:
     with pytest.raises(StructuredGenerationProviderError) as excinfo:
         await provider.generate(_request())
 
-    _assert_invalid_response_error(excinfo.value)
+    _assert_empty_response_error(excinfo.value)
     assert excinfo.value.__cause__ is None
     assert excinfo.value.__context__ is None
     assert private_marker not in str(excinfo.value)

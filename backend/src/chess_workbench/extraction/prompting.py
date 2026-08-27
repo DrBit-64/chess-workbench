@@ -29,7 +29,7 @@ from .provider import StructuredGenerationRequest, StructuredMessage
 
 CCEF_PROMPT_VERSION = "chess-workbench/ccef-prompt/1.3"
 CCEF_PROMPT_VERSION_1_1 = "chess-workbench/ccef-prompt/1.4"
-CCEF_SEMANTIC_PROMPT_VERSION_1_1 = "chess-workbench/ccef-prompt/1.5"
+CCEF_SEMANTIC_PROMPT_VERSION_1_1 = "chess-workbench/ccef-prompt/1.6"
 
 _MAX_PAGES = 20_000
 _MAX_FRAGMENTS = 200_000
@@ -323,8 +323,10 @@ _V1_1_SEMANTIC_ALGORITHM = (
     "Introductory move-order examples outside an active score remain narrative prose unless the "
     "source clearly presents them as a standalone numbered score.\n"
     "For every item, node, annotation, warning, or diagnostic supported by an evidence fragment, "
-    "copy that fragment's physical_page, fragment_sha256, and exact box into its EvidenceRef. "
-    "Never emit a page-only EvidenceRef when a supplied fragment supports the value.\n"
+    "select it using only the fragment's exact physical_page and fragment_sha256 in EvidenceRef. "
+    "Omit bbox, start_offset, and end_offset or set them to null; trusted local code fills those "
+    "physical fields after validating the fragment selector. Never emit a page-only EvidenceRef "
+    "when a supplied fragment supports the value.\n"
     "Illustrative topology only: if a synthetic mainline reaches 5...e6 and prints 6.Nf3, then "
     "discusses the alternative '(6.Bg5 Be7 (6...c5))', and later prints 6...Nf6, both White sixth "
     "moves share the node for 5...e6 as parent; Be7 and c5 share Bg5 as parent; the later Nf6 "

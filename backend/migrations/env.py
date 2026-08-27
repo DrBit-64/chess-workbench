@@ -30,6 +30,9 @@ from chess_workbench.store.models import (
     PdfExtractionDocumentAppend,
     PdfExtractionDocumentRevision,
     PdfExtractionDocumentSegment,
+    PdfReviewEvent,
+    PdfReviewRevision,
+    PdfReviewSession,
     Position,
     Source,
     SourceFile,
@@ -62,6 +65,9 @@ _REGISTERED_MODELS = (
     PdfExtractionDocumentAppend,
     PdfExtractionDocumentRevision,
     PdfExtractionDocumentSegment,
+    PdfReviewEvent,
+    PdfReviewRevision,
+    PdfReviewSession,
 )
 
 config = context.config

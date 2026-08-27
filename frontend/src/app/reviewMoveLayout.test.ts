@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildReviewMoveRows,
   buildReviewReadingFlow,
+  compactReviewBlocks,
 } from './reviewMoveLayout';
 import type { AnnotatedMoveSequenceItem, MoveNode } from './reviewMoveLayout';
 
@@ -131,16 +132,40 @@ describe('buildReviewMoveRows', () => {
     expect(rows[1].white).toBeNull();
     expect(rows[1].black).toBe(c5);
     expect(rows[1].variationDepth).toBe(1);
+    expect(rows[1].variationPath).toEqual(['c5']);
 
     // Primary descendant of the alternative keeps depth 1 (does not deepen).
     expect(rows[2].white).toBe(d4);
     expect(rows[2].black).toBeNull();
     expect(rows[2].variationDepth).toBe(1);
+    expect(rows[2].variationPath).toEqual(['c5']);
 
     // Nested alternative adds one more level.
     expect(rows[3].white).toBeNull();
     expect(rows[3].black).toBe(g6);
     expect(rows[3].variationDepth).toBe(2);
+    expect(rows[3].variationPath).toEqual(['c5', 'g6']);
+
+    const compact = compactReviewBlocks(
+      rows.map((row) => ({
+        kind: 'move_row' as const,
+        key: `move:${row.key}`,
+        row,
+      })),
+    );
+    expect(compact.map((block) => block.kind)).toEqual([
+      'mainline_row',
+      'variation_line',
+      'variation_line',
+    ]);
+    expect(compact[1].kind).toBe('variation_line');
+    if (compact[1].kind === 'variation_line') {
+      expect(compact[1].rows.map((row) => row.key)).toEqual(['c5', 'd4']);
+    }
+    expect(compact[2].kind).toBe('variation_line');
+    if (compact[2].kind === 'variation_line') {
+      expect(compact[2].variationPath).toEqual(['c5', 'g6']);
+    }
   });
 
   it('never pairs incompatible or nonconsecutive nodes and keeps fallback rows visible', () => {

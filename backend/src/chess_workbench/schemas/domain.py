@@ -448,6 +448,21 @@ class PageSpan(StrictContract):
     kind: Literal["page"] = "page"
     page_number: Annotated[int, Field(ge=1)]
     bbox: NormalizedBoundingBox | None = None
+    start_offset: NonNegativeInt | None = None
+    end_offset: Annotated[int, Field(gt=0)] | None = None
+    fragment_sha256: Sha256 | None = None
+
+    @model_validator(mode="after")
+    def offsets_must_be_paired(self) -> PageSpan:
+        if (self.start_offset is None) != (self.end_offset is None):
+            raise ValueError("page text offsets must be provided together")
+        if (
+            self.start_offset is not None
+            and self.end_offset is not None
+            and self.end_offset <= self.start_offset
+        ):
+            raise ValueError("end_offset must be greater than start_offset")
+        return self
 
 
 class VideoSpan(StrictContract):

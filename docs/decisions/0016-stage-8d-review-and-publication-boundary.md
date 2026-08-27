@@ -51,6 +51,41 @@ session 使用 expected-version 乐观并发。每次修改、批准、拒绝或
 通过从 JSON 删除 item/node 来隐式消失。批准要求所有 warning 已被确认，所有 blocking issue 已通过
 可审计修改或拒绝决定解决。
 
+#### 8D-4 持久化细化（2026-08-24）
+
+审核 session 绑定二元组“目标身份 + 创建时精确 normalized CCEF hash”。目标恰为一个 extraction run
+或一个增量 `PdfExtractionDocument`；后者继续增长后，以新聚合 hash 打开新 session，不把旧审核基线
+静默推进。session 是唯一可变 head（`status`、`version`、UTC timestamps），revision 与 event 都是
+不可变追加事实。revision number 与 resulting session version 一致，event 明确记录 parent/resulting
+version、操作类型和有限结构化决定。
+
+创建 session 时先经过既有只读审核加载器完整验证 CCEF、证据页和 CAS 绑定，再让 revision 1 直接引用
+已验证 normalized CCEF 的 content-addressed object；不会覆盖或复制 raw/provider 工件。创建事件为
+`created`，父版本为 0、结果版本为 1。8D-4 只开放创建/复用和读取账本；edit/acknowledge/approve/
+reject/reopen 的状态机和 expected-version 命令由 8D-5 实现。
+
+为避免大型候选和服务器路径泄露，公开账本只包含目标、baseline hash、状态/version、revision 的 hash
+与序号以及结构化 event；不返回 revision CAS 路径或 CCEF 正文。现有审核文档 API 仍负责返回经过验证的
+候选正文与页图。
+
+#### 8D-5 命令与棋谱交互细化（2026-08-24）
+
+审核页面不提供任意 CCEF JSON 编辑器。前端提交带 expected-version 的语义命令，后端在当前不可变
+revision 的副本上执行、重新规范化并写入新的 CAS revision。棋盘录入一串合法 UCI：当前局面没有
+后续时成为主线，已有其他后续时成为最后一个变招，已存在相同 UCI 时只进入既有分支而不创建重复节点。
+用户新增棋步明确采用当前显示的物理页作为页级 EvidenceRef；后端生成本地 ID、SAN、回合/行棋方与
+前后 FEN。
+
+棋谱菜单采用 Lichess 式语义：`delete_subtree` 从选中棋步开始显式排除整棵子树；
+`promote_variation` 只在同父候选中向前提升一级；`make_mainline` 把通向选中节点的每一层候选提升为
+主线。结构修改后，节点保持父先于子并同步重建 exact-cover reading flow；与被删节点绑定的谱内注释
+随显式删除决定移除，旧 revision 继续保存完整历史。heading、prose 与谱内 annotation 使用受控文字
+命令，NAG 必须明确选择零个或一个。
+
+`acknowledge` 只确认当前非阻断 issue；任何后续 edit 都使旧确认失效。`approve` 要求当前没有 blocking
+issue 且所有非阻断 issue 已确认。`reject` 与 `reopen` 是显式状态转换。所有成功命令——包括只改变
+状态的命令——都追加一条 revision/event，绝不覆盖提取工件或旧审核内容。
+
 ### 5. 既有映射阻断的处理
 
 - `EvidenceRef` 始终完整保留在审核修订。发布所需的 SourceSpan fidelity 通过 Stage 8D migration

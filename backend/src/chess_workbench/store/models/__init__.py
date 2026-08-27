@@ -45,6 +45,11 @@ from chess_workbench.store.models.pgn import (
     PgnImportGame,
     PgnOccurrenceAnnotation,
 )
+from chess_workbench.store.models.review import (
+    PdfReviewEvent,
+    PdfReviewRevision,
+    PdfReviewSession,
+)
 
 __all__ = [
     "ArchiveMixin",
@@ -71,6 +76,9 @@ __all__ = [
     "PdfExtractionDocumentAppend",
     "PdfExtractionDocumentRevision",
     "PdfExtractionDocumentSegment",
+    "PdfReviewEvent",
+    "PdfReviewRevision",
+    "PdfReviewSession",
     "Position",
     "PgnAsset",
     "PgnImport",

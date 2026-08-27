@@ -1,4 +1,4 @@
-"""Immutable PDF asset upload and extraction-run HTTP boundary."""
+"""PDF source, extraction, review-read and review-ledger HTTP boundary."""
 
 from __future__ import annotations
 
@@ -38,7 +38,13 @@ from chess_workbench.schemas.pdf_documents import (
     PdfExtractionDocumentRevisionRead,
     PdfExtractionDocumentSegmentRead,
 )
-from chess_workbench.schemas.review import PdfReviewDocumentRead
+from chess_workbench.schemas.review import (
+    PdfReviewCommandEnvelope,
+    PdfReviewCommandRequest,
+    PdfReviewDocumentRead,
+    PdfReviewSessionEnvelope,
+    PdfReviewSessionRead,
+)
 from chess_workbench.services.jobs import job_read
 from chess_workbench.services.pdf import prepare_pdf_asset
 from chess_workbench.services.pdf_documents import (
@@ -57,6 +63,7 @@ from chess_workbench.services.pdf_persistence import (
     PdfPersistenceService,
 )
 from chess_workbench.services.pdf_review import PdfReviewReadService
+from chess_workbench.services.pdf_review_ledger import PdfReviewLedgerService
 from chess_workbench.store.database import Database
 
 pdf_blueprint = Blueprint("pdf", url_prefix="/api")
@@ -363,9 +370,9 @@ async def create_pdf_extraction_document_append(
 async def get_pdf_extraction_review(request: Request, run_id: UUID) -> HTTPResponse:
     database = cast(Database, request.app.ctx.database)
     async with database.session() as session:
-        document = await PdfReviewReadService(session, request.app.ctx.settings).read_document(
-            run_id
-        )
+        document = await PdfReviewLedgerService(
+            session, request.app.ctx.settings
+        ).get_target_document(run_id)
     return json(document.model_dump(mode="json"))
 
 
@@ -403,6 +410,100 @@ async def get_pdf_extraction_review_page(
             "X-Content-Type-Options": "nosniff",
         },
     )
+
+
+@pdf_blueprint.post(
+    "/pdf-extractions/<target_id:uuid>/review/session",
+    name="create_pdf_review_session",
+)
+@openapi.operation("createPdfReviewSession")
+@openapi.summary("Open a hash-bound review session for the current verified candidate")
+@openapi.tag("pdf")
+@openapi.response(201, _media(PdfReviewSessionEnvelope), "PDF review session created")
+@openapi.response(200, _media(PdfReviewSessionEnvelope), "Existing PDF review session replayed")
+@openapi.response(404, ERROR_SCHEMA, "PDF extraction review not found")
+@openapi.response(409, ERROR_SCHEMA, "PDF extraction review or session is unavailable")
+@openapi.response(503, ERROR_SCHEMA, "Source storage unavailable")
+async def create_pdf_review_session(request: Request, target_id: UUID) -> HTTPResponse:
+    database = cast(Database, request.app.ctx.database)
+    async with request.app.ctx.pdf_persistence_lock, database.session() as session, session.begin():
+        outcome = await PdfReviewLedgerService(session, request.app.ctx.settings).open_session(
+            target_id
+        )
+        envelope = PdfReviewSessionEnvelope(
+            replayed=outcome.replayed,
+            session=outcome.session,
+        )
+    return json(
+        envelope.model_dump(mode="json"),
+        status=200 if outcome.replayed else 201,
+        headers={
+            "Location": f"/api/pdf-review-sessions/{outcome.session.id}",
+            "Idempotency-Replayed": "true" if outcome.replayed else "false",
+        },
+    )
+
+
+@pdf_blueprint.get(
+    "/pdf-review-sessions/<session_id:uuid>",
+    name="get_pdf_review_session",
+)
+@openapi.operation("getPdfReviewSession")
+@openapi.summary("Read one immutable PDF review ledger")
+@openapi.tag("pdf")
+@openapi.response(200, _media(PdfReviewSessionRead), "PDF review session")
+@openapi.response(404, ERROR_SCHEMA, "PDF review session not found")
+@openapi.response(409, ERROR_SCHEMA, "PDF review session is unavailable")
+async def get_pdf_review_session(request: Request, session_id: UUID) -> HTTPResponse:
+    database = cast(Database, request.app.ctx.database)
+    async with database.session() as session:
+        payload = await PdfReviewLedgerService(session, request.app.ctx.settings).get_session(
+            session_id
+        )
+    return json(payload.model_dump(mode="json"))
+
+
+@pdf_blueprint.get(
+    "/pdf-review-sessions/<session_id:uuid>/document",
+    name="get_pdf_review_session_document",
+)
+@openapi.operation("getPdfReviewSessionDocument")
+@openapi.summary("Read the current immutable package revision of a PDF review session")
+@openapi.tag("pdf")
+@openapi.response(200, _media(PdfReviewDocumentRead), "Current PDF review document")
+@openapi.response(404, ERROR_SCHEMA, "PDF review session not found")
+@openapi.response(409, ERROR_SCHEMA, "PDF review session is unavailable")
+@openapi.response(503, ERROR_SCHEMA, "Source storage unavailable")
+async def get_pdf_review_session_document(request: Request, session_id: UUID) -> HTTPResponse:
+    database = cast(Database, request.app.ctx.database)
+    async with database.session() as session:
+        payload = await PdfReviewLedgerService(
+            session, request.app.ctx.settings
+        ).get_session_document(session_id)
+    return json(payload.model_dump(mode="json"))
+
+
+@pdf_blueprint.post(
+    "/pdf-review-sessions/<session_id:uuid>/commands",
+    name="apply_pdf_review_command",
+)
+@openapi.operation("applyPdfReviewCommand")
+@openapi.summary("Append one expected-version PDF review command")
+@openapi.tag("pdf")
+@openapi.body(_media(PdfReviewCommandRequest), required=True)
+@openapi.response(200, _media(PdfReviewCommandEnvelope), "PDF review command applied")
+@openapi.response(404, ERROR_SCHEMA, "PDF review session not found")
+@openapi.response(409, ERROR_SCHEMA, "Review state or expected version conflict")
+@openapi.response(422, ERROR_SCHEMA, "Review command could not be applied")
+@openapi.response(503, ERROR_SCHEMA, "Source storage unavailable")
+async def apply_pdf_review_command(request: Request, session_id: UUID) -> HTTPResponse:
+    body = parse_body(request, PdfReviewCommandRequest)
+    database = cast(Database, request.app.ctx.database)
+    async with request.app.ctx.pdf_persistence_lock, database.session() as session, session.begin():
+        payload = await PdfReviewLedgerService(session, request.app.ctx.settings).apply_command(
+            session_id, body
+        )
+    return json(payload.model_dump(mode="json"))
 
 
 def _multipart_upload(

@@ -2,6 +2,8 @@ from datetime import UTC, date, datetime, timedelta
 from uuid import UUID
 
 import pytest
+from pydantic import ValidationError
+
 from chess_workbench.api.contracts import openapi_schema
 from chess_workbench.schemas.domain import (
     CourseContentBlockCreate,
@@ -46,7 +48,6 @@ from chess_workbench.schemas.domain import (
     VideoSpan,
     WholeSpan,
 )
-from pydantic import ValidationError
 
 NOW = datetime(2026, 8, 6, 2, 0, tzinfo=UTC)
 LATER = NOW + timedelta(minutes=1)
@@ -251,7 +252,13 @@ def test_source_span_locator_is_a_strict_discriminated_union() -> None:
     bbox = NormalizedBoundingBox(x0=0.1, y0=0.2, x1=0.8, y1=0.9)
     locators: list[WholeSpan | PageSpan | VideoSpan | TextSpan] = [
         WholeSpan(),
-        PageSpan(page_number=12, bbox=bbox),
+        PageSpan(
+            page_number=12,
+            bbox=bbox,
+            start_offset=10,
+            end_offset=24,
+            fragment_sha256="a" * 64,
+        ),
         VideoSpan(start_ms=1_000, end_ms=2_500),
         TextSpan(start_offset=3, end_offset=9),
     ]
@@ -265,6 +272,10 @@ def test_source_span_locator_is_a_strict_discriminated_union() -> None:
         )
         read = SourceSpanRead.model_validate({**lifecycle(ID3), **span.model_dump()})
         assert read.locator.kind == locator.kind
+        if isinstance(read.locator, PageSpan):
+            assert read.locator.start_offset == 10
+            assert read.locator.end_offset == 24
+            assert read.locator.fragment_sha256 == "a" * 64
 
     updated = SourceSpanUpdate.model_validate(
         {
@@ -279,6 +290,8 @@ def test_source_span_locator_is_a_strict_discriminated_union() -> None:
         {"kind": "video", "start_ms": 10, "end_ms": 10},
         {"kind": "text", "start_offset": 4, "end_offset": 2},
         {"kind": "page", "page_number": 1, "start_ms": 0},
+        {"kind": "page", "page_number": 1, "start_offset": 0},
+        {"kind": "page", "page_number": 1, "start_offset": 3, "end_offset": 3},
     ]
     for invalid_locator in invalid_locators:
         with pytest.raises(ValidationError):

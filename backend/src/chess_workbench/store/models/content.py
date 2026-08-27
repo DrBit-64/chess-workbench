@@ -228,13 +228,19 @@ class SourceSpan(MutableEntityMixin, Base):
         ),
         CheckConstraint(
             "(locator_kind = 'whole' AND page_number IS NULL AND bbox IS NULL "
-            "AND start_value IS NULL AND end_value IS NULL) OR "
+            "AND start_value IS NULL AND end_value IS NULL AND fragment_sha256 IS NULL) OR "
             "(locator_kind = 'page' AND page_number IS NOT NULL AND page_number >= 1 "
-            "AND start_value IS NULL AND end_value IS NULL) OR "
+            "AND ((start_value IS NULL AND end_value IS NULL) OR "
+            "(start_value IS NOT NULL AND end_value IS NOT NULL "
+            "AND start_value >= 0 AND end_value > start_value))) OR "
             "(locator_kind IN ('video','text') AND page_number IS NULL AND bbox IS NULL "
             "AND start_value IS NOT NULL AND end_value IS NOT NULL "
-            "AND start_value >= 0 AND end_value > start_value)",
+            "AND start_value >= 0 AND end_value > start_value AND fragment_sha256 IS NULL)",
             name="locator_fields",
+        ),
+        CheckConstraint(
+            "fragment_sha256 IS NULL OR length(fragment_sha256) = 64",
+            name="fragment_sha256_length",
         ),
         CheckConstraint(
             "locator_kind = 'whole' OR source_file_id IS NOT NULL",
@@ -255,6 +261,7 @@ class SourceSpan(MutableEntityMixin, Base):
     bbox: Mapped[dict[str, float] | None] = mapped_column(JSON(none_as_null=True), nullable=True)
     start_value: Mapped[int | None] = mapped_column(Integer, nullable=True)
     end_value: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    fragment_sha256: Mapped[str | None] = mapped_column(_ascii_string(64), nullable=True)
     quote: Mapped[str | None] = mapped_column(Text, nullable=True)
     ocr_text: Mapped[str | None] = mapped_column(Text, nullable=True)
     confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
