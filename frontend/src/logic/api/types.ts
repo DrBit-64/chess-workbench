@@ -69,5 +69,11 @@ export type PdfReviewCommandRequest =
 export type PdfReviewCommandEnvelope =
   paths['/api/pdf-review-sessions/{session_id}/commands']['post']['responses'][200]['content']['application/json'];
 
+export type PdfReviewPublishRequest =
+  paths['/api/pdf-review-sessions/{session_id}/publications']['post']['requestBody']['content']['application/json'];
+
+export type PdfReviewPublication =
+  paths['/api/pdf-review-sessions/{session_id}/publications']['post']['responses'][201]['content']['application/json'];
+
 export type ContentHistory =
   paths['/api/history/{entity_type}/{entity_id}']['get']['responses'][200]['content']['application/json'];

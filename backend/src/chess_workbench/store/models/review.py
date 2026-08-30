@@ -10,7 +10,7 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import JSON, CheckConstraint, ForeignKey, Integer, String, UniqueConstraint
+from sqlalchemy import JSON, CheckConstraint, ForeignKey, Index, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from chess_workbench.store.base import Base
@@ -168,4 +168,57 @@ class PdfReviewEvent(UUIDPrimaryKeyMixin, UTCCreatedAtMixin, Base):
     decisions: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
 
 
-__all__ = ["PdfReviewEvent", "PdfReviewRevision", "PdfReviewSession"]
+class PdfReviewPublication(UUIDPrimaryKeyMixin, UTCCreatedAtMixin, Base):
+    """Immutable idempotency receipt for one approved review publication plan."""
+
+    __tablename__ = "pdf_review_publications"
+    __table_args__ = (
+        CheckConstraint("length(mapping_version) > 0", name="mapping_version_nonempty"),
+        CheckConstraint("length(plan_sha256) = 64", name="plan_hash"),
+        UniqueConstraint(
+            "session_id",
+            "revision_id",
+            "target_course_id",
+            "mapping_version",
+            "plan_sha256",
+            name="uq_pdf_review_publication_plan",
+        ),
+        Index("ix_pdf_review_publication_session", "session_id"),
+        {"mysql_engine": "InnoDB"},
+    )
+
+    session_id: Mapped[UUID] = mapped_column(
+        ForeignKey(
+            "pdf_review_sessions.id",
+            name="fk_pdf_review_publication_session",
+            ondelete="RESTRICT",
+        ),
+        nullable=False,
+    )
+    revision_id: Mapped[UUID] = mapped_column(
+        ForeignKey(
+            "pdf_review_revisions.id",
+            name="fk_pdf_review_publication_revision",
+            ondelete="RESTRICT",
+        ),
+        nullable=False,
+    )
+    target_course_id: Mapped[UUID] = mapped_column(
+        ForeignKey(
+            "courses.id",
+            name="fk_pdf_review_publication_course",
+            ondelete="RESTRICT",
+        ),
+        nullable=False,
+    )
+    mapping_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    plan_sha256: Mapped[str] = mapped_column(_ascii_string(64), nullable=False)
+    result: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+
+
+__all__ = [
+    "PdfReviewEvent",
+    "PdfReviewPublication",
+    "PdfReviewRevision",
+    "PdfReviewSession",
+]

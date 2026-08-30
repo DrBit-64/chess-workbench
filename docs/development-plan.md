@@ -425,7 +425,9 @@ Repertoire/Exercise 发布 adapter 等 Stage 5 模型存在后再接入。
 - JSON Schema、python-chess、前后局面和置信度验证；
 - 三栏审核页：原文/页图、棋盘、候选变化/警告；
 - 批准、修改、拒绝、多来源合并和审计记录；
-- 批准时可以产出 Course 与 KnowledgeNote 草稿；AI 合并历史可按版本查看；Exercise
+- 批准时可以把多个拖拽选择的棋谱片段原子发布到同一本 Course 的“章节 → 例局/理论”两级
+  Module 目录；章节自身也可带棋谱与说明；KnowledgeNote 与 SourceSpan 随片段落库，AI 合并历史
+  可按版本查看；Exercise
   草稿 adapter 在 Stage 5 完成后追加；
 - 未配置 API key 时核心应用完整可用。
 

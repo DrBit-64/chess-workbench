@@ -1037,6 +1037,179 @@ describe('Stage 8D review page (8D-3A)', () => {
     expect(await screen.findByText('审核中 · 版本 2')).toBeTruthy();
   });
 
+  it('can explicitly exclude a blocking non-score item from the audit revision', async () => {
+    const figure = {
+      id: 'photo1',
+      kind: 'figure',
+      figure_type: 'photo',
+      caption: 'Player portrait',
+      alt_text: null,
+      evidence: evidence(6),
+      confidence: null,
+      position_fen_candidate: null,
+      warnings: [],
+    } satisfies ReviewItem;
+    const blocked = baseDocument({
+      items: [...baseItems(), figure],
+      issues: [
+        {
+          issue_id: 'item:photo1:unsupported-figure',
+          item_id: 'photo1',
+          node_id: null,
+          scope: 'item',
+          severity: 'error',
+          code: 'unsupported_figure',
+          message: 'Non-chess figures require explicit rejection',
+          blocking: true,
+          evidence: evidence(6),
+        },
+      ],
+      issueCounts: { issue_count: 1, blocking_issue_count: 1 },
+    });
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const target = String(input);
+      if (target.endsWith('/review/session')) {
+        return json({ replayed: false, session: reviewSession() }, 201);
+      }
+      if (target.endsWith('/commands')) {
+        return json({
+          session: reviewSession(2),
+          document: baseDocument({
+            issues: [],
+            issueCounts: { issue_count: 0, blocking_issue_count: 0 },
+          }),
+        });
+      }
+      void init;
+      return json(blocked);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    renderPage();
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: '开始编辑审核' }),
+    );
+    fireEvent.click(await screen.findByRole('button', { name: '排除此内容' }));
+
+    await waitFor(() =>
+      expect(
+        fetchMock.mock.calls.some(([input]) =>
+          String(input).endsWith('/commands'),
+        ),
+      ).toBe(true),
+    );
+    const commandCall = fetchMock.mock.calls.find(([input]) =>
+      String(input).endsWith('/commands'),
+    )!;
+    expect(JSON.parse(String(commandCall[1]?.body))).toEqual({
+      expected_version: 1,
+      command: {
+        kind: 'edit',
+        operation: { kind: 'exclude_item', item_id: 'photo1' },
+      },
+    });
+  });
+
+  it('drag-selects moves and publishes one fragment into a new nested chapter', async () => {
+    const courseId = '55555555-5555-4555-8555-555555555555';
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const target = String(input);
+      if (target.endsWith('/review/session')) {
+        return json({
+          replayed: true,
+          session: { ...reviewSession(), status: 'approved' },
+        });
+      }
+      if (target.startsWith('/api/courses?')) {
+        return json([
+          {
+            id: courseId,
+            title: 'Smerdon Scandinavian',
+            description: '',
+            category: null,
+            tags: [],
+            status: 'draft',
+            mode: 'traditional',
+            version: 1,
+            created_at: '2026-08-28T00:00:00Z',
+            updated_at: '2026-08-28T00:00:00Z',
+            archived_at: null,
+          },
+        ]);
+      }
+      if (target === `/api/courses/${courseId}/modules`) return json([]);
+      if (target.endsWith('/publications') && init?.method === 'POST') {
+        return json(
+          {
+            publication_id: '66666666-6666-4666-8666-666666666666',
+            review_session_id: reviewSession().id,
+            review_revision_number: 1,
+            target_course_id: courseId,
+            mapping_version: 'review-course-publication/1.0',
+            plan_sha256: 'f'.repeat(64),
+            segments: [],
+            replayed: false,
+          },
+          201,
+        );
+      }
+      return json(baseDocument());
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderPage();
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: '开始编辑审核' }),
+    );
+    fireEvent.click(await screen.findByRole('button', { name: '编排发布' }));
+    await screen.findByRole('option', { name: 'Smerdon Scandinavian' });
+    fireEvent.mouseDown(screen.getByRole('button', { name: 'e4' }));
+    fireEvent.mouseEnter(screen.getByRole('button', { name: 'e5' }));
+    fireEvent.mouseUp(window);
+    expect(screen.getByText(/当前已选 2 个半回合/)).toBeTruthy();
+    fireEvent.change(screen.getByLabelText('新章节标题'), {
+      target: { value: 'Chapter Eight' },
+    });
+    fireEvent.change(screen.getByLabelText('目标小节'), {
+      target: { value: '__new__' },
+    });
+    fireEvent.change(screen.getByLabelText('新小节标题'), {
+      target: { value: 'Game 1' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: '加入当前选择' }));
+    fireEvent.click(screen.getByRole('button', { name: '原子发布全部片段' }));
+
+    await waitFor(() =>
+      expect(
+        fetchMock.mock.calls.some(([input]) =>
+          String(input).endsWith('/publications'),
+        ),
+      ).toBe(true),
+    );
+    const publishCall = fetchMock.mock.calls.find(([input]) =>
+      String(input).endsWith('/publications'),
+    )!;
+    expect(JSON.parse(String(publishCall[1]?.body))).toEqual({
+      expected_version: 1,
+      target_course_id: courseId,
+      mapping_version: 'review-course-publication/1.1',
+      segments: [
+        {
+          sequence_id: 'seq1',
+          node_ids: ['n1', 'n2'],
+          target: {
+            chapter: { kind: 'new', title: 'Chapter Eight' },
+            subsection: { kind: 'new', title: 'Game 1' },
+          },
+        },
+      ],
+    });
+    expect(
+      await screen.findByRole('link', { name: '打开已发布书籍' }),
+    ).toBeTruthy();
+  });
+
   it('moves annotation source and editing into its right-click menu', async () => {
     const fetchMock = vi.fn((input: RequestInfo | URL) => {
       if (String(input).endsWith('/review/session')) {

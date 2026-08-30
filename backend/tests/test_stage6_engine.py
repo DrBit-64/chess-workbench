@@ -3,10 +3,12 @@ from __future__ import annotations
 import asyncio
 import os
 from pathlib import Path
+from typing import Any, cast
 
 import chess
 import pytest
 import uvloop
+
 from chess_workbench.config import Settings
 from chess_workbench.schemas.engine import (
     AnalysisRequest,
@@ -175,6 +177,35 @@ async def test_cancelled_engine_play_leaves_no_process(
     pid = int(pid_file.read_text())
     with pytest.raises(ProcessLookupError):
         os.kill(pid, 0)
+
+
+async def test_uci_cleanup_tolerates_a_transport_closed_before_quit() -> None:
+    returncode: asyncio.Future[int] = asyncio.get_running_loop().create_future()
+
+    class ClosedDuringQuitProtocol:
+        async def quit(self) -> None:
+            raise RuntimeError("handler is closed")
+
+    class ClosingTransport:
+        killed = False
+
+        def is_closing(self) -> bool:
+            return False
+
+        def kill(self) -> None:
+            self.killed = True
+            returncode.set_result(-9)
+
+        def close(self) -> None:
+            return None
+
+    protocol = ClosedDuringQuitProtocol()
+    protocol.returncode = returncode  # type: ignore[attr-defined]
+    transport = ClosingTransport()
+
+    await UciEngine._close(cast(Any, transport), cast(Any, protocol))
+
+    assert transport.killed is True
 
 
 def test_analysis_cache_key_covers_full_fen_version_and_every_parameter() -> None:

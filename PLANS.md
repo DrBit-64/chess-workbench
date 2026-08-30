@@ -15,14 +15,50 @@ ADR 0016 is authoritative. Stage 5/6E and Stage 7 remain deferred.
   visible constituent segments.
 - [x] Give each book one management surface for new extraction, exact-range re-extraction, review,
   adopting a successful run as an incremental document and registering the next adjacent append.
-- [ ] Add archive/delete and review-based modification only with their authoritative backend
-  boundaries; the first library slice exposes these future actions as disabled rather than
-  hard-deleting immutable source/run records.
+- [x] Add recoverable extraction-task deletion at the authoritative backend boundary: active work
+  is cancelled, its Job is archived, and immutable runs/artifacts remain available for audit.
+- [ ] Add review-based modification with its authoritative backend boundary; editing actions that
+  are not implemented remain disabled.
 
 This slice intentionally reuses the existing asset/run/document APIs and adds no SQL identity. A
 fresh client idempotency key is sent for each user-requested extraction so two requests for the same
 asset and page range remain two separately addressable runs. Focused browser/type verification is
 sufficient during this product-layout iteration.
+
+## SQLite reliability correction
+
+- [x] Enable WAL, bounded busy waiting and one authoritative local SQLite connection while leaving
+  MySQL concurrency unchanged.
+- [x] Route worker state transitions and extraction artifact registration through bounded short
+  write transactions; reduce heartbeat write frequency without weakening cancellation polling.
+- [x] Cancel and await a handler whenever its supervisor fails or loses ownership, so no detached
+  provider/engine operation can outlive the durable Job controller.
+- [x] Recover a complete, verified CCEF candidate from immutable artifacts and rebuild the Job
+  result without another provider call.
+- [x] Reproduce external-writer contention, supervisor failure and expired-lease candidate recovery
+  with focused deterministic tests. ADR 0019 is authoritative.
+
+## Course learning workbench correction before 8D-6
+
+- [x] Replace the former four-column course editor with a three-pane learning workbench: chapter or
+  source-page navigation, the existing board/engine stack, and one compact annotated score pane.
+- [x] Project the course occurrence graph into paired mainline rows plus dense explicit variations;
+  nested alternatives retain branch rails and selecting any move updates the board.
+- [x] Render local position notes as unboxed score annotations. Their PDF provenance is hidden from
+  the reading surface and exposed through a right-click source menu.
+- [x] Resolve cited page spans through the immutable PDF asset and a covering incremental document
+  or successful extraction. Courses without a usable scanned source remain chapter-only, while a
+  cited note can switch the left pane directly to its verified rendered page.
+- [x] Preserve board move entry, engine MultiPV/arrows, chapter creation, narrative/note editing,
+  history, PGN operations, explorer publication and source-reference navigation.
+- [x] Keep score navigation, move recording and board-flip controls outside the score's independent
+  scroll viewport so they remain reachable on long games.
+- [x] Allow drag reordering within each existing module sibling group while refusing cross-parent
+  drops; hierarchy changes remain a separate future operation.
+
+8D-6 publication must target the ordinary Course/Knowledge model rather than make learning pages
+depend on CCEF. It may populate citations used by this source-page adapter, but the workbench itself
+remains a presentation over the course position graph.
 
 ## Delivery order
 
@@ -174,7 +210,19 @@ publication and UI into one delegated task.
      validity is encoded by move styling (invalid red, ambiguous amber) rather than permanent
      labels; source pages and edit actions live in move/annotation context menus, whose opening
      also navigates the source pane to the first evidence page.
-6. [ ] **8D-6 draft publication:** atomic idempotent Course/Knowledge draft mapping.
+6. [x] **8D-6 draft publication:** atomic idempotent Course/Knowledge draft mapping.
+   - One approved revision can publish multiple explicitly selected score fragments into one
+     existing traditional draft Course. Each fragment targets a top-level chapter or an optional
+     example/theory child; both levels may carry their own score.
+   - The review UI builds ranges by drag-selecting moves and can create/reuse chapter paths. The
+     backend owns topology closure, chess validity, hierarchy validation, evidence materialization,
+     expected-version conflict handling and an immutable idempotency receipt.
+   - The learning directory renders expandable chapter children while keeping the chapter itself
+     clickable, preserving all pre-existing one-level courses.
+   - Publication mapping 1.1 follows CCEF 1.1 reading flow for unanchored in-score annotations,
+     exposes occurrence-owned PDF citations to the learning source pane, and renders notes after
+     their owning move. Review blockers for non-score items have an explicit audited exclusion
+     command instead of leaving a session permanently unapprovable.
 7. [ ] **8D-7 interactive completion:** explicit conflict resolution, multi-source merge and
    focused `make acceptance-stage-8` closeout.
 

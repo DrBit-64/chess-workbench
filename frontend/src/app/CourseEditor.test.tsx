@@ -17,6 +17,7 @@ vi.mock('react-chessboard', () => ({
     onPieceDrop,
     onSquareClick,
     animationDuration,
+    boardOrientation,
     customSquareStyles,
     customArrows = [],
   }: {
@@ -24,10 +25,11 @@ vi.mock('react-chessboard', () => ({
     onPieceDrop: (source: string, target: string) => boolean;
     onSquareClick: (square: string) => void;
     animationDuration: number;
+    boardOrientation: 'white' | 'black';
     customSquareStyles: Record<string, Record<string, string | number>>;
     customArrows?: unknown[];
   }) => (
-    <div aria-label="测试棋盘">
+    <div aria-label="测试棋盘" data-orientation={boardOrientation}>
       <span>{position}</span>
       <output
         data-testid="board-feedback"
@@ -388,10 +390,10 @@ describe('Stage 4B course editor', () => {
       await screen.findByRole('heading', { name: '可交互课程' }),
     ).toBeTruthy();
     expect(await screen.findByText('安全的说明')).toBeTruthy();
-    expect(screen.getByText('Source One')).toBeTruthy();
     expect(screen.getByText('Initial explanation')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: '查看关联局面' }));
-    fireEvent.click(screen.getByRole('button', { name: /交互棋谱从这里开始/ }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Initial explanation' }),
+    );
     expect(await screen.findByText('转置 × 2')).toBeTruthy();
     const boardFeedback = screen.getByTestId('board-feedback');
     expect(boardFeedback.getAttribute('data-animation-duration')).toBe('100');
@@ -404,11 +406,23 @@ describe('Stage 4B course editor', () => {
     fireEvent.click(screen.getByRole('button', { name: '选择 e2' }));
     fireEvent.click(screen.getByRole('button', { name: /e4 e2e4/ }));
     expect((await screen.findAllByText(e4Fen)).length).toBeGreaterThan(0);
-    fireEvent.click(screen.getByRole('button', { name: /^起\s*点$/ }));
+    fireEvent.click(screen.getByRole('button', { name: '起始局面' }));
     fireEvent.click(screen.getByRole('button', { name: '走 e4' }));
     expect((await screen.findAllByText(e4Fen)).length).toBeGreaterThan(0);
 
-    fireEvent.click(screen.getByRole('button', { name: /^起\s*点$/ }));
+    fireEvent.click(screen.getByRole('button', { name: '起始局面' }));
+    const recordMoves = screen.getByRole('checkbox', { name: '记录走棋' });
+    fireEvent.click(recordMoves);
+    const writesBeforePreview = fetchMock.mock.calls.filter(
+      ([input]) => String(input) === '/api/occurrences',
+    ).length;
+    fireEvent.click(screen.getByRole('button', { name: '走 Nf3' }));
+    expect(
+      fetchMock.mock.calls.filter(
+        ([input]) => String(input) === '/api/occurrences',
+      ),
+    ).toHaveLength(writesBeforePreview);
+    fireEvent.click(recordMoves);
     fireEvent.click(screen.getByRole('button', { name: '走 Nf3' }));
     await waitFor(() =>
       expect(fetchMock).toHaveBeenCalledWith(
@@ -437,6 +451,129 @@ describe('Stage 4B course editor', () => {
           module,
           content_blocks: [],
           occurrences: [root, e4, e5, nf3],
+          notes: [
+            {
+              ...note,
+              target: { kind: 'occurrence', occurrence_id: 'occ-e4' },
+              markdown: 'After e4',
+              rendered_markdown: 'After e4',
+              source_span_ids: [],
+              rendered_source_span_ids: [],
+              source_occurrence_id: 'occ-e4',
+            },
+          ],
+        });
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderEditor();
+
+    await screen.findByRole('navigation', { name: '课程棋谱' });
+    expect(screen.queryByLabelText('键盘输入着法 UCI')).toBeNull();
+    expect(screen.queryByRole('button', { name: '提交着法' })).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: /e4 e2e4/ }));
+    fireEvent.click(await screen.findByRole('button', { name: /e5 e7e5/ }));
+    fireEvent.click(await screen.findByRole('button', { name: /Nf3 g1f3/ }));
+
+    const score = screen.getByRole('navigation', { name: '课程棋谱' });
+    const controls = screen.getByLabelText('棋谱导航与棋盘设置');
+    expect(screen.getByLabelText('课程内容滚动区').contains(controls)).toBe(
+      false,
+    );
+    expect(within(score).getByText('1.')).toBeTruthy();
+    expect(within(score).getByText('2.')).toBeTruthy();
+    expect(within(score).getByRole('button', { name: 'e4 e2e4' })).toBeTruthy();
+    expect(within(score).getByRole('button', { name: 'e5 e7e5' })).toBeTruthy();
+    expect(
+      within(score).getByRole('button', { name: 'Nf3 g1f3' }),
+    ).toBeTruthy();
+    const e4Button = within(score).getByRole('button', { name: 'e4 e2e4' });
+    const afterE4 = within(score).getByText('After e4');
+    const e5Button = within(score).getByRole('button', { name: 'e5 e7e5' });
+    expect(
+      e4Button.compareDocumentPosition(afterE4) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).not.toBe(0);
+    expect(
+      afterE4.compareDocumentPosition(e5Button) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).not.toBe(0);
+
+    fireEvent.click(within(score).getByRole('button', { name: '起始局面' }));
+    expect(screen.getByLabelText('测试棋盘').textContent).toContain(startFen);
+    expect(
+      within(score).getByRole('button', { name: 'Nf3 g1f3' }),
+    ).toBeTruthy();
+
+    fireEvent.click(within(score).getByRole('button', { name: 'e5 e7e5' }));
+    expect(screen.getByLabelText('测试棋盘').textContent).toContain(
+      e5.full_fen,
+    );
+    expect(
+      (
+        within(controls).getByRole('checkbox', {
+          name: '记录走棋',
+        }) as HTMLInputElement
+      ).checked,
+    ).toBe(true);
+    fireEvent.click(within(controls).getByRole('button', { name: '回到开始' }));
+    fireEvent.click(within(controls).getByRole('button', { name: '下一步' }));
+    expect(screen.getByLabelText('测试棋盘').textContent).toContain(e4Fen);
+    fireEvent.click(
+      within(controls).getByRole('button', { name: '前往主线末尾' }),
+    );
+    expect(screen.getByLabelText('测试棋盘').textContent).toContain(
+      nf3.full_fen,
+    );
+    fireEvent.click(within(controls).getByRole('button', { name: '上一步' }));
+    expect(screen.getByLabelText('测试棋盘').textContent).toContain(
+      e5.full_fen,
+    );
+    fireEvent.contextMenu(
+      within(score).getByRole('button', { name: 'e4 e2e4' }),
+    );
+    const moveMenu = screen.getByRole('menu', { name: 'e4 操作菜单' });
+    expect(within(moveMenu).getByText('提升变招')).toBeTruthy();
+    expect(within(moveMenu).getByText('设为主线')).toBeTruthy();
+    expect(within(moveMenu).getByText('招法评注')).toBeTruthy();
+    expect(within(moveMenu).getByText('从此处开始删除')).toBeTruthy();
+    fireEvent.keyDown(document, { key: 'Escape' });
+    fireEvent.click(within(controls).getByRole('button', { name: /翻转棋盘/ }));
+    expect(screen.getByLabelText('测试棋盘').dataset.orientation).toBe('black');
+  });
+
+  it('shows chapters as expandable parents while keeping parent scores clickable', async () => {
+    const childModule = {
+      ...module,
+      id: 'module-game-1',
+      parent_id: module.id,
+      title: '例局 1',
+      sort_order: 0,
+    };
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url === '/api/citable-sources') return json([]);
+      if (url === '/api/courses/course-1') return json(course);
+      if (url === '/api/courses/course-1/modules') {
+        return json([module, childModule]);
+      }
+      if (url === '/api/courses/course-1/editor/module-1') {
+        return json({
+          module,
+          content_blocks: [],
+          occurrences: [root, e4],
+          notes: [],
+        });
+      }
+      if (url === '/api/courses/course-1/editor/module-game-1') {
+        return json({
+          module: childModule,
+          content_blocks: [],
+          occurrences: [
+            { ...root, id: 'child-root', module_id: childModule.id },
+          ],
           notes: [],
         });
       }
@@ -445,28 +582,227 @@ describe('Stage 4B course editor', () => {
     vi.stubGlobal('fetch', fetchMock);
     renderEditor();
 
-    await screen.findByRole('navigation', { name: '主线棋谱' });
-    expect(screen.queryByLabelText('键盘输入着法 UCI')).toBeNull();
-    expect(screen.queryByRole('button', { name: '提交着法' })).toBeNull();
+    expect(await screen.findByRole('button', { name: '第一章' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: '例局 1' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: '第一章 设置' }));
+    expect(await screen.findByText('重命名')).toBeTruthy();
+    expect(screen.getByText('删除小节')).toBeTruthy();
+    fireEvent.keyDown(document, { key: 'Escape' });
+    fireEvent.click(screen.getByRole('button', { name: '收起 第一章' }));
+    expect(screen.queryByRole('button', { name: '例局 1' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: '展开 第一章' }));
+    fireEvent.click(screen.getByRole('button', { name: '例局 1' }));
+    await waitFor(() =>
+      expect(
+        fetchMock.mock.calls.some(
+          ([input]) =>
+            String(input) === '/api/courses/course-1/editor/module-game-1',
+        ),
+      ).toBe(true),
+    );
+  });
 
-    fireEvent.click(screen.getByRole('button', { name: /e4 e2e4/ }));
-    fireEvent.click(await screen.findByRole('button', { name: /e5 e7e5/ }));
-    fireEvent.click(await screen.findByRole('button', { name: /Nf3 g1f3/ }));
+  it('reorders titles by drag only within their current parent', async () => {
+    const secondChapter = {
+      ...module,
+      id: 'module-2',
+      title: '第二章',
+      sort_order: 1,
+    };
+    const gameOne = {
+      ...module,
+      id: 'module-game-1',
+      parent_id: module.id,
+      title: '例局 1',
+      sort_order: 0,
+    };
+    const gameTwo = {
+      ...gameOne,
+      id: 'module-game-2',
+      title: '例局 2',
+      sort_order: 1,
+    };
+    let moduleList = [module, secondChapter, gameOne, gameTwo];
+    const fetchMock = vi.fn(
+      async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        if (url === '/api/citable-sources') return json([]);
+        if (url === '/api/courses/course-1') return json(course);
+        if (url === '/api/courses/course-1/modules') return json(moduleList);
+        if (url === '/api/courses/course-1/editor/module-1') {
+          return json({
+            module,
+            content_blocks: [],
+            occurrences: [root],
+            notes: [],
+          });
+        }
+        if (
+          url.startsWith('/api/course-modules/') &&
+          init?.method === 'PATCH'
+        ) {
+          const id = url.split('/').at(-1)!;
+          const body = JSON.parse(String(init.body)) as { sort_order: number };
+          const updated = {
+            ...moduleList.find((item) => item.id === id)!,
+            sort_order: body.sort_order,
+            version: 2,
+          };
+          moduleList = moduleList.map((item) =>
+            item.id === id ? updated : item,
+          );
+          return json(updated);
+        }
+        throw new Error(`Unexpected request: ${url}`);
+      },
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    renderEditor();
 
-    const score = screen.getByRole('navigation', { name: '主线棋谱' });
-    expect(within(score).getByText('1.')).toBeTruthy();
-    expect(within(score).getByText('2.')).toBeTruthy();
-    expect(within(score).getByRole('button', { name: 'e4' })).toBeTruthy();
-    expect(within(score).getByRole('button', { name: 'e5' })).toBeTruthy();
-    expect(within(score).getByRole('button', { name: 'Nf3' })).toBeTruthy();
+    const dataTransfer = {
+      effectAllowed: 'none',
+      dropEffect: 'none',
+      setData: vi.fn(),
+    };
+    const gameOneHandle = await screen.findByRole('button', {
+      name: '拖动 例局 1',
+    });
+    const secondChapterRow = screen.getByRole('button', {
+      name: '第二章',
+    }).parentElement!;
+    fireEvent.dragStart(gameOneHandle, { dataTransfer });
+    fireEvent.dragOver(secondChapterRow, { clientY: 1, dataTransfer });
+    fireEvent.drop(secondChapterRow, { clientY: 1, dataTransfer });
+    fireEvent.dragEnd(gameOneHandle, { dataTransfer });
+    expect(
+      fetchMock.mock.calls.filter(([, init]) => init?.method === 'PATCH'),
+    ).toHaveLength(0);
 
-    fireEvent.click(within(score).getByRole('button', { name: '起点' }));
-    expect(screen.getByLabelText('测试棋盘').textContent).toContain(startFen);
-    expect(within(score).getByRole('button', { name: 'Nf3' })).toBeTruthy();
+    const gameTwoRow = screen.getByRole('button', {
+      name: '例局 2',
+    }).parentElement!;
+    vi.spyOn(gameTwoRow, 'getBoundingClientRect').mockReturnValue({
+      top: 0,
+      height: 20,
+    } as DOMRect);
+    fireEvent.dragStart(gameOneHandle, { dataTransfer });
+    expect(dataTransfer.setData).toHaveBeenLastCalledWith(
+      'text/plain',
+      'module-game-1',
+    );
+    expect(
+      fireEvent.dragOver(gameTwoRow, { clientY: 19, dataTransfer }),
+    ).toBe(false);
+    expect(fireEvent.drop(gameTwoRow, { clientY: 19, dataTransfer })).toBe(
+      false,
+    );
 
-    fireEvent.click(within(score).getByRole('button', { name: 'e5' }));
-    expect(screen.getByLabelText('测试棋盘').textContent).toContain(
-      e5.full_fen,
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/course-modules/module-game-2',
+        expect.objectContaining({
+          method: 'PATCH',
+          body: JSON.stringify({ expected_version: 1, sort_order: 0 }),
+        }),
+      );
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/course-modules/module-game-1',
+        expect.objectContaining({
+          method: 'PATCH',
+          body: JSON.stringify({ expected_version: 1, sort_order: 1 }),
+        }),
+      );
+    });
+  });
+
+  it('switches the left pane from chapters to a cited PDF page', async () => {
+    const pageSource = {
+      source: { ...citableSource.source, kind: 'book', title: '扫描棋书' },
+      source_version: {
+        ...citableSource.source_version,
+        id: 'version-pdf',
+      },
+      source_span: {
+        ...citableSource.source_span,
+        id: 'span-page-321',
+        source_version_id: 'version-pdf',
+        source_file_id: 'file-pdf',
+        locator: {
+          kind: 'page',
+          page_number: 321,
+          bbox: null,
+          start_offset: null,
+          end_offset: null,
+          fragment_sha256: null,
+        },
+      },
+    };
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url === '/api/citable-sources') return json([pageSource]);
+      if (url === '/api/pdf-assets') {
+        return json({
+          items: [
+            {
+              id: 'asset-pdf',
+              source_file_id: 'file-pdf',
+              source_version_id: 'version-pdf',
+            },
+          ],
+        });
+      }
+      if (url === '/api/pdf-extractions') return json({ items: [] });
+      if (url === '/api/pdf-extraction-documents') {
+        return json({
+          items: [
+            {
+              id: 'document-pdf',
+              pdf_asset_id: 'asset-pdf',
+              first_page: 319,
+              last_page: 328,
+            },
+          ],
+        });
+      }
+      if (url === '/api/courses/course-1') return json(course);
+      if (url === '/api/courses/course-1/modules') return json([module]);
+      if (url === '/api/courses/course-1/editor/module-1') {
+        return json({
+          module,
+          content_blocks: [
+            {
+              id: 'score-block',
+              kind: 'move_sequence',
+              root_occurrence_id: 'occ-root',
+            },
+          ],
+          occurrences: [
+            {
+              ...root,
+              context: { source_span_ids: ['span-page-321'] },
+            },
+            e4,
+          ],
+          notes: [],
+        });
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderEditor();
+
+    const sourceButton = await screen.findByRole('button', {
+      name: /原\s*文/,
+    });
+    await waitFor(() =>
+      expect(sourceButton.hasAttribute('disabled')).toBe(false),
+    );
+    fireEvent.click(sourceButton);
+    const page = await screen.findByRole('img', {
+      name: '扫描棋书 第 321 页',
+    });
+    expect(page.getAttribute('src')).toBe(
+      '/api/pdf-extractions/document-pdf/review/pages/321',
     );
   });
 
@@ -729,7 +1065,9 @@ describe('Stage 4B course editor', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /^历\s*史$/ }));
     expect(await screen.findByText('版本 1')).toBeTruthy();
-    expect(screen.getByText('Initial explanation')).toBeTruthy();
+    expect(screen.getAllByText('Initial explanation').length).toBeGreaterThan(
+      0,
+    );
   });
 
   it('creates a new note, renders live reference cards, and publishes the module', async () => {

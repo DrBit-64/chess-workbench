@@ -19,6 +19,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from chess_workbench.store.base import Base
 from chess_workbench.store.models.mixins import (
+    ArchiveMixin,
     UTCCreatedAtMixin,
     UTCDateTime,
     UTCTimestampMixin,
@@ -27,7 +28,7 @@ from chess_workbench.store.models.mixins import (
 )
 
 
-class Job(UUIDPrimaryKeyMixin, UTCTimestampMixin, VersionMixin, Base):
+class Job(UUIDPrimaryKeyMixin, UTCTimestampMixin, VersionMixin, ArchiveMixin, Base):
     """Durable SQL queue entry shared by engine and later import workers."""
 
     __tablename__ = "jobs"

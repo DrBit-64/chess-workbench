@@ -40,6 +40,12 @@ controls without copying Lichess' browser-worker implementation into a server-ow
    the Stage 5-dependent 6E integration tail.
 8. The repository pins the Stockfish release/archive metadata but does not commit the binary or
    large Syzygy tables. Installation writes only to gitignored `data/engines`/`data/tablebases`.
+9. User-facing task deletion is recoverable archival, orthogonal to the five-state execution
+   machine. Archiving a queued Job first transitions it to `cancelled`; archiving a running Job
+   records the ordinary cancellation request so its owning worker cancels and awaits the handler;
+   terminal Jobs retain their terminal state. `archived_at` removes all three forms from discovery
+   lists without deleting the Job, domain receipt or immutable artifacts. Direct receipt reads may
+   remain available for audit. The first public archive operation is scoped to PDF extraction runs.
 
 ## UI mapping
 
@@ -57,4 +63,3 @@ study is the primary use case; this intentionally differs from Lichess' stored d
   install it instead of silently returning fabricated analysis.
 - Tablebase coverage is limited by the files the user has installed.
 - 6E cannot be marked complete until the Stage 5 Exercise model exists.
-

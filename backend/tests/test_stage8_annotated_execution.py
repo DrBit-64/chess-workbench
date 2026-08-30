@@ -17,6 +17,7 @@ from __future__ import annotations
 import copy
 import json
 from collections.abc import Awaitable, Callable
+from datetime import timedelta
 from io import BytesIO
 from pathlib import Path
 from typing import Any, cast
@@ -40,6 +41,7 @@ from chess_workbench.extraction.provider import (
     StructuredGenerationResponse,
     TokenUsage,
 )
+from chess_workbench.services.jobs import JobService
 from chess_workbench.services.pdf import prepare_pdf_asset
 from chess_workbench.services.pdf_extraction import (
     PDF_EXTRACTION_RESULT_SCHEMA,
@@ -56,9 +58,10 @@ from chess_workbench.services.pdf_persistence import (
     PdfPersistenceService,
 )
 from chess_workbench.services.uci import EngineError
+from chess_workbench.services.worker import SqlWorker
 from chess_workbench.store.base import Base
 from chess_workbench.store.database import Database
-from chess_workbench.store.models import ExtractionArtifact
+from chess_workbench.store.models import ExtractionArtifact, Job, utc_now
 
 CCEF_KINDS = frozenset({"provider_response", "raw_ccef", "normalized_ccef"})
 
@@ -681,6 +684,29 @@ async def test_v4_job_uses_semantic_prompt_and_exact_fragment_bindings(tmp_path:
         sequence = normalized["items"][1]
         expected_hash = envelope["evidence_pages"][0]["fragments"][0]["fragment"]["fragment_sha256"]
         assert sequence["nodes"][0]["evidence"][0]["fragment_sha256"] == expected_hash
+
+        async with database.session() as session, session.begin():
+            abandoned = await JobService(session).claim(
+                worker_id="abandoned-v4", allowed_kinds={"pdf_extraction"}
+            )
+            assert abandoned is not None
+            abandoned.lease_expires_at = utc_now() - timedelta(seconds=1)
+        recovery_worker = SqlWorker(
+            database,
+            settings,
+            worker_id="replacement-v4",
+            handlers={
+                "pdf_extraction": _handler(_FailingRenderer(), provider),
+            },
+        )
+        assert await recovery_worker.run_once()
+        async with database.session() as session:
+            recovered = await session.get(Job, extraction.job.id)
+            assert recovered is not None
+            assert recovered.status == "succeeded"
+            assert recovered.attempt_count == 2
+            assert recovered.result == result
+        assert len(provider.calls) == 1
     finally:
         await database.close()
 
@@ -839,8 +865,9 @@ async def test_v3_resume_uses_1_1_path_without_rerender(tmp_path: Path) -> None:
             provider=provider,
         )
         assert renderer.calls == [1]
-        # Second invocation resumes from committed evidence; the renderer must
-        # not be called again and the provider processes the 1.1 request again.
+        # Second invocation verifies the complete immutable candidate and
+        # reconstructs the Job result without rendering or paying the provider
+        # again.
         second = await process_pdf_extraction_job(
             database,
             settings,
@@ -855,7 +882,7 @@ async def test_v3_resume_uses_1_1_path_without_rerender(tmp_path: Path) -> None:
             == first["candidate"]["normalized_ccef_sha256"]
         )
         assert renderer.calls == [1]
-        assert len(provider.calls) == 2
+        assert len(provider.calls) == 1
         assert len(await _ccef_rows(database, extraction.run.id)) == 3
     finally:
         await database.close()
@@ -1013,13 +1040,19 @@ async def test_v3_artifact_conflict_is_fail_closed_and_never_overwrites(
         rows_before = await _ccef_rows(database, extraction.run.id)
         bindings_before = {(row.kind, row.content_sha256, row.byte_size) for row in rows_before}
 
-        # A second run of the same v3 job with a semantically different but
-        # trusted-binding package must fail closed: the existing immutable
-        # slots are never overwritten.
-        envelope = json.loads(provider.calls[0].messages[-1].content.split("\n", 1)[1])
-        changed_package = copy.deepcopy(envelope["package"])
-        changed_package["items"] = _annotated_items()
-        changed_package["items"][1]["annotations"][0]["text"] = "A changed annotation text."
+        async with database.session() as session, session.begin():
+            normalized = await session.scalar(
+                select(ExtractionArtifact).where(
+                    ExtractionArtifact.run_id == extraction.run.id,
+                    ExtractionArtifact.kind == "normalized_ccef",
+                )
+            )
+            assert normalized is not None
+            normalized.content_sha256 = "f" * 64
+
+        # A corrupt immutable binding fails closed before any provider call;
+        # recovery never overwrites or regenerates candidate slots.
+        no_call_provider = _Provider(contents=["provider must not be called"])
         try:
             await process_pdf_extraction_job(
                 database,
@@ -1027,15 +1060,25 @@ async def test_v3_artifact_conflict_is_fail_closed_and_never_overwrites(
                 extraction.job.payload,
                 renderer=_Renderer(),
                 ocr_adapter=_unused_ocr(),
-                provider=_Provider(contents=[json.dumps(changed_package)]),
+                provider=no_call_provider,
             )
             raise AssertionError("expected artifact_conflict")
         except EngineError as caught:
             assert caught.code == "artifact_conflict"
         rows_after = await _ccef_rows(database, extraction.run.id)
+        assert len(no_call_provider.calls) == 0
+        assert any(
+            row.kind == "normalized_ccef" and row.content_sha256 == "f" * 64 for row in rows_after
+        )
         assert {
-            (row.kind, row.content_sha256, row.byte_size) for row in rows_after
-        } == bindings_before
+            (kind, sha256, byte_size)
+            for kind, sha256, byte_size in bindings_before
+            if kind != "normalized_ccef"
+        } == {
+            (row.kind, row.content_sha256, row.byte_size)
+            for row in rows_after
+            if row.kind != "normalized_ccef"
+        }
     finally:
         await database.close()
 

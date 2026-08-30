@@ -23,6 +23,8 @@ from chess_workbench.schemas.domain import (
     CourseCreate,
     CourseKnowledgeNoteBlockCreate,
     CourseKnowledgeNoteBlockRead,
+    CourseModuleArchiveTreeRead,
+    CourseModuleArchiveTreeRequest,
     CourseModuleCreate,
     CourseModuleEditorRead,
     CourseModuleRead,
@@ -34,6 +36,8 @@ from chess_workbench.schemas.domain import (
     KnowledgeNoteCreate,
     KnowledgeNoteRead,
     KnowledgeNoteUpdate,
+    OccurrenceCommandRead,
+    OccurrenceCommandRequest,
     OccurrenceMoveCreate,
     OccurrenceRead,
     OccurrenceUpdate,
@@ -85,8 +89,10 @@ CONTENT_HISTORY_SCHEMA = _media(ContentHistoryRead)
 MODULE_SCHEMA = _media(CourseModuleRead)
 MODULE_LIST_SCHEMA = _collection_media(CourseModuleRead)
 MODULE_EDITOR_SCHEMA = _media(CourseModuleEditorRead)
+MODULE_ARCHIVE_TREE_SCHEMA = _media(CourseModuleArchiveTreeRead)
 OCCURRENCE_SCHEMA = _media(OccurrenceRead)
 OCCURRENCE_LIST_SCHEMA = _collection_media(OccurrenceRead)
+OCCURRENCE_COMMAND_SCHEMA = _media(OccurrenceCommandRead)
 SOURCE_SCHEMA = _media(SourceRead)
 SOURCE_LIST_SCHEMA = _collection_media(SourceRead)
 SOURCE_VERSION_SCHEMA = _media(SourceVersionRead)
@@ -293,6 +299,26 @@ async def update_module(request: Request, module_id: UUID) -> HTTPResponse:
     database = cast(Database, request.app.ctx.database)
     async with database.session() as session, session.begin():
         payload = await ContentService(session).update_module(module_id, body)
+    return _json(payload)
+
+
+@content_blueprint.post(
+    "/course-modules/<module_id:uuid>/archive-tree",
+    name="archive_course_module_tree",
+)
+@openapi.operation("archiveCourseModuleTree")
+@openapi.summary("Archive one module subtree and invalidate its live reference cards")
+@openapi.tag("courses")
+@openapi.body({"application/json": openapi_schema(CourseModuleArchiveTreeRequest)}, required=True)
+@openapi.response(200, MODULE_ARCHIVE_TREE_SCHEMA, "Module subtree archived")
+@openapi.response(404, ERROR_SCHEMA, "Module not found")
+@openapi.response(409, ERROR_SCHEMA, "Module version is stale")
+@openapi.response(422, ERROR_SCHEMA, "Request validation failed")
+async def archive_course_module_tree(request: Request, module_id: UUID) -> HTTPResponse:
+    body = parse_body(request, CourseModuleArchiveTreeRequest)
+    database = cast(Database, request.app.ctx.database)
+    async with database.session() as session, session.begin():
+        payload = await ContentService(session).archive_module_tree(module_id, body)
     return _json(payload)
 
 
@@ -524,6 +550,29 @@ async def update_occurrence(request: Request, occurrence_id: UUID) -> HTTPRespon
     database = cast(Database, request.app.ctx.database)
     async with database.session() as session, session.begin():
         payload = await ContentService(session).update_occurrence(occurrence_id, body)
+    return _json(payload)
+
+
+@content_blueprint.post(
+    "/occurrences/<occurrence_id:uuid>/commands",
+    name="apply_course_occurrence_command",
+)
+@openapi.operation("applyCourseOccurrenceCommand")
+@openapi.summary("Apply one semantic course-score edit atomically")
+@openapi.tag("course-occurrences")
+@openapi.body({"application/json": openapi_schema(OccurrenceCommandRequest)}, required=True)
+@openapi.response(200, OCCURRENCE_COMMAND_SCHEMA, "Course-score command applied")
+@openapi.response(404, ERROR_SCHEMA, "Occurrence not found")
+@openapi.response(409, ERROR_SCHEMA, "Version or tree context conflicts")
+@openapi.response(422, ERROR_SCHEMA, "Request validation failed")
+async def apply_course_occurrence_command(
+    request: Request,
+    occurrence_id: UUID,
+) -> HTTPResponse:
+    body = parse_body(request, OccurrenceCommandRequest)
+    database = cast(Database, request.app.ctx.database)
+    async with database.session() as session, session.begin():
+        payload = await ContentService(session).execute_occurrence_command(occurrence_id, body)
     return _json(payload)
 
 

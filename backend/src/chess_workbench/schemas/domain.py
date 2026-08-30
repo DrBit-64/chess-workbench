@@ -257,6 +257,17 @@ class CourseModuleUpdate(VersionedUpdate):
     _non_nullable_updates = frozenset({"title", "description", "sort_order", "archived"})
 
 
+class CourseModuleArchiveTreeRequest(StrictContract):
+    expected_version: VersionNumber
+
+
+class CourseModuleArchiveTreeRead(StrictContract):
+    module_id: EntityId
+    archived_module_count: NonNegativeInt
+    archived_occurrence_count: NonNegativeInt
+    invalidated_reference_count: NonNegativeInt
+
+
 ContentBlockKind = Literal["section_header", "narrative", "move_sequence", "knowledge_note"]
 
 
@@ -605,6 +616,26 @@ class OccurrenceUpdate(VersionedUpdate):
     context: dict[str, JsonValue] | None = None
     archived: bool | None = None
     _non_nullable_updates = frozenset({"sort_order", "context", "archived"})
+
+
+class OccurrenceCommandRequest(StrictContract):
+    kind: Literal["promote_variation", "make_mainline", "set_nag", "delete_subtree"]
+    expected_version: VersionNumber
+    nag: Nag | None = None
+
+    @model_validator(mode="after")
+    def nag_matches_command(self) -> OccurrenceCommandRequest:
+        if self.kind == "set_nag" and "nag" not in self.model_fields_set:
+            raise ValueError("set_nag requires nag, including null to clear it")
+        if self.kind != "set_nag" and "nag" in self.model_fields_set:
+            raise ValueError("nag is only valid for set_nag")
+        return self
+
+
+class OccurrenceCommandRead(StrictContract):
+    selected_occurrence_id: EntityId
+    affected_occurrence_count: NonNegativeInt
+    invalidated_reference_count: NonNegativeInt
 
 
 CourseOccurrenceCreate = OccurrenceCreate

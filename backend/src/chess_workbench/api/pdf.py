@@ -9,8 +9,9 @@ from uuid import UUID
 
 from pydantic import BaseModel, ValidationError
 from sanic import Blueprint, Request
-from sanic.response import HTTPResponse, json, raw
+from sanic.response import HTTPResponse, empty, json, raw
 from sanic_ext import openapi
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from chess_workbench.api.contracts import openapi_schema, parse_body
 from chess_workbench.api.errors import ApiError
@@ -42,6 +43,8 @@ from chess_workbench.schemas.review import (
     PdfReviewCommandEnvelope,
     PdfReviewCommandRequest,
     PdfReviewDocumentRead,
+    PdfReviewPublicationRead,
+    PdfReviewPublishRequest,
     PdfReviewSessionEnvelope,
     PdfReviewSessionRead,
 )
@@ -64,6 +67,7 @@ from chess_workbench.services.pdf_persistence import (
 )
 from chess_workbench.services.pdf_review import PdfReviewReadService
 from chess_workbench.services.pdf_review_ledger import PdfReviewLedgerService
+from chess_workbench.services.pdf_review_publication import PdfReviewPublicationService
 from chess_workbench.store.database import Database
 
 pdf_blueprint = Blueprint("pdf", url_prefix="/api")
@@ -218,6 +222,23 @@ async def get_pdf_extraction(request: Request, run_id: UUID) -> HTTPResponse:
     if view is None:
         raise ApiError(404, "not_found", "PDF extraction not found")
     return json(_extraction_read(view).model_dump(mode="json"))
+
+
+@pdf_blueprint.delete("/pdf-extractions/<run_id:uuid>", name="archive_pdf_extraction")
+@openapi.operation("archivePdfExtraction")
+@openapi.summary("Cancel active work and archive one PDF extraction result")
+@openapi.tag("pdf")
+@openapi.response(204, None, "PDF extraction archived")
+@openapi.response(404, ERROR_SCHEMA, "PDF extraction not found")
+async def archive_pdf_extraction(request: Request, run_id: UUID) -> HTTPResponse:
+    database = cast(Database, request.app.ctx.database)
+
+    async def archive(session: AsyncSession) -> bool:
+        return await PdfPersistenceService(session).archive_extraction(run_id) is not None
+
+    if not await database.run_write(archive):
+        raise ApiError(404, "not_found", "PDF extraction not found")
+    return empty(status=204)
 
 
 @pdf_blueprint.get("/pdf-extractions", name="list_pdf_extractions")
@@ -504,6 +525,37 @@ async def apply_pdf_review_command(request: Request, session_id: UUID) -> HTTPRe
             session_id, body
         )
     return json(payload.model_dump(mode="json"))
+
+
+@pdf_blueprint.post(
+    "/pdf-review-sessions/<session_id:uuid>/publications",
+    name="publish_pdf_review_selection",
+)
+@openapi.operation("publishPdfReviewSelection")
+@openapi.summary("Publish selected approved review score fragments into one draft book")
+@openapi.tag("pdf")
+@openapi.body(_media(PdfReviewPublishRequest), required=True)
+@openapi.response(201, _media(PdfReviewPublicationRead), "Review selection published")
+@openapi.response(200, _media(PdfReviewPublicationRead), "Publication plan replayed")
+@openapi.response(404, ERROR_SCHEMA, "Review session or target book not found")
+@openapi.response(409, ERROR_SCHEMA, "Review state, hierarchy or target conflict")
+@openapi.response(422, ERROR_SCHEMA, "Publication selection is invalid")
+@openapi.response(503, ERROR_SCHEMA, "Source storage unavailable")
+async def publish_pdf_review_selection(request: Request, session_id: UUID) -> HTTPResponse:
+    body = parse_body(request, PdfReviewPublishRequest)
+    database = cast(Database, request.app.ctx.database)
+    async with request.app.ctx.pdf_persistence_lock, database.session() as session, session.begin():
+        outcome = await PdfReviewPublicationService(session, request.app.ctx.settings).publish(
+            session_id, body
+        )
+    return json(
+        outcome.publication.model_dump(mode="json"),
+        status=200 if outcome.replayed else 201,
+        headers={
+            "Location": f"/api/courses/{outcome.publication.target_course_id}",
+            "Idempotency-Replayed": "true" if outcome.replayed else "false",
+        },
+    )
 
 
 def _multipart_upload(

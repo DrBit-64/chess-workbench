@@ -235,6 +235,77 @@ body {
   align-items: start;
 }
 
+.course-workbench-grid {
+  display: grid;
+  grid-template-columns:
+    minmax(300px, 380px)
+    minmax(420px, 500px)
+    minmax(400px, 520px);
+  justify-content: center;
+  height: calc(100vh - 9rem);
+  min-height: 36rem;
+  gap: 0.8rem;
+  align-items: stretch;
+  overflow: hidden;
+}
+
+.course-workbench-pane {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.course-workbench-pane > .ant-card-body {
+  height: calc(100% - 2.9rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.course-reading-pane > .ant-card-body {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+  padding-bottom: 0;
+}
+
+.course-reading-scroll {
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.course-score-controls {
+  flex: none;
+}
+
+.course-board-pane {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+@media (min-width: 1181px) {
+  .course-board-pane {
+    scrollbar-gutter: stable both-edges;
+  }
+}
+
+.course-reading-flow {
+  color: #292524;
+  line-height: 1.55;
+}
+
+.course-reading-prose {
+  max-width: 72ch;
+  padding: 0.65rem 0.8rem;
+}
+
+.course-reading-prose p {
+  margin-bottom: 0.7em;
+}
+
 .editor-panel {
   max-height: calc(100vh - 9rem);
   overflow: auto;
@@ -363,6 +434,23 @@ body {
     grid-column: 1 / -1;
     max-height: none;
   }
+
+  .course-workbench-grid {
+    grid-template-columns: minmax(190px, 0.55fr) minmax(420px, 1fr);
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+  }
+
+  .course-reading-pane {
+    grid-column: 1 / -1;
+    max-height: 42rem;
+  }
+
+  .course-left-pane,
+  .course-board-pane {
+    max-height: none;
+  }
 }
 
 @media (max-width: 760px) {
@@ -379,5 +467,29 @@ body {
 
   .editor-grid > :last-child {
     grid-column: auto;
+  }
+
+  .course-workbench-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .course-reading-pane {
+    grid-column: auto;
+    max-height: none;
+  }
+
+  .course-workbench-pane > .ant-card-body,
+  .course-board-pane {
+    height: auto;
+    overflow: visible;
+  }
+
+  .course-reading-pane > .ant-card-body {
+    display: block;
+    padding-bottom: 0;
+  }
+
+  .course-reading-scroll {
+    overflow: visible;
   }
 }

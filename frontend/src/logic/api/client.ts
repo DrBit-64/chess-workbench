@@ -47,6 +47,28 @@ export async function requestJson<T>(
   return (await response.json()) as T;
 }
 
+export async function requestEmpty(
+  url: string,
+  init: RequestInit,
+): Promise<void> {
+  const response = await fetch(url, {
+    ...init,
+    headers: {
+      Accept: 'application/json',
+      ...init.headers,
+    },
+  });
+  if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as {
+      message?: string;
+    } | null;
+    throw new ApiError(
+      body?.message ?? `API request failed with status ${response.status}`,
+      response.status,
+    );
+  }
+}
+
 export async function requestFormData<T>(
   url: string,
   body: FormData,

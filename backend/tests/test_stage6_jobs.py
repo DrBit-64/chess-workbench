@@ -7,6 +7,10 @@ from typing import Any
 from uuid import uuid4
 
 import pytest
+from hypothesis import given
+from hypothesis import strategies as st
+from sqlalchemy import select
+
 from chess_workbench.config import Settings
 from chess_workbench.domain.jobs import (
     InvalidJobTransition,
@@ -22,9 +26,6 @@ from chess_workbench.store.base import Base
 from chess_workbench.store.database import Database
 from chess_workbench.store.models import Job, utc_now
 from chess_workbench.store.models.engine import InvalidationEvent
-from hypothesis import given
-from hypothesis import strategies as st
-from sqlalchemy import select
 
 
 @given(st.sampled_from(JobStatus), st.sampled_from(JobEvent))
@@ -489,6 +490,60 @@ async def test_worker_shutdown_leaves_job_recoverable(tmp_path: Path) -> None:
             )
             assert recovered is not None and recovered.id == job_id
             assert recovered.attempt_count == 2
+    finally:
+        await database.close()
+
+
+async def test_worker_monitor_failure_never_leaves_handler_detached(tmp_path: Path) -> None:
+    database = await _database(tmp_path)
+    started = asyncio.Event()
+    interrupted = asyncio.Event()
+
+    async def blocking_handler(
+        database: Any, settings: Settings, payload: dict[str, Any]
+    ) -> dict[str, Any]:
+        del database, settings, payload
+        started.set()
+        try:
+            await asyncio.Event().wait()
+        finally:
+            interrupted.set()
+        return {}
+
+    class BrokenHeartbeatWorker(SqlWorker):
+        async def _heartbeat(self, job_id: Any) -> bool:
+            del job_id
+            raise RuntimeError("simulated heartbeat write failure")
+
+    settings = Settings(
+        database_url=f"sqlite+aiosqlite:///{tmp_path / 'jobs.db'}",
+        engine_worker_enabled=False,
+    )
+    worker = BrokenHeartbeatWorker(
+        database,
+        settings,
+        worker_id="broken-heartbeat",
+        handlers={"blocking": blocking_handler},
+        heartbeat_interval_seconds=0.05,
+    )
+    try:
+        async with database.session() as session, session.begin():
+            job = await JobService(session).enqueue(
+                kind="blocking",
+                payload={},
+                idempotency_key="monitor-failure",
+                max_attempts=1,
+            )
+            job_id = job.id
+        assert await worker.run_once()
+        assert started.is_set()
+        assert interrupted.is_set()
+        async with database.session() as session:
+            final = await session.get(Job, job_id)
+            assert final is not None
+            assert final.status == "failed"
+            assert final.last_error_code == "worker_error"
+            assert final.last_error_message == "simulated heartbeat write failure"
     finally:
         await database.close()
 

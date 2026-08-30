@@ -47,6 +47,7 @@ from chess_workbench.store.models.pgn import (
 )
 from chess_workbench.store.models.review import (
     PdfReviewEvent,
+    PdfReviewPublication,
     PdfReviewRevision,
     PdfReviewSession,
 )
@@ -77,6 +78,7 @@ __all__ = [
     "PdfExtractionDocumentRevision",
     "PdfExtractionDocumentSegment",
     "PdfReviewEvent",
+    "PdfReviewPublication",
     "PdfReviewRevision",
     "PdfReviewSession",
     "Position",

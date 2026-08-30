@@ -22,6 +22,7 @@ import useSWR from 'swr';
 import {
   ApiError,
   fetchJson,
+  requestEmpty,
   requestFormData,
   requestJson,
 } from '../logic/api/client';
@@ -388,6 +389,40 @@ export function SourcesPage() {
     }
   }
 
+  async function archiveExtraction(
+    runId: string,
+    status: RunStatus,
+    busyId = runId,
+  ) {
+    const verb =
+      status === 'running'
+        ? '停止并删除'
+        : status === 'queued'
+          ? '取消并删除'
+          : '删除';
+    if (
+      !window.confirm(`${verb}这项识别任务？提取记录会被归档，不会物理删除。`)
+    ) {
+      return;
+    }
+    try {
+      setBusyResultId(busyId);
+      await requestEmpty(`/api/pdf-extractions/${encodeURIComponent(runId)}`, {
+        method: 'DELETE',
+      });
+      await Promise.all([mutateRuns(), mutateDocuments()]);
+      void message.success(
+        status === 'running' ? '已请求停止并从列表移除' : '任务已从列表移除',
+      );
+    } catch (error) {
+      void message.error(
+        error instanceof ApiError ? error.message : '删除识别任务失败',
+      );
+    } finally {
+      setBusyResultId(undefined);
+    }
+  }
+
   function openAppend(document: PdfExtractionDocument) {
     const nextPage = document.last_page + 1;
     setAppendDocumentId(document.id);
@@ -695,6 +730,7 @@ export function SourcesPage() {
                                 更新于 {formatDate(document.updated_at)}
                               </Typography.Text>
                               <Dropdown
+                                trigger={['click']}
                                 menu={{
                                   items: [
                                     {
@@ -720,18 +756,48 @@ export function SourcesPage() {
                                       disabled: true,
                                     },
                                     {
-                                      key: 'delete',
-                                      label: '删除／归档（后续接入）',
+                                      key: 'delete-attempt',
+                                      label: latestAttempt
+                                        ? `${
+                                            latestAttempt.job.status ===
+                                            'running'
+                                              ? '停止'
+                                              : latestAttempt.job.status ===
+                                                  'queued'
+                                                ? '取消'
+                                                : '删除'
+                                          }最近提取任务`
+                                        : '没有可删除的提取任务',
+                                      disabled: !latestAttempt,
+                                      danger: true,
+                                    },
+                                    {
+                                      key: 'delete-document',
+                                      label: '删除连续文档（后续接入）',
                                       disabled: true,
                                       danger: true,
                                     },
                                   ],
                                   onClick: ({ key }) => {
-                                    if (key === 'append') openAppend(document);
+                                    if (key === 'append') {
+                                      openAppend(document);
+                                    } else if (
+                                      key === 'delete-attempt' &&
+                                      latestAttempt
+                                    ) {
+                                      void archiveExtraction(
+                                        latestAttempt.run_id,
+                                        latestAttempt.job.status,
+                                        document.id,
+                                      );
+                                    }
                                   },
                                 }}
                               >
-                                <Button loading={busyResultId === document.id}>
+                                <Button
+                                  aria-label="操作"
+                                  loading={busyResultId === document.id}
+                                >
                                   操作
                                 </Button>
                               </Dropdown>
@@ -785,6 +851,7 @@ export function SourcesPage() {
                               创建于 {formatDate(run.created_at)}
                             </Typography.Text>
                             <Dropdown
+                              trigger={['click']}
                               menu={{
                                 items: [
                                   {
@@ -818,8 +885,12 @@ export function SourcesPage() {
                                   },
                                   {
                                     key: 'delete',
-                                    label: '删除／归档（后续接入）',
-                                    disabled: true,
+                                    label:
+                                      run.job.status === 'running'
+                                        ? '停止并删除'
+                                        : run.job.status === 'queued'
+                                          ? '取消并删除'
+                                          : '删除任务',
                                     danger: true,
                                   },
                                 ],
@@ -828,11 +899,19 @@ export function SourcesPage() {
                                     void repeatExtraction(run);
                                   } else if (key === 'adopt') {
                                     void adoptRun(run);
+                                  } else if (key === 'delete') {
+                                    void archiveExtraction(
+                                      run.id,
+                                      run.job.status,
+                                    );
                                   }
                                 },
                               }}
                             >
-                              <Button loading={busyResultId === run.id}>
+                              <Button
+                                aria-label="操作"
+                                loading={busyResultId === run.id}
+                              >
                                 操作
                               </Button>
                             </Dropdown>

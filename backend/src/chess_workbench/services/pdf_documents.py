@@ -592,7 +592,10 @@ class PdfDocumentService:
                     ExtractionRun.id == PdfExtractionDocumentAppend.extraction_run_id,
                 )
                 .join(Job, Job.id == ExtractionRun.job_id)
-                .where(PdfExtractionDocumentAppend.document_id == document.id)
+                .where(
+                    PdfExtractionDocumentAppend.document_id == document.id,
+                    Job.archived_at.is_(None),
+                )
                 .order_by(PdfExtractionDocumentAppend.created_at, PdfExtractionDocumentAppend.id)
             )
         ).all()

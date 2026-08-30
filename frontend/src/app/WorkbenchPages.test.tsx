@@ -446,6 +446,50 @@ describe('Stage 4A workbench pages', () => {
     expect(await screen.findByText('排队中')).toBeTruthy();
   });
 
+  it('archives a failed extraction from the book result menu', async () => {
+    let archived = false;
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const failedRun = extractionRun({
+      job: {
+        ...baseJob,
+        status: 'failed',
+        last_error_message: '模型输出无效',
+      },
+    });
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url === '/api/pdf-extractions/run-1' && init?.method === 'DELETE') {
+        archived = true;
+        return Promise.resolve(new Response(null, { status: 204 }));
+      }
+      if (url === '/api/pdf-assets') return json({ items: [pdfAsset] });
+      if (url === '/api/pdf-extraction-documents') {
+        return json({ items: [] });
+      }
+      if (url.startsWith('/api/pdf-extractions')) {
+        return json({ items: archived ? [] : [failedRun] });
+      }
+      return json([source]);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderPage(<SourcesPage />);
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: '管理提取结果' }),
+    );
+    expect(await screen.findByText('模型输出无效')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: '操作' }));
+    fireEvent.click(await screen.findByText('删除任务'));
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/pdf-extractions/run-1',
+        expect.objectContaining({ method: 'DELETE' }),
+      ),
+    );
+    expect(await screen.findByText('这本书还没有提取结果')).toBeTruthy();
+  });
+
   it('requests the expected URLs when status and conflict filters change', async () => {
     const runs = [
       extractionRun({

@@ -1,12 +1,17 @@
+import asyncio
+import sqlite3
 from pathlib import Path
 
 import pytest
+from sqlalchemy import func, select, text
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from chess_workbench.schemas.domain import SourceCreate
 from chess_workbench.services import ContentService
 from chess_workbench.store.base import Base
 from chess_workbench.store.database import Database
 from chess_workbench.store.models import Source
-from sqlalchemy import func, select, text
+from chess_workbench.store.models.engine import InvalidationEvent
 
 
 async def test_ping_creates_parent_directory_and_database(tmp_path: Path) -> None:
@@ -39,6 +44,56 @@ async def test_sqlite_connections_enforce_foreign_keys() -> None:
 
         assert result.scalar_one() == 1
     finally:
+        await database.close()
+
+
+async def test_file_sqlite_uses_wal_and_bounded_busy_wait(tmp_path: Path) -> None:
+    database = Database(f"sqlite+aiosqlite:///{tmp_path / 'pragmas.db'}")
+    try:
+        async with database.engine.connect() as connection:
+            journal_mode = await connection.exec_driver_sql("PRAGMA journal_mode")
+            busy_timeout = await connection.exec_driver_sql("PRAGMA busy_timeout")
+            synchronous = await connection.exec_driver_sql("PRAGMA synchronous")
+        assert journal_mode.scalar_one() == "wal"
+        assert busy_timeout.scalar_one() == 5_000
+        assert synchronous.scalar_one() == 1
+    finally:
+        await database.close()
+
+
+async def test_short_write_waits_for_external_sqlite_writer(tmp_path: Path) -> None:
+    database_path = tmp_path / "busy-writer.db"
+    database = Database(f"sqlite+aiosqlite:///{database_path}")
+    blocker: sqlite3.Connection | None = None
+    try:
+        async with database.engine.begin() as connection:
+            await connection.run_sync(InvalidationEvent.__table__.create)
+
+        blocker = sqlite3.connect(database_path, isolation_level=None)
+        blocker.execute("BEGIN IMMEDIATE")
+
+        async def write_event(session: AsyncSession) -> int:
+            event = InvalidationEvent(
+                resource_type="database-test",
+                resource_id="bounded-wait",
+                reason="released",
+            )
+            session.add(event)
+            await session.flush()
+            return event.id
+
+        pending = asyncio.create_task(database.run_write(write_event))
+        await asyncio.sleep(0.1)
+        assert not pending.done()
+        blocker.commit()
+        event_id = await asyncio.wait_for(pending, timeout=2)
+
+        async with database.session() as session:
+            row = await session.get(InvalidationEvent, event_id)
+            assert row is not None and row.reason == "released"
+    finally:
+        if blocker is not None:
+            blocker.close()
         await database.close()
 
 

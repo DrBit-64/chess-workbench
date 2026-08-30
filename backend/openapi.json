@@ -2877,6 +2877,261 @@
         ]
       }
     },
+    "/api/course-modules/{module_id}/archive-tree": {
+      "post": {
+        "operationId": "archiveCourseModuleTree",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "module_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "expected_version": {
+                    "minimum": 1,
+                    "title": "Expected Version",
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "expected_version"
+                ],
+                "title": "CourseModuleArchiveTreeRequest",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "archived_module_count": {
+                      "minimum": 0,
+                      "title": "Archived Module Count",
+                      "type": "integer"
+                    },
+                    "archived_occurrence_count": {
+                      "minimum": 0,
+                      "title": "Archived Occurrence Count",
+                      "type": "integer"
+                    },
+                    "invalidated_reference_count": {
+                      "minimum": 0,
+                      "title": "Invalidated Reference Count",
+                      "type": "integer"
+                    },
+                    "module_id": {
+                      "format": "uuid",
+                      "title": "Module Id",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "module_id",
+                    "archived_module_count",
+                    "archived_occurrence_count",
+                    "invalidated_reference_count"
+                  ],
+                  "title": "CourseModuleArchiveTreeRead",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Module subtree archived"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error",
+                        "payload_too_large",
+                        "unsupported_media_type",
+                        "invalid_pgn",
+                        "pgn_limit_exceeded",
+                        "idempotency_conflict",
+                        "course_mode_conflict",
+                        "pgn_not_exportable",
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Module not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error",
+                        "payload_too_large",
+                        "unsupported_media_type",
+                        "invalid_pgn",
+                        "pgn_limit_exceeded",
+                        "idempotency_conflict",
+                        "course_mode_conflict",
+                        "pgn_not_exportable",
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Module version is stale"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error",
+                        "payload_too_large",
+                        "unsupported_media_type",
+                        "invalid_pgn",
+                        "pgn_limit_exceeded",
+                        "idempotency_conflict",
+                        "course_mode_conflict",
+                        "pgn_not_exportable",
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Archive one module subtree and invalidate its live reference cards",
+        "tags": [
+          "courses"
+        ]
+      }
+    },
     "/api/course-modules/{module_id}/content-blocks": {
       "get": {
         "operationId": "listCourseContentBlocks",
@@ -11710,6 +11965,274 @@
         ]
       }
     },
+    "/api/occurrences/{occurrence_id}/commands": {
+      "post": {
+        "operationId": "applyCourseOccurrenceCommand",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "occurrence_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "expected_version": {
+                    "minimum": 1,
+                    "title": "Expected Version",
+                    "type": "integer"
+                  },
+                  "kind": {
+                    "enum": [
+                      "promote_variation",
+                      "make_mainline",
+                      "set_nag",
+                      "delete_subtree"
+                    ],
+                    "title": "Kind",
+                    "type": "string"
+                  },
+                  "nag": {
+                    "default": null,
+                    "maximum": 255,
+                    "minimum": 0,
+                    "nullable": true,
+                    "title": "Nag",
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "expected_version"
+                ],
+                "title": "OccurrenceCommandRequest",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "affected_occurrence_count": {
+                      "minimum": 0,
+                      "title": "Affected Occurrence Count",
+                      "type": "integer"
+                    },
+                    "invalidated_reference_count": {
+                      "minimum": 0,
+                      "title": "Invalidated Reference Count",
+                      "type": "integer"
+                    },
+                    "selected_occurrence_id": {
+                      "format": "uuid",
+                      "title": "Selected Occurrence Id",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "selected_occurrence_id",
+                    "affected_occurrence_count",
+                    "invalidated_reference_count"
+                  ],
+                  "title": "OccurrenceCommandRead",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Course-score command applied"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error",
+                        "payload_too_large",
+                        "unsupported_media_type",
+                        "invalid_pgn",
+                        "pgn_limit_exceeded",
+                        "idempotency_conflict",
+                        "course_mode_conflict",
+                        "pgn_not_exportable",
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Occurrence not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error",
+                        "payload_too_large",
+                        "unsupported_media_type",
+                        "invalid_pgn",
+                        "pgn_limit_exceeded",
+                        "idempotency_conflict",
+                        "course_mode_conflict",
+                        "pgn_not_exportable",
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Version or tree context conflicts"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error",
+                        "payload_too_large",
+                        "unsupported_media_type",
+                        "invalid_pgn",
+                        "pgn_limit_exceeded",
+                        "idempotency_conflict",
+                        "course_mode_conflict",
+                        "pgn_not_exportable",
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Apply one semantic course-score edit atomically",
+        "tags": [
+          "course-occurrences"
+        ]
+      }
+    },
     "/api/pdf-assets": {
       "get": {
         "operationId": "listPdfAssets",
@@ -16846,6 +17369,91 @@
       }
     },
     "/api/pdf-extractions/{run_id}": {
+      "delete": {
+        "operationId": "archivePdfExtraction",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "content": {
+              "*/*": {
+                "schema": {}
+              }
+            },
+            "description": "PDF extraction archived"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error",
+                        "payload_too_large",
+                        "unsupported_media_type",
+                        "invalid_pgn",
+                        "pgn_limit_exceeded",
+                        "idempotency_conflict",
+                        "course_mode_conflict",
+                        "pgn_not_exportable",
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "PDF extraction not found"
+          }
+        },
+        "summary": "Cancel active work and archive one PDF extraction result",
+        "tags": [
+          "pdf"
+        ]
+      },
       "get": {
         "operationId": "getPdfExtraction",
         "parameters": [
@@ -22484,6 +23092,29 @@
                                   "nag"
                                 ],
                                 "title": "PdfReviewSetNag",
+                                "type": "object"
+                              },
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "item_id": {
+                                    "pattern": "^[A-Za-z][A-Za-z0-9._:-]{0,127}$",
+                                    "title": "Item Id",
+                                    "type": "string"
+                                  },
+                                  "kind": {
+                                    "enum": [
+                                      "exclude_item"
+                                    ],
+                                    "title": "Kind",
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "item_id"
+                                ],
+                                "title": "PdfReviewExcludeItem",
                                 "type": "object"
                               }
                             ],
@@ -30607,6 +31238,680 @@
           }
         },
         "summary": "Read the current immutable package revision of a PDF review session",
+        "tags": [
+          "pdf"
+        ]
+      }
+    },
+    "/api/pdf-review-sessions/{session_id}/publications": {
+      "post": {
+        "operationId": "publishPdfReviewSelection",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "expected_version": {
+                    "minimum": 1,
+                    "title": "Expected Version",
+                    "type": "integer"
+                  },
+                  "mapping_version": {
+                    "default": "review-course-publication/1.1",
+                    "enum": [
+                      "review-course-publication/1.1"
+                    ],
+                    "title": "Mapping Version",
+                    "type": "string"
+                  },
+                  "segments": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "node_ids": {
+                          "items": {
+                            "pattern": "^[A-Za-z][A-Za-z0-9._:-]{0,127}$",
+                            "type": "string"
+                          },
+                          "maxItems": 10000,
+                          "minItems": 1,
+                          "title": "Node Ids",
+                          "type": "array"
+                        },
+                        "sequence_id": {
+                          "pattern": "^[A-Za-z][A-Za-z0-9._:-]{0,127}$",
+                          "title": "Sequence Id",
+                          "type": "string"
+                        },
+                        "target": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "chapter": {
+                              "discriminator": {
+                                "propertyName": "kind"
+                              },
+                              "oneOf": [
+                                {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "kind": {
+                                      "enum": [
+                                        "existing"
+                                      ],
+                                      "title": "Kind",
+                                      "type": "string"
+                                    },
+                                    "module_id": {
+                                      "format": "uuid",
+                                      "title": "Module Id",
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "module_id"
+                                  ],
+                                  "title": "PdfReviewExistingModuleTarget",
+                                  "type": "object"
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "kind": {
+                                      "enum": [
+                                        "new"
+                                      ],
+                                      "title": "Kind",
+                                      "type": "string"
+                                    },
+                                    "title": {
+                                      "maxLength": 200,
+                                      "minLength": 1,
+                                      "title": "Title",
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "title"
+                                  ],
+                                  "title": "PdfReviewNewModuleTarget",
+                                  "type": "object"
+                                }
+                              ],
+                              "title": "Chapter"
+                            },
+                            "subsection": {
+                              "default": null,
+                              "discriminator": {
+                                "propertyName": "kind"
+                              },
+                              "nullable": true,
+                              "oneOf": [
+                                {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "kind": {
+                                      "enum": [
+                                        "existing"
+                                      ],
+                                      "title": "Kind",
+                                      "type": "string"
+                                    },
+                                    "module_id": {
+                                      "format": "uuid",
+                                      "title": "Module Id",
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "module_id"
+                                  ],
+                                  "title": "PdfReviewExistingModuleTarget",
+                                  "type": "object"
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "kind": {
+                                      "enum": [
+                                        "new"
+                                      ],
+                                      "title": "Kind",
+                                      "type": "string"
+                                    },
+                                    "title": {
+                                      "maxLength": 200,
+                                      "minLength": 1,
+                                      "title": "Title",
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "title"
+                                  ],
+                                  "title": "PdfReviewNewModuleTarget",
+                                  "type": "object"
+                                }
+                              ],
+                              "title": "Subsection"
+                            }
+                          },
+                          "required": [
+                            "chapter"
+                          ],
+                          "title": "PdfReviewPublicationPath",
+                          "type": "object"
+                        }
+                      },
+                      "required": [
+                        "sequence_id",
+                        "node_ids",
+                        "target"
+                      ],
+                      "title": "PdfReviewPublicationSegment",
+                      "type": "object"
+                    },
+                    "maxItems": 100,
+                    "minItems": 1,
+                    "title": "Segments",
+                    "type": "array"
+                  },
+                  "target_course_id": {
+                    "format": "uuid",
+                    "title": "Target Course Id",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "expected_version",
+                  "target_course_id",
+                  "segments"
+                ],
+                "title": "PdfReviewPublishRequest",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "mapping_version": {
+                      "enum": [
+                        "review-course-publication/1.1"
+                      ],
+                      "title": "Mapping Version",
+                      "type": "string"
+                    },
+                    "plan_sha256": {
+                      "pattern": "^[0-9a-f]{64}$",
+                      "title": "Plan Sha256",
+                      "type": "string"
+                    },
+                    "publication_id": {
+                      "format": "uuid",
+                      "title": "Publication Id",
+                      "type": "string"
+                    },
+                    "replayed": {
+                      "title": "Replayed",
+                      "type": "boolean"
+                    },
+                    "review_revision_number": {
+                      "minimum": 1,
+                      "title": "Review Revision Number",
+                      "type": "integer"
+                    },
+                    "review_session_id": {
+                      "format": "uuid",
+                      "title": "Review Session Id",
+                      "type": "string"
+                    },
+                    "segments": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "chapter_module_id": {
+                            "format": "uuid",
+                            "title": "Chapter Module Id",
+                            "type": "string"
+                          },
+                          "note_count": {
+                            "minimum": 0,
+                            "title": "Note Count",
+                            "type": "integer"
+                          },
+                          "occurrence_count": {
+                            "minimum": 1,
+                            "title": "Occurrence Count",
+                            "type": "integer"
+                          },
+                          "sequence_id": {
+                            "pattern": "^[A-Za-z][A-Za-z0-9._:-]{0,127}$",
+                            "title": "Sequence Id",
+                            "type": "string"
+                          },
+                          "source_span_count": {
+                            "minimum": 0,
+                            "title": "Source Span Count",
+                            "type": "integer"
+                          },
+                          "subsection_module_id": {
+                            "format": "uuid",
+                            "nullable": true,
+                            "title": "Subsection Module Id",
+                            "type": "string"
+                          },
+                          "target_module_id": {
+                            "format": "uuid",
+                            "title": "Target Module Id",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "sequence_id",
+                          "chapter_module_id",
+                          "subsection_module_id",
+                          "target_module_id",
+                          "occurrence_count",
+                          "note_count",
+                          "source_span_count"
+                        ],
+                        "title": "PdfReviewPublishedSegmentRead",
+                        "type": "object"
+                      },
+                      "title": "Segments",
+                      "type": "array"
+                    },
+                    "target_course_id": {
+                      "format": "uuid",
+                      "title": "Target Course Id",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "publication_id",
+                    "review_session_id",
+                    "review_revision_number",
+                    "target_course_id",
+                    "mapping_version",
+                    "plan_sha256",
+                    "segments",
+                    "replayed"
+                  ],
+                  "title": "PdfReviewPublicationRead",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Publication plan replayed"
+          },
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "mapping_version": {
+                      "enum": [
+                        "review-course-publication/1.1"
+                      ],
+                      "title": "Mapping Version",
+                      "type": "string"
+                    },
+                    "plan_sha256": {
+                      "pattern": "^[0-9a-f]{64}$",
+                      "title": "Plan Sha256",
+                      "type": "string"
+                    },
+                    "publication_id": {
+                      "format": "uuid",
+                      "title": "Publication Id",
+                      "type": "string"
+                    },
+                    "replayed": {
+                      "title": "Replayed",
+                      "type": "boolean"
+                    },
+                    "review_revision_number": {
+                      "minimum": 1,
+                      "title": "Review Revision Number",
+                      "type": "integer"
+                    },
+                    "review_session_id": {
+                      "format": "uuid",
+                      "title": "Review Session Id",
+                      "type": "string"
+                    },
+                    "segments": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "chapter_module_id": {
+                            "format": "uuid",
+                            "title": "Chapter Module Id",
+                            "type": "string"
+                          },
+                          "note_count": {
+                            "minimum": 0,
+                            "title": "Note Count",
+                            "type": "integer"
+                          },
+                          "occurrence_count": {
+                            "minimum": 1,
+                            "title": "Occurrence Count",
+                            "type": "integer"
+                          },
+                          "sequence_id": {
+                            "pattern": "^[A-Za-z][A-Za-z0-9._:-]{0,127}$",
+                            "title": "Sequence Id",
+                            "type": "string"
+                          },
+                          "source_span_count": {
+                            "minimum": 0,
+                            "title": "Source Span Count",
+                            "type": "integer"
+                          },
+                          "subsection_module_id": {
+                            "format": "uuid",
+                            "nullable": true,
+                            "title": "Subsection Module Id",
+                            "type": "string"
+                          },
+                          "target_module_id": {
+                            "format": "uuid",
+                            "title": "Target Module Id",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "sequence_id",
+                          "chapter_module_id",
+                          "subsection_module_id",
+                          "target_module_id",
+                          "occurrence_count",
+                          "note_count",
+                          "source_span_count"
+                        ],
+                        "title": "PdfReviewPublishedSegmentRead",
+                        "type": "object"
+                      },
+                      "title": "Segments",
+                      "type": "array"
+                    },
+                    "target_course_id": {
+                      "format": "uuid",
+                      "title": "Target Course Id",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "publication_id",
+                    "review_session_id",
+                    "review_revision_number",
+                    "target_course_id",
+                    "mapping_version",
+                    "plan_sha256",
+                    "segments",
+                    "replayed"
+                  ],
+                  "title": "PdfReviewPublicationRead",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Review selection published"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error",
+                        "payload_too_large",
+                        "unsupported_media_type",
+                        "invalid_pgn",
+                        "pgn_limit_exceeded",
+                        "idempotency_conflict",
+                        "course_mode_conflict",
+                        "pgn_not_exportable",
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Review session or target book not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error",
+                        "payload_too_large",
+                        "unsupported_media_type",
+                        "invalid_pgn",
+                        "pgn_limit_exceeded",
+                        "idempotency_conflict",
+                        "course_mode_conflict",
+                        "pgn_not_exportable",
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Review state, hierarchy or target conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error",
+                        "payload_too_large",
+                        "unsupported_media_type",
+                        "invalid_pgn",
+                        "pgn_limit_exceeded",
+                        "idempotency_conflict",
+                        "course_mode_conflict",
+                        "pgn_not_exportable",
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Publication selection is invalid"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error",
+                        "payload_too_large",
+                        "unsupported_media_type",
+                        "invalid_pgn",
+                        "pgn_limit_exceeded",
+                        "idempotency_conflict",
+                        "course_mode_conflict",
+                        "pgn_not_exportable",
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Source storage unavailable"
+          }
+        },
+        "summary": "Publish selected approved review score fragments into one draft book",
         "tags": [
           "pdf"
         ]

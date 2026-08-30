@@ -14,7 +14,7 @@ from typing import Protocol, TypeVar, cast
 from uuid import UUID
 
 from pydantic import BaseModel, JsonValue
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from chess_workbench.domain import PositionError, PositionState
@@ -29,6 +29,8 @@ from chess_workbench.schemas.domain import (
     CourseCreate,
     CourseKnowledgeNoteBlockCreate,
     CourseKnowledgeNoteBlockRead,
+    CourseModuleArchiveTreeRead,
+    CourseModuleArchiveTreeRequest,
     CourseModuleCreate,
     CourseModuleEditorRead,
     CourseModuleRead,
@@ -47,6 +49,8 @@ from chess_workbench.schemas.domain import (
     KnowledgeNoteUpdate,
     ModulePublicationRead,
     NormalizedBoundingBox,
+    OccurrenceCommandRead,
+    OccurrenceCommandRequest,
     OccurrenceMoveCreate,
     OccurrenceNoteTarget,
     OccurrenceRead,
@@ -361,6 +365,64 @@ class ContentService:
                 )
         await self._update_changes(row, data.expected_version, changes, "course_module")
         return await self._module_read(row)
+
+    async def archive_module_tree(
+        self,
+        module_id: UUID,
+        data: CourseModuleArchiveTreeRequest,
+    ) -> CourseModuleArchiveTreeRead:
+        target = self._require(
+            await self.repository.get_module(module_id),
+            "course_module",
+            module_id,
+        )
+        if target.version != data.expected_version:
+            raise ServiceError(
+                "stale_version",
+                409,
+                "expected version does not match the current resource version",
+                {
+                    "resource": "course_module",
+                    "id": str(target.id),
+                    "expected": data.expected_version,
+                    "actual": target.version,
+                },
+            )
+        modules = await self.repository.list_modules(target.course_id)
+        module_by_parent: dict[UUID, list[CourseModule]] = {}
+        for module in modules:
+            if module.parent_id is not None:
+                module_by_parent.setdefault(module.parent_id, []).append(module)
+        selected: list[CourseModule] = []
+        pending = [target]
+        while pending:
+            module = pending.pop()
+            selected.append(module)
+            pending.extend(module_by_parent.get(module.id, []))
+        selected_ids = {module.id for module in selected}
+        occurrences = [
+            row
+            for row in await self.repository.list_occurrences(target.course_id)
+            if row.module_id in selected_ids
+        ]
+        invalidated = await self._archive_authoring_content(
+            occurrence_rows=occurrences,
+            module_ids=selected_ids,
+        )
+        archived_at = utc_now()
+        for module in reversed(selected):
+            await self._update_changes(
+                module,
+                module.version,
+                {"archived_at": archived_at},
+                "course_module",
+            )
+        return CourseModuleArchiveTreeRead(
+            module_id=module_id,
+            archived_module_count=len(selected),
+            archived_occurrence_count=len(occurrences),
+            invalidated_reference_count=invalidated,
+        )
 
     async def get_module_editor(
         self,
@@ -830,6 +892,235 @@ class ContentService:
                     "course_content_block",
                 )
         return self._occurrence_read(row)
+
+    async def execute_occurrence_command(
+        self,
+        occurrence_id: UUID,
+        data: OccurrenceCommandRequest,
+    ) -> OccurrenceCommandRead:
+        row = await self._active_occurrence(occurrence_id)
+        if row.parent_id is None:
+            raise self._ambiguous(
+                "course_occurrence",
+                occurrence_id,
+                "the root occurrence cannot be edited as a move",
+            )
+        if row.version != data.expected_version:
+            raise ServiceError(
+                "stale_version",
+                409,
+                "expected version does not match the current resource version",
+                {
+                    "resource": "course_occurrence",
+                    "id": str(row.id),
+                    "expected": data.expected_version,
+                    "actual": row.version,
+                },
+            )
+
+        selected_id = row.id
+        affected = 0
+        invalidated = 0
+        if data.kind == "set_nag":
+            await self._update_changes(
+                row,
+                row.version,
+                {"nag": data.nag},
+                "course_occurrence",
+            )
+            affected = 1
+        elif data.kind == "promote_variation":
+            siblings = await self.repository.list_occurrences(
+                row.course_id,
+                parent_id=row.parent_id,
+            )
+            index = next(i for i, sibling in enumerate(siblings) if sibling.id == row.id)
+            if index > 0:
+                desired = [*siblings]
+                desired[index - 1], desired[index] = desired[index], desired[index - 1]
+                affected = await self._reorder_active_siblings(row.parent_id, desired)
+        elif data.kind == "make_mainline":
+            child = row
+            while child.parent_id is not None:
+                siblings = await self.repository.list_occurrences(
+                    child.course_id,
+                    parent_id=child.parent_id,
+                )
+                index = next(i for i, sibling in enumerate(siblings) if sibling.id == child.id)
+                if index > 0:
+                    desired = [child, *siblings[:index], *siblings[index + 1 :]]
+                    affected += await self._reorder_active_siblings(child.parent_id, desired)
+                child = await self._active_occurrence(child.parent_id)
+        else:
+            descendants = await self._active_occurrence_subtree(row)
+            all_siblings = await self.repository.list_occurrences(
+                row.course_id,
+                parent_id=row.parent_id,
+                include_archived=True,
+            )
+            archive_sort_order = max(sibling.sort_order for sibling in all_siblings) + 1
+            await self._update_changes(
+                row,
+                row.version,
+                {"archived_at": utc_now(), "sort_order": archive_sort_order},
+                "course_occurrence",
+            )
+            invalidated = await self._archive_authoring_content(
+                occurrence_rows=descendants,
+                module_ids=set(),
+            )
+            selected_id = row.parent_id
+            affected = len(descendants)
+            siblings = await self.repository.list_occurrences(
+                row.course_id,
+                parent_id=row.parent_id,
+            )
+            if siblings:
+                affected += await self._reorder_active_siblings(row.parent_id, siblings)
+
+        return OccurrenceCommandRead(
+            selected_occurrence_id=selected_id,
+            affected_occurrence_count=affected,
+            invalidated_reference_count=invalidated,
+        )
+
+    async def _active_occurrence_subtree(
+        self,
+        root: CourseOccurrence,
+    ) -> list[CourseOccurrence]:
+        rows = await self.repository.list_occurrences(
+            root.course_id,
+            module_id=root.module_id,
+        )
+        children: dict[UUID, list[CourseOccurrence]] = {}
+        for row in rows:
+            if row.parent_id is not None:
+                children.setdefault(row.parent_id, []).append(row)
+        result: list[CourseOccurrence] = []
+        pending = [root]
+        while pending:
+            current = pending.pop()
+            result.append(current)
+            pending.extend(children.get(current.id, []))
+        return result
+
+    async def _reorder_active_siblings(
+        self,
+        parent_id: UUID,
+        desired: list[CourseOccurrence],
+    ) -> int:
+        if not desired:
+            return 0
+        all_siblings = await self.repository.list_occurrences(
+            desired[0].course_id,
+            parent_id=parent_id,
+            include_archived=True,
+        )
+        reserved = {
+            sibling.sort_order for sibling in all_siblings if sibling.archived_at is not None
+        }
+        slots: list[int] = []
+        candidate = 0
+        while len(slots) < len(desired):
+            if candidate not in reserved:
+                slots.append(candidate)
+            candidate += 1
+        changed = [
+            (row, final_order)
+            for row, final_order in zip(desired, slots, strict=True)
+            if row.sort_order != final_order
+        ]
+        if not changed:
+            return 0
+        temporary = max(sibling.sort_order for sibling in all_siblings) + 1
+        for offset, (row, _) in enumerate(changed):
+            await self._update_changes(
+                row,
+                row.version,
+                {"sort_order": temporary + offset},
+                "course_occurrence",
+            )
+        for row, final_order in changed:
+            await self._update_changes(
+                row,
+                row.version,
+                {"sort_order": final_order},
+                "course_occurrence",
+            )
+        return len(changed)
+
+    async def _archive_authoring_content(
+        self,
+        *,
+        occurrence_rows: list[CourseOccurrence],
+        module_ids: set[UUID],
+    ) -> int:
+        occurrence_ids = {row.id for row in occurrence_rows}
+        note_rows: list[KnowledgeNote] = []
+        if occurrence_ids:
+            note_rows = list(
+                await self.session.scalars(
+                    select(KnowledgeNote).where(
+                        KnowledgeNote.occurrence_id.in_(occurrence_ids),
+                        KnowledgeNote.archived_at.is_(None),
+                    )
+                )
+            )
+        note_ids = {row.id for row in note_rows}
+        reference_rows: list[KnowledgeNote] = []
+        if note_ids:
+            reference_rows = list(
+                await self.session.scalars(
+                    select(KnowledgeNote).where(
+                        KnowledgeNote.source_note_id.in_(note_ids),
+                        KnowledgeNote.archived_at.is_(None),
+                    )
+                )
+            )
+        block_conditions = []
+        if module_ids:
+            block_conditions.append(CourseContentBlock.module_id.in_(module_ids))
+        if occurrence_ids:
+            block_conditions.append(CourseContentBlock.root_occurrence_id.in_(occurrence_ids))
+        if note_ids:
+            block_conditions.append(CourseContentBlock.knowledge_note_id.in_(note_ids))
+        block_rows = (
+            list(
+                await self.session.scalars(
+                    select(CourseContentBlock).where(
+                        or_(*block_conditions),
+                        CourseContentBlock.archived_at.is_(None),
+                    )
+                )
+            )
+            if block_conditions
+            else []
+        )
+        archived_at = utc_now()
+        for note in [*reference_rows, *note_rows]:
+            if note.archived_at is None:
+                await self._update_changes(
+                    note,
+                    note.version,
+                    {"archived_at": archived_at},
+                    "knowledge_note",
+                )
+        for block in block_rows:
+            await self._update_changes(
+                block,
+                block.version,
+                {"archived_at": archived_at},
+                "course_content_block",
+            )
+        for occurrence in reversed(occurrence_rows):
+            if occurrence.archived_at is None:
+                await self._update_changes(
+                    occurrence,
+                    occurrence.version,
+                    {"archived_at": archived_at},
+                    "course_occurrence",
+                )
+        return len(reference_rows)
 
     async def create_source(self, data: SourceCreate) -> SourceRead:
         row = Source(

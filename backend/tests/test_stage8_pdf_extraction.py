@@ -351,7 +351,8 @@ async def test_retryable_storage_failure_has_zero_rows_then_same_job_succeeds(
             assert succeeded is not None
             assert succeeded.status == "succeeded"
             assert succeeded.attempt_count == 2
-            assert succeeded.last_error_code == "source_storage_unavailable"
+            assert succeeded.last_error_code is None
+            assert succeeded.last_error_message is None
         assert len(await _artifacts(database, extraction.run.id)) == 8
     finally:
         await database.close()

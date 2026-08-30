@@ -279,19 +279,27 @@ class UciEngine:
         transport: asyncio.SubprocessTransport, protocol: chess.engine.UciProtocol
     ) -> None:
         try:
-            await asyncio.wait_for(protocol.quit(), timeout=1)
-        except (TimeoutError, chess.engine.EngineError, ProcessLookupError):
+            if not protocol.returncode.done() and not transport.is_closing():
+                await asyncio.wait_for(protocol.quit(), timeout=1)
+        except (
+            TimeoutError,
+            chess.engine.EngineError,
+            ProcessLookupError,
+            RuntimeError,
+            OSError,
+        ):
             if not protocol.returncode.done():
-                with suppress(ProcessLookupError):
+                with suppress(ProcessLookupError, RuntimeError, OSError):
                     transport.kill()
         finally:
             if not protocol.returncode.done():
                 try:
                     await asyncio.wait_for(asyncio.shield(protocol.returncode), timeout=1)
                 except TimeoutError:
-                    with suppress(ProcessLookupError):
+                    with suppress(ProcessLookupError, RuntimeError, OSError):
                         transport.kill()
                     with suppress(TimeoutError):
                         await asyncio.wait_for(asyncio.shield(protocol.returncode), timeout=1)
             if not transport.is_closing():
-                transport.close()
+                with suppress(RuntimeError, OSError):
+                    transport.close()

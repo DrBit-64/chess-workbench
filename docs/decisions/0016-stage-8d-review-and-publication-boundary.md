@@ -104,6 +104,29 @@ issue 且所有非阻断 issue 已确认。`reject` 与 `reopen` 是显式状态
 覆盖。发布 receipt 由 review session + 精确 revision + mapping version + 目标组合唯一确定；重放返回
 既有结果，任何校验、版本冲突或写入失败均为零部分写入。
 
+#### 8D-6 书籍层级与片段发布细化（2026-08-28）
+
+traditional Course 在学习入口中表示一本书，CourseModule 采用两级可读目录：顶层 Module 是章节，
+其子 Module 是例局或理论小节。为兼容既有课程，顶层章节本身仍可拥有 root occurrence、棋谱、正文
+和注释；有子节点不意味着它只能充当空目录。第一版发布不创建第三层 Module。
+
+一次发布计划绑定一个已批准 review revision 和一本现有 traditional draft Course，可以包含多个棋谱
+片段。每个片段明确选择一个 move sequence、一个非空 node ID 集合，以及“章节 + 可选小节”目标；
+章节/小节既可引用现有 Module，也可在同一事务中按标题创建。节点集合必须构成一个父节点闭合、具有
+唯一外部父节点/起始局面的棋谱片段，且所有节点已经通过本地棋规验证。不同片段可以投到不同小节，
+但同一计划不能让两个片段争用同一个目标 Module，第一版也不覆盖已有棋谱。
+
+审核页面以拖拽棋步范围生成片段，不要求用户识别或输入内部 node ID。后端仍以明确 ID、父子拓扑和
+expected-version 为权威，并在一个数据库事务中创建层级、occurrence、KnowledgeNote、SourceSpan 和
+不可变 publication receipt。receipt 的计划 hash 包含完整片段与目标路径；完全相同的重放返回既有
+结果，不重复创建课程内容。
+
+`review-course-publication/1.1` 以 CCEF 1.1 `reading_flow` 作为谱内文字的发布顺序。没有显式 anchor
+的 annotation 在其前一棋步属于所选片段时，作为该棋步后的 KnowledgeNote 发布；位于所选序列首着
+之前的 annotation 随根局面发布。棋步、序列与注释证据均物化为绑定原 PDF 文件的 SourceSpan，课程
+读取面必须同时考虑 occurrence context 和 KnowledgeNote 引用，以恢复原书页预览。1.0 receipt 保持
+不可变，不以新语义静默重放。
+
 ## Stage 8D 顺序
 
 1. 纯 CCEF review inspection；

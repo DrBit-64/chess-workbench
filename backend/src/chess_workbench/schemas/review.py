@@ -15,7 +15,16 @@ from pydantic import Field, JsonValue, StringConstraints, field_validator, model
 
 from ..extraction.contracts import ExtractionPackage, ExtractionPackageV1_1, LocalId
 from ..review.inspection import ReviewInspection, inspect_review_candidate
-from .domain import EntityId, Nag, Sha256, StrictContract, UciMove, UtcDateTime, VersionNumber
+from .domain import (
+    EntityId,
+    Nag,
+    Sha256,
+    StrictContract,
+    Title,
+    UciMove,
+    UtcDateTime,
+    VersionNumber,
+)
 
 ReviewPageContentPath = Annotated[
     str,
@@ -167,6 +176,68 @@ class PdfReviewSessionEnvelope(StrictContract):
     session: PdfReviewSessionRead
 
 
+class PdfReviewExistingModuleTarget(StrictContract):
+    kind: Literal["existing"]
+    module_id: EntityId
+
+
+class PdfReviewNewModuleTarget(StrictContract):
+    kind: Literal["new"]
+    title: Title
+
+
+PdfReviewModuleTarget = Annotated[
+    PdfReviewExistingModuleTarget | PdfReviewNewModuleTarget,
+    Field(discriminator="kind"),
+]
+
+
+class PdfReviewPublicationPath(StrictContract):
+    chapter: PdfReviewModuleTarget
+    subsection: PdfReviewModuleTarget | None = None
+
+
+class PdfReviewPublicationSegment(StrictContract):
+    sequence_id: LocalId
+    node_ids: list[LocalId] = Field(min_length=1, max_length=10_000)
+    target: PdfReviewPublicationPath
+
+    @field_validator("node_ids")
+    @classmethod
+    def node_ids_must_be_unique(cls, value: list[str]) -> list[str]:
+        if len(value) != len(set(value)):
+            raise ValueError("publication node_ids must be unique")
+        return value
+
+
+class PdfReviewPublishRequest(StrictContract):
+    expected_version: VersionNumber
+    target_course_id: EntityId
+    mapping_version: Literal["review-course-publication/1.1"] = "review-course-publication/1.1"
+    segments: list[PdfReviewPublicationSegment] = Field(min_length=1, max_length=100)
+
+
+class PdfReviewPublishedSegmentRead(StrictContract):
+    sequence_id: LocalId
+    chapter_module_id: EntityId
+    subsection_module_id: EntityId | None
+    target_module_id: EntityId
+    occurrence_count: Annotated[int, Field(ge=1)]
+    note_count: Annotated[int, Field(ge=0)]
+    source_span_count: Annotated[int, Field(ge=0)]
+
+
+class PdfReviewPublicationRead(StrictContract):
+    publication_id: EntityId
+    review_session_id: EntityId
+    review_revision_number: VersionNumber
+    target_course_id: EntityId
+    mapping_version: Literal["review-course-publication/1.1"]
+    plan_sha256: Sha256
+    segments: list[PdfReviewPublishedSegmentRead]
+    replayed: bool
+
+
 class PdfReviewAddLine(StrictContract):
     kind: Literal["add_line"]
     sequence_id: LocalId
@@ -208,13 +279,19 @@ class PdfReviewSetNag(StrictContract):
     nag: Nag | None
 
 
+class PdfReviewExcludeItem(StrictContract):
+    kind: Literal["exclude_item"]
+    item_id: LocalId
+
+
 PdfReviewEditOperation = Annotated[
     PdfReviewAddLine
     | PdfReviewDeleteSubtree
     | PdfReviewPromoteVariation
     | PdfReviewMakeMainline
     | PdfReviewEditText
-    | PdfReviewSetNag,
+    | PdfReviewSetNag
+    | PdfReviewExcludeItem,
     Field(discriminator="kind"),
 ]
 
@@ -287,6 +364,7 @@ __all__ = [
     "PdfReviewEditCommand",
     "PdfReviewEditOperation",
     "PdfReviewEditText",
+    "PdfReviewExcludeItem",
     "PdfReviewEventRead",
     "PdfReviewMakeMainline",
     "PdfReviewPageRead",

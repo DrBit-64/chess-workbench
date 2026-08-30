@@ -20,3 +20,4 @@ ADR 记录会长期影响数据兼容性、模块边界或运维方式的决定�
 - [0016：Stage 8D 人工审核与草稿发布边界](0016-stage-8d-review-and-publication-boundary.md)
 - [0017：带原子注释的棋谱树与独立阅读流](0017-annotated-move-tree-and-reading-flow.md)
 - [0018：增量 PDF 提取文档、分段续接与不可变聚合修订](0018-incremental-pdf-extraction-documents.md)
+- [0019：SQLite 写协调与基于工件的任务恢复](0019-sqlite-write-coordination-and-job-recovery.md)

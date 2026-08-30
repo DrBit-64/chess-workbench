@@ -40,6 +40,7 @@ from chess_workbench.schemas.review import (
     PdfReviewDeleteSubtree,
     PdfReviewEditOperation,
     PdfReviewEditText,
+    PdfReviewExcludeItem,
     PdfReviewMakeMainline,
     PdfReviewPromoteVariation,
     PdfReviewSetNag,
@@ -75,6 +76,8 @@ def apply_review_edit(
         decisions = _edit_text(result, operation)
     elif isinstance(operation, PdfReviewSetNag):
         decisions = _set_nag(result, operation)
+    elif isinstance(operation, PdfReviewExcludeItem):
+        decisions = _exclude_item(result, operation)
     else:  # pragma: no cover - discriminated request contract is exhaustive.
         raise TypeError("unsupported review edit operation")
 
@@ -436,6 +439,34 @@ def _set_nag(package: ReviewPackage, operation: PdfReviewSetNag) -> dict[str, Js
         "sequence_id": operation.sequence_id,
         "node_id": operation.node_id,
         "nag": operation.nag,
+    }
+
+
+def _exclude_item(package: ReviewPackage, operation: PdfReviewExcludeItem) -> dict[str, JsonValue]:
+    item_index = next(
+        (
+            index
+            for index, candidate in enumerate(package.items)
+            if candidate.id == operation.item_id
+        ),
+        None,
+    )
+    if item_index is None:
+        raise ValueError("review item was not found")
+    item = package.items[item_index]
+    if _is_sequence(item):
+        raise ValueError("move sequences must be removed with delete_subtree")
+    package.items.pop(item_index)
+    removed_diagnostics = sum(
+        1 for diagnostic in package.diagnostics if diagnostic.item_id == operation.item_id
+    )
+    package.diagnostics = [
+        diagnostic for diagnostic in package.diagnostics if diagnostic.item_id != operation.item_id
+    ]
+    return {
+        "operation": "exclude_item",
+        "item_id": operation.item_id,
+        "removed_diagnostic_count": removed_diagnostics,
     }
 
 

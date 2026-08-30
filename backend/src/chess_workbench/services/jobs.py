@@ -131,6 +131,18 @@ class JobService:
         await self.session.flush()
         return row
 
+    async def archive(self, job_id: UUID) -> Job | None:
+        """Cancel active work and hide the Job without deleting its receipt."""
+
+        row = await self.cancel(job_id)
+        if row is None:
+            return None
+        if row.archived_at is None:
+            row.archived_at = utc_now()
+            await self.emit("job", str(row.id), "archived")
+            await self.session.flush()
+        return row
+
     async def recover_expired(self, *, allowed_kinds: Collection[str]) -> int:
         kinds = _validated_allowed_kinds(allowed_kinds)
         now = utc_now()

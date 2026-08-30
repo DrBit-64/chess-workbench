@@ -158,7 +158,7 @@ def expected_run_id(
     the production private helper.
     """
     fingerprint_version = (
-        "pdfium-text-lines+ccef-semantic-consolidation:v7"
+        "pdfium-text-lines+ccef-semantic-consolidation:v12"
         if pipeline_version == PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION
         else "pdfium-text-lines+ccef-formal-consolidation:v5"
     )
@@ -429,6 +429,63 @@ async def test_extraction_enqueue_returns_202_with_exact_job(tmp_path: Path) -> 
         assert await count_rows(app, InvalidationEvent) == 1
         assert await count_rows(app, Course) == 0
         assert await count_rows(app, KnowledgeNote) == 0
+    finally:
+        await app.ctx.database.close()
+
+
+async def test_archive_extraction_cancels_active_jobs_and_hides_all_states(
+    tmp_path: Path,
+) -> None:
+    app = build_app(tmp_path, "archive")
+    await create_schema(app)
+    client = cast(Any, app.asgi_client)
+    try:
+        asset = (await upload_pdf(client, make_pdf(3))).json["asset"]
+        runs: list[dict[str, Any]] = []
+        for index in range(3):
+            _, response = await client.post(
+                "/api/pdf-extractions",
+                json={
+                    "pdf_asset_id": asset["id"],
+                    "first_page": 1,
+                    "last_page": index + 1,
+                },
+                headers={"Idempotency-Key": f"archive-{index}"},
+            )
+            assert response.status == 202
+            runs.append(response.json["extraction"])
+
+        async with app.ctx.database.session() as session, session.begin():
+            running = await session.get(Job, UUID(runs[1]["job"]["id"]))
+            failed = await session.get(Job, UUID(runs[2]["job"]["id"]))
+            assert running is not None and failed is not None
+            running.status = "running"
+            running.lease_owner = "archive-test"
+            failed.status = "failed"
+
+        for run in runs:
+            _, archived = await client.delete(f"/api/pdf-extractions/{run['id']}")
+            assert archived.status == 204
+
+        _, listing = await client.get("/api/pdf-extractions")
+        assert listing.status == 200
+        assert listing.json == {"items": []}
+
+        async with app.ctx.database.session() as session:
+            queued = await session.get(Job, UUID(runs[0]["job"]["id"]))
+            running = await session.get(Job, UUID(runs[1]["job"]["id"]))
+            failed = await session.get(Job, UUID(runs[2]["job"]["id"]))
+            assert queued is not None and running is not None and failed is not None
+            assert queued.status == "cancelled"
+            assert running.status == "running"
+            assert running.cancel_requested_at is not None
+            assert failed.status == "failed"
+            assert all(job.archived_at is not None for job in (queued, running, failed))
+
+        # Archival affects discovery, not immutable receipt or audit access.
+        _, direct = await client.get(f"/api/pdf-extractions/{runs[2]['id']}")
+        assert direct.status == 200
+        assert direct.json["job"]["status"] == "failed"
     finally:
         await app.ctx.database.close()
 

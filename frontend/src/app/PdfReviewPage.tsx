@@ -14,11 +14,15 @@ import useSWR from 'swr';
 
 import { ApiError, fetchJson, requestJson } from '../logic/api/client';
 import type {
+  Course,
+  CourseModule,
   PdfReviewCommandEnvelope,
   PdfReviewCommandRequest,
   PdfReviewDocument,
   PdfReviewSession,
   PdfReviewSessionEnvelope,
+  PdfReviewPublication,
+  PdfReviewPublishRequest,
 } from '../logic/api/types';
 import {
   FAST_MOVE_ANIMATION_MS,
@@ -85,6 +89,21 @@ interface ReviewContextMenuState {
   actions: ContextMenuAction[];
 }
 
+interface MoveSelection {
+  sequenceId: string;
+  anchorNodeId: string;
+  nodeIds: string[];
+}
+
+interface PublicationDraftSegment {
+  key: string;
+  sequenceId: string;
+  nodeIds: string[];
+  label: string;
+  targetLabel: string;
+  target: PdfReviewPublishRequest['segments'][number]['target'];
+}
+
 const HEADING_TAGS = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'] as const;
 
 function reviewErrorMessage(error: unknown): string {
@@ -138,7 +157,38 @@ export function PdfReviewPage({ runId }: { runId: string }) {
   const [currentDocument, setCurrentDocument] =
     useState<PdfReviewDocument | null>(null);
   const [textEditor, setTextEditor] = useState<TextEditorState | null>(null);
+  const [publishing, setPublishing] = useState(false);
+  const [publicationBusy, setPublicationBusy] = useState(false);
+  const [targetCourseId, setTargetCourseId] = useState('');
+  const [chapterChoice, setChapterChoice] = useState('__new__');
+  const [newChapterTitle, setNewChapterTitle] = useState('');
+  const [subsectionChoice, setSubsectionChoice] = useState('__none__');
+  const [newSubsectionTitle, setNewSubsectionTitle] = useState('');
+  const [moveSelection, setMoveSelection] = useState<MoveSelection | null>(
+    null,
+  );
+  const [dragSelecting, setDragSelecting] = useState(false);
+  const [publicationSegments, setPublicationSegments] = useState<
+    PublicationDraftSegment[]
+  >([]);
+  const [publicationResult, setPublicationResult] =
+    useState<PdfReviewPublication | null>(null);
   const initializedRunId = useRef<string | null>(null);
+
+  const { data: targetCourses = [], mutate: mutateTargetCourses } = useSWR<
+    Course[]
+  >(
+    publishing
+      ? '/api/courses?mode=traditional&status=draft&sort=title_asc'
+      : null,
+    fetchJson,
+  );
+  const { data: targetModules = [] } = useSWR<CourseModule[]>(
+    publishing && targetCourseId
+      ? `/api/courses/${encodeURIComponent(targetCourseId)}/modules`
+      : null,
+    fetchJson,
+  );
 
   const document = currentDocument ?? data;
 
@@ -172,7 +222,24 @@ export function PdfReviewPage({ runId }: { runId: string }) {
     setPendingLine(null);
     setBoardContext(null);
     initializedRunId.current = null;
+    setPublishing(false);
+    setMoveSelection(null);
+    setPublicationSegments([]);
+    setPublicationResult(null);
   }, [runId]);
+
+  useEffect(() => {
+    if (!dragSelecting) return;
+    const finish = () => setDragSelecting(false);
+    window.addEventListener('mouseup', finish);
+    return () => window.removeEventListener('mouseup', finish);
+  }, [dragSelecting]);
+
+  useEffect(() => {
+    if (!targetCourseId && targetCourses[0]) {
+      setTargetCourseId(targetCourses[0].id);
+    }
+  }, [targetCourseId, targetCourses]);
 
   const activeDescriptor =
     pages.find((page) => page.physical_page === selectedPage) ?? pages[0];
@@ -344,6 +411,158 @@ export function PdfReviewPage({ runId }: { runId: string }) {
 
   function applyEdit(operation: ReviewEditOperation) {
     return applyCommand({ kind: 'edit', operation });
+  }
+
+  function beginMoveSelection(sequence: MoveSequenceItem, node: MoveNode) {
+    if (!publishing) return;
+    setDragSelecting(true);
+    setMoveSelection({
+      sequenceId: sequence.id,
+      anchorNodeId: node.id,
+      nodeIds: [node.id],
+    });
+  }
+
+  function extendMoveSelection(sequence: MoveSequenceItem, node: MoveNode) {
+    if (!publishing || !dragSelecting) return;
+    setMoveSelection((current) => {
+      if (current === null || current.sequenceId !== sequence.id)
+        return current;
+      const anchorIndex = sequence.nodes.findIndex(
+        (candidate) => candidate.id === current.anchorNodeId,
+      );
+      const focusIndex = sequence.nodes.findIndex(
+        (candidate) => candidate.id === node.id,
+      );
+      if (anchorIndex < 0 || focusIndex < 0) return current;
+      const start = Math.min(anchorIndex, focusIndex);
+      const end = Math.max(anchorIndex, focusIndex);
+      return {
+        ...current,
+        nodeIds: sequence.nodes.slice(start, end + 1).map((item) => item.id),
+      };
+    });
+  }
+
+  async function createTargetBook() {
+    const title = window.prompt('新书名称')?.trim();
+    if (!title) return;
+    try {
+      const created = await requestJson<Course>('/api/courses', {
+        method: 'POST',
+        body: JSON.stringify({ title, mode: 'traditional' }),
+      });
+      await mutateTargetCourses((current) => [...(current ?? []), created], {
+        revalidate: false,
+      });
+      setTargetCourseId(created.id);
+      setPublicationSegments([]);
+      void message.success('书籍草稿已创建');
+    } catch (requestError) {
+      void message.error(
+        requestError instanceof Error ? requestError.message : '创建书籍失败',
+      );
+    }
+  }
+
+  function addPublicationSegment() {
+    if (moveSelection === null) {
+      void message.warning('请先在棋谱上拖拽选择棋步');
+      return;
+    }
+    const sequence = sequenceById(moveSelection.sequenceId);
+    if (sequence === undefined) return;
+    const chapter =
+      chapterChoice === '__new__'
+        ? newChapterTitle.trim()
+          ? ({ kind: 'new', title: newChapterTitle.trim() } as const)
+          : null
+        : ({ kind: 'existing', module_id: chapterChoice } as const);
+    if (chapter === null) {
+      void message.warning('请选择章节或填写新章节标题');
+      return;
+    }
+    const subsection =
+      subsectionChoice === '__none__'
+        ? null
+        : subsectionChoice === '__new__'
+          ? newSubsectionTitle.trim()
+            ? ({ kind: 'new', title: newSubsectionTitle.trim() } as const)
+            : undefined
+          : ({ kind: 'existing', module_id: subsectionChoice } as const);
+    if (subsection === undefined) {
+      void message.warning('请填写新小节标题');
+      return;
+    }
+    const selectedNodes = sequence.nodes.filter((node) =>
+      moveSelection.nodeIds.includes(node.id),
+    );
+    const chapterLabel =
+      chapter.kind === 'new'
+        ? chapter.title
+        : (targetModules.find((item) => item.id === chapter.module_id)?.title ??
+          '已有章节');
+    const subsectionLabel =
+      subsection === null
+        ? null
+        : subsection.kind === 'new'
+          ? subsection.title
+          : (targetModules.find((item) => item.id === subsection.module_id)
+              ?.title ?? '已有小节');
+    setPublicationSegments((current) => [
+      ...current,
+      {
+        key: `${sequence.id}:${moveSelection.nodeIds.join(':')}:${current.length}`,
+        sequenceId: sequence.id,
+        nodeIds: moveSelection.nodeIds,
+        label: `${sequence.title ?? '棋谱'} · ${selectedNodes[0]?.move_text ?? ''}–${selectedNodes.at(-1)?.move_text ?? ''}`,
+        targetLabel: subsectionLabel
+          ? `${chapterLabel} / ${subsectionLabel}`
+          : chapterLabel,
+        target: { chapter, subsection },
+      },
+    ]);
+    setMoveSelection(null);
+  }
+
+  async function publishPlan() {
+    if (
+      reviewSession === null ||
+      reviewSession.status !== 'approved' ||
+      !targetCourseId ||
+      publicationSegments.length === 0
+    ) {
+      return;
+    }
+    setPublicationBusy(true);
+    try {
+      const result = await requestJson<PdfReviewPublication>(
+        `/api/pdf-review-sessions/${encodeURIComponent(reviewSession.id)}/publications`,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            expected_version: reviewSession.version,
+            target_course_id: targetCourseId,
+            mapping_version: 'review-course-publication/1.1',
+            segments: publicationSegments.map((segment) => ({
+              sequence_id: segment.sequenceId,
+              node_ids: segment.nodeIds,
+              target: segment.target,
+            })),
+          } satisfies PdfReviewPublishRequest),
+        },
+      );
+      setPublicationResult(result);
+      void message.success(
+        result.replayed ? '该发布计划已完成' : '已发布到学习资料',
+      );
+    } catch (requestError) {
+      void message.error(
+        requestError instanceof Error ? requestError.message : '发布失败',
+      );
+    } finally {
+      setPublicationBusy(false);
+    }
   }
 
   function submitBoardMove(source: string, target: string): boolean {
@@ -538,6 +757,17 @@ export function PdfReviewPage({ runId }: { runId: string }) {
     void applyCommand({ kind: 'reopen', reason: null });
   }
 
+  function excludeItem(itemId: string) {
+    if (
+      !window.confirm(
+        '确认从当前审核修订中排除这项内容？原始提取结果不会被修改。',
+      )
+    ) {
+      return;
+    }
+    void applyEdit({ kind: 'exclude_item', item_id: itemId });
+  }
+
   if (isLoading) {
     return (
       <div role="status" aria-busy="true" className="p-8 text-stone-600">
@@ -633,14 +863,25 @@ export function PdfReviewPage({ runId }: { runId: string }) {
                 </button>
               </>
             ) : (
-              <button
-                type="button"
-                disabled={commandBusy}
-                onClick={reopenReview}
-                className="rounded border border-stone-300 bg-white px-3 py-1.5 text-sm"
-              >
-                重新打开
-              </button>
+              <>
+                <button
+                  type="button"
+                  disabled={commandBusy}
+                  onClick={reopenReview}
+                  className="rounded border border-stone-300 bg-white px-3 py-1.5 text-sm"
+                >
+                  重新打开
+                </button>
+                {reviewSession.status === 'approved' ? (
+                  <button
+                    type="button"
+                    onClick={() => setPublishing((value) => !value)}
+                    className="rounded bg-emerald-800 px-3 py-1.5 text-sm text-white"
+                  >
+                    {publishing ? '收起发布编排' : '编排发布'}
+                  </button>
+                ) : null}
+              </>
             )}
           </>
         )}
@@ -650,6 +891,159 @@ export function PdfReviewPage({ runId }: { runId: string }) {
           </span>
         ) : null}
       </div>
+      {publishing ? (
+        <section
+          aria-label="发布计划"
+          className="mx-6 rounded-md border border-emerald-200 bg-emerald-50 p-3"
+        >
+          <div className="flex flex-wrap items-end gap-3">
+            <label className="grid gap-1 text-sm">
+              <span className="font-medium">书</span>
+              <select
+                aria-label="发布到书"
+                value={targetCourseId}
+                onChange={(event) => {
+                  setTargetCourseId(event.target.value);
+                  setPublicationSegments([]);
+                  setChapterChoice('__new__');
+                  setSubsectionChoice('__none__');
+                }}
+                className="min-w-52 rounded border border-stone-300 bg-white px-2 py-1.5"
+              >
+                <option value="">选择书籍草稿</option>
+                {targetCourses.map((course) => (
+                  <option key={course.id} value={course.id}>
+                    {course.title}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button
+              type="button"
+              onClick={() => void createTargetBook()}
+              className="rounded border border-stone-300 bg-white px-2 py-1.5 text-sm"
+            >
+              新建书籍
+            </button>
+            <label className="grid gap-1 text-sm">
+              <span className="font-medium">章节</span>
+              <select
+                aria-label="目标章节"
+                value={chapterChoice}
+                onChange={(event) => {
+                  setChapterChoice(event.target.value);
+                  setSubsectionChoice('__none__');
+                }}
+                className="min-w-48 rounded border border-stone-300 bg-white px-2 py-1.5"
+              >
+                <option value="__new__">新建章节</option>
+                {targetModules
+                  .filter((item) => item.parent_id === null)
+                  .map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.title}
+                    </option>
+                  ))}
+              </select>
+            </label>
+            {chapterChoice === '__new__' ? (
+              <Input
+                aria-label="新章节标题"
+                value={newChapterTitle}
+                onChange={(event) => setNewChapterTitle(event.target.value)}
+                placeholder="章节标题"
+                className="max-w-52"
+              />
+            ) : null}
+            <label className="grid gap-1 text-sm">
+              <span className="font-medium">例局 / 理论（可选）</span>
+              <select
+                aria-label="目标小节"
+                value={subsectionChoice}
+                onChange={(event) => setSubsectionChoice(event.target.value)}
+                className="min-w-52 rounded border border-stone-300 bg-white px-2 py-1.5"
+              >
+                <option value="__none__">直接放入章节</option>
+                <option value="__new__">新建小节</option>
+                {chapterChoice !== '__new__'
+                  ? targetModules
+                      .filter((item) => item.parent_id === chapterChoice)
+                      .map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.title}
+                        </option>
+                      ))
+                  : null}
+              </select>
+            </label>
+            {subsectionChoice === '__new__' ? (
+              <Input
+                aria-label="新小节标题"
+                value={newSubsectionTitle}
+                onChange={(event) => setNewSubsectionTitle(event.target.value)}
+                placeholder="例局或理论标题"
+                className="max-w-52"
+              />
+            ) : null}
+            <button
+              type="button"
+              onClick={addPublicationSegment}
+              className="rounded border border-emerald-700 bg-white px-3 py-1.5 text-sm text-emerald-900"
+            >
+              加入当前选择
+            </button>
+          </div>
+          <p className="mt-2 text-sm text-stone-600">
+            在右侧棋谱按住鼠标拖过棋步；可重复选择并分别放入不同章节或小节。
+            {moveSelection !== null
+              ? ` 当前已选 ${moveSelection.nodeIds.length} 个半回合。`
+              : ''}
+          </p>
+          {publicationSegments.length > 0 ? (
+            <ol className="mt-2 grid gap-1 pl-5 text-sm">
+              {publicationSegments.map((segment, index) => (
+                <li key={segment.key}>
+                  {segment.label} → {segment.targetLabel}（
+                  {segment.nodeIds.length} 个半回合）
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setPublicationSegments((current) =>
+                        current.filter((_, itemIndex) => itemIndex !== index),
+                      )
+                    }
+                    className="ml-2 text-red-700"
+                  >
+                    移除
+                  </button>
+                </li>
+              ))}
+            </ol>
+          ) : null}
+          <div className="mt-3 flex items-center gap-3">
+            <button
+              type="button"
+              disabled={
+                publicationBusy ||
+                !targetCourseId ||
+                publicationSegments.length === 0
+              }
+              onClick={() => void publishPlan()}
+              className="rounded bg-emerald-800 px-3 py-1.5 text-sm text-white disabled:opacity-40"
+            >
+              {publicationBusy ? '正在发布…' : '原子发布全部片段'}
+            </button>
+            {publicationResult !== null ? (
+              <a
+                href={`/learn/${publicationResult.target_course_id}`}
+                className="text-sm text-emerald-800 underline"
+              >
+                打开已发布书籍
+              </a>
+            ) : null}
+          </div>
+        </section>
+      ) : null}
       <div className="grid grid-cols-1 gap-6 px-6 pb-6 lg:h-[calc(100vh-12rem)] lg:grid-cols-3 lg:overflow-hidden">
         <section
           aria-label="原书页面"
@@ -759,6 +1153,14 @@ export function PdfReviewPage({ runId }: { runId: string }) {
                 onMakeMainline={makeMainline}
                 onSetNag={setNag}
                 onEditText={openTextEditor}
+                publishing={publishing}
+                selectedNodeIds={
+                  moveSelection?.sequenceId === item.id
+                    ? new Set(moveSelection.nodeIds)
+                    : new Set()
+                }
+                onBeginMoveSelection={beginMoveSelection}
+                onExtendMoveSelection={extendMoveSelection}
               />
             ))}
           </div>
@@ -767,6 +1169,7 @@ export function PdfReviewPage({ runId }: { runId: string }) {
             acknowledgedIssueIds={acknowledgedIssueIds}
             editable={editing && !commandBusy}
             onAcknowledge={(issueId) => acknowledgeIssues([issueId])}
+            onExcludeItem={excludeItem}
             onSelectPage={selectPage}
           />
         </section>
@@ -809,6 +1212,10 @@ function ReviewItemView({
   onMakeMainline,
   onSetNag,
   onEditText,
+  publishing,
+  selectedNodeIds,
+  onBeginMoveSelection,
+  onExtendMoveSelection,
 }: {
   item: ReviewItem;
   editable: boolean;
@@ -830,6 +1237,10 @@ function ReviewItemView({
     text: string,
     textFormat: 'plain' | 'markdown' | null,
   ) => void;
+  publishing: boolean;
+  selectedNodeIds: Set<string>;
+  onBeginMoveSelection: (sequence: MoveSequenceItem, node: MoveNode) => void;
+  onExtendMoveSelection: (sequence: MoveSequenceItem, node: MoveNode) => void;
 }) {
   switch (item.kind) {
     case 'heading': {
@@ -901,6 +1312,10 @@ function ReviewItemView({
           onMakeMainline={onMakeMainline}
           onSetNag={onSetNag}
           onEditText={onEditText}
+          publishing={publishing}
+          selectedNodeIds={selectedNodeIds}
+          onBeginMoveSelection={onBeginMoveSelection}
+          onExtendMoveSelection={onExtendMoveSelection}
         />
       );
     }
@@ -964,6 +1379,10 @@ function MoveSequenceView({
   onMakeMainline,
   onSetNag,
   onEditText,
+  publishing,
+  selectedNodeIds,
+  onBeginMoveSelection,
+  onExtendMoveSelection,
 }: {
   item: MoveSequenceItem;
   editable: boolean;
@@ -984,6 +1403,10 @@ function MoveSequenceView({
     text: string,
     textFormat: 'plain' | 'markdown' | null,
   ) => void;
+  publishing: boolean;
+  selectedNodeIds: Set<string>;
+  onBeginMoveSelection: (sequence: MoveSequenceItem, node: MoveNode) => void;
+  onExtendMoveSelection: (sequence: MoveSequenceItem, node: MoveNode) => void;
 }) {
   const blocks = useMemo<CompactReviewBlock[]>(() => {
     let readingBlocks: ReviewReadingBlock[];
@@ -1108,6 +1531,10 @@ function MoveSequenceView({
                 row={block.row}
                 onSelectNode={onSelectNode}
                 onContextMenu={openMoveContextMenu}
+                publishing={publishing}
+                selectedNodeIds={selectedNodeIds}
+                onBeginMoveSelection={onBeginMoveSelection}
+                onExtendMoveSelection={onExtendMoveSelection}
               />
             );
           }
@@ -1119,6 +1546,10 @@ function MoveSequenceView({
                 block={block}
                 onSelectNode={onSelectNode}
                 onContextMenu={openMoveContextMenu}
+                publishing={publishing}
+                selectedNodeIds={selectedNodeIds}
+                onBeginMoveSelection={onBeginMoveSelection}
+                onExtendMoveSelection={onExtendMoveSelection}
               />
             );
           }
@@ -1207,11 +1638,19 @@ function MainlineMoveRow({
   row,
   onSelectNode,
   onContextMenu,
+  publishing,
+  selectedNodeIds,
+  onBeginMoveSelection,
+  onExtendMoveSelection,
 }: {
   sequence: MoveSequenceItem;
   row: ReviewMoveRow;
   onSelectNode: (sequence: MoveSequenceItem, node: MoveNode) => void;
   onContextMenu: (event: ReactMouseEvent, node: MoveNode) => void;
+  publishing: boolean;
+  selectedNodeIds: Set<string>;
+  onBeginMoveSelection: (sequence: MoveSequenceItem, node: MoveNode) => void;
+  onExtendMoveSelection: (sequence: MoveSequenceItem, node: MoveNode) => void;
 }) {
   return (
     <div
@@ -1228,6 +1667,10 @@ function MainlineMoveRow({
             node={row.fallback}
             onSelectNode={onSelectNode}
             onContextMenu={onContextMenu}
+            publishing={publishing}
+            selected={selectedNodeIds.has(row.fallback.id)}
+            onBeginMoveSelection={onBeginMoveSelection}
+            onExtendMoveSelection={onExtendMoveSelection}
             fullWidth
           />
         </div>
@@ -1240,6 +1683,10 @@ function MainlineMoveRow({
                 node={row.white}
                 onSelectNode={onSelectNode}
                 onContextMenu={onContextMenu}
+                publishing={publishing}
+                selected={selectedNodeIds.has(row.white.id)}
+                onBeginMoveSelection={onBeginMoveSelection}
+                onExtendMoveSelection={onExtendMoveSelection}
                 fullWidth
               />
             ) : null}
@@ -1251,6 +1698,10 @@ function MainlineMoveRow({
                 node={row.black}
                 onSelectNode={onSelectNode}
                 onContextMenu={onContextMenu}
+                publishing={publishing}
+                selected={selectedNodeIds.has(row.black.id)}
+                onBeginMoveSelection={onBeginMoveSelection}
+                onExtendMoveSelection={onExtendMoveSelection}
                 fullWidth
               />
             ) : null}
@@ -1266,11 +1717,19 @@ function VariationLine({
   block,
   onSelectNode,
   onContextMenu,
+  publishing,
+  selectedNodeIds,
+  onBeginMoveSelection,
+  onExtendMoveSelection,
 }: {
   sequence: MoveSequenceItem;
   block: Extract<CompactReviewBlock, { kind: 'variation_line' }>;
   onSelectNode: (sequence: MoveSequenceItem, node: MoveNode) => void;
   onContextMenu: (event: ReactMouseEvent, node: MoveNode) => void;
+  publishing: boolean;
+  selectedNodeIds: Set<string>;
+  onBeginMoveSelection: (sequence: MoveSequenceItem, node: MoveNode) => void;
+  onExtendMoveSelection: (sequence: MoveSequenceItem, node: MoveNode) => void;
 }) {
   const visualDepth = Math.min(5, block.variationDepth);
   return (
@@ -1295,6 +1754,10 @@ function VariationLine({
                 node={row.fallback}
                 onSelectNode={onSelectNode}
                 onContextMenu={onContextMenu}
+                publishing={publishing}
+                selected={selectedNodeIds.has(row.fallback.id)}
+                onBeginMoveSelection={onBeginMoveSelection}
+                onExtendMoveSelection={onExtendMoveSelection}
               />
             ) : (
               <>
@@ -1304,6 +1767,10 @@ function VariationLine({
                     node={row.white}
                     onSelectNode={onSelectNode}
                     onContextMenu={onContextMenu}
+                    publishing={publishing}
+                    selected={selectedNodeIds.has(row.white.id)}
+                    onBeginMoveSelection={onBeginMoveSelection}
+                    onExtendMoveSelection={onExtendMoveSelection}
                   />
                 ) : null}
                 {row.black !== null ? (
@@ -1312,6 +1779,10 @@ function VariationLine({
                     node={row.black}
                     onSelectNode={onSelectNode}
                     onContextMenu={onContextMenu}
+                    publishing={publishing}
+                    selected={selectedNodeIds.has(row.black.id)}
+                    onBeginMoveSelection={onBeginMoveSelection}
+                    onExtendMoveSelection={onExtendMoveSelection}
                   />
                 ) : null}
               </>
@@ -1348,12 +1819,20 @@ function MoveCell({
   node,
   onSelectNode,
   onContextMenu,
+  publishing,
+  selected,
+  onBeginMoveSelection,
+  onExtendMoveSelection,
   fullWidth = false,
 }: {
   sequence: MoveSequenceItem;
   node: MoveNode;
   onSelectNode: (sequence: MoveSequenceItem, node: MoveNode) => void;
   onContextMenu: (event: ReactMouseEvent, node: MoveNode) => void;
+  publishing: boolean;
+  selected: boolean;
+  onBeginMoveSelection: (sequence: MoveSequenceItem, node: MoveNode) => void;
+  onExtendMoveSelection: (sequence: MoveSequenceItem, node: MoveNode) => void;
   fullWidth?: boolean;
 }) {
   const isNavigable =
@@ -1374,9 +1853,19 @@ function MoveCell({
       type="button"
       aria-label={node.move_text}
       data-validation-status={node.validation_status}
-      onClick={() => onSelectNode(sequence, node)}
+      data-publication-selected={selected || undefined}
+      onClick={() => {
+        if (!publishing) onSelectNode(sequence, node);
+      }}
+      onMouseDown={(event) => {
+        if (publishing && event.button === 0) {
+          event.preventDefault();
+          onBeginMoveSelection(sequence, node);
+        }
+      }}
+      onMouseEnter={() => onExtendMoveSelection(sequence, node)}
       onContextMenu={(event) => onContextMenu(event, node)}
-      className={`${fullWidth ? 'flex h-full w-full' : 'inline-flex'} min-w-0 items-center rounded-sm px-1.5 py-0.5 text-left text-sm leading-5 hover:bg-emerald-100 ${validationClass}`}
+      className={`${fullWidth ? 'flex h-full w-full' : 'inline-flex'} min-w-0 select-none items-center rounded-sm px-1.5 py-0.5 text-left text-sm leading-5 hover:bg-emerald-100 ${selected ? 'bg-emerald-200 ring-1 ring-inset ring-emerald-700' : validationClass}`}
     >
       {content}
     </button>
@@ -1385,8 +1874,16 @@ function MoveCell({
       aria-disabled="true"
       tabIndex={0}
       data-validation-status={node.validation_status}
+      data-publication-selected={selected || undefined}
+      onMouseDown={(event) => {
+        if (publishing && event.button === 0) {
+          event.preventDefault();
+          onBeginMoveSelection(sequence, node);
+        }
+      }}
+      onMouseEnter={() => onExtendMoveSelection(sequence, node)}
       onContextMenu={(event) => onContextMenu(event, node)}
-      className={`${fullWidth ? 'flex h-full w-full' : 'inline-flex'} min-w-0 items-center rounded-sm px-1.5 py-0.5 text-sm leading-5 ${validationClass}`}
+      className={`${fullWidth ? 'flex h-full w-full' : 'inline-flex'} min-w-0 select-none items-center rounded-sm px-1.5 py-0.5 text-sm leading-5 ${selected ? 'bg-emerald-200 ring-1 ring-inset ring-emerald-700' : validationClass}`}
     >
       {content}
     </span>
@@ -1576,15 +2073,22 @@ function IssuesView({
   acknowledgedIssueIds,
   editable,
   onAcknowledge,
+  onExcludeItem,
   onSelectPage,
 }: {
   document: PdfReviewDocument;
   acknowledgedIssueIds: Set<string>;
   editable: boolean;
   onAcknowledge: (issueId: string) => void;
+  onExcludeItem: (itemId: string) => void;
   onSelectPage: (page: number) => void;
 }) {
   const { inspection } = document;
+  const excludableItemIds = new Set(
+    (document.package.items ?? [])
+      .filter((item) => item.kind !== 'move_sequence')
+      .map((item) => item.id),
+  );
   return (
     <section className="mt-6">
       <h2 className="text-lg font-semibold text-stone-900">自动检查</h2>
@@ -1630,6 +2134,17 @@ function IssuesView({
                     确认此警告
                   </button>
                 ) : null
+              ) : editable &&
+                issue.item_id !== null &&
+                issue.node_id === null &&
+                excludableItemIds.has(issue.item_id) ? (
+                <button
+                  type="button"
+                  onClick={() => onExcludeItem(issue.item_id!)}
+                  className="ml-2 rounded border border-red-300 bg-white px-2 py-0.5 text-xs text-red-700"
+                >
+                  排除此内容
+                </button>
               ) : null}
             </li>
           ))}

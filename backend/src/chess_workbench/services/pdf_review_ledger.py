@@ -177,6 +177,17 @@ class PdfReviewLedgerService:
             raise _unavailable() from None
         return await self._document(review_session, baseline_document)
 
+    async def get_current_package(
+        self, session_id: UUID
+    ) -> ExtractionPackage | ExtractionPackageV1_1:
+        """Load the current immutable revision without advancing a document baseline."""
+        if type(session_id) is not UUID:
+            raise TypeError("session_id must be UUID")
+        review_session = await self.session.get(PdfReviewSession, session_id)
+        if review_session is None:
+            raise ServiceError("not_found", 404, _SESSION_MISSING)
+        return await self._revision_package(await self._revision(review_session))
+
     async def apply_command(
         self, session_id: UUID, request: PdfReviewCommandRequest
     ) -> PdfReviewCommandEnvelope:

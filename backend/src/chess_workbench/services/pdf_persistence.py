@@ -345,6 +345,18 @@ class PdfPersistenceService:
             return None
         return await self._extraction_view(row[0], row[1])
 
+    async def archive_extraction(self, run_id: UUID) -> Job | None:
+        """Cancel and archive one extraction Job while preserving its immutable run."""
+
+        if not isinstance(run_id, UUID):
+            raise TypeError("run_id must be UUID")
+        job_id = await self.session.scalar(
+            select(ExtractionRun.job_id).where(ExtractionRun.id == run_id).with_for_update()
+        )
+        if job_id is None:
+            return None
+        return await self.jobs.archive(job_id)
+
     async def list_extractions(
         self,
         *,
@@ -354,7 +366,11 @@ class PdfPersistenceService:
         # Candidate conflict state is verified from the completed Job result plus
         # immutable artifact slots at the HTTP read boundary, not stored twice.
         del has_conflicts
-        statement = select(ExtractionRun, Job).join(Job, Job.id == ExtractionRun.job_id)
+        statement = (
+            select(ExtractionRun, Job)
+            .join(Job, Job.id == ExtractionRun.job_id)
+            .where(Job.archived_at.is_(None))
+        )
         if status is not None:
             statement = statement.where(Job.status == status)
         statement = statement.order_by(ExtractionRun.created_at.desc(), ExtractionRun.id)

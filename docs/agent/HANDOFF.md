@@ -6535,3 +6535,227 @@ the frontend TypeScript build passed. The shell used Node 24 rather than the rep
 Node 22 and emitted pnpm's existing non-blocking engine warning. No backend, provider, extraction,
 database, full-suite or Stage acceptance command ran, and no commit was created. Browser visual
 inspection at the operator's real viewport remains the next useful check.
+
+## Codex course learning workbench refactor (2026-08-27)
+
+The operator accepted the compact review score and requested the same reading model for ordinary
+courses before 8D-6 publication. `CourseEditor` is now a three-pane workbench: the left card toggles
+between the chapter directory and a verified rendered PDF page, the center retains the existing
+interactive board plus local engine/arrow panel, and the independently scrolling right card owns
+the compact annotated score and editing controls. Courses without a cited, resolvable PDF page keep
+the source toggle disabled rather than showing unrelated library material.
+
+`courseMoveLayout.ts` deterministically derives the primary course line from occurrence
+`sort_order`, pairs white/black mainline plies, and indexes every sibling alternative with its full
+nested branch path. `CourseScore.tsx` renders paired mainline rows, dense variation lines and one
+rail per alternative depth. Local occurrence notes are plain in-score annotations; their source
+pages are absent from the permanent reading UI and available by right-click, which also switches
+the left pane to the first cited page. Opening-explorer occurrences are projected through canonical
+parent positions so equivalent module roots still appear as one merged score.
+
+The PDF adapter only considers source spans actually cited by the current module. It matches their
+source file/version to a PDF asset, prefers a covering incremental document and falls back to a
+covering successful candidate run, then uses the existing verified review-page endpoint. No new
+backend route, persistence model or CCEF dependency was added to the course UI.
+
+Focused verification only: `courseMoveLayout.test.ts` plus `CourseEditor.test.tsx` passed 13 tests
+before the final source-filter hardening; the cited-PDF test then passed independently. Focused
+Prettier, ESLint and TypeScript checks passed. A real local render of course `test2` at 1800x1100
+showed a stable three-pane layout with the board/engine retained and the unavailable source toggle
+correctly disabled. The temporary API used port 28100 with the engine worker disabled and the Vite
+server used 5174; both were stopped. The operator's pre-existing processes on 8000/5173 were not
+touched. No provider, extraction job, database mutation, broad suite or commit ran. Next product
+delivery remains 8D-6 atomic publication into a Course/Knowledge draft.
+
+## Codex course workbench width adjustment (2026-08-27)
+
+The desktop workbench columns now target 380px for the chapter/source pane, 500px for the board and
+engine stack, and 520px for the annotated score. This makes the directory easier to scan, removes
+unused width from the score and reduces the board enough for all four configured MultiPV rows to
+fit beneath it at the operator's demonstrated desktop height. Existing responsive breakpoints and
+all interaction behavior remain unchanged. `CourseEditor.test.tsx` passed 12 focused tests;
+focused Prettier, TypeScript and diff checks passed. No broad suite or backend work ran.
+
+## Codex engine-panel layout jitter fix (2026-08-27)
+
+Opening the course engine changed the center pane from its short loading state to four MultiPV rows.
+At the one-screen height boundary, `overflow-y: auto` could repeatedly add and remove its scrollbar;
+that changed the responsive board width, which changed the pane height again and produced visible
+layout oscillation. Desktop `.course-board-pane` now uses `scrollbar-gutter: stable both-edges`, so
+the available board width and horizontal centering remain invariant across disabled, loading and
+result states. The responsive document-flow layouts are unchanged. `CourseEditor.test.tsx` passed
+12 focused tests; focused Prettier, TypeScript and diff checks passed. No broad suite ran.
+
+## Codex Stage 8D-6 multi-fragment draft publication (2026-08-28)
+
+Stage 8D-6 now publishes only an approved, exact review revision into one existing traditional
+draft Course. One request can contain multiple explicitly selected move fragments. Each fragment
+targets either a top-level chapter Module or an optional example/theory child Module; either level
+may own its own root score. New chapter paths are created inside the same transaction, existing
+paths are course/parent checked, occupied targets and duplicate targets in one plan are rejected,
+and a fragment must be locally valid with one coherent external parent/start position.
+
+The mapper creates the Course occurrence graph through ContentService, materializes complete page/
+bbox/offset/hash evidence as SourceSpan rows, maps selected CCEF 1.1 anchored annotations to
+approved KnowledgeNote blocks, and stores an immutable publication receipt keyed by review session,
+revision, target Course, mapping version and canonical plan hash. Exact replay returns the prior
+result. The HTTP boundary is
+`POST /api/pdf-review-sessions/{session_id}/publications`; migration 0014 adds only the receipt
+table. Generated OpenAPI and TypeScript contracts include the new request and response.
+
+After approval the review page exposes an explicit publication mode. The operator selects a draft
+book, drag-selects a contiguous visual move range, chooses or creates its chapter and optional
+subsection, adds more independently targeted ranges, then submits the whole plan atomically. The
+learning course directory now renders Module parent/child relationships as an expandable tree;
+the chapter title remains separately clickable, so chapters with their own score and all legacy
+one-level courses remain usable.
+
+Focused verification only: the new temporary-SQLite publication test passed (one request publishing
+two fragments into a chapter score and a chapter/example score, including one anchored note); the
+existing migration/metadata comparison passed; the new drag-selection/publication UI test passed;
+the new expandable-parent learning-directory test passed. Existing `PdfReviewPage` 22 tests and
+`CourseEditor` 12 tests had passed immediately before adding those two focused regressions. Related
+Ruff, MyPy, ESLint, Prettier, frontend TypeScript, contract drift and `git diff --check` checks are
+clean. The SQLite tests had to run outside the tool sandbox because sandboxed aiosqlite stalled
+before schema creation. No full Stage 8/whole-repository suite, real provider call, extraction job,
+runtime database migration or commit was performed.
+
+## Codex Stage 8D review/publication follow-up (2026-08-28)
+
+The real `scan-test` 319–345 document was inspected without mutating it. Its review session
+`046b2ec3-1f9c-5b8b-bb0a-d7731554e4a7` was not waiting on a worker: it was open at version 3 with
+one blocking `unsupported_figure` issue for `figure_rogers` on page 322. The product had required
+explicit rejection of non-chess figures but exposed no command capable of doing that. Review edits
+now include audited `exclude_item` for non-move top-level items; the issue row exposes
+`排除此内容`. Applying that operation purely to the current stored revision changed its inspection
+from one blocker to zero without changing the immutable extraction artifact or database.
+
+Publication mapping is now versioned as `review-course-publication/1.1`. For CCEF 1.1, annotations
+are consumed in authoritative `reading_flow` order. An unanchored annotation whose preceding move
+belongs to the selected fragment is published as a KnowledgeNote after that occurrence; leading
+annotations are attached to the fragment root when the first sequence move is selected. The
+existing approved 319–323 revision contains 95 such annotations after the 202 selected nodes, which
+explains why its earlier 1.0 publication reported `note_count=0`. Existing 1.0 receipts remain
+immutable; new publication requests use 1.1. The learning page now discovers PDF citations from
+occurrence context as well as notes/narrative blocks, so previously published move evidence enables
+the source pane without rewriting the course. Mainline and variation notes render after their
+owning move, splitting a paired white/black row only when text must appear between those plies.
+
+The UCI cleanup boundary now treats an already-closed subprocess transport as an expected cleanup
+state. It does not send `quit` through a closed handler and suppresses only close/kill transport
+errors, so an HTTP/client cancellation remains `CancelledError` rather than being replaced by the
+reported RuntimeError.
+
+Focused evidence only: review editing tests passed (6); the real stored `figure_rogers` dry-run
+reduced blockers 1→0; publication test passed and covers a null-anchor reading-flow note plus
+occurrence source citations; the closed-transport UCI regression passed; the focused review UI,
+course PDF-source and note-order tests each passed. Targeted Ruff/MyPy, ESLint/TypeScript,
+contract regeneration/drift and `git diff --check` passed. No full suite, worker/provider call,
+runtime database mutation, service restart or commit was performed.
+
+## Codex SQLite write coordination and Job recovery correction (2026-08-28)
+
+The 00:49 PDF incident was reproduced from the real database without mutating it. Job
+`e8bae957-35a1-4cb6-9734-16384f8eccd2` owns run
+`73f3e23c-f672-57a9-b3f9-1b295b9c91e0`; its persisted range is 15--19 inclusive (five pages, not
+four). Rendering/OCR committed immediately, its final lease expired at 00:51 local time, and the
+complete provider/raw/normalized CCEF artifacts committed at 00:57, but an SQLite lock failure in
+the worker supervisor left the Job in `running`. `ERROR.md` is two renderings of that same failed
+`retrying` invalidation write; Ctrl+C exposed the failure but did not cause the original lock.
+
+ADR 0019 is now authoritative. File SQLite uses WAL, `synchronous=NORMAL`, a five-second busy
+timeout and one pooled connection for the authoritative local process. `Database.run_write`
+serializes short database-only writes and retries only completely rolled-back SQLite busy errors.
+Worker claim/heartbeat/success/failure/cancellation transitions and extraction artifact
+registration use that boundary. Cancellation is still polled every 100 ms, while lease heartbeat
+writes occur every ten seconds. Any supervisor failure or lease loss cancels and consumes the
+handler task, so provider/engine work cannot continue detached from its durable Job.
+
+The PDF handler now verifies an already committed three-slot candidate (CAS binding, canonical
+bytes, package/source/page/provenance and provider-response binding) before configuring or calling
+a provider. A complete set reconstructs the versioned Job result and summary locally; a partial or
+inconsistent set fails closed. On a SQLite backup of the real database, the stuck payload restored
+five pages, five content items and 138 move nodes with a provider fake that would fail on any call;
+the observed provider call count was exactly zero. The real database and CAS were not changed.
+After the next API restart the expired lease can be claimed again and this Job should finish from
+its artifacts. A separate Job `892f62b3-9a2a-48ba-9854-a8a3b2c4095d` remains queued and may perform
+its own provider request afterward; it was deliberately not cancelled or modified.
+
+Focused relevant verification passed 87 tests across database, worker/engine, real Stockfish, PDF
+execution/recovery and PDF API paths. The final worker lifecycle file passed 15 tests. Ruff format,
+Ruff lint, strict MyPy on the four changed production modules and `git diff --check` are clean. A
+broader no-coverage backend run was intentionally performed for this cross-cutting infrastructure
+change: 1349 passed, 4 skipped and 6 unrelated pre-existing Stage 8 oracle failures remained. They
+are one stale candidate-error-code assertion, two tests with hard-coded pre-0012 migration counts,
+and three review API tests that still mock `PdfReviewReadService` after the route was previously
+switched to `PdfReviewLedgerService`; none exercises SQLite coordination or Job recovery. No real
+provider call, runtime migration, service start, runtime database write or commit was performed.
+
+## Codex extraction-task cancellation and archival (2026-08-28)
+
+The Sources task menu now performs a real recoverable delete through
+`DELETE /api/pdf-extractions/{run_id}`. The endpoint runs one coordinated database write: queued
+Jobs become `cancelled`, running Jobs receive `cancel_requested_at`, and terminal Jobs keep their
+terminal state; every case receives `archived_at` and disappears from extraction discovery. The
+worker's existing 100 ms cancellation monitor cancels and awaits a running provider handler, while
+immutable `ExtractionRun` and artifact receipts remain readable directly for audit. Incremental
+document views also omit archived append attempts. Migration `20260828_0015` adds only the nullable
+Job archival marker; no runtime database was migrated by Codex.
+
+The book drawer exposes `取消并删除`, `停止并删除`, or `删除任务` according to persisted Job state.
+Incremental-document menus can remove their latest attempt while preserving the logical document
+and committed segments. The operation requires confirmation, refreshes both run and document
+lists, and uses a 204-capable HTTP helper. The dropdown triggers now have explicit click behavior
+and accessible names.
+
+Focused verification: the archive API lifecycle test passed outside the tool sandbox (the same
+aiosqlite test stalled inside it); it proves queued/running/failed transitions, hidden discovery,
+and retained direct audit access. SQLite migration/metadata and MySQL upgrade/downgrade DDL checks
+passed, including the now-current 15-revision count. OpenAPI/TypeScript regeneration and drift
+check passed. The focused Sources deletion UI test, frontend lint and typecheck passed; the wider
+legacy `WorkbenchPages` file still contains unrelated stale Sources mocks and was not treated as a
+task gate. No provider call, live task cancellation, runtime database mutation or commit occurred.
+## 2026-08-28 — Course learning score controls and section lifecycle
+
+- Added authoritative course-score commands at
+  `POST /api/occurrences/{occurrence_id}/commands`: promote one variation,
+  make a path mainline, set/clear NAG, and archive a move subtree. Sibling
+  priority updates and subtree archival are transactional and use optimistic
+  versions.
+- Added `POST /api/course-modules/{module_id}/archive-tree`. It archives a
+  level-1/level-2 module subtree, its authored blocks/notes/occurrences, and
+  any live opening-explorer reference cards that point at the removed source.
+  Explorer reads therefore omit invalidated references instead of resolving
+  an archived source and throwing.
+- Course UI now has move right-click actions (`提升变招`, `设为主线`,
+  `招法评注`, `从此处开始删除`), mainline start/previous/next/end navigation,
+  a `记录走棋` switch, and board flip. Recording defaults on for compatibility;
+  while off, legal board moves stay as an unpersisted analysis line.
+- Both directory levels expose a gear menu with rename and subtree delete.
+  Move/note right-click continues to jump the PDF pane to its first available
+  cited page; page provenance is kept in the menu rather than always visible.
+- Regenerated OpenAPI and TypeScript contracts. Focused verification only:
+  `backend/tests/test_course_learning_commands.py` **2 passed** (real SQLite
+  API; all four score commands plus nested-module deletion/reference
+  invalidation), `CourseEditor.test.tsx` **13 passed**, frontend typecheck,
+  focused Ruff/mypy, `make check-contracts`, and `git diff --check` all clean.
+  No full suite or Stage acceptance was run.
+
+## 2026-08-28 — Fixed score footer and same-parent directory sorting
+
+- The course content card now has two explicit regions: `课程内容滚动区` owns
+  the long annotated score/editor content, while `棋谱导航与棋盘设置` is a
+  non-scrolling card footer. Start/previous/next/end, move recording and board
+  flip therefore remain visible without scrolling to the end of a long game.
+- Chapter rows expose a small drag handle. A drop is accepted only when source
+  and target have the same `parent_id`; top-level chapters can reorder among
+  themselves and children can reorder inside their current parent, but a child
+  cannot be moved into another chapter. The UI updates optimistically and then
+  persists contiguous sibling `sort_order` values through the existing module
+  PATCH endpoint with expected versions.
+- Focused verification only: `CourseEditor.test.tsx` **14 passed**, including
+  controls outside the scroll region, an accepted same-parent reorder and a
+  rejected cross-parent drop with no PATCH; focused ESLint and frontend
+  TypeScript checks passed. `git diff --check` is clean. No backend change,
+  schema generation, full suite, runtime database write, service restart or
+  commit was performed.

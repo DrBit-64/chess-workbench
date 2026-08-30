@@ -92,6 +92,23 @@ export interface paths {
         patch: operations["updateCourseModule"];
         trace?: never;
     };
+    "/api/course-modules/{module_id}/archive-tree": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Archive one module subtree and invalidate its live reference cards */
+        post: operations["archiveCourseModuleTree"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/course-modules/{module_id}/content-blocks": {
         parameters: {
             query?: never;
@@ -624,6 +641,23 @@ export interface paths {
         patch: operations["updateCourseOccurrence"];
         trace?: never;
     };
+    "/api/occurrences/{occurrence_id}/commands": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Apply one semantic course-score edit atomically */
+        post: operations["applyCourseOccurrenceCommand"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/pdf-assets": {
         parameters: {
             query?: never;
@@ -740,7 +774,8 @@ export interface paths {
         get: operations["getPdfExtraction"];
         put?: never;
         post?: never;
-        delete?: never;
+        /** Cancel active work and archive one PDF extraction result */
+        delete: operations["archivePdfExtraction"];
         options?: never;
         head?: never;
         patch?: never;
@@ -842,6 +877,23 @@ export interface paths {
         get: operations["getPdfReviewSessionDocument"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/pdf-review-sessions/{session_id}/publications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Publish selected approved review score fragments into one draft book */
+        post: operations["publishPdfReviewSelection"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2628,6 +2680,119 @@ export interface operations {
                 };
             };
             /** @description Stale version or invalid parent context */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description Request validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    archiveCourseModuleTree: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                module_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Expected Version */
+                    expected_version: number;
+                };
+            };
+        };
+        responses: {
+            /** @description Module subtree archived */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Archived Module Count */
+                        archived_module_count: number;
+                        /** Archived Occurrence Count */
+                        archived_occurrence_count: number;
+                        /** Invalidated Reference Count */
+                        invalidated_reference_count: number;
+                        /**
+                         * Module Id
+                         * Format: uuid
+                         */
+                        module_id: string;
+                    };
+                };
+            };
+            /** @description Module not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description Module version is stale */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -7195,6 +7360,127 @@ export interface operations {
             };
         };
     };
+    applyCourseOccurrenceCommand: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                occurrence_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Expected Version */
+                    expected_version: number;
+                    /**
+                     * Kind
+                     * @enum {string}
+                     */
+                    kind: "promote_variation" | "make_mainline" | "set_nag" | "delete_subtree";
+                    /**
+                     * Nag
+                     * @default null
+                     */
+                    nag?: number | null;
+                };
+            };
+        };
+        responses: {
+            /** @description Course-score command applied */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Affected Occurrence Count */
+                        affected_occurrence_count: number;
+                        /** Invalidated Reference Count */
+                        invalidated_reference_count: number;
+                        /**
+                         * Selected Occurrence Id
+                         * Format: uuid
+                         */
+                        selected_occurrence_id: string;
+                    };
+                };
+            };
+            /** @description Occurrence not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description Version or tree context conflicts */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description Request validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
     listPdfAssets: {
         parameters: {
             query?: never;
@@ -9907,6 +10193,52 @@ export interface operations {
             };
         };
     };
+    archivePdfExtraction: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description PDF extraction archived */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": unknown;
+                };
+            };
+            /** @description PDF extraction not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
     getPdfExtractionReview: {
         parameters: {
             query?: never;
@@ -12263,6 +12595,14 @@ export interface operations {
                             node_id: string;
                             /** Sequence Id */
                             sequence_id: string;
+                        } | {
+                            /** Item Id */
+                            item_id: string;
+                            /**
+                             * Kind
+                             * @enum {string}
+                             */
+                            kind: "exclude_item";
                         };
                     } | {
                         /** Issue Ids */
@@ -15796,6 +16136,312 @@ export interface operations {
             };
             /** @description PDF review session is unavailable */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description Source storage unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    publishPdfReviewSelection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Expected Version */
+                    expected_version: number;
+                    /**
+                     * Mapping Version
+                     * @default review-course-publication/1.1
+                     * @enum {string}
+                     */
+                    mapping_version?: "review-course-publication/1.1";
+                    /** Segments */
+                    segments: {
+                        /** Node Ids */
+                        node_ids: string[];
+                        /** Sequence Id */
+                        sequence_id: string;
+                        /** PdfReviewPublicationPath */
+                        target: {
+                            /** Chapter */
+                            chapter: {
+                                /**
+                                 * Kind
+                                 * @enum {string}
+                                 */
+                                kind: "existing";
+                                /**
+                                 * Module Id
+                                 * Format: uuid
+                                 */
+                                module_id: string;
+                            } | {
+                                /**
+                                 * Kind
+                                 * @enum {string}
+                                 */
+                                kind: "new";
+                                /** Title */
+                                title: string;
+                            };
+                            /**
+                             * Subsection
+                             * @default null
+                             */
+                            subsection?: ({
+                                /**
+                                 * Kind
+                                 * @enum {string}
+                                 */
+                                kind: "existing";
+                                /**
+                                 * Module Id
+                                 * Format: uuid
+                                 */
+                                module_id: string;
+                            } | {
+                                /**
+                                 * Kind
+                                 * @enum {string}
+                                 */
+                                kind: "new";
+                                /** Title */
+                                title: string;
+                            }) | null;
+                        };
+                    }[];
+                    /**
+                     * Target Course Id
+                     * Format: uuid
+                     */
+                    target_course_id: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Publication plan replayed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Mapping Version
+                         * @enum {string}
+                         */
+                        mapping_version: "review-course-publication/1.1";
+                        /** Plan Sha256 */
+                        plan_sha256: string;
+                        /**
+                         * Publication Id
+                         * Format: uuid
+                         */
+                        publication_id: string;
+                        /** Replayed */
+                        replayed: boolean;
+                        /** Review Revision Number */
+                        review_revision_number: number;
+                        /**
+                         * Review Session Id
+                         * Format: uuid
+                         */
+                        review_session_id: string;
+                        /** Segments */
+                        segments: {
+                            /**
+                             * Chapter Module Id
+                             * Format: uuid
+                             */
+                            chapter_module_id: string;
+                            /** Note Count */
+                            note_count: number;
+                            /** Occurrence Count */
+                            occurrence_count: number;
+                            /** Sequence Id */
+                            sequence_id: string;
+                            /** Source Span Count */
+                            source_span_count: number;
+                            /**
+                             * Subsection Module Id
+                             * Format: uuid
+                             */
+                            subsection_module_id: string | null;
+                            /**
+                             * Target Module Id
+                             * Format: uuid
+                             */
+                            target_module_id: string;
+                        }[];
+                        /**
+                         * Target Course Id
+                         * Format: uuid
+                         */
+                        target_course_id: string;
+                    };
+                };
+            };
+            /** @description Review selection published */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Mapping Version
+                         * @enum {string}
+                         */
+                        mapping_version: "review-course-publication/1.1";
+                        /** Plan Sha256 */
+                        plan_sha256: string;
+                        /**
+                         * Publication Id
+                         * Format: uuid
+                         */
+                        publication_id: string;
+                        /** Replayed */
+                        replayed: boolean;
+                        /** Review Revision Number */
+                        review_revision_number: number;
+                        /**
+                         * Review Session Id
+                         * Format: uuid
+                         */
+                        review_session_id: string;
+                        /** Segments */
+                        segments: {
+                            /**
+                             * Chapter Module Id
+                             * Format: uuid
+                             */
+                            chapter_module_id: string;
+                            /** Note Count */
+                            note_count: number;
+                            /** Occurrence Count */
+                            occurrence_count: number;
+                            /** Sequence Id */
+                            sequence_id: string;
+                            /** Source Span Count */
+                            source_span_count: number;
+                            /**
+                             * Subsection Module Id
+                             * Format: uuid
+                             */
+                            subsection_module_id: string | null;
+                            /**
+                             * Target Module Id
+                             * Format: uuid
+                             */
+                            target_module_id: string;
+                        }[];
+                        /**
+                         * Target Course Id
+                         * Format: uuid
+                         */
+                        target_course_id: string;
+                    };
+                };
+            };
+            /** @description Review session or target book not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description Review state, hierarchy or target conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description Publication selection is invalid */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };

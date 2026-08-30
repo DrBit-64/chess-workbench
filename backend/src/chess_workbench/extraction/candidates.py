@@ -288,7 +288,11 @@ def _sequence_warning_count(sequence: MoveSequenceItem | MoveSequenceItemV1_1) -
     return len(sequence.warnings) + annotation_warnings
 
 
-def _summarize(package: ExtractionPackage | ExtractionPackageV1_1) -> CcefCandidateSummary:
+def summarize_ccef_candidate(
+    package: ExtractionPackage | ExtractionPackageV1_1,
+) -> CcefCandidateSummary:
+    """Rebuild the persisted candidate summary from one trusted package."""
+
     move_node_count = 0
     figure_count = 0
     unresolved_count = 0
@@ -403,7 +407,7 @@ def assemble_ccef_candidate_artifacts(
         response_sha256=response_sha256,
         raw_ccef_sha256=_sha256_hex(raw_ccef_bytes),
         normalized_ccef_sha256=_sha256_hex(normalized_ccef_bytes),
-        summary=_summarize(normalized_package),
+        summary=summarize_ccef_candidate(normalized_package),
     )
 
 
@@ -506,7 +510,7 @@ def _assemble_ccef_candidate_artifacts_v1_1(
         response_sha256=response_sha256,
         raw_ccef_sha256=_sha256_hex(raw_ccef_bytes),
         normalized_ccef_sha256=_sha256_hex(normalized_ccef_bytes),
-        summary=_summarize(normalized_package),
+        summary=summarize_ccef_candidate(normalized_package),
     )
 
 
@@ -550,4 +554,5 @@ __all__ = [
     "assemble_ccef_candidate_artifacts",
     "assemble_ccef_candidate_artifacts_v1_1",
     "assemble_ccef_candidate_artifacts_v1_1_semantic",
+    "summarize_ccef_candidate",
 ]

@@ -3,6 +3,7 @@ import {
   Button,
   Card,
   Divider,
+  Dropdown,
   Drawer,
   Empty,
   Form,
@@ -16,7 +17,14 @@ import {
   message,
 } from 'antd';
 import { Chess } from 'chess.js';
-import { useEffect, useMemo, useReducer, useState } from 'react';
+import {
+  type DragEvent as ReactDragEvent,
+  useEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+} from 'react';
 import { Chessboard } from 'react-chessboard';
 import ReactMarkdown from 'react-markdown';
 import rehypeSanitize from 'rehype-sanitize';
@@ -31,12 +39,20 @@ import type {
   CourseModule,
   ModuleEditor,
   Occurrence,
+  PdfAssetListResponse,
+  PdfExtractionDocumentListResponse,
+  PdfExtractionListResponse,
 } from '../logic/api/types';
 import {
   FAST_MOVE_ANIMATION_MS,
   lichessSquareStyles,
 } from './boardInteraction';
 import { CourseEnginePanel, type CourseEngineArrow } from './CourseEnginePanel';
+import {
+  CourseScore,
+  CourseScoreControls,
+  type CourseMoveAction,
+} from './CourseScore';
 import { createDraftState, editorDraftReducer } from './editorDraft';
 
 const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
@@ -55,8 +71,11 @@ export function CourseEditor() {
   );
   const [moduleId, setModuleId] = useState<string>();
   const [occurrenceId, setOccurrenceId] = useState<string>();
-  const [lineLeafId, setLineLeafId] = useState<string>();
   const [pendingFen, setPendingFen] = useState<string>();
+  const [recordBoardMoves, setRecordBoardMoves] = useState(true);
+  const [boardOrientation, setBoardOrientation] = useState<'white' | 'black'>(
+    'white',
+  );
   const [selectedSquare, setSelectedSquare] = useState<string>();
   const [engineArrows, setEngineArrows] = useState<CourseEngineArrow[]>([]);
   const [moduleModal, setModuleModal] = useState(false);
@@ -64,6 +83,14 @@ export function CourseEditor() {
   const [publishTarget, setPublishTarget] = useState<string>();
   const [historyOpen, setHistoryOpen] = useState(false);
   const [readingMode, setReadingMode] = useState(true);
+  const [leftPaneMode, setLeftPaneMode] = useState<'chapters' | 'source'>(
+    'chapters',
+  );
+  const [activeSourceSpanId, setActiveSourceSpanId] = useState<string>();
+  const [expandedModuleIds, setExpandedModuleIds] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const [reorderingModules, setReorderingModules] = useState(false);
   const [narrativeModal, setNarrativeModal] = useState(false);
   const [narrativeMarkdown, setNarrativeMarkdown] = useState('');
   const [narrativeSourceSpanIds, setNarrativeSourceSpanIds] = useState<
@@ -100,10 +127,25 @@ export function CourseEditor() {
     if (!moduleId && modules[0]) {
       const requested = searchParams.get('module');
       setModuleId(
-        modules.find((item) => item.id === requested)?.id ?? modules[0].id,
+        modules.find((item) => item.id === requested)?.id ??
+          modules.find((item) => item.parent_id === null)?.id ??
+          modules[0].id,
       );
     }
   }, [moduleId, modules, searchParams]);
+  useEffect(() => {
+    setExpandedModuleIds((current) => {
+      const next = new Set(current);
+      let changed = false;
+      for (const item of modules) {
+        if (item.parent_id === null && !next.has(item.id)) {
+          next.add(item.id);
+          changed = true;
+        }
+      }
+      return changed ? next : current;
+    });
+  }, [modules]);
   const editorKey =
     course?.mode !== 'opening_explorer' && courseId && moduleId
       ? `/api/courses/${courseId}/editor/${moduleId}`
@@ -141,6 +183,49 @@ export function CourseEditor() {
       notes: explorerEditors.flatMap((item) => item.notes),
     };
   }, [course?.mode, explorerEditors, moduleEditor, moduleId]);
+  const scoreRootId = useMemo(
+    () =>
+      editor?.content_blocks.find(
+        (block) => block.kind === 'move_sequence' && block.root_occurrence_id,
+      )?.root_occurrence_id ??
+      editor?.occurrences.find((item) => item.parent_id === null)?.id,
+    [editor],
+  );
+  const courseSourceSpanIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const block of editor?.content_blocks ?? []) {
+      for (const id of block.source_span_ids ?? []) ids.add(id);
+    }
+    for (const note of editor?.notes ?? []) {
+      for (const id of note.rendered_source_span_ids) ids.add(id);
+    }
+    for (const occurrence of editor?.occurrences ?? []) {
+      const sourceSpanIds = occurrence.context?.source_span_ids;
+      if (!Array.isArray(sourceSpanIds)) continue;
+      for (const id of sourceSpanIds) {
+        if (typeof id === 'string') ids.add(id);
+      }
+    }
+    return ids;
+  }, [editor]);
+  const hasPdfPageSources = citableSources.some(
+    (item) =>
+      courseSourceSpanIds.has(item.source_span.id) &&
+      item.source_span.locator.kind === 'page' &&
+      item.source_span.source_file_id !== null,
+  );
+  const { data: pdfAssets } = useSWR<PdfAssetListResponse>(
+    hasPdfPageSources ? '/api/pdf-assets' : null,
+    fetchJson,
+  );
+  const { data: pdfExtractions } = useSWR<PdfExtractionListResponse>(
+    hasPdfPageSources ? '/api/pdf-extractions' : null,
+    fetchJson,
+  );
+  const { data: pdfDocuments } = useSWR<PdfExtractionDocumentListResponse>(
+    hasPdfPageSources ? '/api/pdf-extraction-documents' : null,
+    fetchJson,
+  );
   const editorError = moduleEditorError ?? explorerEditorError;
   useEffect(() => {
     const requested = searchParams.get('occurrence');
@@ -156,7 +241,6 @@ export function CourseEditor() {
       !editor.occurrences.some((item) => item.id === occurrenceId)
     ) {
       setOccurrenceId(root.id);
-      setLineLeafId(root.id);
       setPendingFen(undefined);
     }
   }, [editor, moduleId, occurrenceId, searchParams]);
@@ -165,6 +249,33 @@ export function CourseEditor() {
     () => new Map(editor?.occurrences.map((item) => [item.id, item]) ?? []),
     [editor],
   );
+  const scoreOccurrences = useMemo(() => {
+    if (!editor || course?.mode !== 'opening_explorer') {
+      return editor?.occurrences ?? [];
+    }
+    const canonicalByPosition = new Map<string, string>();
+    for (const occurrence of editor.occurrences) {
+      if (!canonicalByPosition.has(occurrence.position_id)) {
+        canonicalByPosition.set(occurrence.position_id, occurrence.id);
+      }
+    }
+    const seenEdges = new Set<string>();
+    return editor.occurrences.flatMap((occurrence) => {
+      if (occurrence.parent_id === null) {
+        return canonicalByPosition.get(occurrence.position_id) === occurrence.id
+          ? [occurrence]
+          : [];
+      }
+      const parent = byId.get(occurrence.parent_id);
+      const parentId = parent
+        ? (canonicalByPosition.get(parent.position_id) ?? occurrence.parent_id)
+        : occurrence.parent_id;
+      const edgeKey = `${parentId}:${occurrence.inbound_uci ?? occurrence.id}:${occurrence.position_id}`;
+      if (seenEdges.has(edgeKey)) return [];
+      seenEdges.add(edgeKey);
+      return [{ ...occurrence, parent_id: parentId }];
+    });
+  }, [byId, course?.mode, editor]);
   const explorerEntries = useMemo(() => {
     const entries: Array<{ module: CourseModule; occurrence: Occurrence }> = [];
     const seenPositions = new Set<string>();
@@ -203,45 +314,6 @@ export function CourseEditor() {
     }
     return [...merged.values()];
   }, [course?.mode, current, editor]);
-  const linePath = useMemo(() => {
-    const result: ModuleEditor['occurrences'] = [];
-    const visited = new Set<string>();
-    let node = (lineLeafId ? byId.get(lineLeafId) : undefined) ?? current;
-    while (node && !visited.has(node.id)) {
-      visited.add(node.id);
-      result.push(node);
-      node = node.parent_id ? byId.get(node.parent_id) : undefined;
-    }
-    return result.reverse();
-  }, [byId, current, lineLeafId]);
-  const moveRows = useMemo(() => {
-    const root = linePath[0];
-    if (!root) return [];
-    const fenFields = root.full_fen.split(/\s+/);
-    let side: 'white' | 'black' = fenFields[1] === 'b' ? 'black' : 'white';
-    let moveNumber = Number.parseInt(fenFields[5] ?? '1', 10);
-    if (!Number.isFinite(moveNumber) || moveNumber < 1) moveNumber = 1;
-    const rows: Array<{
-      moveNumber: number;
-      white?: ModuleEditor['occurrences'][number];
-      black?: ModuleEditor['occurrences'][number];
-    }> = [];
-    for (const occurrence of linePath.slice(1)) {
-      let row = rows.at(-1);
-      if (!row || row.moveNumber !== moveNumber) {
-        row = { moveNumber };
-        rows.push(row);
-      }
-      row[side] = occurrence;
-      if (side === 'white') {
-        side = 'black';
-      } else {
-        side = 'white';
-        moveNumber += 1;
-      }
-    }
-    return rows;
-  }, [linePath]);
   const transpositionCount = useMemo(() => {
     if (!current) return 0;
     const matching =
@@ -291,10 +363,6 @@ export function CourseEditor() {
   const referenceNotes = currentNotes.filter(
     (note) => note.source_note_id !== null,
   );
-  const notesById = useMemo(
-    () => new Map((editor?.notes ?? []).map((item) => [item.id, item])),
-    [editor?.notes],
-  );
   const sourcesBySpanId = useMemo(
     () =>
       new Map(
@@ -302,6 +370,70 @@ export function CourseEditor() {
       ),
     [citableSources],
   );
+  const pdfPreviews = useMemo(() => {
+    if (!pdfAssets || !pdfExtractions || !pdfDocuments) return [];
+    const result: Array<{
+      spanId: string;
+      page: number;
+      title: string;
+      contentUrl: string;
+    }> = [];
+    for (const citable of citableSources) {
+      const span = citable.source_span;
+      if (!courseSourceSpanIds.has(span.id)) continue;
+      if (span.locator.kind !== 'page' || span.source_file_id === null)
+        continue;
+      const page = span.locator.page_number;
+      const asset = pdfAssets.items.find(
+        (item) =>
+          item.source_file_id === span.source_file_id &&
+          item.source_version_id === span.source_version_id,
+      );
+      if (!asset) continue;
+      const document = pdfDocuments.items.find(
+        (item) =>
+          item.pdf_asset_id === asset.id &&
+          item.first_page <= page &&
+          item.last_page >= page,
+      );
+      const run = pdfExtractions.items.find(
+        (item) =>
+          item.pdf_asset_id === asset.id &&
+          item.first_page <= page &&
+          item.last_page >= page &&
+          item.job.status === 'succeeded' &&
+          item.candidate !== null,
+      );
+      const targetId = document?.id ?? run?.id;
+      if (!targetId) continue;
+      result.push({
+        spanId: span.id,
+        page,
+        title: citable.source.title,
+        contentUrl: `/api/pdf-extractions/${targetId}/review/pages/${page}`,
+      });
+    }
+    return result;
+  }, [
+    citableSources,
+    courseSourceSpanIds,
+    pdfAssets,
+    pdfDocuments,
+    pdfExtractions,
+  ]);
+  const sourcePageBySpanId = useMemo(
+    () => new Map(pdfPreviews.map((item) => [item.spanId, item.page] as const)),
+    [pdfPreviews],
+  );
+  const activePdfPreview =
+    pdfPreviews.find((item) => item.spanId === activeSourceSpanId) ??
+    pdfPreviews[0];
+
+  function selectSourcePreview(spanId: string) {
+    if (!sourcePageBySpanId.has(spanId)) return;
+    setActiveSourceSpanId(spanId);
+    setLeftPaneMode('source');
+  }
   const contextNote = referenceNotes.find((note) => note.id === contextNoteId);
   const contextEditorKey =
     contextNote?.source_module_id && contextNote.source_course_id
@@ -352,12 +484,11 @@ export function CourseEditor() {
     fetchJson,
   );
 
-  function selectOccurrence(id: string, preserveLine = false) {
+  function selectOccurrence(id: string) {
     const selected = byId.get(id);
     if (course?.mode === 'opening_explorer' && selected?.module_id) {
       setModuleId(selected.module_id);
     }
-    if (!preserveLine) setLineLeafId(id);
     setOccurrenceId(id);
     setPendingFen(undefined);
     setSelectedSquare(undefined);
@@ -365,7 +496,7 @@ export function CourseEditor() {
 
   function submitMove(source: string, target: string): boolean {
     if (!current || !editor) return false;
-    const game = new Chess(current.full_fen);
+    const game = new Chess(pendingFen ?? current.full_fen);
     let move;
     try {
       move = game.move({ from: source, to: target, promotion: 'q' });
@@ -374,12 +505,15 @@ export function CourseEditor() {
     }
     if (!move) return false;
     const uci = `${source}${target}${move.promotion ?? ''}`;
-    const existing = candidates.find((item) => item.inbound_uci === uci);
+    const existing = pendingFen
+      ? undefined
+      : candidates.find((item) => item.inbound_uci === uci);
     if (existing) {
       selectOccurrence(existing.id);
       return true;
     }
     setPendingFen(game.fen());
+    if (!recordBoardMoves) return true;
     void requestJson<Occurrence>('/api/occurrences', {
       method: 'POST',
       body: JSON.stringify({
@@ -396,7 +530,6 @@ export function CourseEditor() {
           await mutateModuleEditor();
         }
         setOccurrenceId(created.id);
-        setLineLeafId(created.id);
         setPendingFen(undefined);
       })
       .catch((error: unknown) => {
@@ -415,7 +548,7 @@ export function CourseEditor() {
 
   function selectOwnPiece(square: string) {
     if (!current) return;
-    const game = new Chess(current.full_fen);
+    const game = new Chess(pendingFen ?? current.full_fen);
     const piece = game.get(square as Parameters<typeof game.get>[0]);
     setSelectedSquare(piece?.color === game.turn() ? square : undefined);
   }
@@ -456,6 +589,154 @@ export function CourseEditor() {
     void message.success(
       course?.mode === 'opening_explorer' ? '入口局面已创建' : '章节已创建',
     );
+  }
+
+  async function applyMoveAction(
+    action: CourseMoveAction,
+    occurrence: ModuleEditor['occurrences'][number],
+  ) {
+    let nag: number | null | undefined;
+    if (action === 'set_nag') {
+      const input = window.prompt(
+        '输入招法评注：!、?、!!、??、!?、?!；留空清除',
+        occurrence.nag === null ? '' : nagSymbol(occurrence.nag),
+      );
+      if (input === null) return;
+      const normalized = input.trim();
+      const mapped = (
+        {
+          '!': 1,
+          '?': 2,
+          '!!': 3,
+          '??': 4,
+          '!?': 5,
+          '?!': 6,
+        } as Record<string, number>
+      )[normalized];
+      if (normalized && mapped === undefined) {
+        void message.warning('请输入 !、?、!!、??、!?、?!，或留空清除');
+        return;
+      }
+      nag = normalized ? mapped : null;
+    }
+    if (
+      action === 'delete_subtree' &&
+      !window.confirm(
+        '确定从这步开始删除整条分支吗？此操作会使相关探索器来源失效。',
+      )
+    ) {
+      return;
+    }
+    try {
+      const result = await requestJson<{
+        selected_occurrence_id: string;
+      }>(`/api/occurrences/${occurrence.id}/commands`, {
+        method: 'POST',
+        body: JSON.stringify({
+          kind: action,
+          expected_version: occurrence.version,
+          ...(action === 'set_nag' ? { nag } : {}),
+        }),
+      });
+      if (course?.mode === 'opening_explorer') await mutateExplorerEditors();
+      else await mutateModuleEditor();
+      setOccurrenceId(result.selected_occurrence_id);
+      setPendingFen(undefined);
+    } catch (error: unknown) {
+      void message.error(
+        error instanceof Error ? error.message : '棋谱修改失败',
+      );
+    }
+  }
+
+  async function renameModule(item: CourseModule) {
+    const title = window.prompt('重命名小节', item.title)?.trim();
+    if (!title || title === item.title) return;
+    try {
+      await requestJson(`/api/course-modules/${item.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ expected_version: item.version, title }),
+      });
+      await Promise.all([mutateModules(), mutateModuleEditor()]);
+    } catch (error: unknown) {
+      void message.error(error instanceof Error ? error.message : '重命名失败');
+    }
+  }
+
+  async function reorderSiblingModules(orderedIds: string[]) {
+    if (reorderingModules) return;
+    const orderById = new Map(orderedIds.map((id, index) => [id, index]));
+    const changes = modules.flatMap((item) => {
+      const sortOrder = orderById.get(item.id);
+      return sortOrder === undefined || sortOrder === item.sort_order
+        ? []
+        : [{ item, sortOrder }];
+    });
+    if (changes.length === 0) return;
+
+    setReorderingModules(true);
+    await mutateModules(
+      modules.map((item) => {
+        const sortOrder = orderById.get(item.id);
+        return sortOrder === undefined
+          ? item
+          : { ...item, sort_order: sortOrder };
+      }),
+      { revalidate: false },
+    );
+    try {
+      for (const { item, sortOrder } of changes) {
+        await requestJson<CourseModule>(`/api/course-modules/${item.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            expected_version: item.version,
+            sort_order: sortOrder,
+          }),
+        });
+      }
+      await mutateModules();
+    } catch (error: unknown) {
+      await mutateModules();
+      void message.error(
+        error instanceof Error ? error.message : '调整小节顺序失败',
+      );
+    } finally {
+      setReorderingModules(false);
+    }
+  }
+
+  async function deleteModule(item: CourseModule) {
+    const childCount = modules.filter(
+      (candidate) => candidate.parent_id === item.id,
+    ).length;
+    if (
+      !window.confirm(
+        childCount
+          ? `确定删除“${item.title}”及其 ${childCount} 个下级小节吗？`
+          : `确定删除“${item.title}”吗？`,
+      )
+    ) {
+      return;
+    }
+    try {
+      await requestJson(`/api/course-modules/${item.id}/archive-tree`, {
+        method: 'POST',
+        body: JSON.stringify({ expected_version: item.version }),
+      });
+      if (
+        moduleId === item.id ||
+        isModuleDescendant(modules, moduleId, item.id)
+      ) {
+        setModuleId(undefined);
+        setOccurrenceId(undefined);
+      }
+      await mutateModules();
+      void message.success('小节已删除；相关探索器来源已失效');
+    } catch (error: unknown) {
+      void message.error(
+        error instanceof Error ? error.message : '删除小节失败',
+      );
+    }
   }
 
   async function saveNote() {
@@ -650,13 +931,45 @@ export function CourseEditor() {
           title="编辑器数据加载失败"
         />
       ) : null}
-      <div className="editor-grid">
+      <div className="course-workbench-grid">
         <Card
-          title={course.mode === 'opening_explorer' ? '探索概览' : '章节'}
+          title={leftPaneMode === 'chapters' ? '章节' : '原书页面'}
           size="small"
-          className="editor-panel"
+          className="course-workbench-pane course-left-pane"
+          extra={
+            course.mode === 'traditional' ? (
+              <Space.Compact>
+                <Button
+                  size="small"
+                  type={leftPaneMode === 'chapters' ? 'primary' : 'default'}
+                  onClick={() => setLeftPaneMode('chapters')}
+                >
+                  目录
+                </Button>
+                <Button
+                  size="small"
+                  type={leftPaneMode === 'source' ? 'primary' : 'default'}
+                  disabled={!activePdfPreview}
+                  onClick={() => setLeftPaneMode('source')}
+                >
+                  原文
+                </Button>
+              </Space.Compact>
+            ) : null
+          }
         >
-          {course.mode === 'opening_explorer' ? (
+          {leftPaneMode === 'source' && activePdfPreview ? (
+            <figure className="m-0 flex min-h-0 flex-col">
+              <img
+                src={activePdfPreview.contentUrl}
+                alt={`${activePdfPreview.title} 第 ${activePdfPreview.page} 页`}
+                className="mx-auto block max-h-[calc(100vh-15rem)] max-w-full object-contain"
+              />
+              <figcaption className="mt-2 text-center text-xs text-stone-500">
+                {activePdfPreview.title} · 第 {activePdfPreview.page} 页
+              </figcaption>
+            </figure>
+          ) : course.mode === 'opening_explorer' ? (
             <>
               <Alert
                 type="success"
@@ -690,38 +1003,39 @@ export function CourseEditor() {
               )}
             </>
           ) : modules.length ? (
-            <ul className="list-none p-0!">
-              {modules.map((item) => (
-                <li
-                  key={item.id}
-                  className={item.id === moduleId ? 'bg-emerald-50' : ''}
-                >
-                  <Button
-                    type="text"
-                    className="w-full text-left"
-                    onClick={() => {
-                      setModuleId(item.id);
-                      setOccurrenceId(undefined);
-                      setLineLeafId(undefined);
-                    }}
-                  >
-                    {item.parent_id ? '↳ ' : ''}
-                    {item.title}
-                  </Button>
-                </li>
-              ))}
-            </ul>
+            <ModuleDirectory
+              modules={modules}
+              selectedId={moduleId}
+              expandedIds={expandedModuleIds}
+              onToggle={(id) =>
+                setExpandedModuleIds((current) => {
+                  const next = new Set(current);
+                  if (next.has(id)) next.delete(id);
+                  else next.add(id);
+                  return next;
+                })
+              }
+              onSelect={(id) => {
+                setModuleId(id);
+                setOccurrenceId(undefined);
+              }}
+              onRename={(item) => void renameModule(item)}
+              onDelete={(item) => void deleteModule(item)}
+              onReorder={(orderedIds) => void reorderSiblingModules(orderedIds)}
+              reordering={reorderingModules}
+            />
           ) : (
             <Empty description="先创建一个章节" />
           )}
         </Card>
-        <section className="min-w-0">
+        <section className="course-board-pane min-w-0">
           {current ? (
             <>
-              <div className="mx-auto max-w-[560px]">
+              <div className="mx-auto max-w-[500px]">
                 <Chessboard
                   id="course-editor-board"
                   position={pendingFen ?? current.full_fen}
+                  boardOrientation={boardOrientation}
                   animationDuration={FAST_MOVE_ANIMATION_MS}
                   onPieceDrop={onPieceDrop}
                   onPieceDragBegin={(_, source) => selectOwnPiece(source)}
@@ -736,7 +1050,7 @@ export function CourseEditor() {
                   }}
                 />
               </div>
-              <div className="mx-auto mt-3 max-w-[560px]">
+              <div className="mx-auto mt-3 max-w-[500px]">
                 <CourseEnginePanel
                   fen={pendingFen ?? current.full_fen}
                   onArrowsChange={setEngineArrows}
@@ -748,354 +1062,276 @@ export function CourseEditor() {
           )}
         </section>
         <Card
-          title="棋谱"
+          title={course.mode === 'traditional' ? '课程内容' : '探索棋谱'}
           size="small"
-          className="editor-panel move-score-panel"
-        >
-          {linePath.length ? (
-            <nav aria-label="主线棋谱">
-              <button
-                type="button"
-                className={`move-score-start ${current?.id === linePath[0]?.id ? 'active' : ''}`}
-                aria-current={
-                  current?.id === linePath[0]?.id ? 'step' : undefined
-                }
-                onClick={() => selectOccurrence(linePath[0]!.id, true)}
-              >
-                起点
-              </button>
-              {moveRows.length ? (
-                <div className="move-score-list">
-                  {moveRows.map((row) => (
-                    <div className="move-score-row" key={row.moveNumber}>
-                      <span className="move-score-number">
-                        {row.moveNumber}.
-                      </span>
-                      {(['white', 'black'] as const).map((side) => {
-                        const occurrence = row[side];
-                        return occurrence ? (
-                          <button
-                            key={side}
-                            type="button"
-                            className={`move-score-move ${occurrence.id === current?.id ? 'active' : ''}`}
-                            aria-current={
-                              occurrence.id === current?.id ? 'step' : undefined
-                            }
-                            title={occurrence.inbound_uci ?? undefined}
-                            onClick={() =>
-                              selectOccurrence(occurrence.id, true)
-                            }
-                          >
-                            {occurrence.inbound_san ?? occurrence.inbound_uci}
-                          </button>
-                        ) : (
-                          <span key={side} className="move-score-placeholder">
-                            {side === 'white' ? '…' : ''}
-                          </span>
-                        );
-                      })}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <Typography.Paragraph
-                  type="secondary"
-                  className="mt-3 text-center text-xs"
-                >
-                  当前位于起始局面
-                </Typography.Paragraph>
-              )}
-            </nav>
-          ) : (
-            <Empty
-              image={Empty.PRESENTED_IMAGE_SIMPLE}
-              description="暂无棋谱"
-            />
-          )}
-        </Card>
-        <Card
-          title={course.mode === 'traditional' ? '章节正文' : '当前局面'}
-          size="small"
-          className="editor-panel reading-panel"
+          className="course-workbench-pane course-reading-pane"
           extra={
             course.mode === 'traditional' ? (
-              <Space.Compact>
-                <Button
-                  size="small"
-                  type={readingMode ? 'primary' : 'default'}
-                  onClick={() => setReadingMode(true)}
-                >
-                  阅读
-                </Button>
-                <Button
-                  size="small"
-                  type={!readingMode ? 'primary' : 'default'}
-                  onClick={() => setReadingMode(false)}
-                >
-                  编辑
-                </Button>
-              </Space.Compact>
+              <Space size="small">
+                {transpositionCount > 1 ? (
+                  <Tag color="gold">转置 × {transpositionCount}</Tag>
+                ) : null}
+                <Space.Compact>
+                  <Button
+                    size="small"
+                    type={readingMode ? 'primary' : 'default'}
+                    onClick={() => setReadingMode(true)}
+                  >
+                    阅读
+                  </Button>
+                  <Button
+                    size="small"
+                    type={!readingMode ? 'primary' : 'default'}
+                    onClick={() => setReadingMode(false)}
+                  >
+                    编辑
+                  </Button>
+                </Space.Compact>
+              </Space>
             ) : transpositionCount > 1 ? (
               <Tag color="gold">转置 × {transpositionCount}</Tag>
             ) : null
           }
         >
-          {course.mode === 'traditional' ? (
-            <article className="chapter-reader" aria-label="章节正文">
-              {!readingMode ? (
+          <div className="course-reading-scroll" aria-label="课程内容滚动区">
+            <article
+              className="course-reading-flow"
+              aria-label="课程正文与棋谱"
+            >
+              {!readingMode && course.mode === 'traditional' ? (
                 <div className="mb-3 flex justify-end">
                   <Button size="small" onClick={() => setNarrativeModal(true)}>
                     添加叙述正文
                   </Button>
                 </div>
               ) : null}
-              {editor?.content_blocks.length ? (
-                editor.content_blocks.map((block) => {
-                  const embeddedNote = block.knowledge_note_id
-                    ? notesById.get(block.knowledge_note_id)
-                    : undefined;
-                  const embeddedOccurrenceId =
-                    embeddedNote?.target.kind === 'occurrence'
-                      ? embeddedNote.target.occurrence_id
-                      : undefined;
-                  return (
-                    <section
+              {editor?.content_blocks.map((block) => {
+                if (block.kind === 'knowledge_note') return null;
+                if (block.kind === 'move_sequence') {
+                  return block.root_occurrence_id ? (
+                    <CourseScore
                       key={block.id}
-                      className={`reader-block ${block.kind}`}
-                    >
-                      {block.kind === 'section_header' ? (
-                        <Typography.Title level={4}>
-                          {block.heading}
-                        </Typography.Title>
-                      ) : null}
-                      {block.kind === 'narrative' && block.markdown ? (
-                        <>
-                          <ReactMarkdown rehypePlugins={[rehypeSanitize]}>
-                            {block.markdown}
-                          </ReactMarkdown>
-                          {(block.source_span_ids ?? []).length ? (
-                            <Space size={[4, 4]} wrap>
-                              {(block.source_span_ids ?? []).map((spanId) => (
-                                <Tag key={spanId} color="blue">
-                                  {sourceLabel(spanId)}
-                                </Tag>
-                              ))}
-                            </Space>
-                          ) : null}
-                        </>
-                      ) : null}
-                      {block.kind === 'move_sequence' ? (
-                        <Button
-                          type="text"
-                          className="reader-position-link"
-                          onClick={() =>
-                            block.root_occurrence_id
-                              ? selectOccurrence(block.root_occurrence_id)
-                              : undefined
-                          }
-                        >
-                          ♟ 交互棋谱从这里开始
-                        </Button>
-                      ) : null}
-                      {block.kind === 'knowledge_note' && embeddedNote ? (
-                        <>
-                          <ReactMarkdown rehypePlugins={[rehypeSanitize]}>
-                            {embeddedNote.rendered_markdown}
-                          </ReactMarkdown>
-                          <Space size={[4, 4]} wrap>
-                            {embeddedNote.rendered_source_span_ids.map(
-                              (spanId) => (
-                                <Tag key={spanId} color="blue">
-                                  {sourceLabel(spanId)}
-                                </Tag>
-                              ),
-                            )}
-                            {embeddedOccurrenceId ? (
-                              <Button
-                                size="small"
-                                type="link"
-                                onClick={() =>
-                                  selectOccurrence(embeddedOccurrenceId)
-                                }
-                              >
-                                查看关联局面
-                              </Button>
-                            ) : null}
-                          </Space>
-                        </>
-                      ) : null}
-                    </section>
-                  );
-                })
-              ) : (
-                <Empty
-                  image={Empty.PRESENTED_IMAGE_SIMPLE}
-                  description="本章还没有正文"
-                />
-              )}
-            </article>
-          ) : null}
-          {course.mode === 'traditional' ? <Divider /> : null}
-          <div className="mb-2 flex items-center justify-between gap-2">
-            <Typography.Text strong>当前局面</Typography.Text>
-            {transpositionCount > 1 ? (
-              <Tag color="gold">转置 × {transpositionCount}</Tag>
-            ) : null}
-          </div>
-          <Typography.Text type="secondary">直接候选着</Typography.Text>
-          {candidates.length ? (
-            <ul className="mt-2 list-none p-0!">
-              {candidates.map((item, index) => (
-                <li key={item.id} className="mb-1 last:mb-0">
-                  <Button
-                    className="w-full"
-                    type={index === 0 ? 'primary' : 'default'}
-                    onClick={() => selectOccurrence(item.id)}
-                  >
-                    {item.inbound_san}
-                    <span className="ml-2">{item.inbound_uci}</span>
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <Empty
-              className="mt-2"
-              image={Empty.PRESENTED_IMAGE_SIMPLE}
-              description="在棋盘走一步以创建候选着"
-            />
-          )}
-          {current ? (
-            <Typography.Paragraph className="mt-4 break-all text-xs text-stone-500">
-              {current.full_fen}
-            </Typography.Paragraph>
-          ) : null}
-          {current ? (
-            <>
-              {referenceNotes.length ? (
-                <div className="mt-4">
-                  <Typography.Text strong>来源观点</Typography.Text>
-                  {referenceNotes.map((note) => (
-                    <Card key={note.id} size="small" className="mt-2">
-                      <ReactMarkdown rehypePlugins={[rehypeSanitize]}>
-                        {note.rendered_markdown}
-                      </ReactMarkdown>
-                      <Link
-                        to={`/learn/${note.source_course_id}?module=${note.source_module_id ?? ''}&occurrence=${note.source_occurrence_id}`}
-                      >
-                        跳转到原始条目
-                      </Link>
-                      <Button
-                        className="ml-2"
-                        type="link"
-                        disabled={!note.source_module_id}
-                        onClick={() => setContextNoteId(note.id)}
-                      >
-                        查看原文上下文
-                      </Button>
-                    </Card>
-                  ))}
-                </div>
-              ) : null}
-              {!readingMode || course.mode === 'opening_explorer' ? (
-                <>
-                  <Divider />
-                  <div className="mb-2 flex items-center justify-between gap-2">
-                    <Typography.Text strong>
-                      {current.parent_id ? '着法与局面说明' : '局面说明'}
-                    </Typography.Text>
-                    <Space size="small">
-                      <Button
-                        size="small"
-                        disabled={draft.past.length === 0}
-                        onClick={() => dispatchDraft({ type: 'undo' })}
-                      >
-                        撤销
-                      </Button>
-                      <Button
-                        size="small"
-                        disabled={draft.future.length === 0}
-                        onClick={() => dispatchDraft({ type: 'redo' })}
-                      >
-                        重做
-                      </Button>
-                      <Button
-                        size="small"
-                        disabled={!editableNote}
-                        onClick={() => setHistoryOpen(true)}
-                      >
-                        历史
-                      </Button>
-                    </Space>
-                  </div>
-                  {saveError ? (
-                    <Alert
-                      className="mb-3"
-                      type="error"
-                      showIcon
-                      title="说明尚未保存"
-                      description={saveError}
-                      action={
-                        <Button size="small" onClick={() => void saveNote()}>
-                          重试
-                        </Button>
+                      occurrences={scoreOccurrences}
+                      notes={(editor.notes ?? []).filter(
+                        (note) => note.source_note_id === null,
+                      )}
+                      rootId={block.root_occurrence_id}
+                      currentId={current?.id}
+                      sourcePageBySpanId={sourcePageBySpanId}
+                      onSelectOccurrence={selectOccurrence}
+                      onSelectSource={selectSourcePreview}
+                      onMoveAction={(action, occurrence) =>
+                        void applyMoveAction(action, occurrence)
                       }
                     />
-                  ) : null}
-                  <Input.TextArea
-                    aria-label="Markdown 说明"
-                    value={draft.present.markdown}
-                    autoSize={{ minRows: 5, maxRows: 12 }}
-                    placeholder="用 Markdown 写下计划、解释或记忆提示"
-                    onChange={(event) =>
-                      dispatchDraft({
-                        type: 'markdown',
-                        markdown: event.target.value,
-                      })
-                    }
-                  />
-                  <Select
-                    aria-label="关联来源"
-                    className="mt-3 w-full"
-                    mode="multiple"
-                    placeholder="关联一个或多个手工来源"
-                    value={draft.present.sourceSpanIds}
-                    onChange={(sourceSpanIds) =>
-                      dispatchDraft({ type: 'sources', sourceSpanIds })
-                    }
-                    options={citableSources.map((item) => ({
-                      value: item.source_span.id,
-                      label: item.source.title,
-                    }))}
-                  />
-                  <div className="mt-3 rounded-md bg-stone-50 p-3">
-                    <Typography.Text type="secondary">安全预览</Typography.Text>
-                    {draft.present.markdown ? (
-                      <ReactMarkdown rehypePlugins={[rehypeSanitize]}>
-                        {draft.present.markdown}
-                      </ReactMarkdown>
-                    ) : (
-                      <Typography.Paragraph type="secondary" className="mb-0!">
-                        还没有说明
-                      </Typography.Paragraph>
+                  ) : null;
+                }
+                return (
+                  <section key={block.id} className="course-reading-prose">
+                    {block.kind === 'section_header' ? (
+                      <Typography.Title level={4}>
+                        {block.heading}
+                      </Typography.Title>
+                    ) : null}
+                    {block.kind === 'narrative' && block.markdown ? (
+                      <div
+                        onContextMenu={(event) => {
+                          const spanId = block.source_span_ids.find((id) =>
+                            sourcePageBySpanId.has(id),
+                          );
+                          if (!spanId) return;
+                          event.preventDefault();
+                          selectSourcePreview(spanId);
+                        }}
+                      >
+                        <ReactMarkdown rehypePlugins={[rehypeSanitize]}>
+                          {block.markdown}
+                        </ReactMarkdown>
+                      </div>
+                    ) : null}
+                  </section>
+                );
+              })}
+              {editor &&
+              !editor.content_blocks.some(
+                (block) => block.kind === 'move_sequence',
+              ) ? (
+                editor.occurrences.find((item) => item.parent_id === null) ? (
+                  <CourseScore
+                    occurrences={scoreOccurrences}
+                    notes={(editor.notes ?? []).filter(
+                      (note) => note.source_note_id === null,
                     )}
-                  </div>
-                  <div className="mt-3 flex items-center justify-between">
-                    <Typography.Text type={dirty ? 'warning' : 'secondary'}>
-                      {dirty ? '有未保存修改' : '已与服务器同步'}
-                    </Typography.Text>
-                    <Button
-                      type="primary"
-                      loading={saving}
-                      disabled={!dirty || !draft.present.markdown.trim()}
-                      onClick={() => void saveNote()}
-                    >
-                      保存说明
-                    </Button>
-                  </div>
-                </>
+                    rootId={
+                      editor.occurrences.find(
+                        (item) => item.parent_id === null,
+                      )!.id
+                    }
+                    currentId={current?.id}
+                    sourcePageBySpanId={sourcePageBySpanId}
+                    onSelectOccurrence={selectOccurrence}
+                    onSelectSource={selectSourcePreview}
+                    onMoveAction={(action, occurrence) =>
+                      void applyMoveAction(action, occurrence)
+                    }
+                  />
+                ) : (
+                  <Empty description="本章还没有内容" />
+                )
               ) : null}
-            </>
+            </article>
+            {current ? (
+              <>
+                {referenceNotes.length ? (
+                  <div className="mt-4">
+                    <Typography.Text strong>来源观点</Typography.Text>
+                    {referenceNotes.map((note) => (
+                      <Card key={note.id} size="small" className="mt-2">
+                        <ReactMarkdown rehypePlugins={[rehypeSanitize]}>
+                          {note.rendered_markdown}
+                        </ReactMarkdown>
+                        <Link
+                          to={`/learn/${note.source_course_id}?module=${note.source_module_id ?? ''}&occurrence=${note.source_occurrence_id}`}
+                        >
+                          跳转到原始条目
+                        </Link>
+                        <Button
+                          className="ml-2"
+                          type="link"
+                          disabled={!note.source_module_id}
+                          onClick={() => setContextNoteId(note.id)}
+                        >
+                          查看原文上下文
+                        </Button>
+                      </Card>
+                    ))}
+                  </div>
+                ) : null}
+                {!readingMode || course.mode === 'opening_explorer' ? (
+                  <>
+                    <Divider />
+                    <div className="mb-2 flex items-center justify-between gap-2">
+                      <Typography.Text strong>
+                        {current.parent_id ? '着法与局面说明' : '局面说明'}
+                      </Typography.Text>
+                      <Space size="small">
+                        <Button
+                          size="small"
+                          disabled={draft.past.length === 0}
+                          onClick={() => dispatchDraft({ type: 'undo' })}
+                        >
+                          撤销
+                        </Button>
+                        <Button
+                          size="small"
+                          disabled={draft.future.length === 0}
+                          onClick={() => dispatchDraft({ type: 'redo' })}
+                        >
+                          重做
+                        </Button>
+                        <Button
+                          size="small"
+                          disabled={!editableNote}
+                          onClick={() => setHistoryOpen(true)}
+                        >
+                          历史
+                        </Button>
+                      </Space>
+                    </div>
+                    {saveError ? (
+                      <Alert
+                        className="mb-3"
+                        type="error"
+                        showIcon
+                        title="说明尚未保存"
+                        description={saveError}
+                        action={
+                          <Button size="small" onClick={() => void saveNote()}>
+                            重试
+                          </Button>
+                        }
+                      />
+                    ) : null}
+                    <Input.TextArea
+                      aria-label="Markdown 说明"
+                      value={draft.present.markdown}
+                      autoSize={{ minRows: 5, maxRows: 12 }}
+                      placeholder="用 Markdown 写下计划、解释或记忆提示"
+                      onChange={(event) =>
+                        dispatchDraft({
+                          type: 'markdown',
+                          markdown: event.target.value,
+                        })
+                      }
+                    />
+                    <Select
+                      aria-label="关联来源"
+                      className="mt-3 w-full"
+                      mode="multiple"
+                      placeholder="关联一个或多个手工来源"
+                      value={draft.present.sourceSpanIds}
+                      onChange={(sourceSpanIds) =>
+                        dispatchDraft({ type: 'sources', sourceSpanIds })
+                      }
+                      options={citableSources.map((item) => ({
+                        value: item.source_span.id,
+                        label: item.source.title,
+                      }))}
+                    />
+                    <div className="mt-3 rounded-md bg-stone-50 p-3">
+                      <Typography.Text type="secondary">
+                        安全预览
+                      </Typography.Text>
+                      {draft.present.markdown ? (
+                        <ReactMarkdown rehypePlugins={[rehypeSanitize]}>
+                          {draft.present.markdown}
+                        </ReactMarkdown>
+                      ) : (
+                        <Typography.Paragraph
+                          type="secondary"
+                          className="mb-0!"
+                        >
+                          还没有说明
+                        </Typography.Paragraph>
+                      )}
+                    </div>
+                    <div className="mt-3 flex items-center justify-between">
+                      <Typography.Text type={dirty ? 'warning' : 'secondary'}>
+                        {dirty ? '有未保存修改' : '已与服务器同步'}
+                      </Typography.Text>
+                      <Button
+                        type="primary"
+                        loading={saving}
+                        disabled={!dirty || !draft.present.markdown.trim()}
+                        onClick={() => void saveNote()}
+                      >
+                        保存说明
+                      </Button>
+                    </div>
+                  </>
+                ) : null}
+              </>
+            ) : null}
+          </div>
+          {scoreRootId ? (
+            <CourseScoreControls
+              occurrences={scoreOccurrences}
+              rootId={scoreRootId}
+              currentId={current?.id}
+              onSelectOccurrence={selectOccurrence}
+              recordMoves={recordBoardMoves}
+              onRecordMovesChange={(enabled) => {
+                setRecordBoardMoves(enabled);
+                setPendingFen(undefined);
+                setSelectedSquare(undefined);
+              }}
+              boardOrientation={boardOrientation}
+              onFlipBoard={() =>
+                setBoardOrientation((current) =>
+                  current === 'white' ? 'black' : 'white',
+                )
+              }
+            />
           ) : null}
         </Card>
       </div>
@@ -1330,5 +1566,214 @@ export function CourseEditor() {
         ))}
       </Modal>
     </main>
+  );
+}
+
+function ModuleDirectory({
+  modules,
+  selectedId,
+  expandedIds,
+  onToggle,
+  onSelect,
+  onRename,
+  onDelete,
+  onReorder,
+  reordering,
+}: {
+  modules: CourseModule[];
+  selectedId: string | undefined;
+  expandedIds: Set<string>;
+  onToggle: (id: string) => void;
+  onSelect: (id: string) => void;
+  onRename: (item: CourseModule) => void;
+  onDelete: (item: CourseModule) => void;
+  onReorder: (orderedIds: string[]) => void;
+  reordering: boolean;
+}) {
+  const draggedId = useRef<string>();
+  const [dropIndicator, setDropIndicator] = useState<{
+    id: string;
+    position: 'before' | 'after';
+  }>();
+  const childrenByParent = new Map<string | null, CourseModule[]>();
+  for (const item of modules) {
+    const siblings = childrenByParent.get(item.parent_id) ?? [];
+    siblings.push(item);
+    childrenByParent.set(item.parent_id, siblings);
+  }
+  for (const siblings of childrenByParent.values()) {
+    siblings.sort(
+      (left, right) =>
+        left.sort_order - right.sort_order ||
+        left.title.localeCompare(right.title),
+    );
+  }
+
+  function renderLevel(parentId: string | null, depth: number) {
+    return (childrenByParent.get(parentId) ?? []).map((item) => {
+      const children = childrenByParent.get(item.id) ?? [];
+      const expanded = expandedIds.has(item.id);
+      const indicator = dropIndicator?.id === item.id && dropIndicator.position;
+
+      function dropPosition(event: ReactDragEvent): 'before' | 'after' {
+        const bounds = event.currentTarget.getBoundingClientRect();
+        return event.clientY < bounds.top + bounds.height / 2
+          ? 'before'
+          : 'after';
+      }
+
+      function canDrop(): boolean {
+        const dragged = modules.find(
+          (candidate) => candidate.id === draggedId.current,
+        );
+        return Boolean(
+          dragged &&
+          dragged.id !== item.id &&
+          dragged.parent_id === item.parent_id,
+        );
+      }
+
+      return (
+        <li key={item.id}>
+          <div
+            className={`flex items-center ${item.id === selectedId ? 'bg-emerald-50' : ''} ${indicator === 'before' ? 'border-t-2 border-emerald-600' : ''} ${indicator === 'after' ? 'border-b-2 border-emerald-600' : ''}`}
+            style={{ paddingLeft: `${depth * 16}px` }}
+            onDragOver={(event) => {
+              if (!canDrop()) return;
+              event.preventDefault();
+              event.dataTransfer.dropEffect = 'move';
+              setDropIndicator({ id: item.id, position: dropPosition(event) });
+            }}
+            onDragLeave={(event) => {
+              if (!event.currentTarget.contains(event.relatedTarget as Node)) {
+                setDropIndicator(undefined);
+              }
+            }}
+            onDrop={(event) => {
+              const droppedId = draggedId.current;
+              if (!canDrop() || !droppedId) return;
+              event.preventDefault();
+              const siblings = [
+                ...(childrenByParent.get(item.parent_id) ?? []),
+              ];
+              const reordered = siblings.filter(
+                (candidate) => candidate.id !== droppedId,
+              );
+              const targetIndex = reordered.findIndex(
+                (candidate) => candidate.id === item.id,
+              );
+              const position = dropPosition(event);
+              reordered.splice(
+                targetIndex + (position === 'after' ? 1 : 0),
+                0,
+                siblings.find((candidate) => candidate.id === droppedId)!,
+              );
+              draggedId.current = undefined;
+              setDropIndicator(undefined);
+              onReorder(reordered.map((candidate) => candidate.id));
+            }}
+          >
+            {children.length > 0 ? (
+              <button
+                type="button"
+                aria-label={`${expanded ? '收起' : '展开'} ${item.title}`}
+                aria-expanded={expanded}
+                onClick={() => onToggle(item.id)}
+                className="h-8 w-7 shrink-0 text-stone-500"
+              >
+                {expanded ? '▾' : '▸'}
+              </button>
+            ) : (
+              <span className="block w-7 shrink-0" />
+            )}
+            <button
+              type="button"
+              draggable={!reordering}
+              disabled={reordering}
+              aria-label={`拖动 ${item.title}`}
+              title="拖动调整同级顺序"
+              onDragStart={(event) => {
+                draggedId.current = item.id;
+                event.dataTransfer.effectAllowed = 'move';
+                event.dataTransfer.setData('text/plain', item.id);
+              }}
+              onDragEnd={() => {
+                draggedId.current = undefined;
+                setDropIndicator(undefined);
+              }}
+              className="grid h-8 w-6 shrink-0 cursor-grab place-items-center rounded text-stone-300 hover:bg-stone-100 hover:text-stone-600 active:cursor-grabbing disabled:cursor-wait"
+            >
+              ⠿
+            </button>
+            <Button
+              type="text"
+              className="min-w-0 flex-1 justify-start truncate text-left"
+              onClick={() => onSelect(item.id)}
+            >
+              {item.title}
+            </Button>
+            <Dropdown
+              trigger={['click']}
+              menu={{
+                items: [
+                  { key: 'rename', label: '重命名' },
+                  { key: 'delete', label: '删除小节', danger: true },
+                ],
+                onClick: ({ key, domEvent }) => {
+                  domEvent.stopPropagation();
+                  if (key === 'rename') onRename(item);
+                  else onDelete(item);
+                },
+              }}
+            >
+              <button
+                type="button"
+                aria-label={`${item.title} 设置`}
+                onClick={(event) => event.stopPropagation()}
+                className="mr-1 grid h-8 w-8 shrink-0 place-items-center rounded text-stone-400 hover:bg-stone-100 hover:text-stone-700"
+              >
+                ⚙
+              </button>
+            </Dropdown>
+          </div>
+          {children.length > 0 && expanded ? (
+            <ul className="list-none p-0!">
+              {renderLevel(item.id, depth + 1)}
+            </ul>
+          ) : null}
+        </li>
+      );
+    });
+  }
+
+  return <ul className="list-none p-0!">{renderLevel(null, 0)}</ul>;
+}
+
+function isModuleDescendant(
+  modules: CourseModule[],
+  candidateId: string | undefined,
+  ancestorId: string,
+): boolean {
+  let currentId = candidateId;
+  const seen = new Set<string>();
+  while (currentId && !seen.has(currentId)) {
+    if (currentId === ancestorId) return true;
+    seen.add(currentId);
+    currentId =
+      modules.find((item) => item.id === currentId)?.parent_id ?? undefined;
+  }
+  return false;
+}
+
+function nagSymbol(nag: number): string {
+  return (
+    {
+      1: '!',
+      2: '?',
+      3: '!!',
+      4: '??',
+      5: '!?',
+      6: '?!',
+    }[nag] ?? String(nag)
   );
 }

@@ -21,6 +21,7 @@ from chess_workbench.schemas.review import (
     PdfReviewCommandRequest,
     PdfReviewDeleteSubtree,
     PdfReviewDocumentRead,
+    PdfReviewExcludeItem,
     PdfReviewMakeMainline,
     PdfReviewPageRead,
     PdfReviewPromoteVariation,
@@ -204,6 +205,31 @@ def test_delete_from_here_removes_subtree_and_its_anchored_annotation() -> None:
         "n2",
         "n3",
     ]
+
+
+def test_explicitly_excluding_a_non_chess_figure_clears_its_blocker() -> None:
+    package = _package()
+    payload = package.model_dump(mode="json")
+    payload["items"].append(
+        {
+            "kind": "figure",
+            "id": "photo1",
+            "figure_type": "photo",
+            "caption": "Player portrait",
+            "evidence": [{"page": 2}],
+        }
+    )
+    with_figure = ExtractionPackageV1_1.model_validate(payload)
+    assert inspect_review_candidate(with_figure).blocking_issue_count == 1
+
+    result = apply_review_edit(
+        with_figure,
+        PdfReviewExcludeItem(kind="exclude_item", item_id="photo1"),
+    )
+
+    assert all(item.id != "photo1" for item in result.package.items)
+    assert inspect_review_candidate(result.package).blocking_issue_count == 0
+    assert result.decisions["operation"] == "exclude_item"
 
 
 class _LedgerSession:

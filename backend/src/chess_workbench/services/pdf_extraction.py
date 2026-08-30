@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -13,6 +14,7 @@ from uuid import UUID
 from pydantic import JsonValue, ValidationError
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from chess_workbench.config import SecretFileError, Settings, load_deepseek_api_key
 from chess_workbench.extraction.candidates import (
@@ -21,7 +23,9 @@ from chess_workbench.extraction.candidates import (
     assemble_ccef_candidate_artifacts,
     assemble_ccef_candidate_artifacts_v1_1,
     assemble_ccef_candidate_artifacts_v1_1_semantic,
+    summarize_ccef_candidate,
 )
+from chess_workbench.extraction.contracts import ExtractionPackage, ExtractionPackageV1_1
 from chess_workbench.extraction.decoder import CcefDecodeError
 from chess_workbench.extraction.deepseek import (
     DeepSeekInvalidResponseRecorder,
@@ -421,58 +425,61 @@ async def _register_artifacts(
             "Extraction artifact slots are not unique",
             retryable=False,
         )
+
+    async def register(session: AsyncSession) -> None:
+        locked_run = await session.scalar(
+            select(ExtractionRun).where(ExtractionRun.id == source.run_id).with_for_update()
+        )
+        if locked_run is None:
+            raise EngineError("invalid_job_payload", "PDF extraction Job payload is invalid")
+        existing = list(
+            await session.scalars(
+                select(ExtractionArtifact).where(
+                    ExtractionArtifact.run_id == source.run_id,
+                    ExtractionArtifact.kind.in_(artifact_kinds),
+                )
+            )
+        )
+        seen: set[tuple[str, int | None]] = set()
+        for artifact in existing:
+            slot = (artifact.kind, artifact.page_number)
+            candidate = expected.get(slot)
+            if slot in seen or candidate is None:
+                raise EngineError(
+                    "artifact_conflict",
+                    "Extraction artifact conflicts with an existing immutable artifact",
+                    retryable=False,
+                )
+            seen.add(slot)
+            if (
+                artifact.relative_path != candidate.blob.relative_path
+                or artifact.content_sha256 != candidate.blob.sha256
+                or artifact.byte_size != candidate.blob.size_bytes
+                or artifact.media_type != candidate.media_type
+            ):
+                raise EngineError(
+                    "artifact_conflict",
+                    "Extraction artifact conflicts with an existing immutable artifact",
+                    retryable=False,
+                )
+        for slot, candidate in expected.items():
+            if slot in seen:
+                continue
+            session.add(
+                ExtractionArtifact(
+                    run_id=source.run_id,
+                    kind=candidate.kind,
+                    page_number=candidate.page_number,
+                    relative_path=candidate.blob.relative_path,
+                    media_type=candidate.media_type,
+                    byte_size=candidate.blob.size_bytes,
+                    content_sha256=candidate.blob.sha256,
+                )
+            )
+        await session.flush()
+
     try:
-        async with database.session() as session, session.begin():
-            locked_run = await session.scalar(
-                select(ExtractionRun).where(ExtractionRun.id == source.run_id).with_for_update()
-            )
-            if locked_run is None:
-                raise EngineError("invalid_job_payload", "PDF extraction Job payload is invalid")
-            existing = list(
-                await session.scalars(
-                    select(ExtractionArtifact).where(
-                        ExtractionArtifact.run_id == source.run_id,
-                        ExtractionArtifact.kind.in_(artifact_kinds),
-                    )
-                )
-            )
-            seen: set[tuple[str, int | None]] = set()
-            for artifact in existing:
-                slot = (artifact.kind, artifact.page_number)
-                candidate = expected.get(slot)
-                if slot in seen or candidate is None:
-                    raise EngineError(
-                        "artifact_conflict",
-                        "Extraction artifact conflicts with an existing immutable artifact",
-                        retryable=False,
-                    )
-                seen.add(slot)
-                if (
-                    artifact.relative_path != candidate.blob.relative_path
-                    or artifact.content_sha256 != candidate.blob.sha256
-                    or artifact.byte_size != candidate.blob.size_bytes
-                    or artifact.media_type != candidate.media_type
-                ):
-                    raise EngineError(
-                        "artifact_conflict",
-                        "Extraction artifact conflicts with an existing immutable artifact",
-                        retryable=False,
-                    )
-            for slot, candidate in expected.items():
-                if slot in seen:
-                    continue
-                session.add(
-                    ExtractionArtifact(
-                        run_id=source.run_id,
-                        kind=candidate.kind,
-                        page_number=candidate.page_number,
-                        relative_path=candidate.blob.relative_path,
-                        media_type=candidate.media_type,
-                        byte_size=candidate.blob.size_bytes,
-                        content_sha256=candidate.blob.sha256,
-                    )
-                )
-            await session.flush()
+        await database.run_write(register)
     except IntegrityError:
         raise EngineError(
             "artifact_conflict",
@@ -741,6 +748,178 @@ async def _load_committed_evidence(
     )
 
 
+async def _load_committed_candidate_result(
+    database: Database,
+    settings: Settings,
+    source: _ExtractionInput,
+    committed: _CommittedEvidence,
+) -> dict[str, Any] | None:
+    """Recover a fully persisted candidate without another provider call."""
+
+    async with database.session() as session:
+        artifacts = list(
+            await session.scalars(
+                select(ExtractionArtifact).where(
+                    ExtractionArtifact.run_id == source.run_id,
+                    ExtractionArtifact.kind.in_(_CCEF_ARTIFACT_KINDS),
+                )
+            )
+        )
+    if not artifacts:
+        return None
+    slots = _artifact_slots(artifacts)
+    expected_slots = {
+        ("provider_response", None),
+        ("raw_ccef", None),
+        ("normalized_ccef", None),
+    }
+    if len(artifacts) != 3 or set(slots) != expected_slots:
+        raise EngineError(
+            "artifact_conflict",
+            "Extraction candidate artifacts are incomplete or conflicting",
+            retryable=False,
+        )
+    if any(
+        artifact.media_type != "application/json"
+        or artifact.byte_size <= 0
+        or artifact.byte_size > _MAX_EVIDENCE_ARTIFACT_BYTES
+        or artifact.relative_path
+        != (f"derived/extraction/{artifact.content_sha256[:2]}/{artifact.content_sha256}.json")
+        for artifact in slots.values()
+    ):
+        raise EngineError(
+            "artifact_conflict",
+            "Extraction candidate artifacts are incomplete or conflicting",
+            retryable=False,
+        )
+
+    provider_bytes, raw_bytes, normalized_bytes = await asyncio.gather(
+        _read_artifact_bytes(settings, slots[("provider_response", None)]),
+        _read_artifact_bytes(settings, slots[("raw_ccef", None)]),
+        _read_artifact_bytes(settings, slots[("normalized_ccef", None)]),
+    )
+    package_type: type[ExtractionPackage] | type[ExtractionPackageV1_1]
+    expected_adapter_version: str
+    if source.pipeline_version == PDF_EXTRACTION_PIPELINE_VERSION:
+        package_type = ExtractionPackage
+        expected_adapter_version = "1.0"
+    else:
+        package_type = ExtractionPackageV1_1
+        expected_adapter_version = "1.1"
+    try:
+        raw_package = package_type.model_validate_json(raw_bytes)
+        normalized_package = package_type.model_validate_json(normalized_bytes)
+        provider_document = json.loads(provider_bytes)
+    except (ValidationError, ValueError, TypeError, UnicodeDecodeError, json.JSONDecodeError):
+        raise EngineError(
+            "artifact_conflict",
+            "Extraction candidate artifacts are incomplete or conflicting",
+            retryable=False,
+        ) from None
+    if not isinstance(provider_document, dict):
+        raise EngineError(
+            "artifact_conflict",
+            "Extraction candidate artifacts are incomplete or conflicting",
+            retryable=False,
+        )
+    if (
+        _json_bytes(cast(dict[str, object], provider_document)) != provider_bytes
+        or _json_bytes(cast(dict[str, object], raw_package.model_dump(mode="json"))) != raw_bytes
+        or _json_bytes(cast(dict[str, object], normalized_package.model_dump(mode="json")))
+        != normalized_bytes
+    ):
+        raise EngineError(
+            "artifact_conflict",
+            "Extraction candidate artifacts are incomplete or conflicting",
+            retryable=False,
+        )
+
+    expected_source_ref = f"source-file:{source.source_file_id}"
+    for package in (raw_package, normalized_package):
+        page_range = package.source.page_range
+        if (
+            package.package_id != source.run_id
+            or package.source.source_ref != expected_source_ref
+            or package.source.media_type != "application/pdf"
+            or page_range is None
+            or page_range.start_page != source.first_page
+            or page_range.end_page != source.last_page
+            or package.provenance.created_at != source.created_at
+            or package.provenance.adapter_name != "chess-workbench-ccef-prompt"
+            or package.provenance.adapter_version != expected_adapter_version
+            or package.provenance.provider is None
+            or package.provenance.model is None
+            or package.provenance.request_sha256 is None
+            or package.provenance.response_sha256 is None
+            or package.extensions != {}
+        ):
+            raise EngineError(
+                "artifact_conflict",
+                "Extraction candidate artifacts are incomplete or conflicting",
+                retryable=False,
+            )
+    if raw_package.provenance != normalized_package.provenance:
+        raise EngineError(
+            "artifact_conflict",
+            "Extraction candidate artifacts are incomplete or conflicting",
+            retryable=False,
+        )
+    request_sha256 = normalized_package.provenance.request_sha256
+    response_sha256 = normalized_package.provenance.response_sha256
+    provider_schema = provider_document.get("artifact_schema")
+    provider_identity: object = provider_document
+    if provider_schema == "chess-workbench/ccef-repair-chain/2.1":
+        provider_identity = provider_document.get("original_response")
+    if not isinstance(provider_identity, dict):
+        raise EngineError(
+            "artifact_conflict",
+            "Extraction candidate artifacts are incomplete or conflicting",
+            retryable=False,
+        )
+    expected_provider_schema = (
+        "chess-workbench/provider-response/1.0"
+        if source.pipeline_version == PDF_EXTRACTION_PIPELINE_VERSION
+        else "chess-workbench/provider-response/1.1"
+    )
+    allowed_provider_schemas = {expected_provider_schema}
+    if source.pipeline_version != PDF_EXTRACTION_PIPELINE_VERSION:
+        allowed_provider_schemas.add("chess-workbench/ccef-repair-chain/2.1")
+    content = provider_identity.get("content")
+    if (
+        provider_schema not in allowed_provider_schemas
+        or provider_document.get("request_sha256") != request_sha256
+        or provider_identity.get("provider") != normalized_package.provenance.provider
+        or provider_identity.get("model") != normalized_package.provenance.model
+        or not isinstance(content, str)
+        or hashlib.sha256(content.encode("utf-8")).hexdigest() != response_sha256
+        or (
+            provider_schema == expected_provider_schema
+            and provider_document.get("response_sha256") != response_sha256
+        )
+    ):
+        raise EngineError(
+            "artifact_conflict",
+            "Extraction candidate artifacts are incomplete or conflicting",
+            retryable=False,
+        )
+    provider_response_sha256 = slots[("provider_response", None)].content_sha256
+    raw_ccef_sha256 = slots[("raw_ccef", None)].content_sha256
+    normalized_ccef_sha256 = slots[("normalized_ccef", None)].content_sha256
+    return {
+        "result_schema": PDF_EXTRACTION_RESULT_SCHEMA,
+        "run_id": str(source.run_id),
+        "evidence": {key: value for key, value in committed.result.items() if key != "run_id"},
+        "candidate": {
+            "provider_response_sha256": provider_response_sha256,
+            "request_sha256": request_sha256,
+            "response_sha256": response_sha256,
+            "raw_ccef_sha256": raw_ccef_sha256,
+            "normalized_ccef_sha256": normalized_ccef_sha256,
+            "summary": summarize_ccef_candidate(normalized_package).model_dump(mode="json"),
+        },
+    }
+
+
 def _active_provider(
     settings: Settings,
     provider: StructuredGenerationProvider | None,
@@ -973,6 +1152,29 @@ async def process_pdf_extraction_job(
         PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION,
     }:
         is_semantic_v4 = payload["pipeline_version"] == PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION
+        committed = await _load_committed_evidence(database, settings, source)
+        if committed is not None:
+            restored = await _load_committed_candidate_result(database, settings, source, committed)
+            if restored is not None:
+                return restored
+            active_provider = _active_provider(
+                settings,
+                provider,
+                thinking_enabled=is_semantic_v4,
+                json_output_enabled=not is_semantic_v4,
+                invalid_response_recorder=(
+                    _deepseek_invalid_response_recorder(settings, source)
+                    if is_semantic_v4
+                    else None
+                ),
+            )
+            return await _process_ccef_candidate(
+                database,
+                settings,
+                source,
+                committed,
+                provider=active_provider,
+            )
         active_provider = _active_provider(
             settings,
             provider,
@@ -982,15 +1184,6 @@ async def process_pdf_extraction_job(
                 _deepseek_invalid_response_recorder(settings, source) if is_semantic_v4 else None
             ),
         )
-        committed = await _load_committed_evidence(database, settings, source)
-        if committed is not None:
-            return await _process_ccef_candidate(
-                database,
-                settings,
-                source,
-                committed,
-                provider=active_provider,
-            )
     render_profile = _render_profile(source.profile)
     language, ocr_profile = _ocr_settings(source.profile)
     active_renderer = renderer or PdfiumPageRenderer()
