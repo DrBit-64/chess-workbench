@@ -768,6 +768,17 @@ export function PdfReviewPage({ runId }: { runId: string }) {
     void applyEdit({ kind: 'exclude_item', item_id: itemId });
   }
 
+  function detachPositionAnchor(issueId: string) {
+    if (
+      !window.confirm(
+        '保留这段文字，但取消它与无法定位局面的关联吗？原始提取结果不会被修改。',
+      )
+    ) {
+      return;
+    }
+    void applyEdit({ kind: 'detach_position_anchor', issue_id: issueId });
+  }
+
   if (isLoading) {
     return (
       <div role="status" aria-busy="true" className="p-8 text-stone-600">
@@ -1170,6 +1181,7 @@ export function PdfReviewPage({ runId }: { runId: string }) {
             editable={editing && !commandBusy}
             onAcknowledge={(issueId) => acknowledgeIssues([issueId])}
             onExcludeItem={excludeItem}
+            onDetachPositionAnchor={detachPositionAnchor}
             onSelectPage={selectPage}
           />
         </section>
@@ -1558,6 +1570,7 @@ function MoveSequenceView({
               key={block.key}
               annotation={block.annotation}
               variationDepth={block.variationDepth}
+              variationPresentation={block.variationPresentation}
               onSelectAnchor={() => {
                 if (isAnnotatedMoveSequence(item)) {
                   onSelectAnnotation(item, block.annotation);
@@ -1582,11 +1595,13 @@ function MoveSequenceView({
 function SequenceAnnotationView({
   annotation,
   variationDepth,
+  variationPresentation,
   onSelectAnchor,
   onContextMenu,
 }: {
   annotation: SequenceAnnotation;
   variationDepth: number;
+  variationPresentation: 'mainline' | 'parenthetical' | 'rail';
   onSelectAnchor: () => void;
   onContextMenu: (event: ReactMouseEvent) => void;
 }) {
@@ -1604,31 +1619,45 @@ function SequenceAnnotationView({
       data-annotation-id={annotation.id}
       data-variation-depth={variationDepth}
       style={
-        variationDepth > 0
+        variationPresentation === 'rail'
           ? { paddingLeft: `${visualDepth * 14 + 8}px` }
           : undefined
       }
       onContextMenu={onContextMenu}
       className={`relative py-1 pr-2 text-sm leading-5 text-stone-700 ${
-        variationDepth > 0 ? '' : 'border-b border-stone-100 pl-9'
+        variationPresentation === 'mainline'
+          ? 'border-b border-stone-100 pl-9'
+          : variationPresentation === 'parenthetical'
+            ? 'pl-3 text-stone-500'
+            : ''
       }`}
     >
-      <BranchRails depth={visualDepth} />
-      {annotation.anchor !== null ? (
-        <div
-          role="button"
-          tabIndex={0}
-          onClick={onSelectAnchor}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter' || event.key === ' ') onSelectAnchor();
-          }}
-          className="block w-full text-left italic hover:text-stone-950"
-        >
-          {content}
-        </div>
-      ) : (
-        <div className="italic">{content}</div>
-      )}
+      {variationPresentation === 'rail' ? (
+        <BranchRails depth={visualDepth} />
+      ) : null}
+      <div className="flex items-baseline gap-1">
+        {variationPresentation === 'parenthetical' ? (
+          <span aria-hidden="true">(</span>
+        ) : null}
+        {annotation.anchor !== null ? (
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={onSelectAnchor}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') onSelectAnchor();
+            }}
+            className="block min-w-0 flex-1 text-left italic hover:text-stone-950"
+          >
+            {content}
+          </div>
+        ) : (
+          <div className="min-w-0 flex-1 italic">{content}</div>
+        )}
+        {variationPresentation === 'parenthetical' ? (
+          <span aria-hidden="true">)</span>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -1732,15 +1761,22 @@ function VariationLine({
   onExtendMoveSelection: (sequence: MoveSequenceItem, node: MoveNode) => void;
 }) {
   const visualDepth = Math.min(5, block.variationDepth);
+  const parenthetical = block.presentation === 'parenthetical';
   return (
     <div
       data-variation-depth={block.variationDepth}
       data-variation-path={block.variationPath.join('/')}
-      style={{ paddingLeft: `${visualDepth * 14 + 8}px` }}
-      className="relative py-1 pr-2 text-sm leading-6"
+      data-variation-presentation={block.presentation}
+      style={
+        parenthetical ? undefined : { paddingLeft: `${visualDepth * 14 + 8}px` }
+      }
+      className={`relative py-1 pr-2 text-sm leading-6 ${
+        parenthetical ? 'pl-3 italic text-stone-500' : ''
+      }`}
     >
-      <BranchRails depth={visualDepth} />
+      {!parenthetical ? <BranchRails depth={visualDepth} /> : null}
       <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0">
+        {parenthetical ? <span aria-hidden="true">(</span> : null}
         {block.rows.map((row) => (
           <span key={row.key} className="inline-flex items-baseline gap-1">
             {row.moveNumber !== null ? (
@@ -1789,6 +1825,7 @@ function VariationLine({
             )}
           </span>
         ))}
+        {parenthetical ? <span aria-hidden="true">)</span> : null}
       </div>
     </div>
   );
@@ -2074,6 +2111,7 @@ function IssuesView({
   editable,
   onAcknowledge,
   onExcludeItem,
+  onDetachPositionAnchor,
   onSelectPage,
 }: {
   document: PdfReviewDocument;
@@ -2081,6 +2119,7 @@ function IssuesView({
   editable: boolean;
   onAcknowledge: (issueId: string) => void;
   onExcludeItem: (itemId: string) => void;
+  onDetachPositionAnchor: (issueId: string) => void;
   onSelectPage: (page: number) => void;
 }) {
   const { inspection } = document;
@@ -2102,52 +2141,67 @@ function IssuesView({
         </p>
       ) : (
         <ol className="space-y-2">
-          {inspection.issues.map((issue) => (
-            <li
-              key={issue.issue_id}
-              className="rounded border border-stone-200 bg-white p-3"
-            >
-              <div className="flex flex-wrap items-center gap-2">
-                <Tag color={issue.severity === 'error' ? 'red' : 'orange'}>
-                  {issue.severity === 'error' ? '错误' : '警告'}
-                </Tag>
-                <Tag>{issue.blocking ? '阻断' : '非阻断'}</Tag>
-                <Tag>{issue.scope}</Tag>
-                <code className="font-mono text-xs text-stone-600">
-                  {issue.code}
-                </code>
-              </div>
-              <p className="mt-1 text-stone-800">{issue.message}</p>
-              <EvidencePages
-                evidence={issue.evidence}
-                onSelectPage={onSelectPage}
-              />
-              {!issue.blocking ? (
-                acknowledgedIssueIds.has(issue.issue_id) ? (
-                  <Tag color="green">已确认</Tag>
-                ) : editable ? (
+          {inspection.issues.map((issue) => {
+            const canDetachPositionAnchor =
+              issue.blocking &&
+              (issue.scope === 'item' || issue.scope === 'annotation') &&
+              (issue.code === 'position_anchor_no_match' ||
+                issue.code === 'position_anchor_ambiguous');
+            return (
+              <li
+                key={issue.issue_id}
+                className="rounded border border-stone-200 bg-white p-3"
+              >
+                <div className="flex flex-wrap items-center gap-2">
+                  <Tag color={issue.severity === 'error' ? 'red' : 'orange'}>
+                    {issue.severity === 'error' ? '错误' : '警告'}
+                  </Tag>
+                  <Tag>{issue.blocking ? '阻断' : '非阻断'}</Tag>
+                  <Tag>{issue.scope}</Tag>
+                  <code className="font-mono text-xs text-stone-600">
+                    {issue.code}
+                  </code>
+                </div>
+                <p className="mt-1 text-stone-800">{issue.message}</p>
+                <EvidencePages
+                  evidence={issue.evidence}
+                  onSelectPage={onSelectPage}
+                />
+                {!issue.blocking ? (
+                  acknowledgedIssueIds.has(issue.issue_id) ? (
+                    <Tag color="green">已确认</Tag>
+                  ) : editable ? (
+                    <button
+                      type="button"
+                      onClick={() => onAcknowledge(issue.issue_id)}
+                      className="ml-2 rounded border border-stone-300 bg-white px-2 py-0.5 text-xs"
+                    >
+                      确认此警告
+                    </button>
+                  ) : null
+                ) : editable && canDetachPositionAnchor ? (
                   <button
                     type="button"
-                    onClick={() => onAcknowledge(issue.issue_id)}
-                    className="ml-2 rounded border border-stone-300 bg-white px-2 py-0.5 text-xs"
+                    onClick={() => onDetachPositionAnchor(issue.issue_id)}
+                    className="ml-2 rounded border border-amber-400 bg-white px-2 py-0.5 text-xs text-amber-800"
                   >
-                    确认此警告
+                    保留文字并取消局面关联
                   </button>
-                ) : null
-              ) : editable &&
-                issue.item_id !== null &&
-                issue.node_id === null &&
-                excludableItemIds.has(issue.item_id) ? (
-                <button
-                  type="button"
-                  onClick={() => onExcludeItem(issue.item_id!)}
-                  className="ml-2 rounded border border-red-300 bg-white px-2 py-0.5 text-xs text-red-700"
-                >
-                  排除此内容
-                </button>
-              ) : null}
-            </li>
-          ))}
+                ) : editable &&
+                  issue.item_id !== null &&
+                  issue.node_id === null &&
+                  excludableItemIds.has(issue.item_id) ? (
+                  <button
+                    type="button"
+                    onClick={() => onExcludeItem(issue.item_id!)}
+                    className="ml-2 rounded border border-red-300 bg-white px-2 py-0.5 text-xs text-red-700"
+                  >
+                    排除此内容
+                  </button>
+                ) : null}
+              </li>
+            );
+          })}
         </ol>
       )}
     </section>

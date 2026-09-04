@@ -159,6 +159,15 @@ body {
   background: #f7f7f5;
 }
 
+.course-engine-bulk {
+  display: flex;
+  min-height: 3.25rem;
+  align-items: center;
+  gap: 0.75rem;
+  border-top: 1px solid #e7e5e4;
+  padding: 0.45rem 0.65rem;
+}
+
 .course-engine-loading,
 .course-engine-empty {
   display: flex;

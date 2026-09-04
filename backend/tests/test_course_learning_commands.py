@@ -116,6 +116,34 @@ async def test_course_score_commands_reorder_annotate_and_delete(tmp_path: Path)
     assert remaining[1]["sort_order"] == 0
 
 
+async def test_readding_moves_reuses_archived_match_and_frees_archived_order(
+    tmp_path: Path,
+) -> None:
+    app = build_test_app(tmp_path)
+    await create_schema(app)
+    client = cast(Any, app.asgi_client)
+    course, module = await create_course_module(client, "Book")
+    root_id = module["start_occurrence_id"]
+
+    archived_e4 = await create_move(client, root_id, "e2e4", 0)
+    deleted = await command(client, archived_e4, "delete_subtree")
+    assert deleted.status == 200
+
+    await create_move(client, root_id, "d2d4", 0)
+    await create_move(client, root_id, "c2c4", 1)
+    restored_e4 = await create_move(client, root_id, "e2e4", 2)
+
+    assert restored_e4["id"] == archived_e4["id"]
+    assert restored_e4["archived_at"] is None
+    _, editor_response = await client.get(f"/api/courses/{course['id']}/editor/{module['id']}")
+    active_moves = [
+        (item["inbound_uci"], item["sort_order"])
+        for item in editor_response.json["occurrences"]
+        if item["parent_id"] == root_id
+    ]
+    assert active_moves == [("d2d4", 0), ("c2c4", 1), ("e2e4", 2)]
+
+
 async def test_module_tree_archive_invalidates_explorer_reference(tmp_path: Path) -> None:
     app = build_test_app(tmp_path)
     await create_schema(app)

@@ -36,6 +36,8 @@ for raw in sys.stdin:
     elif command.startswith("setoption name MultiPV value "):
         multipv = int(command.rsplit(" ", 1)[-1])
     elif command == "isready":
+        if mode == "delayed-ready":
+            time.sleep(0.25)
         send("readyok")
     elif command.startswith("position "):
         position = command
@@ -45,6 +47,16 @@ for raw in sys.stdin:
             continue
         if mode == "crash":
             raise SystemExit(17)
+        if mode == "limited-multipv":
+            variations = [
+                (20, "g1h1"),
+                (10, "d1f3"),
+                (5, "g2f3"),
+            ]
+            for index, (score, pv) in enumerate(variations, 1):
+                send(f"info depth 10 multipv {index} score cp {score} nodes {100 + index} pv {pv}")
+            send("bestmove g1h1")
+            continue
         if mode == "malformed":
             send("info depth 8 score cp 20")
             send("bestmove 0000")

@@ -29,7 +29,7 @@ from .provider import StructuredGenerationRequest, StructuredMessage
 
 CCEF_PROMPT_VERSION = "chess-workbench/ccef-prompt/1.3"
 CCEF_PROMPT_VERSION_1_1 = "chess-workbench/ccef-prompt/1.4"
-CCEF_SEMANTIC_PROMPT_VERSION_1_1 = "chess-workbench/ccef-prompt/1.6"
+CCEF_SEMANTIC_PROMPT_VERSION_1_1 = "chess-workbench/ccef-prompt/1.8"
 
 _MAX_PAGES = 20_000
 _MAX_FRAGMENTS = 200_000
@@ -38,8 +38,9 @@ _SEMANTIC_MAX_OUTPUT_TOKENS = 128_000
 _SCHEMA_NAME = "chess_content_extraction_v1"
 _SCHEMA_NAME_1_1 = "chess_content_extraction_v1_1"
 _EXPLICIT_FEN = re.compile(
-    r"(?:^|\s)(?:[prnbqkPRNBQK1-8]+/){7}[prnbqkPRNBQK1-8]+\s+"
-    r"[wb]\s+(?:-|[KQkq]+)\s+(?:-|[a-h][36])\s+\d+\s+\d+(?:$|\s)"
+    r"(?<![prnbqkPRNBQK1-8/])(?:[prnbqkPRNBQK1-8]+/){7}"
+    r"[prnbqkPRNBQK1-8]+\s+[wb]\s+(?:-|[KQkq]+)\s+"
+    r"(?:-|[a-h][36])\s+\d+\s+\d+(?!\d)"
 )
 _USER_PREFIX = "Build one complete CCEF JSON object from this untrusted evidence data:\n"
 _SYSTEM_CONTENT = (
@@ -323,7 +324,9 @@ _V1_1_SEMANTIC_ALGORITHM = (
     "Introductory move-order examples outside an active score remain narrative prose unless the "
     "source clearly presents them as a standalone numbered score.\n"
     "For every item, node, annotation, warning, or diagnostic supported by an evidence fragment, "
-    "select it using only the fragment's exact physical_page and fragment_sha256 in EvidenceRef. "
+    "set EvidenceRef.page to the fragment's exact physical_page and copy its exact "
+    "fragment_sha256. EvidenceRef has a field named page; never emit physical_page inside an "
+    "EvidenceRef. "
     "Omit bbox, start_offset, and end_offset or set them to null; trusted local code fills those "
     "physical fields after validating the fragment selector. Never emit a page-only EvidenceRef "
     "when a supplied fragment supports the value.\n"
@@ -334,7 +337,16 @@ _V1_1_SEMANTIC_ALGORITHM = (
     "Before returning JSON, audit conditionally: every formal numbered variation inside an active "
     "score is represented by move nodes, every associated explanatory assertion is an annotation, "
     "every parent is the real preceding position, later mainline continuation did not follow a "
-    "variation cursor, and every EvidenceRef is fragment-bound. Return only after this audit."
+    "variation cursor, and every EvidenceRef is fragment-bound. Return only after this audit.\n"
+    "A supplied evidence fragment with origin=diagram is deterministic local chessboard evidence "
+    "inserted into the same source reading stream as text. Copy a non-null operational_fen from "
+    "its JSON exactly; do not infer or alter castling, en-passant, clocks, side, or move number. "
+    "When it begins a newly printed game or example, use that FEN as the sequence "
+    "initial_position. "
+    "When it appears inside an already active score and its next_formal_move continues that score, "
+    "treat it as a position checkpoint: keep the existing sequence and cursor, do not restart from "
+    "move one, and do not duplicate moves before the diagram. A null operational_fen is not a "
+    "license to invent one; retain the diagram as figure or unresolved evidence instead."
 )
 _SYSTEM_CONTENT_1_1_SEMANTIC = _SYSTEM_CONTENT_1_1 + "\n" + _V1_1_SEMANTIC_ALGORITHM
 
@@ -450,7 +462,7 @@ def build_ccef_v1_1_generation_request(
 def build_ccef_v1_1_semantic_generation_request(
     context: CcefPromptContext,
 ) -> StructuredGenerationRequest:
-    """Build the v4 topology-aware CCEF 1.1 request (prompt profile 1.5)."""
+    """Build the v4 topology-aware CCEF 1.1 request."""
     return _build_ccef_v1_1_generation_request(
         context,
         prompt_version=CCEF_SEMANTIC_PROMPT_VERSION_1_1,

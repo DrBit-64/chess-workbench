@@ -228,6 +228,44 @@ describe('Stage 4A workbench pages', () => {
     expect(await screen.findByText('没有匹配的课程')).toBeTruthy();
   });
 
+  it('renames and archives a course from the catalog card', async () => {
+    let currentCourse = { ...course, archived_at: null as string | null };
+    const requests: Record<string, unknown>[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        if (url.startsWith('/api/courses?')) return json([currentCourse]);
+        if (url === '/api/courses/course-1' && init?.method === 'PATCH') {
+          const body = JSON.parse(String(init.body)) as Record<string, unknown>;
+          requests.push(body);
+          currentCourse = {
+            ...currentCourse,
+            ...(typeof body.title === 'string' ? { title: body.title } : {}),
+            version: currentCourse.version + 1,
+          };
+          return json(currentCourse);
+        }
+        throw new Error(`Unexpected request: ${url}`);
+      }),
+    );
+    vi.spyOn(window, 'prompt').mockReturnValue('更新后的课程');
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    renderPage(<CourseCatalog />);
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: '西西里防御 设置' }),
+    );
+    fireEvent.click(await screen.findByText('重命名课程'));
+    expect(await screen.findByText('更新后的课程')).toBeTruthy();
+    expect(requests[0]).toEqual({ expected_version: 1, title: '更新后的课程' });
+
+    fireEvent.click(screen.getByRole('button', { name: '更新后的课程 设置' }));
+    fireEvent.click(await screen.findByText('删除课程'));
+    expect(await screen.findByText('没有匹配的课程')).toBeTruthy();
+    expect(requests[1]).toEqual({ expected_version: 2, archived: true });
+  });
+
   it('queries and creates manual sources', async () => {
     const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);

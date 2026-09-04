@@ -28,10 +28,19 @@ import {
 import { Chessboard } from 'react-chessboard';
 import ReactMarkdown from 'react-markdown';
 import rehypeSanitize from 'rehype-sanitize';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
+import {
+  Link,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from 'react-router-dom';
 import useSWR from 'swr';
 
 import { fetchJson, requestJson } from '../logic/api/client';
+import type {
+  AnalysisCacheLookup,
+  EngineParameters,
+} from '../logic/api/engineTypes';
 import type {
   Course,
   CitableSource,
@@ -47,7 +56,11 @@ import {
   FAST_MOVE_ANIMATION_MS,
   lichessSquareStyles,
 } from './boardInteraction';
-import { CourseEnginePanel, type CourseEngineArrow } from './CourseEnginePanel';
+import {
+  CourseEnginePanel,
+  type CourseEngineArrow,
+  type CourseSectionAnalysisProgress,
+} from './CourseEnginePanel';
 import {
   CourseScore,
   CourseScoreControls,
@@ -59,6 +72,7 @@ const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
 export function CourseEditor() {
   const { courseId = '' } = useParams();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const {
     data: course,
@@ -78,6 +92,9 @@ export function CourseEditor() {
   );
   const [selectedSquare, setSelectedSquare] = useState<string>();
   const [engineArrows, setEngineArrows] = useState<CourseEngineArrow[]>([]);
+  const [sectionAnalysisProgress, setSectionAnalysisProgress] =
+    useState<CourseSectionAnalysisProgress>();
+  const sectionAnalysisController = useRef<AbortController>();
   const [moduleModal, setModuleModal] = useState(false);
   const [publishModal, setPublishModal] = useState(false);
   const [publishTarget, setPublishTarget] = useState<string>();
@@ -276,6 +293,121 @@ export function CourseEditor() {
       return [{ ...occurrence, parent_id: parentId }];
     });
   }, [byId, course?.mode, editor]);
+  const sectionAnalysisFens = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          (editor?.occurrences ?? [])
+            .filter((occurrence) => occurrence.module_id === moduleId)
+            .map((occurrence) => occurrence.full_fen),
+        ),
+      ),
+    [editor, moduleId],
+  );
+
+  useEffect(
+    () => () => {
+      sectionAnalysisController.current?.abort();
+    },
+    [],
+  );
+
+  async function analyzeCurrentSection(
+    parameters: EngineParameters,
+    fens: string[],
+  ) {
+    if (!moduleId || !fens.length || sectionAnalysisProgress?.running) return;
+    const sectionId = moduleId;
+    const sectionTitle =
+      modules.find((item) => item.id === sectionId)?.title ?? '当前小节';
+    const controller = new AbortController();
+    sectionAnalysisController.current?.abort();
+    sectionAnalysisController.current = controller;
+    setSectionAnalysisProgress({
+      sectionId,
+      sectionTitle,
+      completed: 0,
+      failed: 0,
+      total: fens.length,
+      running: true,
+      checking: true,
+      cached: 0,
+      lookupFailed: false,
+    });
+
+    let missingFens: string[];
+    try {
+      const lookup = await requestJson<AnalysisCacheLookup>(
+        '/api/engine/analyses/cache-lookup',
+        {
+          method: 'POST',
+          signal: controller.signal,
+          body: JSON.stringify({ fens, parameters }),
+        },
+      );
+      missingFens = lookup.missing_fens;
+      setSectionAnalysisProgress({
+        sectionId,
+        sectionTitle,
+        completed: 0,
+        failed: 0,
+        total: missingFens.length,
+        running: missingFens.length > 0,
+        checking: false,
+        cached: lookup.cached_fens.length,
+        lookupFailed: false,
+      });
+    } catch {
+      if (controller.signal.aborted) return;
+      setSectionAnalysisProgress({
+        sectionId,
+        sectionTitle,
+        completed: 0,
+        failed: 0,
+        total: 0,
+        running: false,
+        checking: false,
+        cached: 0,
+        lookupFailed: true,
+      });
+      sectionAnalysisController.current = undefined;
+      return;
+    }
+    if (!missingFens.length) {
+      sectionAnalysisController.current = undefined;
+      return;
+    }
+
+    let completed = 0;
+    let failed = 0;
+    for (const position of missingFens) {
+      if (controller.signal.aborted) return;
+      try {
+        await requestJson('/api/engine/analyses', {
+          method: 'POST',
+          signal: controller.signal,
+          body: JSON.stringify({ fen: position, parameters }),
+        });
+      } catch {
+        if (controller.signal.aborted) return;
+        failed += 1;
+      }
+      completed += 1;
+      setSectionAnalysisProgress({
+        sectionId,
+        sectionTitle,
+        completed,
+        failed,
+        total: missingFens.length,
+        running: completed < missingFens.length,
+        checking: false,
+        cached: fens.length - missingFens.length,
+        lookupFailed: false,
+      });
+    }
+    sectionAnalysisController.current = undefined;
+  }
+
   const explorerEntries = useMemo(() => {
     const entries: Array<{ module: CourseModule; occurrence: Occurrence }> = [];
     const seenPositions = new Set<string>();
@@ -524,10 +656,24 @@ export function CourseEditor() {
       }),
     })
       .then(async (created) => {
+        let createdIsVisible = false;
         if (course?.mode === 'opening_explorer') {
-          await mutateExplorerEditors();
+          const refreshed = await mutateExplorerEditors();
+          createdIsVisible =
+            refreshed?.some((item) =>
+              item.occurrences.some(
+                (occurrence) => occurrence.id === created.id,
+              ),
+            ) ?? false;
         } else {
-          await mutateModuleEditor();
+          const refreshed = await mutateModuleEditor();
+          createdIsVisible =
+            refreshed?.occurrences.some(
+              (occurrence) => occurrence.id === created.id,
+            ) ?? false;
+        }
+        if (!createdIsVisible) {
+          throw new Error('保存后的棋步没有出现在当前小节中，请刷新页面后重试');
         }
         setOccurrenceId(created.id);
         setPendingFen(undefined);
@@ -660,6 +806,49 @@ export function CourseEditor() {
       await Promise.all([mutateModules(), mutateModuleEditor()]);
     } catch (error: unknown) {
       void message.error(error instanceof Error ? error.message : '重命名失败');
+    }
+  }
+
+  async function renameCourse() {
+    if (!course) return;
+    const title = window.prompt('重命名课程', course.title)?.trim();
+    if (!title || title === course.title) return;
+    try {
+      const updated = await requestJson<Course>(`/api/courses/${course.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ expected_version: course.version, title }),
+      });
+      await mutateCourse(updated, { revalidate: false });
+    } catch (error: unknown) {
+      void message.error(
+        error instanceof Error ? error.message : '重命名课程失败',
+      );
+    }
+  }
+
+  async function deleteCourse() {
+    if (
+      !course ||
+      !window.confirm(
+        `确定删除课程“${course.title}”吗？课程内容会被归档，不会删除共享局面数据。`,
+      )
+    ) {
+      return;
+    }
+    try {
+      await requestJson<Course>(`/api/courses/${course.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          expected_version: course.version,
+          archived: true,
+        }),
+      });
+      void message.success('课程已删除');
+      navigate('/learn', { replace: true });
+    } catch (error: unknown) {
+      void message.error(
+        error instanceof Error ? error.message : '删除课程失败',
+      );
     }
   }
 
@@ -877,6 +1066,27 @@ export function CourseEditor() {
           <Typography.Title className="m-0!" level={3}>
             {course.title}
           </Typography.Title>
+          <Dropdown
+            trigger={['click']}
+            menu={{
+              items: [
+                { key: 'rename', label: '重命名课程' },
+                { key: 'delete', label: '删除课程', danger: true },
+              ],
+              onClick: ({ key }) => {
+                if (key === 'rename') void renameCourse();
+                else void deleteCourse();
+              },
+            }}
+          >
+            <Button
+              type="text"
+              aria-label={`${course.title} 设置`}
+              title="课程设置"
+            >
+              ⚙
+            </Button>
+          </Dropdown>
           <Tag color={course.mode === 'traditional' ? 'blue' : 'purple'}>
             {course.mode === 'traditional' ? '传统课程' : '开局探索器'}
           </Tag>
@@ -1053,6 +1263,9 @@ export function CourseEditor() {
               <div className="mx-auto mt-3 max-w-[500px]">
                 <CourseEnginePanel
                   fen={pendingFen ?? current.full_fen}
+                  sectionFens={sectionAnalysisFens}
+                  sectionProgress={sectionAnalysisProgress}
+                  onAnalyzeSection={analyzeCurrentSection}
                   onArrowsChange={setEngineArrows}
                 />
               </div>

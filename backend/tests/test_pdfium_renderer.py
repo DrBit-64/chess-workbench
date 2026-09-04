@@ -9,17 +9,16 @@ from typing import Any, cast
 
 import pypdfium2
 import pytest
-from PIL import Image
-from pydantic import ValidationError
-from pypdf import PdfWriter
-from pypdf.generic import DecodedStreamObject, DictionaryObject, NameObject
-
 from chess_workbench.extraction.evidence import (
     PdfEvidenceError,
     PdfPageRenderer,
     RenderProfile,
 )
 from chess_workbench.extraction.pdfium import PdfiumPageRenderer
+from PIL import Image
+from pydantic import ValidationError
+from pypdf import PdfWriter
+from pypdf.generic import DecodedStreamObject, DictionaryObject, NameObject
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
@@ -212,5 +211,5 @@ def test_module_imports_are_within_the_frozen_boundary() -> None:
                 relative_modules.add(node.module or "")
             elif node.module:
                 roots.add(node.module.split(".", 1)[0])
-    assert roots <= {"__future__", "io", "math", "typing", "pypdfium2"}
+    assert roots <= {"__future__", "hashlib", "io", "math", "typing", "pypdfium2"}
     assert relative_modules == {"evidence"}

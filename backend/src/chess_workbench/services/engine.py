@@ -21,6 +21,8 @@ from chess_workbench.schemas.domain import (
     CourseModuleCreate,
 )
 from chess_workbench.schemas.engine import (
+    AnalysisCacheLookupRead,
+    AnalysisCacheLookupRequest,
     AnalysisLine,
     AnalysisRead,
     AnalysisRequest,
@@ -103,7 +105,7 @@ class EngineService:
         identity: EngineIdentity | None = None
         if self.settings.stockfish_path.is_file():
             with suppress(EngineError):
-                identity = await self.uci.probe()
+                identity = await self.uci.probe_cached()
         return EngineCapabilities(
             available=identity is not None,
             engine_path=str(self.settings.stockfish_path),
@@ -126,7 +128,7 @@ class EngineService:
         if tablebase.available and tablebase.wdl is not None:
             return await self._tablebase_analysis(request, tablebase)
 
-        identity = await self.uci.probe()
+        identity = await self.uci.probe_cached()
         key = analysis_cache_key(
             request.fen,
             source="engine",
@@ -149,6 +151,43 @@ class EngineService:
                 parameters=request.parameters,
             )
         return await self._persist_result(request, key, result)
+
+    async def lookup_cached_fens(
+        self,
+        request: AnalysisCacheLookupRequest,
+    ) -> AnalysisCacheLookupRead:
+        rows = list(
+            await self.session.scalars(
+                select(EngineAnalysis).where(EngineAnalysis.fen.in_(request.fens))
+            )
+        )
+        identity: EngineIdentity | None = None
+        if self.settings.stockfish_path.is_file():
+            with suppress(EngineError):
+                identity = await self.uci.probe_cached()
+        parameters = request.parameters.model_dump(mode="json")
+        cached = {
+            row.fen
+            for row in rows
+            if row.parameters == parameters
+            and (
+                (
+                    row.source == "tablebase"
+                    and row.engine_name == "Syzygy"
+                    and row.engine_version == "v1"
+                )
+                or (
+                    identity is not None
+                    and row.source == "engine"
+                    and row.engine_name == identity.name
+                    and row.engine_version == identity.version
+                )
+            )
+        }
+        return AnalysisCacheLookupRead(
+            cached_fens=[fen for fen in request.fens if fen in cached],
+            missing_fens=[fen for fen in request.fens if fen not in cached],
+        )
 
     async def get_analysis(self, analysis_id: UUID) -> AnalysisRead:
         row = await self.session.get(EngineAnalysis, analysis_id)
@@ -250,7 +289,7 @@ class EngineService:
         return _analysis_read(row, from_cache=False)
 
     async def create_game(self, data: EngineGameCreate) -> EngineGameRead:
-        identity = await self.uci.probe()
+        identity = await self.uci.probe_cached()
         board = chess.Board(data.fen)
         row = EngineGame(
             initial_fen=board.fen(en_passant="fen"),
@@ -673,7 +712,7 @@ async def process_analysis_job(
         max_hash_mb=settings.engine_max_hash_mb,
         max_time_ms=settings.engine_max_time_ms,
     )
-    identity = await sf_engine.probe()
+    identity = await sf_engine.probe_cached()
 
     # Check engine cache (short transaction).
     sf_key = analysis_cache_key(

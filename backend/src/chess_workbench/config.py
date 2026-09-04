@@ -83,6 +83,10 @@ class Settings(BaseSettings):
     source_storage_root: Path = Field(default=DEFAULT_SOURCE_STORAGE_ROOT, strict=False)
     pdf_max_bytes: int = Field(default=DEFAULT_PDF_MAX_BYTES, ge=1, le=2_147_483_647, strict=False)
     paddle_ocr_runner_path: Path | None = Field(default=None, strict=False)
+    chess_diagram_model_path: Path = Field(
+        default=PROJECT_ROOT / "data" / "models" / "chess-diagram" / "chess-tiles-v2.onnx",
+        strict=False,
+    )
     stockfish_path: Path = Field(
         default=PROJECT_ROOT / "data" / "engines" / "stockfish-18" / "stockfish",
         strict=False,

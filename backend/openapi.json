@@ -7090,6 +7090,129 @@
         ]
       }
     },
+    "/api/engine/analyses/cache-lookup": {
+      "post": {
+        "operationId": "lookupEngineAnalysisCache",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "fens": {
+                    "items": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "maxItems": 10000,
+                    "minItems": 1,
+                    "title": "Fens",
+                    "type": "array"
+                  },
+                  "parameters": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "depth": {
+                        "default": null,
+                        "maximum": 50,
+                        "minimum": 1,
+                        "nullable": true,
+                        "title": "Depth",
+                        "type": "integer"
+                      },
+                      "hash_mb": {
+                        "default": 128,
+                        "maximum": 4096,
+                        "minimum": 16,
+                        "title": "Hash Mb",
+                        "type": "integer"
+                      },
+                      "movetime_ms": {
+                        "default": 800,
+                        "maximum": 30000,
+                        "minimum": 100,
+                        "title": "Movetime Ms",
+                        "type": "integer"
+                      },
+                      "multipv": {
+                        "default": 4,
+                        "maximum": 5,
+                        "minimum": 1,
+                        "title": "Multipv",
+                        "type": "integer"
+                      },
+                      "ponder": {
+                        "default": false,
+                        "enum": [
+                          false
+                        ],
+                        "title": "Ponder",
+                        "type": "boolean"
+                      },
+                      "threads": {
+                        "default": 1,
+                        "maximum": 32,
+                        "minimum": 1,
+                        "title": "Threads",
+                        "type": "integer"
+                      }
+                    },
+                    "title": "EngineParameters",
+                    "type": "object"
+                  }
+                },
+                "required": [
+                  "fens"
+                ],
+                "title": "AnalysisCacheLookupRequest",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "cached_fens": {
+                      "items": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "title": "Cached Fens",
+                      "type": "array"
+                    },
+                    "missing_fens": {
+                      "items": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "title": "Missing Fens",
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "cached_fens",
+                    "missing_fens"
+                  ],
+                  "title": "AnalysisCacheLookupRead",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Persisted analysis cache coverage"
+          }
+        },
+        "summary": "Lookup Analysis Cache",
+        "tags": [
+          "engine"
+        ]
+      }
+    },
     "/api/engine/analyses/{analysis_id}": {
       "get": {
         "operationId": "getEngineAnalysis",
@@ -23115,6 +23238,29 @@
                                   "item_id"
                                 ],
                                 "title": "PdfReviewExcludeItem",
+                                "type": "object"
+                              },
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "issue_id": {
+                                    "pattern": "^[A-Za-z][A-Za-z0-9._:-]{0,511}$",
+                                    "title": "Issue Id",
+                                    "type": "string"
+                                  },
+                                  "kind": {
+                                    "enum": [
+                                      "detach_position_anchor"
+                                    ],
+                                    "title": "Kind",
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "issue_id"
+                                ],
+                                "title": "PdfReviewDetachPositionAnchor",
                                 "type": "object"
                               }
                             ],

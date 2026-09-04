@@ -6759,3 +6759,265 @@ task gate. No provider call, live task cancellation, runtime database mutation o
   TypeScript checks passed. `git diff --check` is clean. No backend change,
   schema generation, full suite, runtime database write, service restart or
   commit was performed.
+
+## 2026-08-30 — Shared local chess-diagram evidence
+
+- ADR 0020 makes diagram recognition an optional local evidence adapter inside the existing PDF
+  pipeline. PDFium exposes bounded embedded-image candidates; a replaceable ONNX recognizer uses
+  generic grid/border geometry plus 64-square classification; a local resolver accepts an
+  operational FEN only when a nearby numbered SAN move uniquely validates side-to-move and move
+  number through python-chess. No book title, page, move, position or expected-count special case
+  exists in production code.
+- Recognized diagrams become ordinary `origin=diagram` `SourceEvidenceFragment` values inserted by
+  page position into the same text/OCR stream. Standalone and incremental extraction therefore
+  retain one button/HTTP boundary, artifact kinds, CAS ownership, prompt/provider call, CCEF
+  normalization, repair, review and publication path. Missing models, no detections and local
+  recognition errors leave ordinary text extraction available. Invalid/oversized embedded image
+  objects are skipped rather than failing an otherwise renderable page.
+- Prompt 1.8 copies only a non-null locally supplied FEN, distinguishes a new score start from an
+  in-score diagram checkpoint, and forbids inventing a position from an unresolved diagram. The
+  semantic extraction fingerprint is v14, so new behavior cannot overwrite old immutable runs.
+- The local model installer pins the MIT fenshot 0.1.4 ONNX model by SHA-256. The installed model at
+  `data/models/chess-diagram/chess-tiles-v2.onnx` matched
+  `883f6a8e639e6d6b6399b3fda0508ad772e3c6f9cefa2e678a13f27b9fa6248d`. ONNX Runtime telemetry is
+  disabled before import by default, preventing the observed `:memory:.ses` repository artifact.
+- Real local, provider-free probe of *Endgame Strategy* physical pages 19--22 found exactly one
+  diagram on each page and resolved all four without ambiguity: page 19 move 36 white, page 20 move
+  37 white, page 21 move 53 white, page 22 move 55 black. All four piece placements and exact FENs
+  were produced by the generic pipeline; unresolved count was zero.
+- Focused verification only: diagram/PDFium/prompt/config selection **90 passed**, the added
+  ordinary-page preservation regression **2 passed**, focused Ruff and strict MyPy passed, and
+  `git diff --check` is clean. No full suite, database migration/write, service start, commit or
+  provider call was performed.
+- The operator then requested the real extraction through the browser. Run
+  `f6edec0b-2c86-5a39-a812-4eb6aa086fe1` reached DeepSeek and preserved a 94,816-byte CCEF 1.1 JSON
+  response, but strict validation rejected all 167 evidence references: the response used
+  `physical_page` where `EvidenceRef.page` is required. The cause was an internal prompt/schema
+  contradiction: prompt 1.7 explicitly asked the model to select `physical_page` although the
+  supplied schema names the field `page`; diagram recognition and extracted chess content were not
+  the failure.
+- Prompt 1.8 now says `EvidenceRef.page = fragment.physical_page` and explicitly forbids
+  `physical_page` inside EvidenceRef. The shared standalone/incremental pre-validation canonicalizer
+  also renames this exact alias only in contract-owned evidence slots. An absent canonical field or
+  an equal redundant alias is safe to normalize; conflicting `page`/`physical_page` values remain
+  untouched and fail strict validation. The repair never traverses source envelopes or extensions
+  and records each operation in the repair-chain artifact.
+- The saved response was replayed locally through the production canonicalizer without mutation or
+  a provider call: 167 alias operations yielded a strict-valid package with 12 items and zero
+  diagnostics. A prior full candidate replay of the same response produced 102 move nodes, zero
+  invalid/ambiguous moves, zero warnings/errors/unresolved items and no conflicts. Focused repair,
+  candidate and prompt tests passed (**36 passed**); focused Ruff and strict MyPy passed, and the
+  prompt/fingerprint constant test passed. The selected HTTP enqueue integration test did not
+  complete in the current tool environment and was interrupted without an assertion failure; it
+  was not replaced by a broad suite. The old failed run was not modified or retried; new requests
+  use prompt 1.8/fingerprint v14.
+
+## 2026-08-30 — Course subsection engine precomputation
+
+- The course engine panel now exposes `分析本小节` beside its settings button. The selected
+  Module's occurrence FENs are collected from the existing editor payload, deduplicated exactly and
+  terminal positions are skipped. The panel processes them sequentially through the existing
+  `POST /api/engine/analyses` boundary, preventing a burst of parallel Stockfish subprocesses.
+- A compact line progress indicator reports completed/total positions. Individual failures do not
+  discard successful earlier work; completion reports the failed count and the operator may run it
+  again. The batch controller and progress now belong to the course workbench rather than the
+  replaceable Module panel: switching Module keeps the original task running and the newly rendered
+  panel identifies the source Module by title while showing its live progress. Leaving the entire
+  course page aborts unfinished work, while every already completed analysis remains durable.
+- No new persistence or queue model was introduced. `EngineAnalysis` already stores successful
+  results under the ADR 0009 cache identity: complete six-field FEN, source, engine name/version and
+  all engine parameters. Consequently revisiting the same position with the same profile uses the
+  existing cache and avoids Stockfish computation; changing analysis settings intentionally creates
+  another cache identity.
+- Focused verification only: one browser oracle proved two unique subsection positions are
+  requested once each and reaches `2 / 2` plus the saved state; a second delayed-response oracle
+  switched from `第一章` to `第二章` mid-analysis, proved the first task remained visible/running and
+  then completed `2 / 2`. The complete CourseEditor file previously passed **15 tests**; the final
+  correction ran only these **2** owning tests. Focused Prettier, ESLint and TypeScript checks
+  passed. No backend schema, contract generation, broad suite, service start, runtime database
+  write or commit was performed.
+
+## 2026-08-30 — Fast persisted engine cache hits
+
+- The observed approximately one-second delay was not Stockfish search: `process_analysis_job`
+  launched a fresh UCI process through `probe()` before it could construct the version-bound cache
+  key. A focused real fake-engine timing reproduced **1019.82 ms** for the first identity probe and
+  **0.08 ms** for the second cached lookup.
+- `UciEngine.probe_cached()` now shares an in-process identity across capabilities, synchronous
+  analysis, background analysis and engine-game creation. Its key includes resolved path, device,
+  inode, byte size, nanosecond mtime and nanosecond ctime. Replacing/upgrading the executable changes
+  that key and forces a new UCI probe, preserving ADR 0009's engine-version cache isolation. Missing
+  executables still use the existing explicit error path. Concurrent first callers may perform a
+  redundant probe but can never receive an identity for a different file.
+- Course position debounce was reduced from 220 ms to 80 ms. Superseded requests still use the
+  existing AbortController cleanup, so rapid score navigation does not leave detached computation.
+  The first engine use after an API restart may still pay one identity probe; all later cache hits in
+  that process avoid it, and opening capabilities or running subsection precomputation warms it.
+- Focused verification: the identity reuse/file-change regression passed (**1 test**); focused Ruff,
+  strict MyPy, Prettier, ESLint, TypeScript and `git diff --check` passed. The separately selected
+  pre-existing async database cache test hung in the current tool environment after the identity
+  test passed and was interrupted without an assertion failure; no broad suite or runtime database
+  mutation was used.
+
+## 2026-08-30 — Subsection analysis excludes persisted cache hits
+
+- `POST /api/engine/analyses/cache-lookup` accepts a bounded unique list of legal canonical FENs and
+  one engine parameter profile. One query reads candidate `EngineAnalysis` rows; a row counts only
+  when its complete parameters match and it belongs either to Syzygy v1 or to the currently probed
+  Stockfish name/version. The response preserves request order in disjoint `cached_fens` and
+  `missing_fens` lists. Unknown/old-engine/different-profile rows remain missing.
+- The course batch now has an explicit cache-checking phase. Only `missing_fens` enter its sequential
+  analysis loop and progress denominator; cached positions are reported as skipped. An all-cached
+  subsection displays that fact and sends zero `/engine/analyses` requests. Lookup failure fails
+  closed and starts no analysis rather than silently recomputing everything.
+- OpenAPI and generated TypeScript were regenerated. Focused verification passed: **2** backend
+  identity/cache-selection tests and **2** browser subsection tests; the browser oracle supplied one
+  cached and one missing FEN, observed `1 / 1`, and proved only the missing FEN reached analysis.
+  Focused Ruff/MyPy/Prettier/ESLint/TypeScript and contract-drift checks passed. No broad suite,
+  service start, runtime database mutation or commit was performed.
+
+## 2026-08-31 — Evaluation-weighted course engine arrows
+
+- The course board no longer assigns recommendation-arrow strength from the MultiPV array index.
+  It converts white-perspective centipawn or mate scores to the same bounded logistic
+  winning-chance scale used by Lichess, reverses it when Black is to move, and compares every line
+  with the best line.
+- The best move is a saturated blue at 0.86 opacity. Alternatives continuously desaturate toward
+  grey and fade from 0.64 to 0.26 as their winning-chance loss approaches 0.2; alternatives at or
+  beyond that loss are omitted. The existing arrow-count control remains an upper bound, and no
+  board dependency or custom SVG layer was introduced because react-chessboard accepts per-arrow
+  color but not per-arrow width.
+- Focused verification only: the owning CourseEditor browser test passed (**1 test**) and now proves
+  three close evaluations produce three distinct, monotonically weaker RGBA colors. Focused
+  Prettier, ESLint and TypeScript checks are recorded with this change; no broad suite or commit was
+  performed.
+
+## 2026-08-31 — MultiPV positions with fewer legal moves
+
+- The reported position `2kr1b1r/ppp2ppp/8/3P3q/2P1p1n1/4Bn1P/PP3PP1/RN1Q1RK1 w - - 1 13`
+  is in check and has exactly three legal moves (`Kh1`, `Qxf3`, `gxf3`). Stockfish correctly
+  returned three lines for a requested MultiPV of four; the prior backend check incorrectly treated
+  the requested count as mandatory.
+- `UciEngine.analyze()` now requires `min(requested MultiPV, legal root move count)` lines. It still
+  rejects truncated output when further legal root candidates exist, so this does not relax general
+  malformed-output detection. The course panel retains the configured number of display slots and
+  renders unavailable lines as blank rows with no evaluation, move text or recommendation arrow.
+- Focused verification only: the exact three-legal-move UCI regression passed (**1 test**) and the
+  owning CourseEditor browser regression passed (**1 test**) with three blank slots for its
+  one-line fixture. Focused Ruff, MyPy, Prettier, ESLint, TypeScript and `git diff --check` passed.
+  No broad suite, service start, database mutation or commit was performed.
+
+## 2026-08-31 — Re-recording a soft-deleted course move
+
+- The Game 13 failure was traced to archived occurrence
+  `b49294d0-cc72-41c1-983a-168112c0fd60`: it is `h2h3` below the active `8...e6` occurrence and
+  occupies sibling order 1 after deletion. With active `Nc3` at order 0, the browser correctly
+  requested order 1 for a newly recorded `h3`, but `create_move_occurrence()` returned the archived
+  row as a successful create. The refreshed editor excludes archived rows, so the browser's
+  missing-selection fallback jumped to the subsection root.
+- Move creation now resolves the complete active/archived sibling set. An active requested slot is
+  idempotent only for the same move/context; an archived occupant is relocated to the next archive
+  slot when necessary. A matching archived move/context is explicitly restored at the requested
+  active order. Its old descendants, notes and invalidated references remain archived. This also
+  handles a different new move colliding with an archived sort slot rather than relying on an
+  `h3`-specific path.
+- After POST, the course browser now verifies that the refreshed subsection actually contains the
+  returned occurrence ID before selecting it. A bad/stale response produces a visible save error
+  and preserves the current board instead of silently selecting the root.
+- Focused verification: the real temporary-SQLite archive/collision/restore lifecycle and the
+  existing reorder/annotate/delete lifecycle passed (**2 backend tests**); normal browser move
+  persistence and the missing-refreshed-node safeguard passed (**2 frontend tests**). Focused Ruff,
+  MyPy, Prettier, ESLint, TypeScript and `git diff --check` passed. The database tests required the
+  established sandbox-external runner because file-backed SQLite initialization stalled inside the
+  tool sandbox. No runtime database row was changed, no broad suite was run and no commit was made.
+
+## 2026-09-01 — UCI delayed-ready cancellation race
+
+- The reported uvloop callback `InvalidStateError` was reproduced deterministically by delaying the
+  fake engine's `readyok` response and cancelling analysis during that handshake. The old wrapper
+  cancelled `protocol.analysis()` directly; python-chess then received `readyok` and attempted to
+  complete its already-cancelled command result future.
+- Analysis startup is now shielded from caller cancellation. Cleanup closes the engine before it
+  drains an abandoned startup command and, if startup completed during shutdown, also retrieves the
+  inner `AnalysisResult` termination. Play commands likewise remain pending until subprocess close
+  and are drained afterward instead of being cancelled while their UCI transport is live.
+- The exact delayed-ready regression failed before the production change and passes under uvloop
+  afterward without loop exception-handler events or a surviving process. Three adjacent timeout,
+  in-search cancellation and play-cancellation regressions also pass (**4 focused tests** total).
+  Focused Ruff and strict MyPy passed, and `git diff --check` is clean. No broad suite, service start,
+  runtime database write or commit was performed.
+
+## 2026-09-02 — Independent diagram-started incremental segment
+
+- The latest *Endgame Strategy* append run covered physical pages 23--27 and failed after one main
+  provider call with `incremental response has no continuation binding`. Local diagram evidence was
+  present: six diagrams were detected, five had operational FENs, and the provider correctly used
+  the page 23 and page 26 FENs to start two new independent scores. The remaining page 25 analysis
+  diagram was conservatively unresolved. The failure was not diagram recognition.
+- Pages 19--22 end with the heading and metadata for Game 3 but contain move sequences only for
+  Games 1 and 2. The next segment therefore correctly supplied Game 3 as a new FEN-started sequence,
+  rather than falsely binding it to an anchor in either prior game. ADR 0018 already specifies that
+  unbound sequences are appended as new content, but the service binder contradicted it by requiring
+  a positive binding count for every segment.
+- `_bind_continuations` no longer imposes that global count. Every binding that is present still
+  requires the exact predecessor hash and a supplied anchor; a segment with no bindings is allowed
+  to proceed as independent content. One synthetic regression covers a prior sequence plus an
+  unbound diagram-started next score (**1 focused test passed**).
+- The exact saved 23--27 response was replayed offline without a provider call or SQL write. It now
+  normalizes to seven items, two sequences and 177 valid move nodes, then composes into a 19-item,
+  four-sequence aggregate spanning pages 19--27. Focused Ruff and strict MyPy passed and
+  `git diff --check` is clean. The historical failed run remains immutable and was not retried or
+  committed; a new browser request is still required to advance the document head.
+
+## 2026-09-02 — Course-level learning-page actions
+
+- Added settings buttons to both the learning catalog card and the opened course title with
+  `重命名课程` and `删除课程` actions, matching the existing subsection interaction. Rename PATCHes
+  the course with its expected version and updates the visible title from the returned authoritative
+  value without a redundant refetch.
+- Delete uses the existing recoverable `archived: true` course update rather than hard deletion,
+  preserving modules, knowledge and shared position rows, then returns to the learning catalog.
+- Focused verification covers both entry points. No backend or public-contract change was necessary
+  because course rename/archive already existed.
+
+## 2026-09-02 — Review resolution for unusable position anchors
+
+- The open *Endgame Strategy* document review was inspected read-only. Its sole remaining blocker
+  is `position_anchor_no_match` on sequence annotation `ann-g2-analysis-diagram` from physical page
+  22: the annotation's FEN does not occur in the extracted score. The prose and move tree themselves
+  remain readable; excluding the earlier figure item could not resolve this nested annotation.
+- Added the auditable `detach_position_anchor` review edit for unmatched or ambiguous position
+  anchors on top-level prose or sequence annotations. It accepts only a currently reported blocking
+  issue, preserves text, evidence and reading-flow position, changes the anchor to null in a new
+  review revision, and never mutates the immutable extraction candidate.
+- The issue row now offers `保留文字并取消局面关联` while an open review is being edited. A dry-run
+  against the exact saved Endgame review revision changed inspection from one issue/one blocker to
+  zero/zero without writing SQL or CAS. One focused backend regression and one focused browser
+  regression passed; contracts were regenerated and checked.
+
+## 2026-09-02 — Lichess-style binary variation parentheses
+
+- Course and PDF-review scores now follow Lichess's inline-tree heuristic: when a position has
+  exactly two continuations, its sole secondary line is short and its next six plies do not branch,
+  that line is rendered in parentheses. Three-way forks, nearby nested forks and long side lines
+  retain explicit branch rails.
+- The presentation decision is shared by both score projections; move identity, topology, order,
+  board navigation, annotations and right-click actions are unchanged. Parenthetical lines expose
+  `data-variation-presentation="parenthetical"` and no rail elements.
+- Focused verification passed: nine layout/browser tests covering a short binary branch, a
+  three-way fork, a nested-nearby fork, the learning score and the review score. Focused ESLint and
+  TypeScript checks also passed. No broad suite, backend test, service start or commit was run.
+
+## 2026-09-03 — Parenthetical variation placement correction
+
+- Corrected the first pass against Lichess's actual recursive render order. Course alternatives
+  leaving the main score always retain a branch rail. Within an already explicit variation, one
+  short secondary continuation is rendered as an inline parenthesis immediately after the move
+  where the fork occurs and before that variation's primary continuation resumes.
+- `CourseScore` now renders nested variations while walking each parent variation move instead of
+  appending every nested variation after the full parent line. Move selection, notes, right-click
+  actions and occurrence topology are unchanged. The PDF-review projection also no longer marks
+  depth-one alternatives as parenthetical.
+- Focused verification passed: nine selected layout/browser tests, including DOM order
+  `branching move → parenthesized alternative → primary continuation`; focused ESLint, TypeScript
+  and `git diff --check` passed. No broad suite, backend test, service start or commit was run.

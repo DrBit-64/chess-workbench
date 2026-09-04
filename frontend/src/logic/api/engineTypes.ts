@@ -6,6 +6,9 @@ export type EngineCapabilities =
 export type Analysis =
   paths['/api/engine/analyses']['post']['responses'][200]['content']['application/json'];
 
+export type AnalysisCacheLookup =
+  paths['/api/engine/analyses/cache-lookup']['post']['responses'][200]['content']['application/json'];
+
 export type EngineParameters = Required<Analysis['parameters']>;
 export type AnalysisLine = Analysis['lines'][number];
 

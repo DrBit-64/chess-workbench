@@ -13,6 +13,8 @@ import chess.engine
 
 from chess_workbench.schemas.engine import AnalysisLine, EngineParameters
 
+_EngineFileIdentity = tuple[str, int, int, int, int, int]
+
 
 class EngineError(RuntimeError):
     def __init__(self, code: str, message: str, *, retryable: bool = True) -> None:
@@ -27,6 +29,9 @@ class EngineError(RuntimeError):
 class EngineIdentity:
     name: str
     version: str
+
+
+_ENGINE_IDENTITIES: dict[_EngineFileIdentity, EngineIdentity] = {}
 
 
 @dataclass(frozen=True)
@@ -119,6 +124,32 @@ class UciEngine:
         finally:
             await self._close(transport, protocol)
 
+    async def probe_cached(self) -> EngineIdentity:
+        """Reuse identity until the configured executable changes on disk."""
+
+        try:
+            resolved = self.executable.resolve(strict=True)
+            stat = resolved.stat()
+        except OSError:
+            return await self.probe()
+        file_identity: _EngineFileIdentity = (
+            str(resolved),
+            stat.st_dev,
+            stat.st_ino,
+            stat.st_size,
+            stat.st_mtime_ns,
+            stat.st_ctime_ns,
+        )
+        cached = _ENGINE_IDENTITIES.get(file_identity)
+        if cached is not None:
+            return cached
+        identity = await self.probe()
+        for key in tuple(_ENGINE_IDENTITIES):
+            if key[0] == file_identity[0]:
+                del _ENGINE_IDENTITIES[key]
+        _ENGINE_IDENTITIES[file_identity] = identity
+        return identity
+
     async def analyze(self, fen: str, parameters: EngineParameters) -> EngineResult:
         self.validate_parameters(parameters)
         try:
@@ -127,17 +158,17 @@ class UciEngine:
             raise EngineError("invalid_fen", "analysis FEN is invalid") from error
         transport, protocol = await self._open()
         started = monotonic()
-        analysis_task: asyncio.Task[list[chess.engine.InfoDict] | chess.engine.InfoDict] | None = (
-            None
-        )
+        start_task: asyncio.Task[chess.engine.AnalysisResult] | None = None
+        analysis: chess.engine.AnalysisResult | None = None
+        wait_task: asyncio.Task[chess.engine.BestMove] | None = None
         try:
             limit = chess.engine.Limit(
                 time=None if parameters.depth is not None else parameters.movetime_ms / 1000,
                 depth=parameters.depth,
             )
             timeout = min(self.max_time_ms, parameters.movetime_ms) / 1000 + 1
-            analysis_task = asyncio.create_task(
-                protocol.analyse(
+            start_task = asyncio.create_task(
+                protocol.analysis(
                     board,
                     limit,
                     multipv=parameters.multipv,
@@ -147,25 +178,30 @@ class UciEngine:
                     },
                 )
             )
-            done, _ = await asyncio.wait({analysis_task}, timeout=timeout)
+            # Do not let cancellation of the HTTP/job coroutine cancel the
+            # python-chess command future. UciAnalysisCommand may still be
+            # waiting for a delayed ``readyok`` and unconditionally completes
+            # that future when the reply arrives.
+            analysis = await asyncio.shield(start_task)
+            wait_task = asyncio.create_task(analysis.wait())
+            done, _ = await asyncio.wait({wait_task}, timeout=timeout)
             if not done:
-                exited_before_kill = await self._wait_for_process_exit(protocol)
-                if not exited_before_kill:
-                    transport.kill()
-                await self._drain_cancelled_analysis(analysis_task)
+                analysis.stop()
+                await asyncio.wait({wait_task}, timeout=0.1)
                 exit_status = protocol.returncode.result() if protocol.returncode.done() else None
-                if exited_before_kill or (exit_status is not None and exit_status >= 0):
+                if exit_status is not None:
                     raise EngineError(
                         "engine_crashed",
                         f"engine exited with status {exit_status}",
                     )
                 raise EngineError("timeout", "engine analysis exceeded its deadline")
-            raw = analysis_task.result()
-            infos = raw if isinstance(raw, list) else [raw]
-            if len(infos) < parameters.multipv:
+            wait_task.result()
+            infos = analysis.multipv
+            expected_pvs = min(parameters.multipv, board.legal_moves.count())
+            if len(infos) < expected_pvs:
                 raise EngineError(
                     "malformed_output",
-                    f"engine returned {len(infos)} PVs, expected {parameters.multipv}",
+                    f"engine returned {len(infos)} PVs, expected {expected_pvs}",
                 )
             lines = [_line_from_info(board, index, info) for index, info in enumerate(infos, 1)]
             first = infos[0]
@@ -178,10 +214,9 @@ class UciEngine:
                 elapsed_ms=round((monotonic() - started) * 1000),
             )
         except asyncio.CancelledError:
-            if analysis_task is not None and not analysis_task.done():
-                with suppress(ProcessLookupError):
-                    transport.kill()
-                await self._drain_cancelled_analysis(analysis_task)
+            if analysis is not None:
+                analysis.stop()
+                await asyncio.sleep(0)
             raise
         except chess.engine.EngineTerminatedError as error:
             raise EngineError("engine_crashed", str(error)) from error
@@ -191,6 +226,10 @@ class UciEngine:
             raise EngineError(code, message) from error
         finally:
             await self._close(transport, protocol)
+            if wait_task is not None:
+                await self._drain_terminated_task(wait_task)
+            if start_task is not None and analysis is None:
+                await self._drain_abandoned_analysis_start(start_task)
 
     async def play(self, fen: str, *, strength: int) -> tuple[EngineIdentity, chess.Move]:
         board = chess.Board(fen)
@@ -211,12 +250,8 @@ class UciEngine:
             )
             done, _ = await asyncio.wait({play_task}, timeout=3)
             if not done:
-                exited_before_kill = await self._wait_for_process_exit(protocol)
-                if not exited_before_kill:
-                    transport.kill()
-                await self._drain_terminated_task(play_task)
                 exit_status = protocol.returncode.result() if protocol.returncode.done() else None
-                if exited_before_kill or (exit_status is not None and exit_status >= 0):
+                if exit_status is not None:
                     raise EngineError(
                         "engine_crashed",
                         f"engine exited with status {exit_status}",
@@ -227,10 +262,6 @@ class UciEngine:
                 raise EngineError("malformed_output", "engine did not return a legal move")
             return _identity(protocol), result.move
         except asyncio.CancelledError:
-            if play_task is not None and not play_task.done():
-                with suppress(ProcessLookupError):
-                    transport.kill()
-                await self._drain_terminated_task(play_task)
             raise
         except chess.engine.EngineTerminatedError as error:
             raise EngineError("engine_crashed", str(error)) from error
@@ -238,6 +269,8 @@ class UciEngine:
             raise EngineError("engine_crashed", str(error)) from error
         finally:
             await self._close(transport, protocol)
+            if play_task is not None:
+                await self._drain_terminated_task(play_task)
 
     async def _open(self) -> tuple[asyncio.SubprocessTransport, chess.engine.UciProtocol]:
         if not self.executable.is_file():
@@ -250,24 +283,29 @@ class UciEngine:
             raise EngineError("engine_unavailable", str(error)) from error
 
     @staticmethod
-    async def _wait_for_process_exit(
-        protocol: chess.engine.UciProtocol, *, grace_seconds: float = 0.1
-    ) -> bool:
-        if protocol.returncode.done():
-            return True
-        done, _ = await asyncio.wait({protocol.returncode}, timeout=grace_seconds)
-        return bool(done)
-
-    @staticmethod
-    async def _drain_cancelled_analysis(
-        task: asyncio.Task[list[chess.engine.InfoDict] | chess.engine.InfoDict],
+    async def _drain_abandoned_analysis_start(
+        task: asyncio.Task[chess.engine.AnalysisResult],
     ) -> None:
-        await UciEngine._drain_terminated_task(task)
+        """Retrieve both layers of an analysis that was cancelled before startup."""
+
+        try:
+            analysis = await asyncio.wait_for(asyncio.shield(task), timeout=1)
+        except (asyncio.CancelledError, TimeoutError, chess.engine.EngineTerminatedError):
+            if not task.done():
+                task.cancel()
+            with suppress(asyncio.CancelledError, chess.engine.EngineTerminatedError):
+                await task
+            return
+
+        with suppress(chess.engine.EngineTerminatedError):
+            await analysis.wait()
 
     @staticmethod
     async def _drain_terminated_task(task: asyncio.Task[Any]) -> None:
         try:
             await asyncio.wait_for(asyncio.shield(task), timeout=1)
+        except asyncio.CancelledError:
+            pass
         except (TimeoutError, chess.engine.EngineTerminatedError):
             if not task.done():
                 task.cancel()

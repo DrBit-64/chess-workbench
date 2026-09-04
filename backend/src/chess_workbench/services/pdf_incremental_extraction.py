@@ -346,7 +346,6 @@ def _bind_continuations(
         for sequence in continuation_context.sequences
         for anchor in sequence.anchors
     }
-    binding_count = 0
     for item in bound_package.items:
         if not isinstance(item, MoveSequenceItemV1_1):
             continue
@@ -367,9 +366,6 @@ def _bind_continuations(
         ):
             raise ValueError("unknown continuation binding")
         item.initial_position = FenPosition(kind="fen", fen=anchor.position_fen)
-        binding_count += 1
-    if not binding_count:
-        raise ValueError("incremental response has no continuation binding")
     return ExtractionPackageV1_1.model_validate(bound_package.model_dump(mode="json"))
 
 

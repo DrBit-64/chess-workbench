@@ -8,7 +8,7 @@ import json
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, cast
+from typing import Any, Literal, cast
 from uuid import UUID
 
 from pydantic import JsonValue, ValidationError
@@ -31,11 +31,24 @@ from chess_workbench.extraction.deepseek import (
     DeepSeekInvalidResponseRecorder,
     DeepSeekV4FlashProvider,
 )
+from chess_workbench.extraction.diagram import (
+    ChessDiagramError,
+    ChessDiagramRecognition,
+    ChessDiagramRecognitionRequest,
+    ChessDiagramRecognizer,
+    NullChessDiagramRecognizer,
+)
+from chess_workbench.extraction.diagram_context import (
+    DiagramEvidencePage,
+    resolve_diagram_evidence,
+)
+from chess_workbench.extraction.diagram_onnx import OnnxChessDiagramRecognizer
 from chess_workbench.extraction.evidence import (
     EvidenceOrigin,
     NormalizedBox,
     OcrAdapter,
     OcrRequest,
+    PageEvidenceOrigin,
     PdfEvidenceError,
     PdfPageRenderer,
     RenderedPage,
@@ -133,6 +146,17 @@ class _ArtifactCandidate:
     @property
     def slot(self) -> tuple[str, int | None]:
         return self.kind, self.page_number
+
+
+@dataclass(frozen=True, slots=True)
+class _PendingEvidencePage:
+    rendered: RenderedPage
+    rendered_blob: StoredSourceBlob
+    origin: Literal["embedded_text", "ocr"]
+    engine_name: str
+    engine_version: str
+    fragments: list[SourceEvidenceFragment]
+    recognitions: list[ChessDiagramRecognition]
 
 
 @dataclass(frozen=True, slots=True)
@@ -348,7 +372,7 @@ def _fragment_document(
     source: _ExtractionInput,
     page: RenderedPage,
     *,
-    origin: EvidenceOrigin,
+    origin: PageEvidenceOrigin,
     engine_name: str,
     engine_version: str,
     fragments: list[SourceEvidenceFragment],
@@ -1137,6 +1161,7 @@ async def process_pdf_extraction_job(
     *,
     renderer: PdfPageRenderer | None = None,
     ocr_adapter: OcrAdapter | None = None,
+    diagram_recognizer: ChessDiagramRecognizer | None = None,
     provider: StructuredGenerationProvider | None = None,
 ) -> dict[str, Any]:
     """Render one immutable run, write CAS blobs, then atomically register indexes."""
@@ -1190,6 +1215,11 @@ async def process_pdf_extraction_job(
     active_ocr = ocr_adapter or PaddleOcrJsonAdapter(
         None if settings.paddle_ocr_runner_path is None else [str(settings.paddle_ocr_runner_path)]
     )
+    active_diagram_recognizer: ChessDiagramRecognizer = diagram_recognizer or (
+        OnnxChessDiagramRecognizer(settings.chess_diagram_model_path)
+        if renderer is None and settings.chess_diagram_model_path.is_file()
+        else NullChessDiagramRecognizer()
+    )
 
     storage_error: ServiceError | None = None
     try:
@@ -1211,6 +1241,7 @@ async def process_pdf_extraction_job(
     evidence_pages: list[dict[str, object]] = []
     warnings: list[dict[str, object]] = []
     fragment_count = 0
+    pending_pages: list[_PendingEvidencePage] = []
 
     for physical_page in range(source.first_page, source.last_page + 1):
         evidence_error: PdfEvidenceError | None = None
@@ -1223,7 +1254,7 @@ async def process_pdf_extraction_job(
             )
             rendered_blob = await _store_blob(settings, suffix=".png", raw_bytes=rendered.png_bytes)
             if _non_whitespace_count(rendered) >= render_profile.embedded_text_min_chars:
-                origin: EvidenceOrigin = "embedded_text"
+                origin: Literal["embedded_text", "ocr"] = "embedded_text"
                 engine_name = rendered.renderer_name
                 engine_version = rendered.renderer_version
                 raw_fragments = rendered.embedded_fragments
@@ -1268,42 +1299,44 @@ async def process_pdf_extraction_job(
             engine_name=engine_name,
             engine_version=engine_version,
         )
-        fragment_count += len(fragments)
-        if fragment_count > _MAX_RUN_FRAGMENTS:
-            raise EngineError(
-                "evidence_limit_exceeded",
-                "PDF extraction produced too many text fragments",
-                retryable=False,
+        recognitions: list[ChessDiagramRecognition] = []
+        try:
+            recognitions = await asyncio.to_thread(
+                active_diagram_recognizer.recognize,
+                ChessDiagramRecognitionRequest(
+                    physical_page=physical_page,
+                    page_width=rendered.width,
+                    page_height=rendered.height,
+                    page_png_bytes=rendered.png_bytes,
+                    embedded_images=rendered.embedded_images,
+                ),
             )
-        if not fragments:
-            warnings.append({"code": "empty_page", "physical_page": physical_page})
-        evidence_blob = await _store_blob(
-            settings,
-            suffix=".json",
-            raw_bytes=_fragment_document(
-                source,
-                rendered,
+        except ChessDiagramError as error:
+            warnings.append(
+                {
+                    "code": error.code,
+                    "physical_page": physical_page,
+                    "message": error.message,
+                }
+            )
+        pending_pages.append(
+            _PendingEvidencePage(
+                rendered=rendered,
+                rendered_blob=rendered_blob,
                 origin=origin,
                 engine_name=engine_name,
                 engine_version=engine_version,
                 fragments=fragments,
-            ),
+                recognitions=recognitions,
+            )
         )
-        candidates.extend(
-            [
-                _ArtifactCandidate(
-                    kind="rendered_page",
-                    page_number=physical_page,
-                    blob=rendered_blob,
-                    media_type="image/png",
-                ),
-                _ArtifactCandidate(
-                    kind="ocr_fragment",
-                    page_number=physical_page,
-                    blob=evidence_blob,
-                    media_type="application/json",
-                ),
-            ]
+        candidates.append(
+            _ArtifactCandidate(
+                kind="rendered_page",
+                page_number=physical_page,
+                blob=rendered_blob,
+                media_type="image/png",
+            )
         )
         render_pages.append(
             {
@@ -1318,19 +1351,76 @@ async def process_pdf_extraction_job(
                 "media_type": "image/png",
             }
         )
+        await asyncio.sleep(0)
+
+    resolved_pages = resolve_diagram_evidence(
+        [
+            DiagramEvidencePage(
+                physical_page=page.rendered.physical_page,
+                width=page.rendered.width,
+                height=page.rendered.height,
+                fragments=page.fragments,
+                recognitions=page.recognitions,
+            )
+            for page in pending_pages
+        ]
+    )
+    for pending, resolved in zip(pending_pages, resolved_pages, strict=True):
+        page_origin: PageEvidenceOrigin = "mixed" if resolved.diagram_count else pending.origin
+        root_engine_name = "chess-workbench" if resolved.diagram_count else pending.engine_name
+        root_engine_version = (
+            "text+diagram-v1" if resolved.diagram_count else pending.engine_version
+        )
+        fragment_count += len(resolved.fragments)
+        if fragment_count > _MAX_RUN_FRAGMENTS:
+            raise EngineError(
+                "evidence_limit_exceeded",
+                "PDF extraction produced too many evidence fragments",
+                retryable=False,
+            )
+        if not resolved.fragments:
+            warnings.append({"code": "empty_page", "physical_page": pending.rendered.physical_page})
+        if resolved.unresolved_diagram_count:
+            warnings.append(
+                {
+                    "code": "diagram_position_unresolved",
+                    "physical_page": pending.rendered.physical_page,
+                    "count": resolved.unresolved_diagram_count,
+                }
+            )
+        evidence_blob = await _store_blob(
+            settings,
+            suffix=".json",
+            raw_bytes=_fragment_document(
+                source,
+                pending.rendered,
+                origin=page_origin,
+                engine_name=root_engine_name,
+                engine_version=root_engine_version,
+                fragments=resolved.fragments,
+            ),
+        )
+        candidates.append(
+            _ArtifactCandidate(
+                kind="ocr_fragment",
+                page_number=pending.rendered.physical_page,
+                blob=evidence_blob,
+                media_type="application/json",
+            )
+        )
         evidence_pages.append(
             {
-                "physical_page": physical_page,
-                "origin": origin,
-                "engine_name": engine_name,
-                "engine_version": engine_version,
-                "fragment_count": len(fragments),
+                "physical_page": pending.rendered.physical_page,
+                "origin": page_origin,
+                "engine_name": root_engine_name,
+                "engine_version": root_engine_version,
+                "fragment_count": len(resolved.fragments),
+                "diagram_count": resolved.diagram_count,
                 "content_sha256": evidence_blob.sha256,
                 "byte_size": evidence_blob.size_bytes,
                 "media_type": "application/json",
             }
         )
-        await asyncio.sleep(0)
 
     manifest_common: dict[str, object] = {
         "artifact_schema": PDF_EVIDENCE_ARTIFACT_SCHEMA,

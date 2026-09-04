@@ -298,6 +298,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/engine/analyses/cache-lookup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Lookup Analysis Cache */
+        post: operations["lookupEngineAnalysisCache"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/engine/analyses/{analysis_id}": {
         parameters: {
             query?: never;
@@ -4822,6 +4839,72 @@ export interface operations {
                         } | null;
                         /** Message */
                         message: string;
+                    };
+                };
+            };
+        };
+    };
+    lookupEngineAnalysisCache: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Fens */
+                    fens: string[];
+                    /** EngineParameters */
+                    parameters?: {
+                        /**
+                         * Depth
+                         * @default null
+                         */
+                        depth?: number | null;
+                        /**
+                         * Hash Mb
+                         * @default 128
+                         */
+                        hash_mb?: number;
+                        /**
+                         * Movetime Ms
+                         * @default 800
+                         */
+                        movetime_ms?: number;
+                        /**
+                         * Multipv
+                         * @default 4
+                         */
+                        multipv?: number;
+                        /**
+                         * Ponder
+                         * @default false
+                         * @enum {boolean}
+                         */
+                        ponder?: false;
+                        /**
+                         * Threads
+                         * @default 1
+                         */
+                        threads?: number;
+                    };
+                };
+            };
+        };
+        responses: {
+            /** @description Persisted analysis cache coverage */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Cached Fens */
+                        cached_fens: string[];
+                        /** Missing Fens */
+                        missing_fens: string[];
                     };
                 };
             };
@@ -12603,6 +12686,14 @@ export interface operations {
                              * @enum {string}
                              */
                             kind: "exclude_item";
+                        } | {
+                            /** Issue Id */
+                            issue_id: string;
+                            /**
+                             * Kind
+                             * @enum {string}
+                             */
+                            kind: "detach_position_anchor";
                         };
                     } | {
                         /** Issue Ids */

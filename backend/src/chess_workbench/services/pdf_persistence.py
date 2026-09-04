@@ -36,7 +36,9 @@ PDF_ANNOTATED_EXTRACTION_PIPELINE_VERSION = "pdf-extraction:v3"
 PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION = "pdf-extraction:v4"
 PDF_EXTRACTION_FINGERPRINT_VERSION = "pdfium-text-lines+ccef-formal-consolidation:v5"
 PDF_ANNOTATED_EXTRACTION_FINGERPRINT_VERSION = "pdfium-text-lines+ccef-annotated-consolidation:v6"
-PDF_SEMANTIC_EXTRACTION_FINGERPRINT_VERSION = "pdfium-text-lines+ccef-semantic-consolidation:v12"
+PDF_SEMANTIC_EXTRACTION_FINGERPRINT_VERSION = (
+    "pdfium-text-lines+diagram+ccef-semantic-consolidation:v14"
+)
 _SUPPORTED_PIPELINE_VERSIONS = frozenset(
     {
         PDF_EVIDENCE_PIPELINE_VERSION,

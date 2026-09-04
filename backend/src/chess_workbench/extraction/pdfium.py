@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import math
 from io import BytesIO
 from typing import final
@@ -14,6 +15,7 @@ from .evidence import (
     MAX_PIXELS,
     MAX_PNG_BYTES,
     MAX_TEXT_CODE_POINTS,
+    EmbeddedPageImage,
     PdfEvidenceError,
     PixelBox,
     RenderedPage,
@@ -28,6 +30,7 @@ _PAGE_OUT_OF_RANGE = (
 )
 _RENDER_LIMIT = ("render_limit_exceeded", "PDF page exceeds the rendering limits")
 _RENDER_FAILED = ("render_failed", "PDF page could not be rendered")
+_MAX_EMBEDDED_IMAGES = 256
 
 
 def _error(value: tuple[str, str]) -> PdfEvidenceError:
@@ -129,6 +132,70 @@ def _embedded_fragments(
     return fragments
 
 
+def _embedded_images(
+    page: pypdfium2.PdfPage,
+    *,
+    physical_page: int,
+    page_height: float,
+    scale: float,
+    width: int,
+    height: int,
+) -> list[EmbeddedPageImage]:
+    """Decode bounded PDF image objects without changing page rendering semantics."""
+
+    images: list[EmbeddedPageImage] = []
+    for page_object in page.get_objects(filter=[pdfium_c.FPDF_PAGEOBJ_IMAGE]):
+        try:
+            if len(images) >= _MAX_EMBEDDED_IMAGES:
+                break
+            try:
+                box = _pixel_box(
+                    page_object.get_bounds(),
+                    page_height=page_height,
+                    scale=scale,
+                    width=width,
+                    height=height,
+                )
+                if box is None:
+                    continue
+                bitmap = page_object.get_bitmap(render=True, scale_to_original=True)
+                try:
+                    image = bitmap.to_pil().convert("RGB")
+                    image_width, image_height = image.size
+                    if (
+                        image_width < 1
+                        or image_height < 1
+                        or image_width > 10_000
+                        or image_height > 10_000
+                        or image_width * image_height > MAX_PIXELS
+                    ):
+                        continue
+                    output = BytesIO()
+                    image.save(output, format="PNG", compress_level=9, optimize=False)
+                    png_bytes = output.getvalue()
+                finally:
+                    bitmap.close()
+                if len(png_bytes) > MAX_PNG_BYTES:
+                    continue
+                images.append(
+                    EmbeddedPageImage(
+                        physical_page=physical_page,
+                        width=image_width,
+                        height=image_height,
+                        page_box=box,
+                        png_bytes=png_bytes,
+                        content_sha256=hashlib.sha256(png_bytes).hexdigest(),
+                    )
+                )
+            except (pypdfium2.PdfiumError, OSError, TypeError, ValueError):
+                # Embedded images are optional recognition candidates. A bad
+                # object must not make an otherwise renderable PDF page fail.
+                continue
+        finally:
+            page_object.close()
+    return images
+
+
 def _render_open_document(
     document: pypdfium2.PdfDocument,
     physical_page: int,
@@ -153,6 +220,14 @@ def _render_open_document(
             raise _error(_RENDER_LIMIT)
         fragments = _embedded_fragments(
             page,
+            page_height=page_height,
+            scale=scale,
+            width=width,
+            height=height,
+        )
+        embedded_images = _embedded_images(
+            page,
+            physical_page=physical_page,
             page_height=page_height,
             scale=scale,
             width=width,
@@ -183,6 +258,7 @@ def _render_open_document(
             dpi=profile.dpi,
             png_bytes=png_bytes,
             embedded_fragments=fragments,
+            embedded_images=embedded_images,
             renderer_name="pdfium",
             renderer_version=f"{pypdfium2.version.PDFIUM_INFO};text-lines-v1",
         )

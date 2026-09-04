@@ -7,6 +7,7 @@ from typing import Any
 from uuid import UUID
 
 import pytest
+from pydantic import ValidationError
 
 from chess_workbench.extraction.contracts import ExtractionPackageV1_1
 from chess_workbench.extraction.evidence import (
@@ -236,6 +237,56 @@ def test_deterministic_repair_deduplicates_nags_without_model_judgment() -> None
     parsed = ExtractionPackageV1_1.model_validate_json(repaired.content)
     assert parsed.items[0].nodes[0].nags == [1, 3]  # type: ignore[union-attr]
     assert json.loads(original.content)["items"][0]["nodes"][0]["nags"] == [1, 1, 3, 1]
+
+
+def test_deterministic_repair_normalizes_the_evidence_page_alias() -> None:
+    package = _package(extra_node_field=True)
+    del package["items"][0]["nodes"][0]["kind"]
+    sequence = package["items"][0]
+    references = [sequence["evidence"][0]] + [node["evidence"][0] for node in sequence["nodes"]]
+    for reference in references:
+        reference["physical_page"] = reference.pop("page")
+    original = _response(package)
+
+    repaired, operations = apply_deterministic_ccef_repairs(original)
+
+    assert [operation["rule"] for operation in operations] == [
+        "canonicalize_evidence_page_alias",
+        "canonicalize_evidence_page_alias",
+        "canonicalize_evidence_page_alias",
+    ]
+    parsed = ExtractionPackageV1_1.model_validate_json(repaired.content)
+    parsed_sequence = parsed.items[0]
+    assert parsed_sequence.evidence[0].page == 1  # type: ignore[union-attr]
+    assert all(node.evidence[0].page == 1 for node in parsed_sequence.nodes)  # type: ignore[union-attr]
+    repaired_payload = json.loads(repaired.content)
+    repaired_references = [repaired_payload["items"][0]["evidence"][0]] + [
+        node["evidence"][0] for node in repaired_payload["items"][0]["nodes"]
+    ]
+    assert all("physical_page" not in reference for reference in repaired_references)
+    original_payload = json.loads(original.content)
+    assert all(
+        "physical_page" in reference
+        for reference in [
+            original_payload["items"][0]["evidence"][0],
+            *[node["evidence"][0] for node in original_payload["items"][0]["nodes"]],
+        ]
+    )
+
+
+def test_deterministic_repair_refuses_conflicting_evidence_page_aliases() -> None:
+    package = _package(extra_node_field=True)
+    del package["items"][0]["nodes"][0]["kind"]
+    reference = package["items"][0]["evidence"][0]
+    reference["physical_page"] = 2
+    original = _response(package)
+
+    repaired, operations = apply_deterministic_ccef_repairs(original)
+
+    assert repaired is original
+    assert operations == ()
+    with pytest.raises(ValidationError):
+        ExtractionPackageV1_1.model_validate_json(repaired.content)
 
 
 def test_deterministic_repair_aligns_an_exact_reading_flow_projection() -> None:

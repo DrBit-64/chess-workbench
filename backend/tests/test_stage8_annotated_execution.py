@@ -339,7 +339,7 @@ class _Provider:
             package = envelope["package"]
             if package["schema_version"] == "chess-content-extraction/1.1":
                 package["items"] = _annotated_items()
-                if envelope["prompt_version"] == "chess-workbench/ccef-prompt/1.6":
+                if envelope["prompt_version"] == "chess-workbench/ccef-prompt/1.8":
                     fragment = envelope["evidence_pages"][0]["fragments"][0]["fragment"]
                     evidence = {
                         "page": fragment["physical_page"],
@@ -574,7 +574,7 @@ def test_persistence_default_is_still_v2_and_constants_are_frozen() -> None:
     assert PDF_EVIDENCE_PIPELINE_VERSION == "pdf-extraction:v1"
     assert PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION == "pdf-extraction:v4"
     assert PDF_SEMANTIC_EXTRACTION_FINGERPRINT_VERSION == (
-        "pdfium-text-lines+ccef-semantic-consolidation:v12"
+        "pdfium-text-lines+diagram+ccef-semantic-consolidation:v14"
     )
 
 
@@ -670,7 +670,7 @@ async def test_v4_job_uses_semantic_prompt_and_exact_fragment_bindings(tmp_path:
             provider=provider,
         )
         envelope = json.loads(provider.calls[0].messages[-1].content.split("\n", 1)[1])
-        assert envelope["prompt_version"] == "chess-workbench/ccef-prompt/1.6"
+        assert envelope["prompt_version"] == "chess-workbench/ccef-prompt/1.8"
         assert result["candidate"]["summary"]["move_node_count"] == 16
 
         normalized_row = next(

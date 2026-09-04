@@ -27,6 +27,8 @@ from chess_workbench.extraction.contracts import (
     MoveNodeAnnotationAnchor,
     MoveSequenceItem,
     MoveSequenceItemV1_1,
+    PositionAnchor,
+    PositionAnnotationAnchor,
     ProseItem,
     SequenceAnnotation,
     StartPosition,
@@ -35,9 +37,11 @@ from chess_workbench.extraction.validation import (
     normalize_chess_moves,
     normalize_chess_moves_v1_1,
 )
+from chess_workbench.review.inspection import inspect_review_candidate
 from chess_workbench.schemas.review import (
     PdfReviewAddLine,
     PdfReviewDeleteSubtree,
+    PdfReviewDetachPositionAnchor,
     PdfReviewEditOperation,
     PdfReviewEditText,
     PdfReviewExcludeItem,
@@ -78,6 +82,8 @@ def apply_review_edit(
         decisions = _set_nag(result, operation)
     elif isinstance(operation, PdfReviewExcludeItem):
         decisions = _exclude_item(result, operation)
+    elif isinstance(operation, PdfReviewDetachPositionAnchor):
+        decisions = _detach_position_anchor(result, operation)
     else:  # pragma: no cover - discriminated request contract is exhaustive.
         raise TypeError("unsupported review edit operation")
 
@@ -468,6 +474,53 @@ def _exclude_item(package: ReviewPackage, operation: PdfReviewExcludeItem) -> di
         "item_id": operation.item_id,
         "removed_diagnostic_count": removed_diagnostics,
     }
+
+
+def _detach_position_anchor(
+    package: ReviewPackage, operation: PdfReviewDetachPositionAnchor
+) -> dict[str, JsonValue]:
+    """Keep review text in source order while explicitly removing a bad FEN binding."""
+    current_issue_ids = {
+        issue.issue_id
+        for issue in inspect_review_candidate(package).issues
+        if issue.blocking
+        and issue.scope in ("item", "annotation")
+        and issue.code in ("position_anchor_no_match", "position_anchor_ambiguous")
+    }
+    if operation.issue_id not in current_issue_ids:
+        raise ValueError("review position-anchor issue was not found")
+    for item in package.items:
+        if isinstance(item, ProseItem) and isinstance(item.anchor, PositionAnchor):
+            issue_ids = {
+                f"item:{item.id}:position-anchor-no-match",
+                f"item:{item.id}:position-anchor-ambiguous",
+            }
+            if operation.issue_id in issue_ids:
+                item.anchor = None
+                return {
+                    "operation": "detach_position_anchor",
+                    "issue_id": operation.issue_id,
+                    "item_id": item.id,
+                    "annotation_id": None,
+                }
+        if not isinstance(item, MoveSequenceItemV1_1):
+            continue
+        for annotation in item.annotations:
+            if not isinstance(annotation.anchor, PositionAnnotationAnchor):
+                continue
+            issue_ids = {
+                f"annotation:{item.id}:{annotation.id}:position-anchor-no-match",
+                f"annotation:{item.id}:{annotation.id}:position-anchor-ambiguous",
+            }
+            if operation.issue_id in issue_ids:
+                annotation.anchor = None
+                return {
+                    "operation": "detach_position_anchor",
+                    "issue_id": operation.issue_id,
+                    "item_id": item.id,
+                    "annotation_id": annotation.id,
+                }
+    raise ValueError("review position-anchor issue was not found")
 
 
 def _pgn_node_order(sequence: ReviewSequence) -> list[MoveNode]:

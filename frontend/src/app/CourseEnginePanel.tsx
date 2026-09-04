@@ -2,6 +2,7 @@ import {
   Alert,
   Button,
   Drawer,
+  Progress,
   Select,
   Slider,
   Space,
@@ -32,22 +33,52 @@ const DEFAULT_PARAMETERS: EngineParameters = {
   ponder: false,
 };
 
-const ARROW_COLORS = [
-  'rgba(57, 91, 143, 0.78)',
-  'rgba(57, 91, 143, 0.62)',
-  'rgba(57, 91, 143, 0.48)',
-  'rgba(57, 91, 143, 0.36)',
-];
+const BEST_ARROW_COLOR = 'rgba(31, 90, 165, 0.86)';
+const MAX_VISIBLE_WINNING_CHANCE_LOSS = 0.2;
 
 export type CourseEngineArrow = NonNullable<
   ComponentProps<typeof Chessboard>['customArrows']
 >[number];
+export type CourseSectionAnalysisProgress = {
+  sectionId: string;
+  sectionTitle: string;
+  completed: number;
+  failed: number;
+  total: number;
+  running: boolean;
+  checking: boolean;
+  cached: number;
+  lookupFailed: boolean;
+};
 type BoardSquare = CourseEngineArrow[0];
 
 function scoreLabel(line: AnalysisLine): string {
   if (line.mate !== null) return `#${line.mate}`;
   const pawns = (line.score_cp ?? 0) / 100;
   return `${pawns >= 0 ? '+' : ''}${pawns.toFixed(2)}`;
+}
+
+function winningChances(line: AnalysisLine): number {
+  const score =
+    line.mate !== null
+      ? (21 - Math.min(10, Math.abs(line.mate))) *
+        100 *
+        (line.mate > 0 ? 1 : -1)
+      : (line.score_cp ?? 0);
+  const boundedScore = Math.min(1000, Math.max(-1000, score));
+  return 2 / (1 + Math.exp(-0.00368208 * boundedScore)) - 1;
+}
+
+function alternativeArrowColor(loss: number): string {
+  const ratio = Math.min(
+    1,
+    Math.max(0, loss / MAX_VISIBLE_WINNING_CHANCE_LOSS),
+  );
+  const red = Math.round(57 + 78 * ratio);
+  const green = Math.round(91 + 44 * ratio);
+  const blue = Math.round(143 - 8 * ratio);
+  const opacity = (0.64 - 0.38 * ratio).toFixed(2);
+  return `rgba(${red}, ${green}, ${blue}, ${opacity})`;
 }
 
 function isTerminal(fen: string): boolean {
@@ -60,9 +91,18 @@ function isTerminal(fen: string): boolean {
 
 export function CourseEnginePanel({
   fen,
+  sectionFens,
+  sectionProgress,
+  onAnalyzeSection,
   onArrowsChange,
 }: {
   fen: string;
+  sectionFens: string[];
+  sectionProgress?: CourseSectionAnalysisProgress;
+  onAnalyzeSection: (
+    parameters: EngineParameters,
+    fens: string[],
+  ) => Promise<void>;
   onArrowsChange: (arrows: CourseEngineArrow[]) => void;
 }) {
   const [enabled, setEnabled] = useState(false);
@@ -140,7 +180,7 @@ export function CourseEnginePanel({
         .finally(() => {
           if (!controller.signal.aborted) setAnalyzing(false);
         });
-    }, 220);
+    }, 80);
 
     return () => {
       window.clearTimeout(timer);
@@ -150,20 +190,29 @@ export function CourseEnginePanel({
 
   const arrows = useMemo<CourseEngineArrow[]>(() => {
     if (!enabled || !showArrows || !analysis) return [];
+    const bestLine = analysis.lines[0];
+    if (!bestLine) return [];
+    const sideMultiplier = fen.split(' ')[1] === 'b' ? -1 : 1;
+    const bestWinningChances = winningChances(bestLine) * sideMultiplier;
     return analysis.lines
       .slice(0, Math.min(arrowCount, 4))
       .flatMap((line, index) => {
         const move = line.uci[0];
         if (!move) return [];
+        const loss = Math.max(
+          0,
+          (bestWinningChances - winningChances(line) * sideMultiplier) / 2,
+        );
+        if (index > 0 && loss >= MAX_VISIBLE_WINNING_CHANCE_LOSS) return [];
         return [
           [
             move.slice(0, 2) as BoardSquare,
             move.slice(2, 4) as BoardSquare,
-            ARROW_COLORS[index],
+            index === 0 ? BEST_ARROW_COLOR : alternativeArrowColor(loss),
           ],
         ];
       });
-  }, [analysis, arrowCount, enabled, showArrows]);
+  }, [analysis, arrowCount, enabled, fen, showArrows]);
 
   useEffect(() => {
     onArrowsChange(arrows);
@@ -171,6 +220,10 @@ export function CourseEnginePanel({
   }, [arrows, onArrowsChange]);
 
   const terminal = isTerminal(fen);
+  const analyzableSectionFens = useMemo(
+    () => [...new Set(sectionFens)].filter((position) => !isTerminal(position)),
+    [sectionFens],
+  );
 
   return (
     <section className="course-engine-panel" aria-label="课程实时引擎">
@@ -194,14 +247,81 @@ export function CourseEnginePanel({
               : '关闭'}
           </Typography.Text>
         </Space>
-        <Button
-          size="small"
-          aria-label="课程引擎设置"
-          onClick={() => setSettingsOpen(true)}
-        >
-          设置
-        </Button>
+        <Space size="small">
+          <Button
+            size="small"
+            aria-label="引擎分析当前小节"
+            title={`预计算并保存 ${analyzableSectionFens.length} 个局面`}
+            disabled={!analyzableSectionFens.length || sectionProgress?.running}
+            loading={sectionProgress?.running}
+            onClick={() =>
+              void onAnalyzeSection(parameters, analyzableSectionFens)
+            }
+          >
+            分析本小节
+          </Button>
+          <Button
+            size="small"
+            aria-label="课程引擎设置"
+            onClick={() => setSettingsOpen(true)}
+          >
+            设置
+          </Button>
+        </Space>
       </div>
+
+      {sectionProgress ? (
+        <div className="course-engine-bulk">
+          <div className="min-w-0 flex-1">
+            <div className="mb-1 text-xs text-stone-600">
+              {sectionProgress.checking
+                ? '正在检查缓存'
+                : sectionProgress.running
+                  ? '正在分析'
+                  : '已完成'}
+              「{sectionProgress.sectionTitle}」
+            </div>
+            {sectionProgress.checking ? (
+              <div className="course-engine-loading min-h-0 justify-start py-1">
+                <Spin size="small" />
+                <span>正在查找已保存的局面…</span>
+              </div>
+            ) : sectionProgress.total ? (
+              <Progress
+                aria-label="小节引擎分析进度"
+                percent={Math.round(
+                  (sectionProgress.completed / sectionProgress.total) * 100,
+                )}
+                size="small"
+                status={
+                  !sectionProgress.running && sectionProgress.failed
+                    ? 'exception'
+                    : undefined
+                }
+                format={() =>
+                  `${sectionProgress.completed} / ${sectionProgress.total}`
+                }
+              />
+            ) : null}
+            {!sectionProgress.checking && sectionProgress.cached ? (
+              <div className="text-xs text-stone-600">
+                已跳过 {sectionProgress.cached} 个缓存局面
+              </div>
+            ) : null}
+            {!sectionProgress.running && !sectionProgress.checking ? (
+              <div className="text-xs text-stone-600" aria-live="polite">
+                {sectionProgress.lookupFailed
+                  ? '缓存检查失败，未启动分析'
+                  : sectionProgress.total === 0
+                    ? `全部 ${sectionProgress.cached} 个局面已有缓存`
+                    : sectionProgress.failed
+                      ? `${sectionProgress.failed} 个局面失败，可再次运行补齐`
+                      : '本小节分析已保存'}
+              </div>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
 
       {enabled ? (
         <div aria-live="polite">
@@ -216,13 +336,26 @@ export function CourseEnginePanel({
             </div>
           ) : analysis?.lines.length ? (
             <div className="course-pv-list" aria-label="当前局面引擎线路">
-              {analysis.lines.map((line) => (
-                <div className="course-pv-row" key={line.rank}>
-                  <span className="course-pv-rank">{line.rank}</span>
-                  <span className="course-pv-score">{scoreLabel(line)}</span>
-                  <span className="course-pv-moves">{line.san.join(' ')}</span>
-                </div>
-              ))}
+              {Array.from({ length: parameters.multipv }, (_, index) => {
+                const line = analysis.lines[index];
+                return (
+                  <div
+                    className="course-pv-row"
+                    key={line?.rank ?? `empty-${index + 1}`}
+                    aria-label={
+                      line ? undefined : `线路 ${index + 1} 没有更多合法候选着`
+                    }
+                  >
+                    <span className="course-pv-rank">{index + 1}</span>
+                    <span className="course-pv-score">
+                      {line ? scoreLabel(line) : '\u00a0'}
+                    </span>
+                    <span className="course-pv-moves">
+                      {line ? line.san.join(' ') : '\u00a0'}
+                    </span>
+                  </div>
+                );
+              })}
               <div className="course-engine-meta">
                 白方视角 · {analysis.elapsed_ms} ms
                 {analysis.from_cache ? ' · 缓存' : ''}

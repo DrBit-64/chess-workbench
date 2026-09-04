@@ -12,7 +12,7 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
-from collections.abc import Iterable
+from collections.abc import Iterable, Iterator
 from typing import Annotated, Any, Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationError, model_validator
@@ -1098,6 +1098,53 @@ def _parents_precede_children(nodes: list[dict[str, Any]]) -> bool:
     return True
 
 
+def _iter_owner_evidence(owner: dict[str, Any]) -> Iterator[tuple[dict[str, Any], str]]:
+    evidence = owner.get("evidence")
+    if isinstance(evidence, list):
+        for index, reference in enumerate(evidence):
+            if isinstance(reference, dict):
+                yield reference, f"evidence/{index}"
+    warnings = owner.get("warnings")
+    if isinstance(warnings, list):
+        for warning_index, warning in enumerate(warnings):
+            if not isinstance(warning, dict):
+                continue
+            for reference, suffix in _iter_owner_evidence(warning):
+                yield reference, f"warnings/{warning_index}/{suffix}"
+
+
+def iter_ccef_evidence_refs(
+    payload: dict[str, Any],
+) -> Iterator[tuple[dict[str, Any], str]]:
+    """Yield only contract-owned EvidenceRef objects and their JSON Pointer suffixes."""
+
+    items = payload.get("items")
+    if isinstance(items, list):
+        for item_index, item in enumerate(items):
+            if not isinstance(item, dict):
+                continue
+            for reference, suffix in _iter_owner_evidence(item):
+                yield reference, f"items/{item_index}/{suffix}"
+            if item.get("kind") != "move_sequence":
+                continue
+            for member_name in ("nodes", "annotations"):
+                members = item.get(member_name)
+                if not isinstance(members, list):
+                    continue
+                for member_index, member in enumerate(members):
+                    if not isinstance(member, dict):
+                        continue
+                    for reference, suffix in _iter_owner_evidence(member):
+                        yield reference, f"items/{item_index}/{member_name}/{member_index}/{suffix}"
+    diagnostics = payload.get("diagnostics")
+    if isinstance(diagnostics, list):
+        for diagnostic_index, diagnostic in enumerate(diagnostics):
+            if not isinstance(diagnostic, dict):
+                continue
+            for reference, suffix in _iter_owner_evidence(diagnostic):
+                yield reference, f"diagnostics/{diagnostic_index}/{suffix}"
+
+
 def canonicalize_ccef_response(
     response: StructuredGenerationResponse,
 ) -> tuple[StructuredGenerationResponse, tuple[dict[str, object], ...]]:
@@ -1119,6 +1166,29 @@ def canonicalize_ccef_response(
         return response, ()
 
     operations: list[dict[str, object]] = []
+    for evidence, suffix in iter_ccef_evidence_refs(repaired):
+        if "physical_page" not in evidence:
+            continue
+        physical_page = evidence["physical_page"]
+        if "page" not in evidence:
+            evidence["page"] = physical_page
+            del evidence["physical_page"]
+            operations.append(
+                {
+                    "rule": "canonicalize_evidence_page_alias",
+                    "path": f"/{suffix}",
+                    "removed_field": "physical_page",
+                }
+            )
+        elif evidence["page"] == physical_page:
+            del evidence["physical_page"]
+            operations.append(
+                {
+                    "rule": "remove_redundant_evidence_page_alias",
+                    "path": f"/{suffix}",
+                    "removed_field": "physical_page",
+                }
+            )
     for item_index, item in enumerate(items):
         if not isinstance(item, dict) or item.get("kind") != "move_sequence":
             continue
@@ -1238,6 +1308,7 @@ __all__ = [
     "apply_deterministic_ccef_repairs",
     "build_ccef_repair_request",
     "canonicalize_ccef_response",
+    "iter_ccef_evidence_refs",
     "ccef_repair_chain_document",
     "ccef_repair_diagnostics",
     "decode_ccef_repair",

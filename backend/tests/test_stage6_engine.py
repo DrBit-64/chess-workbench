@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import asyncio
 import os
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any, cast
+from unittest.mock import AsyncMock
 
 import chess
 import pytest
@@ -11,6 +13,7 @@ import uvloop
 
 from chess_workbench.config import Settings
 from chess_workbench.schemas.engine import (
+    AnalysisCacheLookupRequest,
     AnalysisRequest,
     EngineGameCreate,
     EngineGameMoveCreate,
@@ -33,7 +36,7 @@ from chess_workbench.services.uci import (
 )
 from chess_workbench.store.base import Base
 from chess_workbench.store.database import Database
-from chess_workbench.store.models import InvalidationEvent
+from chess_workbench.store.models import EngineAnalysis, InvalidationEvent
 
 FIXTURE_ENGINE = Path(__file__).parent / "fixtures" / "fake_uci_engine.py"
 SYZYGY_FIXTURE = Path(__file__).parent / "fixtures" / "syzygy"
@@ -64,11 +67,116 @@ async def test_fake_uci_handshake_options_four_legal_pvs_and_cleanup() -> None:
     assert result.lines[0].wdl is not None
 
 
+async def test_uci_accepts_fewer_pvs_when_the_position_has_only_three_legal_moves(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("FAKE_UCI_MODE", "limited-multipv")
+    checked_fen = "2kr1b1r/ppp2ppp/8/3P3q/2P1p1n1/4Bn1P/PP3PP1/RN1Q1RK1 w - - 1 13"
+
+    result = await _uci().analyze(
+        checked_fen,
+        EngineParameters(multipv=4, movetime_ms=100),
+    )
+
+    assert [line.san for line in result.lines] == [["Kh1"], ["Qxf3"], ["gxf3"]]
+
+
 def test_fake_uci_probe_works_under_sanic_uvloop() -> None:
     identity = uvloop.run(_uci().probe())
 
     assert identity.name == "FakeFish 1.2"
     assert identity.version == "1.2"
+
+
+async def test_cached_probe_reuses_identity_until_the_executable_changes(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    executable = tmp_path / "engine"
+    executable.write_bytes(b"engine-v1")
+    engine = UciEngine(executable, max_threads=1, max_hash_mb=128, max_time_ms=1000)
+    probe = AsyncMock(
+        side_effect=[
+            EngineIdentity(name="FakeFish 1", version="1"),
+            EngineIdentity(name="FakeFish 2", version="2"),
+        ]
+    )
+    monkeypatch.setattr(engine, "probe", probe)
+
+    assert (await engine.probe_cached()).version == "1"
+    assert (await engine.probe_cached()).version == "1"
+    assert probe.await_count == 1
+
+    executable.write_bytes(b"engine-version-two")
+    assert (await engine.probe_cached()).version == "2"
+    assert probe.await_count == 2
+
+
+async def test_cache_lookup_returns_only_current_engine_and_parameter_matches(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class ScalarRows:
+        def __init__(self, rows: list[EngineAnalysis]) -> None:
+            self.rows = rows
+
+        def __iter__(self) -> Iterator[EngineAnalysis]:
+            return iter(self.rows)
+
+    class Session:
+        async def scalars(self, _statement: object) -> ScalarRows:
+            return ScalarRows(rows)
+
+    parameters = EngineParameters()
+    second_fen = chess.Board(chess.STARTING_FEN)
+    second_fen.push_uci("e2e4")
+    rows = [
+        EngineAnalysis(
+            cache_key="a" * 64,
+            fen=chess.STARTING_FEN,
+            source="engine",
+            engine_name="FakeFish",
+            engine_version="2",
+            parameters=parameters.model_dump(mode="json"),
+            lines=[],
+            elapsed_ms=0,
+            from_cache=False,
+        ),
+        EngineAnalysis(
+            cache_key="b" * 64,
+            fen=second_fen.fen(en_passant="fen"),
+            source="engine",
+            engine_name="FakeFish",
+            engine_version="1",
+            parameters=parameters.model_dump(mode="json"),
+            lines=[],
+            elapsed_ms=0,
+            from_cache=False,
+        ),
+    ]
+    executable = tmp_path / "engine"
+    executable.write_bytes(b"engine")
+    settings = Settings(
+        stockfish_path=executable,
+        syzygy_path=tmp_path / "missing",
+        engine_worker_enabled=False,
+    )
+    service = EngineService(cast(Any, Session()), settings)
+    monkeypatch.setattr(
+        service.uci,
+        "probe_cached",
+        AsyncMock(return_value=EngineIdentity(name="FakeFish", version="2")),
+    )
+
+    result = await service.lookup_cached_fens(
+        AnalysisCacheLookupRequest(
+            fens=[chess.STARTING_FEN, second_fen.fen(en_passant="fen")],
+            parameters=parameters,
+        )
+    )
+
+    assert result.cached_fens == [chess.STARTING_FEN]
+    assert result.missing_fens == [second_fen.fen(en_passant="fen")]
 
 
 async def test_fake_uci_play_returns_a_legal_move() -> None:
@@ -154,6 +262,72 @@ async def test_fake_uci_timeout_and_cancellation_leave_no_process(
     analysis_task.cancel()
     with pytest.raises(asyncio.CancelledError):
         await analysis_task
+    pid = int(pid_file.read_text())
+    with pytest.raises(ProcessLookupError):
+        os.kill(pid, 0)
+
+
+async def test_cancelled_analysis_does_not_report_late_transport_errors(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("FAKE_UCI_MODE", "timeout")
+    pid_file = tmp_path / "cancelled-engine.pid"
+    monkeypatch.setenv("FAKE_UCI_PID_FILE", str(pid_file))
+    loop = asyncio.get_running_loop()
+    previous_handler = loop.get_exception_handler()
+    unexpected: list[dict[str, Any]] = []
+    loop.set_exception_handler(lambda _loop, context: unexpected.append(context))
+    try:
+        task = asyncio.create_task(
+            _uci().analyze(
+                chess.STARTING_FEN,
+                EngineParameters(multipv=1, movetime_ms=1000),
+            )
+        )
+        for _ in range(100):
+            if pid_file.exists():
+                await asyncio.sleep(0.05)
+                break
+            await asyncio.sleep(0.01)
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+        await asyncio.sleep(0)
+    finally:
+        loop.set_exception_handler(previous_handler)
+
+    assert unexpected == []
+
+
+def test_cancelled_analysis_during_ready_handshake_has_no_late_callback_error(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("FAKE_UCI_MODE", "delayed-ready")
+    pid_file = tmp_path / "delayed-ready-engine.pid"
+    monkeypatch.setenv("FAKE_UCI_PID_FILE", str(pid_file))
+
+    async def exercise() -> list[dict[str, Any]]:
+        loop = asyncio.get_running_loop()
+        unexpected: list[dict[str, Any]] = []
+        loop.set_exception_handler(lambda _loop, context: unexpected.append(context))
+        task = asyncio.create_task(
+            _uci().analyze(
+                chess.STARTING_FEN,
+                EngineParameters(multipv=1, movetime_ms=1000),
+            )
+        )
+        for _ in range(100):
+            if pid_file.exists():
+                await asyncio.sleep(0.05)
+                break
+            await asyncio.sleep(0.01)
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+        await asyncio.sleep(0.3)
+        return unexpected
+
+    assert uvloop.run(exercise()) == []
     pid = int(pid_file.read_text())
     with pytest.raises(ProcessLookupError):
         os.kill(pid, 0)

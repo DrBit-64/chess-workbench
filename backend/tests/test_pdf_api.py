@@ -158,7 +158,7 @@ def expected_run_id(
     the production private helper.
     """
     fingerprint_version = (
-        "pdfium-text-lines+ccef-semantic-consolidation:v12"
+        "pdfium-text-lines+diagram+ccef-semantic-consolidation:v14"
         if pipeline_version == PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION
         else "pdfium-text-lines+ccef-formal-consolidation:v5"
     )

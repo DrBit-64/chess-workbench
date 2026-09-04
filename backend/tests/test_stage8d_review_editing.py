@@ -20,6 +20,7 @@ from chess_workbench.schemas.review import (
     PdfReviewAddLine,
     PdfReviewCommandRequest,
     PdfReviewDeleteSubtree,
+    PdfReviewDetachPositionAnchor,
     PdfReviewDocumentRead,
     PdfReviewExcludeItem,
     PdfReviewMakeMainline,
@@ -230,6 +231,42 @@ def test_explicitly_excluding_a_non_chess_figure_clears_its_blocker() -> None:
     assert all(item.id != "photo1" for item in result.package.items)
     assert inspect_review_candidate(result.package).blocking_issue_count == 0
     assert result.decisions["operation"] == "exclude_item"
+
+
+def test_detaching_an_unmatched_annotation_anchor_keeps_the_text_in_flow() -> None:
+    payload = _package().model_dump(mode="json")
+    sequence_payload = payload["items"][0]
+    sequence_payload["annotations"][0]["anchor"] = {
+        "kind": "position",
+        "fen": "8/8/8/4k3/8/8/8/4K3 w - - 0 1",
+    }
+    package = ExtractionPackageV1_1.model_validate(payload)
+    issue = next(
+        issue
+        for issue in inspect_review_candidate(package).issues
+        if issue.code == "position_anchor_no_match"
+    )
+    before_flow = _sequence(package).reading_flow
+
+    result = apply_review_edit(
+        package,
+        PdfReviewDetachPositionAnchor(
+            kind="detach_position_anchor",
+            issue_id=issue.issue_id,
+        ),
+    )
+
+    sequence = _sequence(result.package)
+    assert sequence.annotations[0].text == "Comment on the Sicilian branch."
+    assert sequence.annotations[0].anchor is None
+    assert sequence.reading_flow == before_flow
+    assert inspect_review_candidate(result.package).blocking_issue_count == 0
+    assert result.decisions == {
+        "operation": "detach_position_anchor",
+        "issue_id": issue.issue_id,
+        "item_id": "seq1",
+        "annotation_id": "a1",
+    }
 
 
 class _LedgerSession:

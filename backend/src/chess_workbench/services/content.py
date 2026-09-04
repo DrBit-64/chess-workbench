@@ -715,36 +715,71 @@ class ContentService:
         try:
             async with self.session.begin_nested():
                 stored_move = await get_or_create_move(self.session, before, data.uci)
-                existing = await self.repository.find_child_occurrence(
-                    parent.id,
-                    stored_move.edge.id,
-                    data.sort_order,
+                siblings = await self.repository.list_occurrences(
+                    parent.course_id,
+                    parent_id=parent.id,
+                    include_archived=True,
                 )
-                if existing is not None:
+                occupant = next(
+                    (row for row in siblings if row.sort_order == data.sort_order),
+                    None,
+                )
+                if occupant is not None and occupant.archived_at is None:
                     if (
-                        existing.nag != data.nag
-                        or existing.sort_order != data.sort_order
-                        or existing.context != data.context
+                        occupant.inbound_move_edge_id != stored_move.edge.id
+                        or occupant.nag != data.nag
+                        or occupant.context != data.context
                     ):
                         raise self._ambiguous(
                             "course_occurrence",
-                            existing.id,
-                            "the same parent and move already exist with different context",
+                            occupant.id,
+                            "the requested sibling order is already active",
                         )
-                    row = existing
+                    row = occupant
                 else:
-                    row = CourseOccurrence(
-                        course_id=parent.course_id,
-                        module_id=parent.module_id,
-                        parent_id=parent.id,
-                        position_id=stored_move.target.id,
-                        inbound_move_edge_id=stored_move.edge.id,
-                        full_fen=stored_move.move.after.full_fen,
-                        nag=data.nag,
-                        sort_order=data.sort_order,
-                        context=data.context,
+                    reusable = next(
+                        (
+                            sibling
+                            for sibling in siblings
+                            if sibling.archived_at is not None
+                            and sibling.inbound_move_edge_id == stored_move.edge.id
+                            and sibling.nag == data.nag
+                            and sibling.context == data.context
+                        ),
+                        None,
                     )
-                    await self._add(row, "course_occurrence")
+                    if occupant is not None and occupant is not reusable:
+                        archive_sort_order = max(sibling.sort_order for sibling in siblings) + 1
+                        await self._update_changes(
+                            occupant,
+                            occupant.version,
+                            {"sort_order": archive_sort_order},
+                            "course_occurrence",
+                        )
+                    if reusable is not None:
+                        await self._update_changes(
+                            reusable,
+                            reusable.version,
+                            {
+                                "archived_at": None,
+                                "sort_order": data.sort_order,
+                            },
+                            "course_occurrence",
+                        )
+                        row = reusable
+                    else:
+                        row = CourseOccurrence(
+                            course_id=parent.course_id,
+                            module_id=parent.module_id,
+                            parent_id=parent.id,
+                            position_id=stored_move.target.id,
+                            inbound_move_edge_id=stored_move.edge.id,
+                            full_fen=stored_move.move.after.full_fen,
+                            nag=data.nag,
+                            sort_order=data.sort_order,
+                            context=data.context,
+                        )
+                        await self._add(row, "course_occurrence")
         except PositionError as error:
             raise self._position_service_error(error) from error
         return self._occurrence_read(row)

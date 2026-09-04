@@ -40,6 +40,7 @@ vi.mock('react-chessboard', () => ({
       <output data-testid="board-arrows">{JSON.stringify(customArrows)}</output>
       <button onClick={() => onSquareClick('e2')}>选择 e2</button>
       <button onClick={() => onPieceDrop('e2', 'e4')}>走 e4</button>
+      <button onClick={() => onPieceDrop('e7', 'e5')}>走 e5</button>
       <button onClick={() => onPieceDrop('g1', 'f3')}>走 Nf3</button>
       <button onClick={() => onPieceDrop('e2', 'e5')}>走非法棋步</button>
     </div>
@@ -252,6 +253,7 @@ function renderEditor() {
       <MemoryRouter initialEntries={['/learn/course-1']}>
         <Routes>
           <Route path="/learn/:courseId" element={<CourseEditor />} />
+          <Route path="/learn" element={<div>课程列表</div>} />
         </Routes>
       </MemoryRouter>
     </SWRConfig>,
@@ -259,6 +261,181 @@ function renderEditor() {
 }
 
 describe('Stage 4B course editor', () => {
+  it('renames and archives the course from its settings menu', async () => {
+    let currentCourse = { ...course, archived_at: null as string | null };
+    const requests: Array<{ url: string; body: Record<string, unknown> }> = [];
+    const fetchMock = vi.fn(
+      async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        if (url === '/api/citable-sources') return json([]);
+        if (url === '/api/courses/course-1' && !init?.method) {
+          return json(currentCourse);
+        }
+        if (url === '/api/courses/course-1/modules') return json([module]);
+        if (url === '/api/courses/course-1/editor/module-1') {
+          return json({
+            module,
+            content_blocks: [],
+            occurrences: [root],
+            notes: [],
+          });
+        }
+        if (url === '/api/courses/course-1' && init?.method === 'PATCH') {
+          const body = JSON.parse(String(init.body)) as Record<string, unknown>;
+          requests.push({ url, body });
+          currentCourse = {
+            ...currentCourse,
+            ...(typeof body.title === 'string' ? { title: body.title } : {}),
+            ...(body.archived === true
+              ? { archived_at: '2026-09-02T00:00:00Z' }
+              : {}),
+            version: currentCourse.version + 1,
+          };
+          return json(currentCourse);
+        }
+        throw new Error(`Unexpected request: ${url}`);
+      },
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    vi.spyOn(window, 'prompt').mockReturnValue('新课程名');
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    renderEditor();
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: '可交互课程 设置' }),
+    );
+    fireEvent.click(await screen.findByText('重命名课程'));
+
+    expect(await screen.findByText('新课程名')).toBeTruthy();
+    expect(requests[0]).toEqual({
+      url: '/api/courses/course-1',
+      body: { expected_version: 1, title: '新课程名' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: '新课程名 设置' }));
+    fireEvent.click(await screen.findByText('删除课程'));
+
+    expect(await screen.findByText('课程列表')).toBeTruthy();
+    expect(requests[1]).toEqual({
+      url: '/api/courses/course-1',
+      body: { expected_version: 2, archived: true },
+    });
+  });
+
+  it('precomputes each unique non-terminal position in the current subsection', async () => {
+    const analyzedFens: string[] = [];
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url === '/api/citable-sources') return json([]);
+      if (url === '/api/courses/course-1') return json(course);
+      if (url === '/api/courses/course-1/modules') return json([module]);
+      if (url === '/api/courses/course-1/editor/module-1') {
+        return json({
+          module,
+          content_blocks: [],
+          occurrences: [root, e4, transposedRoot],
+          notes: [],
+        });
+      }
+      if (
+        url === '/api/engine/analyses/cache-lookup' &&
+        init?.method === 'POST'
+      ) {
+        return json({ cached_fens: [startFen], missing_fens: [e4Fen] });
+      }
+      if (url === '/api/engine/analyses' && init?.method === 'POST') {
+        const body = JSON.parse(String(init.body)) as { fen: string };
+        analyzedFens.push(body.fen);
+        return json(engineAnalysis(body.fen));
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderEditor();
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: '引擎分析当前小节' }),
+    );
+
+    expect(await screen.findByText('本小节分析已保存')).toBeTruthy();
+    expect(screen.getByText('1 / 1')).toBeTruthy();
+    expect(screen.getByText('已跳过 1 个缓存局面')).toBeTruthy();
+    expect(analyzedFens).toEqual([e4Fen]);
+  });
+
+  it('keeps a subsection analysis running and visible after switching subsections', async () => {
+    const secondModule = {
+      ...module,
+      id: 'module-2',
+      title: '第二章',
+      sort_order: 1,
+    };
+    const secondRoot = {
+      ...root,
+      id: 'occ-second-root',
+      module_id: secondModule.id,
+    };
+    const analyzedFens: string[] = [];
+    let resolveFirstAnalysis!: (response: Response) => void;
+    const firstAnalysis = new Promise<Response>((resolve) => {
+      resolveFirstAnalysis = resolve;
+    });
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url === '/api/citable-sources') return json([]);
+      if (url === '/api/courses/course-1') return json(course);
+      if (url === '/api/courses/course-1/modules') {
+        return json([module, secondModule]);
+      }
+      if (url === '/api/courses/course-1/editor/module-1') {
+        return json({
+          module,
+          content_blocks: [],
+          occurrences: [root, e4],
+          notes: [],
+        });
+      }
+      if (url === '/api/courses/course-1/editor/module-2') {
+        return json({
+          module: secondModule,
+          content_blocks: [],
+          occurrences: [secondRoot],
+          notes: [],
+        });
+      }
+      if (
+        url === '/api/engine/analyses/cache-lookup' &&
+        init?.method === 'POST'
+      ) {
+        return json({ cached_fens: [], missing_fens: [startFen, e4Fen] });
+      }
+      if (url === '/api/engine/analyses' && init?.method === 'POST') {
+        const body = JSON.parse(String(init.body)) as { fen: string };
+        analyzedFens.push(body.fen);
+        return analyzedFens.length === 1
+          ? firstAnalysis
+          : json(engineAnalysis(body.fen));
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderEditor();
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: '引擎分析当前小节' }),
+    );
+    expect(await screen.findByText('正在分析「第一章」')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: '第二章' }));
+    expect(await screen.findByText('正在分析「第一章」')).toBeTruthy();
+
+    resolveFirstAnalysis(await json(engineAnalysis(startFen)));
+    expect(await screen.findByText('本小节分析已保存')).toBeTruthy();
+    expect(screen.getByText('已完成「第一章」')).toBeTruthy();
+    expect(screen.getByText('2 / 2')).toBeTruthy();
+    expect(analyzedFens).toEqual([startFen, e4Fen]);
+  });
+
   it('auto-analyzes every selected course position and draws configurable MultiPV arrows', async () => {
     const analyzedFens: string[] = [];
     const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
@@ -297,6 +474,22 @@ describe('Stage 4B course editor', () => {
       expect(arrows.textContent).toContain('d2');
       expect(arrows.textContent).toContain('g1');
       expect(arrows.textContent).not.toContain('c2');
+      const rendered = JSON.parse(arrows.textContent ?? '[]') as [
+        string,
+        string,
+        string,
+      ][];
+      expect(rendered).toHaveLength(3);
+      expect(rendered[0]?.[2]).toBe('rgba(31, 90, 165, 0.86)');
+      expect(new Set(rendered.map((arrow) => arrow[2])).size).toBe(3);
+      const opacity = (color: string) =>
+        Number(color.match(/, ([0-9.]+)\)$/)?.[1]);
+      expect(opacity(rendered[0]![2])).toBeGreaterThan(
+        opacity(rendered[1]![2]),
+      );
+      expect(opacity(rendered[1]![2])).toBeGreaterThan(
+        opacity(rendered[2]![2]),
+      );
     });
 
     fireEvent.click(screen.getByRole('button', { name: '课程引擎设置' }));
@@ -319,17 +512,29 @@ describe('Stage 4B course editor', () => {
       expect(arrows.textContent).toContain('e5');
       expect(arrows.textContent).not.toContain('e2');
     });
+    expect(screen.getByLabelText('线路 2 没有更多合法候选着')).toBeTruthy();
+    expect(screen.getByLabelText('线路 3 没有更多合法候选着')).toBeTruthy();
+    expect(screen.getByLabelText('线路 4 没有更多合法候选着')).toBeTruthy();
   });
 
   it('loads mixed content, follows candidates, exposes transpositions, and appends a legal move', async () => {
+    let moveCreated = false;
+    const createdNf3 = {
+      ...e4,
+      id: 'occ-nf3',
+      parent_id: 'occ-root',
+      position_id: 'position-nf3-root',
+      full_fen: 'rnbqkbnr/pppppppp/8/8/8/5N2/PPPPPPPP/RNBQKB1R b KQkq - 1 1',
+      inbound_uci: 'g1f3',
+      inbound_san: 'Nf3',
+      sort_order: 1,
+    };
     const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
       if (url === '/api/citable-sources') return json([citableSource]);
       if (init?.method === 'POST' && url === '/api/occurrences') {
-        return json(
-          { ...e4, id: 'occ-nf3', inbound_uci: 'g1f3', inbound_san: 'Nf3' },
-          201,
-        );
+        moveCreated = true;
+        return json(createdNf3, 201);
       }
       if (url === '/api/courses/course-1') return json(course);
       if (url === '/api/courses/course-1/modules') return json([module]);
@@ -377,7 +582,12 @@ describe('Stage 4B course editor', () => {
               archived_at: null,
             },
           ],
-          occurrences: [root, e4, transposedRoot],
+          occurrences: [
+            root,
+            e4,
+            transposedRoot,
+            ...(moveCreated ? [createdNf3] : []),
+          ],
           notes: [{ ...note, rendered_source_span_ids: [] }],
         });
       }
@@ -438,9 +648,79 @@ describe('Stage 4B course editor', () => {
         }),
       ),
     );
+    await waitFor(() =>
+      expect(screen.getByLabelText('测试棋盘').textContent).toContain(
+        createdNf3.full_fen,
+      ),
+    );
+  });
+
+  it('keeps the current position when a saved move is absent after refresh', async () => {
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url === '/api/citable-sources') return json([]);
+      if (url === '/api/courses/course-1') return json(course);
+      if (url === '/api/courses/course-1/modules') return json([module]);
+      if (url === '/api/courses/course-1/editor/module-1') {
+        return json({
+          module,
+          content_blocks: [],
+          occurrences: [root, e4],
+          notes: [],
+        });
+      }
+      if (url === '/api/occurrences' && init?.method === 'POST') {
+        return json({ ...e5, id: 'archived-occurrence' }, 201);
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderEditor();
+
+    fireEvent.click(await screen.findByRole('button', { name: /e4 e2e4/ }));
+    fireEvent.click(screen.getByRole('button', { name: '走 e5' }));
+
+    expect(
+      await screen.findByText(
+        '保存后的棋步没有出现在当前小节中，请刷新页面后重试',
+      ),
+    ).toBeTruthy();
+    expect(screen.getByLabelText('测试棋盘').textContent).toContain(e4Fen);
   });
 
   it('shows a persistent clickable mainline score and removes keyboard move entry', async () => {
+    const c5 = {
+      ...e5,
+      id: 'occ-c5',
+      position_id: 'position-c5',
+      move_edge_id: 'move-c5',
+      full_fen: 'rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2',
+      inbound_uci: 'c7c5',
+      inbound_san: 'c5',
+      sort_order: 1,
+    };
+    const d4AfterC5 = {
+      ...c5,
+      id: 'occ-d4-after-c5',
+      parent_id: c5.id,
+      position_id: 'position-d4-after-c5',
+      move_edge_id: 'move-d4-after-c5',
+      full_fen: 'rnbqkbnr/pp1ppppp/8/2p5/3PP3/8/PPP2PPP/RNBQKBNR b KQkq - 0 2',
+      inbound_uci: 'd2d4',
+      inbound_san: 'd4',
+      sort_order: 0,
+    };
+    const nc3AfterC5 = {
+      ...d4AfterC5,
+      id: 'occ-nc3-after-c5',
+      position_id: 'position-nc3-after-c5',
+      move_edge_id: 'move-nc3-after-c5',
+      full_fen:
+        'rnbqkbnr/pp1ppppp/8/2p5/4P3/2N5/PPPP1PPP/R1BQKBNR b KQkq - 1 2',
+      inbound_uci: 'b1c3',
+      inbound_san: 'Nc3',
+      sort_order: 1,
+    };
     const fetchMock = vi.fn((input: RequestInfo | URL) => {
       const url = String(input);
       if (url === '/api/citable-sources') return json([]);
@@ -450,7 +730,7 @@ describe('Stage 4B course editor', () => {
         return json({
           module,
           content_blocks: [],
-          occurrences: [root, e4, e5, nf3],
+          occurrences: [root, e4, e5, nf3, c5, d4AfterC5, nc3AfterC5],
           notes: [
             {
               ...note,
@@ -483,12 +763,40 @@ describe('Stage 4B course editor', () => {
       false,
     );
     expect(within(score).getByText('1.')).toBeTruthy();
-    expect(within(score).getByText('2.')).toBeTruthy();
+    expect(within(score).getAllByText('2.').length).toBeGreaterThan(0);
     expect(within(score).getByRole('button', { name: 'e4 e2e4' })).toBeTruthy();
     expect(within(score).getByRole('button', { name: 'e5 e7e5' })).toBeTruthy();
     expect(
       within(score).getByRole('button', { name: 'Nf3 g1f3' }),
     ).toBeTruthy();
+    const c5Variation = within(score)
+      .getByRole('button', { name: 'c5 c7c5' })
+      .closest('[data-variation-presentation]') as HTMLElement;
+    expect(c5Variation.getAttribute('data-variation-presentation')).toBe(
+      'rail',
+    );
+    expect(
+      c5Variation.querySelectorAll('[data-course-branch-rail]'),
+    ).toHaveLength(1);
+    const nestedVariation = within(score)
+      .getByRole('button', { name: 'Nc3 b1c3' })
+      .closest('[data-variation-presentation]') as HTMLElement;
+    expect(nestedVariation.getAttribute('data-variation-presentation')).toBe(
+      'parenthetical',
+    );
+    expect(nestedVariation.textContent).toMatch(/^\(.*\)$/);
+    const c5Button = within(score).getByRole('button', { name: 'c5 c7c5' });
+    const d4Button = within(score).getByRole('button', {
+      name: 'd4 d2d4',
+    });
+    expect(
+      c5Button.compareDocumentPosition(nestedVariation) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).not.toBe(0);
+    expect(
+      nestedVariation.compareDocumentPosition(d4Button) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).not.toBe(0);
     const e4Button = within(score).getByRole('button', { name: 'e4 e2e4' });
     const afterE4 = within(score).getByText('After e4');
     const e5Button = within(score).getByRole('button', { name: 'e5 e7e5' });
@@ -690,9 +998,9 @@ describe('Stage 4B course editor', () => {
       'text/plain',
       'module-game-1',
     );
-    expect(
-      fireEvent.dragOver(gameTwoRow, { clientY: 19, dataTransfer }),
-    ).toBe(false);
+    expect(fireEvent.dragOver(gameTwoRow, { clientY: 19, dataTransfer })).toBe(
+      false,
+    );
     expect(fireEvent.drop(gameTwoRow, { clientY: 19, dataTransfer })).toBe(
       false,
     );

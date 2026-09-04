@@ -15,6 +15,8 @@ from chess_workbench.api.errors import ApiError
 from chess_workbench.config import Settings
 from chess_workbench.schemas.domain import ErrorResponse
 from chess_workbench.schemas.engine import (
+    AnalysisCacheLookupRead,
+    AnalysisCacheLookupRequest,
     AnalysisJobRequest,
     AnalysisRead,
     AnalysisRequest,
@@ -101,6 +103,19 @@ async def create_analysis(request: Request) -> HTTPResponse:
         payload = payload.model_copy(update={"from_cache": bool(result["from_cache"])})
     except EngineError as error:
         raise _engine_api_error(error) from error
+    return _json(payload)
+
+
+@engine_blueprint.post("/engine/analyses/cache-lookup", name="lookup_analysis_cache")
+@openapi.operation("lookupEngineAnalysisCache")
+@openapi.tag("engine")
+@openapi.body(_media(AnalysisCacheLookupRequest), required=True)
+@openapi.response(200, _media(AnalysisCacheLookupRead), "Persisted analysis cache coverage")
+async def lookup_analysis_cache(request: Request) -> HTTPResponse:
+    body = parse_body(request, AnalysisCacheLookupRequest)
+    database, settings = _context(request)
+    async with database.session() as session:
+        payload = await EngineService(session, settings).lookup_cached_fens(body)
     return _json(payload)
 
 

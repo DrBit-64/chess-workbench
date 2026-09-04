@@ -64,10 +64,19 @@ describe('course move layout', () => {
       [2, 'nf3', undefined],
     ]);
     expect(layout.variationsByParent.get('root')?.[0]?.path).toEqual(['d4']);
+    expect(layout.variationsByParent.get('root')?.[0]?.presentation).toBe(
+      'rail',
+    );
     expect(layout.variationsByParent.get('e4')?.[0]?.path).toEqual(['c5']);
+    // The secondary c5 line forks again within six plies, so Lichess keeps
+    // the explicit rail treatment instead of parenthesizing it.
+    expect(layout.variationsByParent.get('e4')?.[0]?.presentation).toBe('rail');
     expect(layout.variationsByParent.get('c5')?.[0]?.path).toEqual([
       'c5',
       'd6',
     ]);
+    expect(layout.variationsByParent.get('c5')?.[0]?.presentation).toBe(
+      'parenthetical',
+    );
   });
 });

@@ -21,7 +21,7 @@ STAGE_2D_CONTENT_TESTS := $(wildcard \
 	backend/tests/test_note_source_link.py \
 	backend/tests/test_occurrence_invariants.py)
 
-.PHONY: check-pnpm bootstrap-backend bootstrap-frontend bootstrap lock migrate dev-api dev-web install-stockfish \
+.PHONY: check-pnpm bootstrap-backend bootstrap-frontend bootstrap lock migrate dev-api dev-web install-stockfish install-chess-diagram-model \
 	backend-format backend-lint backend-typecheck backend-static backend-test \
 	backend-migration-check backend-check frontend-format frontend-lint \
 	frontend-typecheck frontend-test frontend-build frontend-check contracts \
@@ -34,6 +34,9 @@ STAGE_2D_CONTENT_TESTS := $(wildcard \
 
 install-stockfish:
 	uv run --project backend --locked python scripts/install_stockfish.py
+
+install-chess-diagram-model:
+	uv run --project backend --locked python scripts/install_chess_diagram_model.py
 
 check-pnpm:
 	@if [ -z "$(PNPM)" ]; then \
@@ -64,13 +67,13 @@ dev-web: check-pnpm
 	$(PNPM) --dir frontend dev
 
 backend-format:
-	uv run --project backend --locked ruff format --config backend/pyproject.toml backend/src backend/tests scripts/contracts.py scripts/assert_health.py scripts/check_backend_coverage.py scripts/check_migrations.py scripts/install_stockfish.py --check
+	uv run --project backend --locked ruff format --config backend/pyproject.toml backend/src backend/tests scripts/contracts.py scripts/assert_health.py scripts/check_backend_coverage.py scripts/check_migrations.py scripts/install_stockfish.py scripts/install_chess_diagram_model.py --check
 
 backend-lint:
-	uv run --project backend --locked ruff check --config backend/pyproject.toml backend/src backend/tests scripts/contracts.py scripts/assert_health.py scripts/check_backend_coverage.py scripts/check_migrations.py scripts/install_stockfish.py
+	uv run --project backend --locked ruff check --config backend/pyproject.toml backend/src backend/tests scripts/contracts.py scripts/assert_health.py scripts/check_backend_coverage.py scripts/check_migrations.py scripts/install_stockfish.py scripts/install_chess_diagram_model.py
 
 backend-typecheck:
-	uv run --project backend --locked mypy --config-file backend/pyproject.toml backend/src backend/tests scripts/contracts.py scripts/assert_health.py scripts/check_backend_coverage.py scripts/check_migrations.py scripts/install_stockfish.py
+	uv run --project backend --locked mypy --config-file backend/pyproject.toml backend/src backend/tests scripts/contracts.py scripts/assert_health.py scripts/check_backend_coverage.py scripts/check_migrations.py scripts/install_stockfish.py scripts/install_chess_diagram_model.py
 
 backend-static: backend-format backend-lint backend-typecheck
 

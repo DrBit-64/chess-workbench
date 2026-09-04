@@ -116,13 +116,14 @@ describe('buildReviewMoveRows', () => {
       move_text: 'c5',
     });
     const d4 = white('d4', 2, { parent_id: 'c5', move_text: 'd4' });
+    const d5 = black('d5', 2, { parent_id: 'd4', move_text: 'd5' });
     const g6 = black('g6', 2, {
       parent_id: 'd4',
       sibling_order: 1,
       move_text: 'g6',
     });
 
-    const rows = buildReviewMoveRows([e4, e5, c5, d4, g6]);
+    const rows = buildReviewMoveRows([e4, e5, c5, d4, d5, g6]);
     expect(rows).toHaveLength(4);
 
     expect(rows[0].white).toBe(e4);
@@ -136,7 +137,7 @@ describe('buildReviewMoveRows', () => {
 
     // Primary descendant of the alternative keeps depth 1 (does not deepen).
     expect(rows[2].white).toBe(d4);
-    expect(rows[2].black).toBeNull();
+    expect(rows[2].black).toBe(d5);
     expect(rows[2].variationDepth).toBe(1);
     expect(rows[2].variationPath).toEqual(['c5']);
 
@@ -145,6 +146,7 @@ describe('buildReviewMoveRows', () => {
     expect(rows[3].black).toBe(g6);
     expect(rows[3].variationDepth).toBe(2);
     expect(rows[3].variationPath).toEqual(['c5', 'g6']);
+    expect(rows[3].variationPresentation).toBe('parenthetical');
 
     const compact = compactReviewBlocks(
       rows.map((row) => ({
@@ -160,12 +162,35 @@ describe('buildReviewMoveRows', () => {
     ]);
     expect(compact[1].kind).toBe('variation_line');
     if (compact[1].kind === 'variation_line') {
-      expect(compact[1].rows.map((row) => row.key)).toEqual(['c5', 'd4']);
+      expect(compact[1].rows.map((row) => row.key)).toEqual(['c5', 'd4+d5']);
+      expect(compact[1].presentation).toBe('rail');
     }
     expect(compact[2].kind).toBe('variation_line');
     if (compact[2].kind === 'variation_line') {
       expect(compact[2].variationPath).toEqual(['c5', 'g6']);
+      expect(compact[2].presentation).toBe('parenthetical');
     }
+  });
+
+  it('uses rails for mainline forks and parentheses only for nested short secondary lines', () => {
+    const e4 = white('e4', 1, { move_text: 'e4' });
+    const e5 = black('e5', 1, { parent_id: 'e4', move_text: 'e5' });
+    const c5 = black('c5', 1, {
+      parent_id: 'e4',
+      sibling_order: 1,
+      move_text: 'c5',
+    });
+    const binary = buildReviewMoveRows([e4, e5, c5]);
+    expect(binary[1]?.variationPresentation).toBe('rail');
+
+    const d5 = black('d5', 1, {
+      parent_id: 'e4',
+      sibling_order: 2,
+      move_text: 'd5',
+    });
+    const threeWay = buildReviewMoveRows([e4, e5, c5, d5]);
+    expect(threeWay[1]?.variationPresentation).toBe('rail');
+    expect(threeWay[2]?.variationPresentation).toBe('rail');
   });
 
   it('never pairs incompatible or nonconsecutive nodes and keeps fallback rows visible', () => {

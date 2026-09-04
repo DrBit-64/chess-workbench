@@ -869,13 +869,13 @@ describe('Stage 8D review page (8D-3A)', () => {
     expect(within(pairRow).getByText('e4')).toBeTruthy();
     expect(within(pairRow).getByText('1')).toBeTruthy();
 
-    // Every alternative, including a single shallow branch, gets an explicit
-    // branch line and a stable branch path rather than parentheses.
+    // A line branching directly from the main score keeps an explicit rail.
     const c5Row = within(sequence)
       .getByText('c5')
       .closest('[data-variation-depth]') as HTMLElement;
     expect(c5Row.getAttribute('data-variation-depth')).toBe('1');
     expect(c5Row.getAttribute('data-variation-path')).toBe('n3');
+    expect(c5Row.getAttribute('data-variation-presentation')).toBe('rail');
     expect(c5Row.querySelectorAll('[data-branch-rail]')).toHaveLength(1);
     expect(within(c5Row).getByText('1...')).toBeTruthy();
 
@@ -889,6 +889,7 @@ describe('Stage 8D review page (8D-3A)', () => {
       .closest('[data-variation-depth]') as HTMLElement;
     expect(d4Row.getAttribute('data-variation-depth')).toBe('1');
     expect(d4Row.getAttribute('data-variation-path')).toBe('n5');
+    expect(d4Row.getAttribute('data-variation-presentation')).toBe('rail');
 
     expect(within(sequence).queryByText('合法')).toBeNull();
     expect(within(sequence).queryByText('非法')).toBeNull();
@@ -1109,6 +1110,89 @@ describe('Stage 8D review page (8D-3A)', () => {
         operation: { kind: 'exclude_item', item_id: 'photo1' },
       },
     });
+  });
+
+  it('keeps annotation text while detaching an unmatched position anchor', async () => {
+    const blocked = annotatedDocument();
+    const sequence = blocked.package.items?.[0];
+    if (
+      sequence === undefined ||
+      sequence.kind !== 'move_sequence' ||
+      !('annotations' in sequence) ||
+      sequence.annotations === undefined
+    ) {
+      throw new Error('Expected an annotated score fixture');
+    }
+    sequence.annotations[0] = {
+      ...sequence.annotations[0]!,
+      anchor: { kind: 'position', fen: CUSTOM_INITIAL_FEN },
+    };
+    blocked.inspection = {
+      ...blocked.inspection,
+      issue_count: 1,
+      blocking_issue_count: 1,
+      issues: [
+        {
+          issue_id: 'annotation:annotated-seq:a1:position-anchor-no-match',
+          item_id: 'annotated-seq',
+          node_id: null,
+          scope: 'annotation',
+          severity: 'error',
+          code: 'position_anchor_no_match',
+          message: 'Position anchor has no candidate occurrence',
+          blocking: true,
+          evidence: evidence(6),
+        },
+      ],
+    };
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      void init;
+      const target = String(input);
+      if (target.endsWith('/review/session')) {
+        return json({ replayed: false, session: reviewSession() }, 201);
+      }
+      if (target.endsWith('/commands')) {
+        return json({
+          session: reviewSession(2),
+          document: annotatedDocument(),
+        });
+      }
+      return json(blocked);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    renderPage();
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: '开始编辑审核' }),
+    );
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: '保留文字并取消局面关联',
+      }),
+    );
+
+    await waitFor(() =>
+      expect(
+        fetchMock.mock.calls.some(([input]) =>
+          String(input).endsWith('/commands'),
+        ),
+      ).toBe(true),
+    );
+    const commandCall = fetchMock.mock.calls.find(([input]) =>
+      String(input).endsWith('/commands'),
+    )!;
+    expect(JSON.parse(String(commandCall[1]?.body))).toEqual({
+      expected_version: 1,
+      command: {
+        kind: 'edit',
+        operation: {
+          kind: 'detach_position_anchor',
+          issue_id: 'annotation:annotated-seq:a1:position-anchor-no-match',
+        },
+      },
+    });
+    expect(screen.getByText('第一条原子说明')).toBeTruthy();
   });
 
   it('drag-selects moves and publishes one fragment into a new nested chapter', async () => {

@@ -1,6 +1,7 @@
 import {
   Button,
   Card,
+  Dropdown,
   Empty,
   Form,
   Input,
@@ -40,6 +41,54 @@ export function CourseCatalog() {
     form.resetFields();
     await mutate();
     void message.success('课程已创建');
+  }
+
+  async function renameCourse(course: Course) {
+    const title = window.prompt('重命名课程', course.title)?.trim();
+    if (!title || title === course.title) return;
+    try {
+      const updated = await requestJson<Course>(`/api/courses/${course.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ expected_version: course.version, title }),
+      });
+      await mutate(
+        (current) =>
+          current?.map((item) => (item.id === updated.id ? updated : item)),
+        { revalidate: false },
+      );
+    } catch (error: unknown) {
+      void message.error(
+        error instanceof Error ? error.message : '重命名课程失败',
+      );
+    }
+  }
+
+  async function deleteCourse(course: Course) {
+    if (
+      !window.confirm(
+        `确定删除课程“${course.title}”吗？课程内容会被归档，不会删除共享局面数据。`,
+      )
+    ) {
+      return;
+    }
+    try {
+      await requestJson<Course>(`/api/courses/${course.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          expected_version: course.version,
+          archived: true,
+        }),
+      });
+      await mutate(
+        (current) => current?.filter((item) => item.id !== course.id),
+        { revalidate: false },
+      );
+      void message.success('课程已删除');
+    } catch (error: unknown) {
+      void message.error(
+        error instanceof Error ? error.message : '删除课程失败',
+      );
+    }
   }
 
   return (
@@ -83,23 +132,43 @@ export function CourseCatalog() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {data.map((course) => (
-            <Link
+            <Card
               key={course.id}
-              to={`/learn/${course.id}`}
-              className="block text-inherit"
-            >
-              <Card
-                loading={isLoading}
-                hoverable
-                title={course.title}
-                extra={
+              loading={isLoading}
+              hoverable
+              title={<Link to={`/learn/${course.id}`}>{course.title}</Link>}
+              extra={
+                <Space size="small">
                   <Tag
                     color={course.status === 'published' ? 'green' : 'default'}
                   >
                     {course.status === 'published' ? '已发布' : '草稿'}
                   </Tag>
-                }
-              >
+                  <Dropdown
+                    trigger={['click']}
+                    menu={{
+                      items: [
+                        { key: 'rename', label: '重命名课程' },
+                        { key: 'delete', label: '删除课程', danger: true },
+                      ],
+                      onClick: ({ key }) => {
+                        if (key === 'rename') void renameCourse(course);
+                        else void deleteCourse(course);
+                      },
+                    }}
+                  >
+                    <Button
+                      type="text"
+                      aria-label={`${course.title} 设置`}
+                      title="课程设置"
+                    >
+                      ⚙
+                    </Button>
+                  </Dropdown>
+                </Space>
+              }
+            >
+              <Link to={`/learn/${course.id}`} className="block text-inherit">
                 <Typography.Paragraph className="min-h-12 text-stone-600">
                   {course.description || '尚未添加课程说明'}
                 </Typography.Paragraph>
@@ -113,8 +182,8 @@ export function CourseCatalog() {
                     <Tag key={tag}>{tag}</Tag>
                   ))}
                 </Space>
-              </Card>
-            </Link>
+              </Link>
+            </Card>
           ))}
         </div>
       )}

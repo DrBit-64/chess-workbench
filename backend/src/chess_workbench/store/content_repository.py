@@ -236,23 +236,6 @@ class ContentRepository:
             statement.order_by(CourseOccurrence.created_at, CourseOccurrence.id)
         )
 
-    async def find_child_occurrence(
-        self,
-        parent_id: UUID,
-        inbound_move_edge_id: UUID,
-        sort_order: int,
-    ) -> CourseOccurrence | None:
-        return cast(
-            CourseOccurrence | None,
-            await self.session.scalar(
-                select(CourseOccurrence).where(
-                    CourseOccurrence.parent_id == parent_id,
-                    CourseOccurrence.inbound_move_edge_id == inbound_move_edge_id,
-                    CourseOccurrence.sort_order == sort_order,
-                )
-            ),
-        )
-
     async def get_source(self, source_id: UUID) -> Source | None:
         return await self.session.get(Source, source_id)
 

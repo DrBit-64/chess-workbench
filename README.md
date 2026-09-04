@@ -34,6 +34,7 @@ corepack prepare pnpm@10.14.0 --activate
 cp .env.example .env
 make bootstrap
 make install-stockfish
+make install-chess-diagram-model
 ```
 
 分别在两个终端启动 API 和前端：
@@ -54,6 +55,8 @@ Dashboard、Learn、Sources、三栏课程编辑器与“引擎”工作台均�
 中设置 `CHESS_WORKBENCH_DEEPSEEK_API_KEY_FILE` 为它的绝对路径。程序拒绝从 `.env` 直接读取
 `CHESS_WORKBENCH_DEEPSEEK_API_KEY`，也会拒绝组或其他用户可读的密钥文件。未配置密钥文件时
 其他功能仍可用，但新的 v2 提取任务会以 `provider_unconfigured` 明确失败。
+扫描棋书中的起始局面图由本地、可替换的 ONNX 识别器处理；模型通过上述安装命令放入
+`data/models/chess-diagram/`，识别证据随后仍进入与普通 PDF 正文完全相同的提取请求。
 
 ## 自动验收
 

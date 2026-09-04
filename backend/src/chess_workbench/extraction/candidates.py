@@ -36,6 +36,7 @@ from .decoder import (
 from .general_repair import (
     canonicalize_ccef_response,
     ccef_repair_chain_document,
+    iter_ccef_evidence_refs,
 )
 from .prompting import (
     CcefPromptContext,
@@ -169,42 +170,10 @@ def _package_matches_context(
     return package.extensions == {}
 
 
-def _iter_raw_owner_evidence(owner: dict[str, Any]) -> Iterator[dict[str, Any]]:
-    evidence = owner.get("evidence")
-    if isinstance(evidence, list):
-        for reference in evidence:
-            if isinstance(reference, dict):
-                yield reference
-    warnings = owner.get("warnings")
-    if isinstance(warnings, list):
-        for warning in warnings:
-            if isinstance(warning, dict):
-                yield from _iter_raw_owner_evidence(warning)
-
-
 def _iter_raw_evidence_refs(payload: dict[str, Any]) -> Iterator[dict[str, Any]]:
     """Yield only CCEF-owned EvidenceRef slots, never similarly named extensions."""
-
-    items = payload.get("items")
-    if isinstance(items, list):
-        for item in items:
-            if not isinstance(item, dict):
-                continue
-            yield from _iter_raw_owner_evidence(item)
-            if item.get("kind") != "move_sequence":
-                continue
-            for member_name in ("nodes", "annotations"):
-                members = item.get(member_name)
-                if not isinstance(members, list):
-                    continue
-                for member in members:
-                    if isinstance(member, dict):
-                        yield from _iter_raw_owner_evidence(member)
-    diagnostics = payload.get("diagnostics")
-    if isinstance(diagnostics, list):
-        for diagnostic in diagnostics:
-            if isinstance(diagnostic, dict):
-                yield from _iter_raw_owner_evidence(diagnostic)
+    for reference, _path in iter_ccef_evidence_refs(payload):
+        yield reference
 
 
 def _decode_fragment_bound_response_v1_1(

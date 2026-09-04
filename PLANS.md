@@ -19,11 +19,34 @@ ADR 0016 is authoritative. Stage 5/6E and Stage 7 remain deferred.
   is cancelled, its Job is archived, and immutable runs/artifacts remain available for audit.
 - [ ] Add review-based modification with its authoritative backend boundary; editing actions that
   are not implemented remain disabled.
+- [x] Let a reviewer resolve unmatched or ambiguous prose/annotation position anchors by explicitly
+  preserving the text in reading order while detaching only the unusable FEN association. Record
+  the choice as a normal immutable review revision before approval.
 
 This slice intentionally reuses the existing asset/run/document APIs and adds no SQL identity. A
 fresh client idempotency key is sent for each user-requested extraction so two requests for the same
 asset and page range remain two separately addressable runs. Focused browser/type verification is
 sufficient during this product-layout iteration.
+
+## Shared chess-diagram evidence extension
+
+- [x] Extract bounded embedded PDF image candidates with their rendered-page coordinates.
+- [x] Detect printed 8×8 boards and classify their 64 squares through a replaceable local ONNX
+  recognizer.
+- [x] Resolve a recognized placement to a conservative operational FEN only when a nearby formal
+  move uniquely validates its side-to-move and move number.
+- [x] Insert diagram markers into the ordinary ordered PDF evidence stream and keep the existing
+  artifacts, semantic prompt, provider, CCEF, incremental and review pipeline.
+- [x] On *Endgame Strategy* physical pages 19--22, recognize all four diagrams locally and resolve
+  four operational FENs without a book/page/position special case.
+- [x] Run one operator-requested real DeepSeek extraction for pages 19--22. The returned content is
+  structurally valid after the shared deterministic EvidenceRef alias correction: 12 items, 102
+  move nodes, no diagnostics, invalid or ambiguous moves. The browser run itself remains failed and
+  immutable; a subsequent request is required to exercise the corrected prompt end to end. ADR
+  0020 is authoritative.
+- [x] Permit an incremental page segment to consist entirely of new, diagram-started scores. Any
+  declared continuation remains hash/anchor validated, while zero bindings no longer rejects
+  independent games that ADR 0018 requires the composer to append in source order.
 
 ## SQLite reliability correction
 
@@ -55,6 +78,32 @@ sufficient during this product-layout iteration.
   scroll viewport so they remain reachable on long games.
 - [x] Allow drag reordering within each existing module sibling group while refusing cross-parent
   drops; hierarchy changes remain a separate future operation.
+- [x] Add course-level settings menus to the learning catalog cards and learning-page title. They
+  reuse the existing optimistic course update boundary for renaming and recoverable archival;
+  deleted courses disappear from the catalog without hard-deleting content or shared positions.
+- [x] Add one-click subsection engine precomputation with visible completed/total progress. Reuse
+  the existing persisted analysis cache, perform one batch cache lookup, and process only missing
+  unique non-terminal FENs sequentially so later visits with the same engine profile return
+  immediately without redundant requests or parallel Stockfish processes.
+- [x] Remove the one-second subprocess tax from engine cache hits by reusing the probed engine
+  identity until the executable's filesystem identity changes; shorten course navigation debounce
+  while retaining cancellation of superseded position requests.
+- [x] Replace rank-only fixed-opacity engine arrows with a Lichess-inspired evaluation mapping:
+  keep the best move saturated blue, continuously desaturate and fade alternatives by their
+  side-to-move winning-chance loss, and hide alternatives beyond the meaningful-loss threshold.
+- [x] Treat the configured MultiPV count as an upper bound when a position has fewer legal root
+  moves. Accept exactly the available Stockfish lines and retain the remaining configured UI rows
+  as blank slots without scores, moves or arrows.
+- [x] Make recorded course moves compatible with soft deletion: archived siblings vacate an active
+  order slot, an exact archived move may be explicitly restored without reviving its old dependent
+  content, and the browser refuses to select a created ID absent from the refreshed subsection.
+- [x] Make UCI command startup cancellation safe under uvloop: never cancel python-chess's pending
+  `readyok` result future, close the subprocess first, and drain both the command and analysis
+  result so rapid course navigation cannot emit late `InvalidStateError` callbacks.
+- [x] Match Lichess's compact inline-tree placement in the course score: alternatives leaving the
+  main score retain explicit rails, while a sole short nested alternative is inserted in
+  parentheses immediately after its branching move. Three-way, nearby re-branching and long
+  alternatives retain rails; the review projection uses the same top-level-versus-nested policy.
 
 8D-6 publication must target the ordinary Course/Knowledge model rather than make learning pages
 depend on CCEF. It may populate citations used by this source-page adapter, but the workbench itself

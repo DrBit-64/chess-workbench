@@ -1,5 +1,5 @@
 import type { MouseEvent as ReactMouseEvent, ReactNode } from 'react';
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import rehypeSanitize from 'rehype-sanitize';
 
@@ -367,60 +367,75 @@ function VariationLine({
   ) => void;
 }) {
   const visualDepth = Math.min(5, variation.depth);
+  const parenthetical = variation.presentation === 'parenthetical';
+  const moves = variation.moves.map((move, index) => (
+    <Fragment key={move.occurrence.id}>
+      <span className="inline-flex items-baseline gap-1">
+        {(index === 0 || move.side === 'white') && (
+          <span className="font-mono text-xs text-stone-400">
+            {move.side === 'black'
+              ? `${move.moveNumber}...`
+              : `${move.moveNumber}.`}
+          </span>
+        )}
+        <CourseMove
+          move={move}
+          active={move.occurrence.id === currentId}
+          onSelectOccurrence={onSelectOccurrence}
+          onContextMenu={onMoveContextMenu}
+        />
+      </span>
+      {(notesByOccurrence.get(move.occurrence.id) ?? []).map((note) => (
+        <span
+          key={note.id}
+          onContextMenu={(event) => onNoteContextMenu(event, note)}
+          className="basis-full cursor-context-menu whitespace-normal py-0.5 italic text-stone-600"
+        >
+          <ReactMarkdown rehypePlugins={[rehypeSanitize]}>
+            {note.rendered_markdown}
+          </ReactMarkdown>
+        </span>
+      ))}
+      {(variationsByParent.get(move.occurrence.id) ?? []).map((nested) => (
+        <VariationLine
+          key={nested.key}
+          variation={nested}
+          variationsByParent={variationsByParent}
+          notesByOccurrence={notesByOccurrence}
+          currentId={currentId}
+          onSelectOccurrence={onSelectOccurrence}
+          onNoteContextMenu={onNoteContextMenu}
+          onMoveContextMenu={onMoveContextMenu}
+        />
+      ))}
+    </Fragment>
+  ));
+
+  if (parenthetical) {
+    return (
+      <span
+        data-variation-depth={variation.depth}
+        data-variation-path={variation.path.join('/')}
+        data-variation-presentation="parenthetical"
+        className="inline-flex flex-wrap items-baseline gap-x-1.5 italic text-stone-500"
+      >
+        <span aria-hidden="true">(</span>
+        {moves}
+        <span aria-hidden="true">)</span>
+      </span>
+    );
+  }
+
   return (
     <div
       data-variation-depth={variation.depth}
       data-variation-path={variation.path.join('/')}
+      data-variation-presentation="rail"
       style={{ paddingLeft: `${visualDepth * 14 + 8}px` }}
-      className="relative py-1 pr-2 text-sm leading-6"
+      className="relative basis-full py-1 pr-2 text-sm leading-6"
     >
       <BranchRails depth={visualDepth} />
-      <div className="flex flex-wrap items-baseline gap-x-1.5">
-        {variation.moves.map((move, index) => (
-          <div key={move.occurrence.id} className="contents">
-            <span className="inline-flex items-baseline gap-1">
-              {(index === 0 || move.side === 'white') && (
-                <span className="font-mono text-xs text-stone-400">
-                  {move.side === 'black'
-                    ? `${move.moveNumber}...`
-                    : `${move.moveNumber}.`}
-                </span>
-              )}
-              <CourseMove
-                move={move}
-                active={move.occurrence.id === currentId}
-                onSelectOccurrence={onSelectOccurrence}
-                onContextMenu={onMoveContextMenu}
-              />
-            </span>
-            {(notesByOccurrence.get(move.occurrence.id) ?? []).map((note) => (
-              <span
-                key={note.id}
-                onContextMenu={(event) => onNoteContextMenu(event, note)}
-                className="basis-full cursor-context-menu whitespace-normal py-0.5 italic text-stone-600"
-              >
-                <ReactMarkdown rehypePlugins={[rehypeSanitize]}>
-                  {note.rendered_markdown}
-                </ReactMarkdown>
-              </span>
-            ))}
-          </div>
-        ))}
-      </div>
-      {variation.moves.flatMap((move) =>
-        (variationsByParent.get(move.occurrence.id) ?? []).map((nested) => (
-          <VariationLine
-            key={nested.key}
-            variation={nested}
-            variationsByParent={variationsByParent}
-            notesByOccurrence={notesByOccurrence}
-            currentId={currentId}
-            onSelectOccurrence={onSelectOccurrence}
-            onNoteContextMenu={onNoteContextMenu}
-            onMoveContextMenu={onMoveContextMenu}
-          />
-        )),
-      )}
+      <div className="flex flex-wrap items-baseline gap-x-1.5">{moves}</div>
     </div>
   );
 }

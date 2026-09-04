@@ -284,6 +284,14 @@ class PdfReviewExcludeItem(StrictContract):
     item_id: LocalId
 
 
+class PdfReviewDetachPositionAnchor(StrictContract):
+    kind: Literal["detach_position_anchor"]
+    issue_id: Annotated[
+        str,
+        StringConstraints(pattern=r"^[A-Za-z][A-Za-z0-9._:-]{0,511}$"),
+    ]
+
+
 PdfReviewEditOperation = Annotated[
     PdfReviewAddLine
     | PdfReviewDeleteSubtree
@@ -291,7 +299,8 @@ PdfReviewEditOperation = Annotated[
     | PdfReviewMakeMainline
     | PdfReviewEditText
     | PdfReviewSetNag
-    | PdfReviewExcludeItem,
+    | PdfReviewExcludeItem
+    | PdfReviewDetachPositionAnchor,
     Field(discriminator="kind"),
 ]
 

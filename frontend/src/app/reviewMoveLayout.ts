@@ -1,4 +1,5 @@
 import type { PdfReviewDocument } from '../logic/api/types';
+import { parentheticalVariationRoots } from './variationPresentation';
 
 type ReviewItem = NonNullable<PdfReviewDocument['package']['items']>[number];
 type MoveSequenceItem = Extract<ReviewItem, { kind: 'move_sequence' }>;
@@ -23,6 +24,8 @@ export interface ReviewMoveRow {
   variationDepth: number;
   /** Ordered alternative roots from the outermost branch to this row. */
   variationPath: string[];
+  /** Compact Lichess-style parentheses or an explicit branch rail. */
+  variationPresentation: 'mainline' | 'parenthetical' | 'rail';
   /** Fullmove number for the gutter; null for fallback rows. */
   moveNumber: number | null;
   /** White ply node, or null for black-only rows. */
@@ -43,6 +46,7 @@ export type ReviewReadingBlock =
       annotation: SequenceAnnotation;
       variationDepth: number;
       variationPath: string[];
+      variationPresentation: 'mainline' | 'parenthetical' | 'rail';
     };
 
 export type CompactReviewBlock =
@@ -52,6 +56,7 @@ export type CompactReviewBlock =
       key: string;
       variationDepth: number;
       variationPath: string[];
+      presentation: 'parenthetical' | 'rail';
       rows: ReviewMoveRow[];
     }
   | Extract<ReviewReadingBlock, { kind: 'annotation' }>;
@@ -69,7 +74,8 @@ export type CompactReviewBlock =
  */
 export function buildReviewMoveRows(nodes: MoveNode[]): ReviewMoveRow[] {
   const paths = variationPaths(nodes);
-  return buildMoveRowsWithPaths(nodes, paths);
+  const parentheticalRoots = reviewParentheticalRoots(nodes);
+  return buildMoveRowsWithPaths(nodes, paths, parentheticalRoots);
 }
 
 /**
@@ -83,6 +89,7 @@ export function buildReviewReadingFlow(
   item: AnnotatedMoveSequenceItem,
 ): ReviewReadingBlock[] {
   const paths = variationPaths(item.nodes);
+  const parentheticalRoots = reviewParentheticalRoots(item.nodes);
   const nodes = new Map(item.nodes.map((node) => [node.id, node]));
   const annotations = new Map(
     (item.annotations ?? []).map((annotation) => [annotation.id, annotation]),
@@ -91,7 +98,11 @@ export function buildReviewReadingFlow(
   let bufferedMoves: MoveNode[] = [];
 
   function flushMoves() {
-    for (const row of buildMoveRowsWithPaths(bufferedMoves, paths)) {
+    for (const row of buildMoveRowsWithPaths(
+      bufferedMoves,
+      paths,
+      parentheticalRoots,
+    )) {
       blocks.push({ kind: 'move_row', key: `move:${row.key}`, row });
     }
     bufferedMoves = [];
@@ -122,6 +133,10 @@ export function buildReviewReadingFlow(
       annotation,
       variationDepth: variationPath.length,
       variationPath,
+      variationPresentation: presentationForPath(
+        variationPath,
+        parentheticalRoots,
+      ),
     });
   }
   flushMoves();
@@ -145,6 +160,10 @@ export function compactReviewBlocks(
         .join('+')}`,
       variationDepth: pendingPath.length,
       variationPath: pendingPath,
+      presentation:
+        pendingRows[0]?.variationPresentation === 'parenthetical'
+          ? 'parenthetical'
+          : 'rail',
       rows: pendingRows,
     });
     pendingRows = [];
@@ -176,6 +195,7 @@ export function compactReviewBlocks(
 function buildMoveRowsWithPaths(
   nodes: MoveNode[],
   paths: Map<string, string[]>,
+  parentheticalRoots: ReadonlySet<string>,
 ): ReviewMoveRow[] {
   const rows: ReviewMoveRow[] = [];
   let pendingWhite: MoveNode | null = null;
@@ -185,7 +205,13 @@ function buildMoveRowsWithPaths(
   function flushWhite() {
     if (pendingWhite !== null) {
       rows.push(
-        makeRow(pendingWhite, null, pendingWhitePath, pendingWhiteMoveNumber),
+        makeRow(
+          pendingWhite,
+          null,
+          pendingWhitePath,
+          parentheticalRoots,
+          pendingWhiteMoveNumber,
+        ),
       );
       pendingWhite = null;
     }
@@ -198,7 +224,9 @@ function buildMoveRowsWithPaths(
 
     if (side === null || moveNumber === null) {
       flushWhite();
-      rows.push(makeRow(null, null, path, moveNumber, node));
+      rows.push(
+        makeRow(null, null, path, parentheticalRoots, moveNumber, node),
+      );
       continue;
     }
 
@@ -217,11 +245,13 @@ function buildMoveRowsWithPaths(
       node.sibling_order === 0 &&
       samePath(path, pendingWhitePath);
     if (canPair) {
-      rows.push(makeRow(pendingWhite, node, path, moveNumber));
+      rows.push(
+        makeRow(pendingWhite, node, path, parentheticalRoots, moveNumber),
+      );
       pendingWhite = null;
     } else {
       flushWhite();
-      rows.push(makeRow(null, node, path, moveNumber));
+      rows.push(makeRow(null, node, path, parentheticalRoots, moveNumber));
     }
   }
 
@@ -247,6 +277,7 @@ function makeRow(
   white: MoveNode | null,
   black: MoveNode | null,
   variationPath: string[],
+  parentheticalRoots: ReadonlySet<string>,
   moveNumber: number | null,
   fallback: MoveNode | null = null,
 ): ReviewMoveRow {
@@ -265,12 +296,37 @@ function makeRow(
     key: contained.map((node) => node.id).join('+'),
     variationDepth: variationPath.length,
     variationPath,
+    variationPresentation: presentationForPath(
+      variationPath,
+      parentheticalRoots,
+    ),
     moveNumber,
     white,
     black,
     fallback,
     evidencePages: pages,
   };
+}
+
+function reviewParentheticalRoots(nodes: MoveNode[]): Set<string> {
+  return parentheticalVariationRoots(
+    nodes.map((node) => ({
+      id: node.id,
+      parentId: node.parent_id,
+      order: node.sibling_order,
+    })),
+  );
+}
+
+function presentationForPath(
+  variationPath: string[],
+  parentheticalRoots: ReadonlySet<string>,
+): 'mainline' | 'parenthetical' | 'rail' {
+  if (variationPath.length === 0) return 'mainline';
+  return variationPath.length > 1 &&
+    parentheticalRoots.has(variationPath[variationPath.length - 1]!)
+    ? 'parenthetical'
+    : 'rail';
 }
 
 function samePath(left: string[], right: string[]): boolean {

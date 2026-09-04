@@ -1,4 +1,5 @@
 import type { ModuleEditor } from '../logic/api/types';
+import { parentheticalVariationRoots } from './variationPresentation';
 
 export type CourseOccurrence = ModuleEditor['occurrences'][number];
 
@@ -20,6 +21,7 @@ export interface CourseVariation {
   depth: number;
   path: string[];
   moves: CourseMoveView[];
+  presentation: 'parenthetical' | 'rail';
 }
 
 export interface CourseScoreLayout {
@@ -58,6 +60,13 @@ export function buildCourseScoreLayout(
         (inputOrder.get(left.id) ?? 0) - (inputOrder.get(right.id) ?? 0),
     );
   }
+  const parentheticalRoots = parentheticalVariationRoots(
+    occurrences.map((occurrence) => ({
+      id: occurrence.id,
+      parentId: occurrence.parent_id,
+      order: occurrence.sort_order,
+    })),
+  );
 
   const moveView = (occurrence: CourseOccurrence): CourseMoveView => {
     const parent = occurrence.parent_id
@@ -99,6 +108,10 @@ export function buildCourseScoreLayout(
         depth: path.length,
         path,
         moves: [moveView(root), ...primaryLine(root.id)],
+        presentation:
+          path.length > 1 && parentheticalRoots.has(root.id)
+            ? ('parenthetical' as const)
+            : ('rail' as const),
       };
     });
     if (alternatives.length > 0) variationsByParent.set(parentId, alternatives);

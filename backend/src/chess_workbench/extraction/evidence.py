@@ -37,7 +37,8 @@ MAX_PIXELS = 40_000_000
 MAX_FRAGMENTS = 20_000
 MAX_TEXT_CODE_POINTS = 100_000
 
-EvidenceOrigin = Literal["embedded_text", "ocr"]
+EvidenceOrigin = Literal["embedded_text", "ocr", "diagram"]
+PageEvidenceOrigin = Literal["embedded_text", "ocr", "mixed"]
 
 
 def _reject_whitespace_only(value: str) -> str:
@@ -128,6 +129,24 @@ class TextFragment(_StrictModel):
     ] = None
 
 
+class EmbeddedPageImage(_StrictModel):
+    """One decoded PDF image object bound to its rendered-page coordinates."""
+
+    physical_page: Annotated[int, Field(ge=1)]
+    width: Annotated[int, Field(ge=1, le=10_000)]
+    height: Annotated[int, Field(ge=1, le=10_000)]
+    page_box: PixelBox
+    png_bytes: Annotated[bytes, Field(min_length=1, max_length=MAX_PNG_BYTES)]
+    content_sha256: Annotated[str, StringConstraints(pattern=r"^[0-9a-f]{64}$")]
+
+    @model_validator(mode="after")
+    def _check_image(self) -> Self:
+        _validate_pixel_area(self.width, self.height)
+        if hashlib.sha256(self.png_bytes).hexdigest() != self.content_sha256:
+            raise ValueError("content_sha256 does not match embedded image bytes")
+        return self
+
+
 class RenderProfile(_StrictModel):
     """Explicit deterministic rendering limits (defaults per ADR 0013)."""
 
@@ -164,6 +183,7 @@ class RenderedPage(_StrictModel):
     dpi: Annotated[int, Field(ge=72, le=600)]
     png_bytes: Annotated[bytes, Field(min_length=1, max_length=MAX_PNG_BYTES)]
     embedded_fragments: list[TextFragment] = Field(default_factory=list)
+    embedded_images: list[EmbeddedPageImage] = Field(default_factory=list)
     renderer_name: Annotated[
         str, StringConstraints(strip_whitespace=True, min_length=1, max_length=100)
     ]
@@ -177,6 +197,13 @@ class RenderedPage(_StrictModel):
         _validate_fragments(self.embedded_fragments, self.width, self.height)
         if any(fragment.confidence is not None for fragment in self.embedded_fragments):
             raise ValueError("embedded-text fragments must have null confidence")
+        if any(image.physical_page != self.physical_page for image in self.embedded_images):
+            raise ValueError("embedded image physical page must match its rendered page")
+        if any(
+            image.page_box.x1 > self.width or image.page_box.y1 > self.height
+            for image in self.embedded_images
+        ):
+            raise ValueError("embedded image box must lie within the page dimensions")
         return self
 
 
@@ -284,8 +311,8 @@ class SourceEvidenceFragment(_StrictModel):
 
     @model_validator(mode="after")
     def _check_origin_confidence_rule(self) -> Self:
-        if self.origin == "ocr" and self.confidence is None:
-            raise ValueError("OCR evidence fragments must carry a confidence score")
+        if self.origin in {"ocr", "diagram"} and self.confidence is None:
+            raise ValueError("OCR and diagram evidence fragments must carry a confidence score")
         if self.origin == "embedded_text" and self.confidence is not None:
             raise ValueError("embedded-text evidence fragments must have null confidence")
         return self
@@ -392,6 +419,8 @@ class ScriptedOcrAdapter:
 
 __all__ = [
     "EvidenceOrigin",
+    "PageEvidenceOrigin",
+    "EmbeddedPageImage",
     "FiniteJsonValue",
     "MAX_FRAGMENTS",
     "MAX_PIXELS",

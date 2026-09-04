@@ -43,6 +43,24 @@ class AnalysisJobRequest(AnalysisRequest):
     idempotency_key: str = Field(min_length=1, max_length=128)
 
 
+class AnalysisCacheLookupRequest(StrictContract):
+    fens: list[NonEmptyText] = Field(min_length=1, max_length=10_000)
+    parameters: EngineParameters = Field(default_factory=EngineParameters)
+
+    @field_validator("fens")
+    @classmethod
+    def canonical_unique_fens(cls, values: list[str]) -> list[str]:
+        canonical = [_legal_fen(value) for value in values]
+        if len(canonical) != len(set(canonical)):
+            raise ValueError("fens must be unique after canonicalization")
+        return canonical
+
+
+class AnalysisCacheLookupRead(StrictContract):
+    cached_fens: list[NonEmptyText]
+    missing_fens: list[NonEmptyText]
+
+
 class AnalysisLine(StrictContract):
     rank: int = Field(ge=1, le=5)
     score_cp: int | None
