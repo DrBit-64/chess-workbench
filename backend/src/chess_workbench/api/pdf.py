@@ -37,6 +37,7 @@ from chess_workbench.schemas.pdf_documents import (
     PdfExtractionDocumentList,
     PdfExtractionDocumentRead,
     PdfExtractionDocumentRevisionRead,
+    PdfExtractionDocumentRollback,
     PdfExtractionDocumentSegmentRead,
 )
 from chess_workbench.schemas.review import (
@@ -378,6 +379,31 @@ async def create_pdf_extraction_document_append(
             "Idempotency-Replayed": "true" if outcome.replayed else "false",
         },
     )
+
+
+@pdf_blueprint.post(
+    "/pdf-extraction-documents/<document_id:uuid>/rollback-latest",
+    name="rollback_latest_pdf_extraction_document_append",
+)
+@openapi.operation("rollbackLatestPdfExtractionDocumentAppend")
+@openapi.summary("Roll back the latest committed incremental extraction result")
+@openapi.tag("pdf")
+@openapi.body(_media(PdfExtractionDocumentRollback), required=True)
+@openapi.response(200, _media(PdfExtractionDocumentRead), "Rolled-back PDF document")
+@openapi.response(404, ERROR_SCHEMA, "PDF extraction document not found")
+@openapi.response(409, ERROR_SCHEMA, "Stale, initial-only or reviewed document")
+async def rollback_latest_pdf_extraction_document_append(
+    request: Request, document_id: UUID
+) -> HTTPResponse:
+    body = parse_body(request, PdfExtractionDocumentRollback)
+    database = cast(Database, request.app.ctx.database)
+    async with request.app.ctx.pdf_persistence_lock, database.session() as session, session.begin():
+        view = await PdfDocumentService(session, request.app.ctx.settings).rollback_latest_append(
+            document_id=document_id,
+            expected_version=body.expected_version,
+        )
+        payload = _pdf_document_read(view)
+    return json(payload.model_dump(mode="json"))
 
 
 @pdf_blueprint.get("/pdf-extractions/<run_id:uuid>/review", name="get_pdf_extraction_review")

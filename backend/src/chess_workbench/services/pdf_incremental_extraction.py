@@ -22,14 +22,6 @@ from chess_workbench.extraction.contracts import (
     PageRange,
     ccef_v1_1_schema_document,
 )
-from chess_workbench.extraction.decoder import CcefDecodeError
-from chess_workbench.extraction.general_repair import (
-    CcefRepairError,
-    apply_ccef_repair,
-    build_ccef_repair_request,
-    canonicalize_ccef_response,
-    ccef_repair_chain_document,
-)
 from chess_workbench.extraction.incremental import (
     CcefContinuationContext,
     build_ccef_continuation_context,
@@ -47,6 +39,7 @@ from chess_workbench.extraction.provider import (
     StructuredGenerationResponse,
     StructuredMessage,
 )
+from chess_workbench.extraction.recovery import CcefRecoveryError, recover_ccef_response
 from chess_workbench.extraction.validation import normalize_chess_moves_v1_1
 from chess_workbench.services.content import ServiceError
 from chess_workbench.services.pdf_documents import (
@@ -448,98 +441,50 @@ async def _generate_candidate(
         normalized = normalize_chess_moves_v1_1(continuation_bound)
         return continuation_bound, normalized
 
-    repair_response: StructuredGenerationResponse | None = None
-    repaired_response: StructuredGenerationResponse | None = None
-    try:
-        repair_base, deterministic_operations = canonicalize_ccef_response(response)
-    except CcefDecodeError:
-        repair_base = response
-        deterministic_operations = ()
-    try:
-        continuation_bound, normalized = validate_response(repair_base)
-    except (CcefDecodeError, ValidationError, ValueError) as initial_error:
+    recovery_provider = active_provider
+    if provider is None:
+        # A bounded patch/supplement does not need another full reasoning pass.
+        recovery_provider = _active_provider(
+            settings,
+            None,
+            thinking_enabled=False,
+            json_output_enabled=True,
+            invalid_response_recorder=_deepseek_invalid_response_recorder(settings, source),
+        )
+
+    async def record_failure(
+        failed_response: StructuredGenerationResponse,
+        error_code: str,
+        error_message: str,
+        diagnostics: tuple[str, ...],
+    ) -> None:
         await _capture_failed_generation(
             settings,
             source,
-            response,
-            error_code="ccef_invalid_package",
-            error_message=str(initial_error),
-            diagnostics=tuple(getattr(initial_error, "diagnostics", ())),
+            failed_response,
+            error_code=error_code,
+            error_message=error_message,
+            diagnostics=diagnostics,
         )
-        repair_failure: BaseException = initial_error
-        try:
-            repair_request = build_ccef_repair_request(
-                repair_base,
-                evidence.context,
-                failure=repair_failure,
-                trusted_context={
-                    "continuation": continuation.model_dump(mode="json"),
-                    "previous_page_text": list(previous_page_text),
-                },
-            )
-        except (CcefDecodeError, CcefRepairError):
-            raise EngineError(
-                "ccef_invalid_package",
-                "Incremental generation content is not a valid CCEF package",
-                retryable=False,
-            ) from None
 
-        repair_provider = active_provider
-        if provider is None:
-            # Diagnostics and a bounded source slice replace the original
-            # extraction prompt.  A direct structured answer is cheaper
-            # and easier to validate than a second full reasoning pass.
-            repair_provider = _active_provider(
-                settings,
-                None,
-                thinking_enabled=False,
-                json_output_enabled=True,
-                invalid_response_recorder=_deepseek_invalid_response_recorder(settings, source),
-            )
-        try:
-            repair_response = await repair_provider.generate(repair_request)
-        except StructuredGenerationProviderError:
-            raise EngineError(
-                "ccef_repair_failed",
-                "Incremental CCEF repair could not be generated",
-                retryable=False,
-            ) from None
-        if repair_response is not None:
-            try:
-                repaired_response = apply_ccef_repair(
-                    repair_base,
-                    repair_response,
-                    evidence.context,
-                    failure=repair_failure,
-                )
-                continuation_bound, normalized = validate_response(repaired_response)
-            except (CcefDecodeError, CcefRepairError, ValidationError, ValueError) as repair_error:
-                await _capture_failed_generation(
-                    settings,
-                    source,
-                    repair_response,
-                    error_code="ccef_repair_failed",
-                    error_message=str(repair_error),
-                    diagnostics=tuple(getattr(repair_error, "diagnostics", ())),
-                )
-                raise EngineError(
-                    "ccef_repair_failed",
-                    "Incremental CCEF repair did not pass local validation",
-                    retryable=False,
-                ) from None
-    else:
-        if deterministic_operations:
-            repaired_response = repair_base
-
-    provider_document: object = response.model_dump(mode="json")
-    if repaired_response is not None:
-        provider_document = ccef_repair_chain_document(
+    try:
+        recovery = await recover_ccef_response(
             response,
-            repaired_response,
-            deterministic_operations=deterministic_operations,
-            repair=repair_response,
-            repair_base=repair_base,
+            evidence.context,
+            validate=validate_response,
+            normalized_package=lambda candidate: candidate[1],
+            repair_provider=recovery_provider,
+            coverage_provider=recovery_provider,
+            record_failure=record_failure,
+            trusted_context={
+                "continuation": continuation.model_dump(mode="json"),
+                "previous_page_text": list(previous_page_text),
+            },
         )
+    except CcefRecoveryError as error:
+        raise EngineError(error.code, str(error), retryable=False) from None
+    continuation_bound, normalized = recovery.value
+    provider_document = recovery.provider_document
     provider_blob = await _store_blob(
         settings, suffix=".json", raw_bytes=_json_bytes(provider_document)
     )

@@ -712,6 +712,108 @@ async def test_v4_job_uses_semantic_prompt_and_exact_fragment_bindings(tmp_path:
 
 
 @pytest.mark.asyncio
+async def test_v4_job_uses_shared_bounded_repair_for_parent_after_child_flow(
+    tmp_path: Path,
+) -> None:
+    database, settings, extraction = await _setup(
+        tmp_path,
+        "v4-shared-repair",
+        pipeline_version=PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION,
+    )
+
+    class RepairingProvider:
+        def __init__(self) -> None:
+            self.calls: list[StructuredGenerationRequest] = []
+            self.original_content: str | None = None
+
+        async def generate(
+            self, request: StructuredGenerationRequest
+        ) -> StructuredGenerationResponse:
+            self.calls.append(request.model_copy(deep=True))
+            if len(self.calls) == 1:
+                response = await _Provider().generate(request)
+                package = json.loads(response.content)
+                flow = package["items"][1]["reading_flow"]
+                flow[12]["node_id"], flow[13]["node_id"] = (
+                    flow[13]["node_id"],
+                    flow[12]["node_id"],
+                )
+                self.original_content = json.dumps(package, ensure_ascii=False)
+                return response.model_copy(update={"content": self.original_content})
+
+            repair_case = json.loads(request.messages[-1].content)
+            resolves = [
+                diagnostic["diagnostic_id"]
+                for diagnostic in repair_case["diagnostics"]
+                if diagnostic["code"]
+                in {"flow_parent_after_child", "move_flow_projection_mismatch"}
+            ]
+            return StructuredGenerationResponse(
+                content=json.dumps(
+                    {
+                        "repair_schema": "chess-workbench/ccef-repair/2.0",
+                        "base_response_sha256": repair_case["base_response_sha256"],
+                        "resolves": resolves,
+                        "operations": [
+                            {
+                                "op": "replace",
+                                "path": "/items/1/reading_flow/12/node_id",
+                                "value": "n12",
+                            },
+                            {
+                                "op": "replace",
+                                "path": "/items/1/reading_flow/13/node_id",
+                                "value": "n13",
+                            },
+                        ],
+                    }
+                ),
+                provider="scripted-provider",
+                model="scripted-repair-model",
+                finish_reason="stop",
+                usage=TokenUsage(),
+            )
+
+    provider = RepairingProvider()
+    try:
+        result = await process_pdf_extraction_job(
+            database,
+            settings,
+            extraction.job.payload,
+            renderer=_Renderer(),
+            ocr_adapter=_unused_ocr(),
+            provider=provider,
+        )
+
+        assert result["candidate"]["summary"]["move_node_count"] == 16
+        assert len(provider.calls) == 2
+        provider_row = next(
+            row
+            for row in await _ccef_rows(database, extraction.run.id)
+            if row.kind == "provider_response"
+        )
+        provider_document = json.loads(
+            (settings.source_storage_root / provider_row.relative_path).read_bytes()
+        )
+        assert provider_document["artifact_schema"] == "chess-workbench/ccef-repair-chain/2.1"
+        assert provider_document["original_response"]["content"] == provider.original_content
+        assert provider_document["repair_response"]["model"] == "scripted-repair-model"
+
+        replayed = await process_pdf_extraction_job(
+            database,
+            settings,
+            extraction.job.payload,
+            renderer=_FailingRenderer(),
+            ocr_adapter=_unused_ocr(),
+            provider=provider,
+        )
+        assert replayed == result
+        assert len(provider.calls) == 2
+    finally:
+        await database.close()
+
+
+@pytest.mark.asyncio
 async def test_v4_invalid_package_retains_response_without_committing_candidate(
     tmp_path: Path,
 ) -> None:
@@ -774,6 +876,14 @@ async def test_v4_unbound_evidence_retains_aggregate_binding_diagnostics(
         async def generate(
             self, request: StructuredGenerationRequest
         ) -> StructuredGenerationResponse:
+            if request.response_schema_name == "chess_workbench_ccef_repair_v2":
+                return StructuredGenerationResponse(
+                    content="{}",
+                    provider="scripted-provider",
+                    model="scripted-model",
+                    finish_reason="stop",
+                    usage=TokenUsage(),
+                )
             envelope = json.loads(request.messages[-1].content.split("\n", 1)[1])
             package = envelope["package"]
             package["items"] = _annotated_items()
@@ -795,7 +905,7 @@ async def test_v4_unbound_evidence_retains_aggregate_binding_diagnostics(
                 ocr_adapter=_unused_ocr(),
                 provider=UnboundEvidenceProvider(),
             )
-        assert caught.value.code == "ccef_semantic_incomplete"
+        assert caught.value.code == "ccef_repair_failed"
         assert caught.value.retryable is False
         assert len(await _ccef_rows(database, extraction.run.id)) == 0
 
@@ -807,8 +917,14 @@ async def test_v4_unbound_evidence_retains_aggregate_binding_diagnostics(
             / "attempt-0"
         )
         report_paths = list(capture_root.glob("*/*.json"))
-        assert len(report_paths) == 1
-        diagnostics = json.loads(report_paths[0].read_bytes())["failure"]["diagnostics"]
+        assert len(report_paths) == 2
+        initial_report = next(
+            report
+            for path in report_paths
+            if (report := json.loads(path.read_bytes()))["failure"]["code"]
+            == "ccef_semantic_incomplete"
+        )
+        diagnostics = initial_report["failure"]["diagnostics"]
         assert diagnostics[0].startswith("evidence_refs=")
         assert "missing_locator=0" not in diagnostics
         assert "unmatched_locator=0" in diagnostics

@@ -387,6 +387,8 @@ def _assemble_ccef_candidate_artifacts_v1_1(
     *,
     expected_builder: Callable[[CcefPromptContext], StructuredGenerationRequest],
     require_fragment_bindings: bool,
+    audit_response: StructuredGenerationResponse | None = None,
+    recovery_document: dict[str, object] | None = None,
 ) -> CcefCandidateArtifacts:
     """Assemble deterministic CCEF 1.1 candidate artifacts from one trusted run.
 
@@ -404,13 +406,18 @@ def _assemble_ccef_candidate_artifacts_v1_1(
         raise TypeError("request must be StructuredGenerationRequest")
     if type(response) is not StructuredGenerationResponse:
         raise TypeError("response must be StructuredGenerationResponse")
+    if audit_response is not None and type(audit_response) is not StructuredGenerationResponse:
+        raise TypeError("audit_response must be StructuredGenerationResponse or None")
+    if recovery_document is not None and type(recovery_document) is not dict:
+        raise TypeError("recovery_document must be dict or None")
 
     expected = expected_builder(context)
     if request != expected:
         raise CcefCandidateError("binding_mismatch", _BINDING_ERROR_MESSAGE)
 
-    original_response = response
+    accepted_input = response
     response, deterministic_operations = canonicalize_ccef_response(response)
+    original_response = audit_response or accepted_input
 
     binding_diagnostics: tuple[str, ...] = ()
     fragment_bindings_complete = True
@@ -438,8 +445,8 @@ def _assemble_ccef_candidate_artifacts_v1_1(
 
     # Locally bind provenance on a fresh deep copy; decoded/context/request/
     # response are never mutated.
-    raw_package.provenance.provider = response.provider
-    raw_package.provenance.model = response.model
+    raw_package.provenance.provider = original_response.provider
+    raw_package.provenance.model = original_response.model
     raw_package.provenance.request_sha256 = request_sha256
     raw_package.provenance.response_sha256 = response_sha256
     raw_package = ExtractionPackageV1_1.model_validate(raw_package.model_dump(mode="json"))
@@ -449,7 +456,11 @@ def _assemble_ccef_candidate_artifacts_v1_1(
     raw_ccef_bytes = _canonical_ccef_bytes(raw_package)
     normalized_ccef_bytes = _canonical_ccef_bytes(normalized_package)
 
-    if deterministic_operations:
+    if recovery_document is not None:
+        provider_response_doc = copy.deepcopy(recovery_document)
+        provider_response_doc["request_sha256"] = request_sha256
+        provider_response_doc["ccef_schema_version"] = "chess-content-extraction/1.1"
+    elif deterministic_operations or audit_response is not None:
         provider_response_doc = ccef_repair_chain_document(
             original_response,
             response,
@@ -513,6 +524,26 @@ def assemble_ccef_candidate_artifacts_v1_1_semantic(
     )
 
 
+def assemble_recovered_ccef_candidate_artifacts_v1_1_semantic(
+    context: CcefPromptContext,
+    request: StructuredGenerationRequest,
+    original_response: StructuredGenerationResponse,
+    accepted_response: StructuredGenerationResponse,
+    recovery_document: dict[str, object],
+) -> CcefCandidateArtifacts:
+    """Assemble a recovered v4 candidate while retaining the actual provider response."""
+
+    return _assemble_ccef_candidate_artifacts_v1_1(
+        context,
+        request,
+        accepted_response,
+        expected_builder=build_ccef_v1_1_semantic_generation_request,
+        require_fragment_bindings=True,
+        audit_response=original_response,
+        recovery_document=recovery_document,
+    )
+
+
 __all__ = [
     "CCEF_PROVIDER_RESPONSE_ARTIFACT_SCHEMA",
     "CCEF_PROVIDER_RESPONSE_ARTIFACT_SCHEMA_1_1",
@@ -523,5 +554,6 @@ __all__ = [
     "assemble_ccef_candidate_artifacts",
     "assemble_ccef_candidate_artifacts_v1_1",
     "assemble_ccef_candidate_artifacts_v1_1_semantic",
+    "assemble_recovered_ccef_candidate_artifacts_v1_1_semantic",
     "summarize_ccef_candidate",
 ]

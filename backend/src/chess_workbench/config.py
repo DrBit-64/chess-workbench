@@ -1,6 +1,7 @@
 import os
 import stat
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -15,43 +16,51 @@ DEFAULT_SOURCE_STORAGE_ROOT = PROJECT_ROOT / "data"
 DEFAULT_PDF_MAX_BYTES = 256 * 1024 * 1024
 SUPPORTED_DATABASE_DRIVERS = frozenset({"mysql+asyncmy", "sqlite+aiosqlite"})
 MAX_SECRET_FILE_BYTES = 4096
+DEFAULT_CCEF_PROVIDER_ENDPOINT = "https://api.deepseek.com/chat/completions"
+DEFAULT_CCEF_PROVIDER_MODEL = "deepseek-v4-flash"
 
 
 class SecretFileError(ValueError):
     """A sanitized failure while loading a server-owned secret file."""
 
 
-def load_deepseek_api_key(settings: "Settings") -> SecretStr | None:
-    """Load the optional DeepSeek key without retaining plaintext in configuration."""
+def load_ccef_provider_api_key(settings: "Settings") -> SecretStr | None:
+    """Load the optional provider key without retaining plaintext in configuration."""
 
-    path = settings.deepseek_api_key_file
+    path = settings.ccef_provider_api_key_file or settings.deepseek_api_key_file
     if path is None:
         return None
     try:
         with path.open("rb") as secret_file:
             file_stat = os.fstat(secret_file.fileno())
             if not stat.S_ISREG(file_stat.st_mode):
-                raise SecretFileError("DeepSeek API key file is not a regular file")
+                raise SecretFileError("AI provider API key file is not a regular file")
             if os.name == "posix" and stat.S_IMODE(file_stat.st_mode) & 0o077:
-                raise SecretFileError("DeepSeek API key file permissions are too broad")
+                raise SecretFileError("AI provider API key file permissions are too broad")
             raw = secret_file.read(MAX_SECRET_FILE_BYTES + 1)
     except SecretFileError:
         raise
     except OSError:
-        raise SecretFileError("DeepSeek API key file is unavailable") from None
+        raise SecretFileError("AI provider API key file is unavailable") from None
     if len(raw) > MAX_SECRET_FILE_BYTES:
-        raise SecretFileError("DeepSeek API key file is too large")
+        raise SecretFileError("AI provider API key file is too large")
     try:
         value = raw.decode("utf-8")
     except UnicodeDecodeError:
-        raise SecretFileError("DeepSeek API key file is not valid UTF-8") from None
+        raise SecretFileError("AI provider API key file is not valid UTF-8") from None
     if value.endswith("\n"):
         value = value[:-1]
         if value.endswith("\r"):
             value = value[:-1]
     if not value or value != value.strip() or "\n" in value or "\r" in value:
-        raise SecretFileError("DeepSeek API key file does not contain one valid secret")
+        raise SecretFileError("AI provider API key file does not contain one valid secret")
     return SecretStr(value)
+
+
+def load_deepseek_api_key(settings: "Settings") -> SecretStr | None:
+    """Backward-compatible alias for the generic provider secret loader."""
+
+    return load_ccef_provider_api_key(settings)
 
 
 class Settings(BaseSettings):
@@ -102,6 +111,13 @@ class Settings(BaseSettings):
     # to reject old .env configuration with a clear, masked validation error.
     deepseek_api_key: SecretStr | None = Field(default=None, repr=False, exclude=True)
     deepseek_api_key_file: Path | None = Field(default=None, repr=False, strict=False)
+    ccef_provider_api_key_file: Path | None = Field(default=None, repr=False, strict=False)
+    ccef_provider_endpoint: str = Field(
+        default=DEFAULT_CCEF_PROVIDER_ENDPOINT, min_length=1, strict=False
+    )
+    ccef_provider_model: str = Field(
+        default=DEFAULT_CCEF_PROVIDER_MODEL, min_length=1, strict=False
+    )
     ccef_provider_timeout_seconds: float = Field(
         default=600.0, ge=1.0, le=1800.0, allow_inf_nan=False, strict=True
     )
@@ -118,8 +134,31 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def deepseek_api_key_must_use_external_file(self) -> "Settings":
         if self.deepseek_api_key is not None:
-            raise ValueError("inline deepseek_api_key is not supported; use deepseek_api_key_file")
+            raise ValueError(
+                "inline deepseek_api_key is not supported; use ccef_provider_api_key_file"
+            )
+        if self.ccef_provider_api_key_file is not None and self.deepseek_api_key_file is not None:
+            raise ValueError("configure only one provider API key file")
         return self
+
+    @field_validator("ccef_provider_endpoint")
+    @classmethod
+    def ccef_provider_endpoint_must_be_absolute_http(cls, value: str) -> str:
+        if value != value.strip():
+            raise ValueError("ccef_provider_endpoint must not contain surrounding whitespace")
+        parsed = urlsplit(value)
+        if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+            raise ValueError("ccef_provider_endpoint must be an absolute HTTP(S) URL")
+        if parsed.username is not None or parsed.password is not None:
+            raise ValueError("ccef_provider_endpoint must not contain credentials")
+        return value
+
+    @field_validator("ccef_provider_model")
+    @classmethod
+    def ccef_provider_model_must_not_be_blank(cls, value: str) -> str:
+        if not value.strip() or value != value.strip():
+            raise ValueError("ccef_provider_model must be a non-blank trimmed string")
+        return value
 
     @field_validator("database_url")
     @classmethod

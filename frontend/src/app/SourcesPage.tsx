@@ -36,6 +36,7 @@ import type {
   PdfExtractionDocumentAppendEnvelope,
   PdfExtractionDocumentEnvelope,
   PdfExtractionDocumentListResponse,
+  PdfExtractionDocumentRollbackResult,
   PdfExtractionEnvelope,
   PdfExtractionListResponse,
   Source,
@@ -423,6 +424,40 @@ export function SourcesPage() {
     }
   }
 
+  async function rollbackLatestAppend(document: PdfExtractionDocument) {
+    const latestSegment = document.segments.at(-1);
+    if (!latestSegment || document.version <= 1) return;
+    if (
+      !window.confirm(
+        `回退第 ${latestSegment.first_page}–${latestSegment.last_page} 页的增量结果？文档将恢复到上一版本，原始识别工件仍会保留。`,
+      )
+    ) {
+      return;
+    }
+    try {
+      setBusyResultId(document.id);
+      await requestJson<PdfExtractionDocumentRollbackResult>(
+        `/api/pdf-extraction-documents/${encodeURIComponent(
+          document.id,
+        )}/rollback-latest`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ expected_version: document.version }),
+        },
+      );
+      await Promise.all([mutateRuns(), mutateDocuments()]);
+      void message.success(
+        `已回退第 ${latestSegment.first_page}–${latestSegment.last_page} 页的增量结果`,
+      );
+    } catch (error) {
+      void message.error(
+        error instanceof ApiError ? error.message : '回退增量结果失败',
+      );
+    } finally {
+      setBusyResultId(undefined);
+    }
+  }
+
   function openAppend(document: PdfExtractionDocument) {
     const nextPage = document.last_page + 1;
     setAppendDocumentId(document.id);
@@ -692,6 +727,10 @@ export function SourcesPage() {
                     if (result.kind === 'document') {
                       const document = result.document;
                       const latestAttempt = document.append_attempts.at(-1);
+                      const latestSegment = document.segments.at(-1);
+                      const latestAttemptIsCommitted = document.segments.some(
+                        (segment) => segment.run_id === latestAttempt?.run_id,
+                      );
                       const canAppend =
                         document.last_page < selectedAsset.page_count;
                       return (
@@ -767,8 +806,20 @@ export function SourcesPage() {
                                                 ? '取消'
                                                 : '删除'
                                           }最近提取任务`
-                                        : '没有可删除的提取任务',
-                                      disabled: !latestAttempt,
+                                        : '没有可删除的未提交任务',
+                                      disabled:
+                                        !latestAttempt ||
+                                        latestAttemptIsCommitted,
+                                      danger: true,
+                                    },
+                                    {
+                                      key: 'rollback-latest',
+                                      label:
+                                        document.version > 1 && latestSegment
+                                          ? `回退第 ${latestSegment.first_page}–${latestSegment.last_page} 页增量结果`
+                                          : '没有可回退的增量结果',
+                                      disabled:
+                                        document.version <= 1 || !latestSegment,
                                       danger: true,
                                     },
                                     {
@@ -790,6 +841,8 @@ export function SourcesPage() {
                                         latestAttempt.job.status,
                                         document.id,
                                       );
+                                    } else if (key === 'rollback-latest') {
+                                      void rollbackLatestAppend(document);
                                     }
                                   },
                                 }}

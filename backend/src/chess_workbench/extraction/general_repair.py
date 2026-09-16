@@ -21,7 +21,6 @@ from .contracts import (
     ExtractionItemV1_1,
     ExtractionPackageV1_1,
     FiniteJsonValue,
-    MoveSequenceItemV1_1,
     Sha256Hex,
 )
 from .decoder import CcefDecodeError, _parse_payload
@@ -320,6 +319,36 @@ def _scan_sequence(item: dict[str, Any], item_index: int, target: list[dict[str,
         for entry in flow
         if isinstance(entry, dict) and entry.get("kind") == "move"
     ]
+    flow_positions: dict[str, int] = {}
+    for flow_index, entry in enumerate(flow):
+        if not isinstance(entry, dict) or entry.get("kind") != "move":
+            continue
+        node_id = entry.get("node_id")
+        if type(node_id) is str and node_id not in flow_positions:
+            flow_positions[node_id] = flow_index
+    for node in nodes:
+        if not isinstance(node, dict):
+            continue
+        node_id = node.get("id")
+        parent_id = node.get("parent_id")
+        if (
+            type(node_id) is str
+            and type(parent_id) is str
+            and node_id in flow_positions
+            and parent_id in flow_positions
+            and flow_positions[parent_id] >= flow_positions[node_id]
+        ):
+            _append_diagnostic(
+                target,
+                code="flow_parent_after_child",
+                path=_pointer(
+                    ("items", item_index, "reading_flow", flow_positions[node_id], "node_id")
+                ),
+                message="A move flow reference must occur after its parent move reference",
+                item_index=item_index,
+                item_id=item_id,
+                node_id=node_id,
+            )
     annotation_refs = [
         entry.get("annotation_id")
         for entry in flow
@@ -478,8 +507,13 @@ def ccef_repair_diagnostics(
     except ValidationError as error:
         _validation_diagnostics(error, diagnostics, payload=payload)
     for item_index, item in enumerate(items):
+        if isinstance(item, dict) and item.get("kind") == "move_sequence":
+            # Root validators can reject a sequence before TypeAdapter can produce a typed
+            # value.  Scan the raw, bounded collections as well so topology/projection failures
+            # still become stable repair diagnostics instead of one opaque root error.
+            _scan_sequence(item, item_index, diagnostics)
         try:
-            typed_item = _ITEM_ADAPTER.validate_python(item)
+            _ITEM_ADAPTER.validate_python(item)
         except ValidationError as error:
             _validation_diagnostics(
                 error,
@@ -488,9 +522,6 @@ def ccef_repair_diagnostics(
                 item_index=item_index,
                 item=item,
             )
-        else:
-            if isinstance(typed_item, MoveSequenceItemV1_1) and isinstance(item, dict):
-                _scan_sequence(item, item_index, diagnostics)
     if context is not None:
         if type(context) is not CcefPromptContext:
             raise TypeError("context must be CcefPromptContext")
@@ -592,6 +623,7 @@ _TOPOLOGY_DIAGNOSTICS = {
     "annotation_anchor_missing",
     "flow_move_reference_missing",
     "flow_annotation_reference_missing",
+    "flow_parent_after_child",
     "continuation_binding_invalid",
 }
 _TRUSTED_CONTEXT_DIAGNOSTICS = {"continuation_binding_invalid"}

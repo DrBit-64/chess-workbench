@@ -1,10 +1,11 @@
 """DeepSeek V4 Flash transport adapter for the structured-generation provider port.
 
-This module implements the first real ``StructuredGenerationProvider`` for the
-official DeepSeek OpenAI-compatible Chat Completions endpoint (packet
+This module implements the first real ``StructuredGenerationProvider`` for a
+DeepSeek OpenAI-compatible Chat Completions endpoint (packet
 DS-STAGE8-DEEPSEEK-ADAPTER-01).  It is transport only:
 
-- fixed to model ``deepseek-v4-flash`` with an explicit, constructor-owned thinking mode;
+- endpoint and model are constructor-owned, with official DeepSeek defaults;
+- thinking mode remains an explicit constructor-owned workflow choice;
 - requests JSON Object output by default, while allowing a caller to omit the
   provider-side switch when it conflicts with thinking mode, and always injects
   the caller-owned JSON Schema as a deterministic system instruction;
@@ -207,6 +208,8 @@ class DeepSeekV4FlashProvider:
         self,
         *,
         api_key: str,
+        endpoint: str = _ENDPOINT,
+        model: str = _MODEL,
         timeout_seconds: float = 600.0,
         max_output_tokens_limit: int = 128_000,
         thinking_enabled: bool = False,
@@ -219,6 +222,22 @@ class DeepSeekV4FlashProvider:
         if not api_key.strip():
             raise ValueError("api_key must not be empty or whitespace-only")
         self._api_key = api_key.strip()
+        if not isinstance(endpoint, str):
+            raise TypeError("endpoint must be a string")
+        try:
+            parsed_endpoint = httpx.URL(endpoint)
+        except httpx.InvalidURL:
+            raise ValueError("endpoint must be an absolute HTTP(S) URL") from None
+        if parsed_endpoint.scheme not in {"http", "https"} or not parsed_endpoint.host:
+            raise ValueError("endpoint must be an absolute HTTP(S) URL")
+        if parsed_endpoint.userinfo:
+            raise ValueError("endpoint must not contain credentials")
+        self._endpoint = str(parsed_endpoint)
+        if not isinstance(model, str):
+            raise TypeError("model must be a string")
+        if not model.strip() or model != model.strip():
+            raise ValueError("model must be a non-blank trimmed string")
+        self._model = model
         if isinstance(timeout_seconds, bool) or not isinstance(timeout_seconds, (int, float)):
             raise TypeError("timeout_seconds must be an actual int or float")
         if not math.isfinite(float(timeout_seconds)):
@@ -261,7 +280,7 @@ class DeepSeekV4FlashProvider:
             {"role": message.role, "content": message.content} for message in request.messages
         )
         payload: dict[str, Any] = {
-            "model": _MODEL,
+            "model": self._model,
             "messages": messages,
             "thinking": {"type": "enabled" if self._thinking_enabled else "disabled"},
             "max_tokens": request.max_output_tokens,
@@ -281,7 +300,7 @@ class DeepSeekV4FlashProvider:
             async with httpx.AsyncClient(
                 timeout=httpx.Timeout(self._timeout_seconds), transport=self._transport
             ) as client:
-                response = await client.post(_ENDPOINT, headers=headers, json=payload)
+                response = await client.post(self._endpoint, headers=headers, json=payload)
         except httpx.TimeoutException:
             mapped_transport_error = StructuredGenerationProviderError(
                 "timeout", _TIMEOUT_MESSAGE, True

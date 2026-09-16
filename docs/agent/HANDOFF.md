@@ -7021,3 +7021,342 @@ task gate. No provider call, live task cancellation, runtime database mutation o
 - Focused verification passed: nine selected layout/browser tests, including DOM order
   `branching move → parenthesized alternative → primary continuation`; focused ESLint, TypeScript
   and `git diff --check` passed. No broad suite, backend test, service start or commit was run.
+
+## 2026-09-04 — Private alternate DeepSeek-compatible provider configuration
+
+- The extraction transport previously hard-coded the official DeepSeek Chat Completions endpoint
+  and `deepseek-v4-flash`. It now accepts constructor-injected endpoint/model values while retaining
+  those defaults and the existing non-streaming thinking/JSON-mode workflow behavior.
+- Runtime settings expose `CHESS_WORKBENCH_CCEF_PROVIDER_ENDPOINT`,
+  `CHESS_WORKBENCH_CCEF_PROVIDER_MODEL` and
+  `CHESS_WORKBENCH_CCEF_PROVIDER_API_KEY_FILE`. The first two belong only in ignored local `.env`;
+  the last points to a chmod-600 key file outside the repository. The legacy DeepSeek key-file
+  setting remains compatible, but configuring both key-file settings is rejected.
+- No private endpoint, private model identifier, key or existing `.env` content was read or written.
+  Focused config/transport verification passed (134 tests), together with focused Ruff, MyPy and
+  `git diff --check`; no live provider request or broad suite was run.
+
+## 2026-09-04 — Diagram side-caption precedence and incremental head rollback
+
+- The pages 33--37 Game 9 cascade was traced to deterministic diagram context, not 39 independent
+  illegal moves: the recognized placement was paired with nearby `33.f4` despite an immediate
+  `Black to move` caption. Diagram context now reads an unambiguous nearby side-to-move caption
+  before the first formal move and filters candidate moves to that side. The synthetic position
+  reproducing the saved failure resolves to Black move 32 and `32...e4?`.
+- The former `删除最近提取任务` action only archived its Job. A successfully composed run therefore
+  remained the document head and appeared unchanged. Incremental documents now expose a separate
+  `回退第 … 页增量结果` command. It restores the direct predecessor revision, archives the removed
+  run, preserves its immutable run/artifacts/CAS bytes, removes only the unreviewed tail membership,
+  and permits a new append for the same range. A review-ledger reference blocks rollback with 409.
+- Focused evidence only: diagram-context tests passed (3); the temporary-SQLite rollback lifecycle
+  passed outside the tool sandbox (1), including a fresh replacement append; the OpenAPI contract
+  checks passed (9); the single Sources rollback interaction passed (1). Targeted Ruff, MyPy,
+  ESLint and TypeScript checks passed. Contract artifacts were regenerated. No provider call,
+  runtime database mutation, broad suite or commit was performed.
+
+## 2026-09-04 — Rollback of a pristine review shell
+
+- Latest-append rollback no longer becomes permanently unavailable merely because the operator
+  opened the new document head for review. A review session is disposable only when it is still
+  `open` at version 1, owns exactly one baseline revision and one matching `created` event, and has
+  no publication. The service removes those three untouched ledger rows before performing the
+  existing document rollback; revision 1 reuses the extraction aggregate CAS object, so source,
+  provider, run, artifact and CAS evidence remain preserved.
+- Any edited, acknowledged, approved, rejected, reopened, published or structurally non-pristine
+  session remains protected by the existing `resource_referenced` 409 response. This is an explicit
+  exception for a zero-decision review shell, not a general weakening of immutable review history.
+- The focused temporary-SQLite lifecycle passed outside the tool sandbox (**1 test**) and now proves
+  pristine-session cleanup, document-head restoration, immutable run/artifact retention and fresh
+  replacement registration. Focused Ruff and strict MyPy passed, and `git diff --check` is clean.
+  A read-only check of the operator's current 19--37 document found that its blocking session meets
+  every pristine condition (open/version 1, one revision, one created event, zero publications and
+  matching bindings). No runtime row was changed, no broad suite was run and no commit was made.
+
+## 2026-09-05 — Incremental OCR move-coverage supplement and saved-sample evaluation
+
+- Added a conservative OCR coverage pass for incremental CCEF 1.1 candidates. It detects obvious
+  numbered score spans, including parenthetical variations and individually annotated moves, but
+  deliberately ignores isolated unannotated prose plans. A reported span is considered covered
+  only when the move sequence exists as a parent-linked path and its nodes occur in reading flow.
+- Missing spans now produce a small additive supplement request (8,192 output-token ceiling) rather
+  than a second full-document request. The model returns only gap grouping, sequence selection, an
+  advisory parent hint, a reading-flow insertion point and printed move tokens. Local python-chess
+  enumerates legal historical positions, resolves the actual parent, computes sibling order and
+  deterministic node IDs, preserves every existing node/annotation/flow entry, and runs the full
+  incremental decoder, evidence binding, continuation binding, normalization and coverage pass
+  again. There is one request and no automatic retry.
+- The saved poor pages 33--37 candidate now yields 11 concrete missing spans. An exact small-request
+  A/B showed the official v4-flash endpoint returning in 4.097 seconds (9,520 input / 966 output
+  tokens) with all 11 spans represented exactly in eight additions. The configured alternate
+  endpoint returned no final content after 104.175 seconds; it was not retried, so this A/B cannot
+  establish comparative model quality and does establish an operational incompatibility with the
+  current no-thinking bounded-repair mode. The prior alternate attempt had also ended in a transport
+  failure after about 110 seconds.
+- Two bounded protocol probes isolated that incompatibility further without re-running extraction:
+  the alternate endpoint's flash model also returned no final content after 57.390 seconds, and
+  omitting both the vendor `thinking` parameter and JSON response-format switch still returned no
+  final content after 56.190 seconds. The temporary omission switch was removed from production
+  because it did not help. No further automatic probe/retry was made; the proxy likely consumes the
+  8,192-token allowance in server-forced reasoning, but its raw private response was not retained in
+  these standalone probes, so that mechanism remains an inference rather than a proven cause.
+- The old saved candidate predates the generic diagram-caption fix and therefore has Game 9 rooted
+  at White move 33 while its source says `Black to move` before `32...e4?`; all 39 original Game 9
+  nodes are invalid under that stale FEN. Applying the already-implemented caption precedence in an
+  in-memory saved-sample replay, then applying the saved v4-flash supplement, reduced 11 coverage
+  gaps to zero and produced Game 8 with 39/39 valid nodes and Game 9 with 60/60 valid nodes. No SQL,
+  CAS or review/document state was changed.
+- The separately saved v4-pro pages 42--43 Game 11 result is structurally strong: one 77-node score,
+  77/77 locally legal nodes, 14 interleaved annotations, 91 reading-flow entries, five binary branch
+  points and zero detected OCR coverage gaps. Its diagram-derived initial FEN is exact and Game 12's
+  heading is retained as prose for the next pages. This single sample is materially better than the
+  earlier v4-flash pages 33--37 output, but its 60,507 total tokens (47,426 output) are expensive and
+  one sample does not prove a system-wide quality advantage.
+- Focused verification: coverage plus incremental-service tests passed (**4**, `--no-cov`); targeted
+  Ruff and strict MyPy passed. A first focused pytest invocation also had all four tests pass but
+  exited on the repository-wide 80% coverage threshold, which is inapplicable to a two-file
+  iterative selection. No broad suite, full extraction retry, database write or commit was run.
+
+Remaining risk: the coverage supplement is currently wired into the incremental v4 path that owns
+the pages 33--37 target. The shared detector/applicator is pipeline-neutral, but standalone v4
+candidate assembly has not yet been adapted to store the same supplement chain. The configured
+alternate endpoint's empty responses mean its bounded repair mode should not be treated as
+operational until a compatible repair budget/mode is selected or the proxy's response behavior is
+diagnosed. The official v4-flash endpoint did complete the exact bounded request quickly.
+
+## 2026-09-08 — Shared standalone/incremental CCEF recovery pipeline
+
+- Added `extraction/recovery.py` as the single post-generation recovery orchestrator used by both
+  standalone semantic v4 and incremental v5. It applies the existing deterministic canonicalizer,
+  invokes at most one hash-bound general patch when a complete bounded JSON package fails, invokes
+  at most one evidence-driven coverage supplement after structural acceptance, and requires the
+  owning pipeline's full validator callback to accept every final response.
+- Standalone v4 now supplies its fragment-bound candidate assembler as that callback; incremental
+  v5 supplies evidence/metadata/continuation/python-chess validation. Transport, blank/truncated,
+  unparseable, oversized and otherwise unrepairable results still stop rather than loop or purchase
+  another full extraction. No real provider request or runtime database mutation was made.
+- General repair diagnostics now scan raw move-sequence collections even when a root validator
+  rejects the item. A generic `flow_parent_after_child` diagnostic reports any reading-flow child
+  reference preceding its declared parent. The saved 2026-09-08 15:48 pages 137--149 response now
+  produces two exact flow-parent diagnostics plus the projection mismatch without a book, page,
+  game or move special case.
+- Recovered standalone artifacts preserve the actual original provider content/hash and store the
+  bounded repair/coverage chain separately. Candidate recovery accepts and verifies both chain
+  schemas, so a worker replay does not call the provider again.
+- Focused verification: 12 pure general-repair/coverage tests passed; four semantic-v4 execution
+  tests passed (normal candidate, shared parent-after-child repair plus persisted replay, an
+  unrepairable malformed package, and a bounded repair-response failure retaining both diagnostic
+  captures). Targeted Ruff and strict MyPy passed. The file-backed SQLite
+  tests were run outside the tool sandbox because their initialization stalled inside it. No broad
+  suite or commit was run.
+
+Remaining risk: the generic repair call still depends on the configured endpoint supporting the
+bounded no-thinking JSON response mode. A provider that returns blank repair content will fail once
+with `ccef_repair_failed`; the system intentionally does not loop or silently fall back to a second
+full extraction.
+
+## 2026-09-17 — GPT-6 continuation handoff (current authoritative snapshot)
+
+This section is a self-contained starting point for a new GPT-6 development window. Chat history is
+not authoritative. The next agent must still read `AGENTS.md`, the beginning/current sections of
+`PLANS.md`, the relevant ADRs and the actual diff before changing code.
+
+### Product and architecture
+
+ChessWorkbench is a single-user, local-first chess knowledge workbench. It combines manually
+authored courses, an interactive chessboard and Stockfish analysis with reviewable AI-assisted PDF
+import. Its internal chess model is a position graph, not a PGN tree; PGN is only an interchange
+format. The long-term domain separation is:
+
+1. **Source** — immutable PDFs, rendered pages, OCR/diagram evidence and extraction runs.
+2. **Knowledge** — reviewed positions, moves, notes and citations.
+3. **Repertoire** — user-selected practical lines built from knowledge.
+4. **Exercise** — generated training material; it must not become the source of truth for the other
+   layers.
+
+The current PDF path is deliberately one pipeline rather than separate “normal book” and “diagram
+book” systems:
+
+`PDF asset → page render/OCR + optional local diagram evidence → provider CCEF 1.1 → local trust,
+normalization and bounded recovery → immutable candidate/incremental document → human review
+ledger → explicit publication into a draft Course`.
+
+Provider output can never publish directly. Raw provider responses, artifacts and CAS objects are
+immutable audit evidence. Review edits create new immutable revisions/events; approved selections
+are mapped into the ordinary Course/Knowledge model. Incremental extraction keeps adjacent source
+runs as segments of one document, while independent or duplicate range extractions remain separate
+outcomes beneath the same PDF book.
+
+The main user surfaces are:
+
+- **Sources**: a book-centric PDF library, extraction/document history, task cancellation/deletion,
+  latest-append rollback, review entry and adjacent incremental requests.
+- **AI book review**: source pages, board and a compact Lichess-style annotated score; semantic move
+  and prose edits are recorded in the review ledger, then selected ranges can be published.
+- **Learn/course workbench**: hierarchical book/course → chapter → example/theory navigation,
+  optional source-page view, board/Stockfish and a compact editable annotated score.
+
+### Runtime and local configuration
+
+- Backend: Python 3.13, Sanic, Pydantic 2, SQLAlchemy 2/Alembic, SQLite locally and MySQL-compatible
+  schema rules. Default API address is `http://127.0.0.1:8000`.
+- Frontend: React 18, TypeScript, Vite, React Router, SWR, Ant Design and Tailwind. Default browser
+  address is `http://127.0.0.1:5173`.
+- Start from two terminals with `make dev-api` and `make dev-web`. `make dev-api` first applies
+  migrations. `OSError: [Errno 98] Address already in use` means another API process already owns
+  port 8000; diagnose that process instead of starting a second server.
+- Bootstrap commands are documented in `README.md`. The local chess-diagram ONNX model and
+  Stockfish are installed through the repository Make targets and live under ignored `data/`.
+- Provider endpoint, model and key-file path belong only in ignored local `.env`. Never commit or
+  quote a private endpoint/model/key. The API key itself must be in a repository-external UTF-8 file
+  with mode `0600`; plaintext keys in `.env` are intentionally rejected. Do not inspect or print
+  secret contents during routine debugging.
+- Runtime SQLite databases, user books, provider responses and generated debug artifacts under
+  `data/` are local state, not source code. Prefer public APIs/read-only services for diagnosis and
+  do not mutate the database directly to “fix” product state.
+
+### Required development style
+
+- The operator override in `AGENTS.md` is active: repository work is performed by Codex. Do not
+  invoke DeepCode or prepare DeepCode prompts unless the operator explicitly reverses that rule.
+- This is primarily a personal local-first site. During iteration, prove the actual user-visible or
+  persisted-artifact outcome first, then run only the smallest directly relevant formatter, type
+  check and focused regression. Do not run broad acceptance/cumulative suites for reassurance;
+  reserve them for Stage closeout, high-risk shared infrastructure or an explicit request.
+- Persisted writes go through the authoritative backend boundary. Frontend `chess.js` is for
+  immediate interaction; persisted moves must be validated by `python-chess` and stored as lowercase
+  UCI. API models use `extra="forbid"`; IDs are UUIDs, persisted timestamps are UTC, and mutable
+  resources use expected-version optimistic concurrency.
+- Keep Source, Knowledge, Repertoire and Exercise separate. Preserve immutable source/provider/CAS
+  evidence and append-only review history. Use recoverable archive/rollback semantics instead of
+  hard-deleting shared graph data.
+- Preserve unrelated dirty changes. Use `apply_patch` for manual edits. Do not commit, rebase,
+  reset, stage/unstage or delete files without explicit operator permission. After a task, inspect
+  `git diff --stat`, run `git diff --check`, and append concrete behavior/tests/risks here.
+- No book/page/game/move-specific production fixes. Deterministic normalization or repair must be
+  expressed as a general invariant and must rerun the owning pipeline's strict evidence, topology,
+  chess and composition validation.
+- Private provider calls can be slow and costly. Do not perform a real extraction or retry a failed
+  immutable run unless the operator explicitly asks. Blank/truncated provider replies are retained
+  as failures and are not automatically repurchased.
+
+### Plan status and documentation caveats
+
+- `main` is at `48ceafb` (`feat(codex): refine Stage 8D review and learning workflows`), matching
+  `origin/main` at the time of this handoff.
+- `PLANS.md` marks Stage 8D-1 through 8D-6 complete. The next formal delivery item is **8D-7:
+  interactive completion**, including explicit conflict resolution, multi-source merge and the
+  focused Stage 8 closeout gate.
+- The top “source library information architecture” list still has an unchecked “review-based
+  modification” line even though the later authoritative 8D-5 section records review commands and
+  editing as complete. Treat this as plan drift to reconcile, not evidence that all editing is
+  missing.
+- The first paragraph of `README.md` still describes an older Stage 4/6 milestone. Use `PLANS.md`,
+  ADRs and this handoff for current Stage status; update that README wording when a documentation
+  cleanup is intentionally scoped.
+- Relevant current ADRs are 0014 (provider execution/candidates), 0016 (Stage 8D review and
+  publication), 0017 (CCEF 1.1 annotated score), 0018 (incremental PDF documents), 0019 (SQLite
+  reliability) and 0020 (local diagram evidence).
+
+### What the recent development sessions changed
+
+1. **Stage 8D review and publication** — added the verified review read surface, immutable
+   session/revision/event ledger, semantic score/prose commands, warning acknowledgement and
+   approve/reject/reopen transitions. Approved move ranges and interleaved annotations can be
+   published atomically into hierarchical draft courses with PDF citations.
+2. **Book-centric Sources and incremental extraction** — a PDF can own many independent extraction
+   outcomes and incremental documents. The UI supports adjacent appends, task cancellation/archive
+   and audited rollback of the latest unreviewed append, including removal of a completely pristine
+   review shell while preserving all immutable run/artifact evidence.
+3. **Course learning workbench** — redesigned to three panes with chapter/source switching, board
+   plus engine, and one compact Lichess-style score. It now supports hierarchical sections,
+   rename/archive/reorder actions, move context menus and recording, navigation/flip controls,
+   source citations, engine batch precomputation and persisted cache reuse.
+4. **Engine reliability and presentation** — fixed subprocess cancellation races under uvloop,
+   cached engine identity to remove the one-second cache-hit tax, skipped already-cached positions
+   in subsection analysis, accepted positions with fewer legal moves than configured MultiPV, and
+   weighted arrow color/opacity by evaluation loss.
+5. **Local chess-diagram evidence** — embedded PDF board images are detected and classified locally,
+   then an operational FEN is accepted only when nearby move/caption evidence resolves it
+   conservatively. Diagram-started scores use the ordinary extraction/incremental pipeline. Caption
+   side-to-move now takes precedence over a misleading nearby numbered move.
+6. **Portable provider configuration** — the DeepSeek-compatible Chat Completions endpoint, model
+   and key-file path are runtime-configurable without storing private deployment details in this
+   public repository. Official defaults and the legacy key-file setting remain compatible.
+7. **Coverage supplement and shared recovery (latest)** — OCR move spans and parenthetical
+   variations missing from CCEF can trigger one bounded additive supplement rather than another
+   full extraction. Standalone semantic v4 and incremental v5 now share `extraction/recovery.py`:
+   deterministic canonicalization, at most one hash-bound general JSON patch, at most one coverage
+   supplement, then full pipeline-specific callback validation. General diagnostics include
+   reading-flow children appearing before their declared parent. Original provider content/hash is
+   retained and repair/coverage chains are separate auditable artifacts.
+
+The saved 2026-09-08 15:48 pages 137–149 failure is a useful offline regression: its JSON is
+complete, but two reading-flow entries place children before their parents. The new generic
+diagnostics identify both violations plus the projection mismatch without any source-specific
+rule. The historical run remains failed and immutable; only a new request can exercise the new
+recovery path in production.
+
+### Current uncommitted worktree — do not lose or blindly accept
+
+All work after `48ceafb` is currently uncommitted. At handoff, `git diff --stat` reports **28 tracked
+files, 2,003 insertions and 174 deletions**, plus three untracked files with **1,325 lines**. These
+changes span several sessions and were verified in focused slices, not reviewed as one atomic
+change. Preserve them and inspect the actual diff before editing overlapping code.
+
+Tracked groups currently modified:
+
+- Local configuration/docs/contracts: `.env.example`, `PLANS.md`, `README.md`,
+  `backend/openapi.json`, generated `frontend/src/types/api.generated.ts`, this handoff and ADRs
+  0014/0018/0020.
+- Provider/recovery pipeline: `config.py`, `extraction/deepseek.py`, `candidates.py`,
+  `diagram_context.py`, `general_repair.py`, `services/pdf_extraction.py` and
+  `services/pdf_incremental_extraction.py`.
+- Incremental-document rollback/API/UI: `api/pdf.py`, `schemas/pdf_documents.py`,
+  `services/pdf_documents.py`, `SourcesPage.tsx` and the API type facade.
+- Focused tests: provider/config/diagram execution, PDF document contracts/service behavior,
+  semantic execution and Sources-page browser behavior.
+
+Untracked but intentional current implementation files:
+
+- `backend/src/chess_workbench/extraction/coverage.py`
+- `backend/src/chess_workbench/extraction/recovery.py`
+- `backend/tests/test_extraction_coverage.py`
+
+Do not assume an untracked file is disposable. Conversely, do not commit this entire worktree as a
+single blob without first reviewing logical boundaries and generated-contract consistency.
+
+### Latest focused verification and known risks
+
+- Shared recovery: 12 pure general-repair/coverage tests passed; four selected semantic-v4
+  execution tests passed (normal candidate, parent-after-child repair and persisted replay,
+  malformed/unrepairable package, and bounded repair failure with both captures). Targeted Ruff,
+  strict MyPy and `git diff --check` passed. File-backed SQLite tests required the established
+  sandbox-external runner because initialization stalled inside the tool sandbox.
+- Earlier slices have their focused evidence in the dated sections above. No repository-wide
+  acceptance suite has been run against the aggregate dirty worktree, and this handoff-only edit
+  does not claim one.
+- No real provider request has exercised the newly shared recovery orchestration end to end. The
+  configured alternate compatible endpoint previously returned blank final content for small
+  no-thinking repair requests. In that case the shared path deliberately fails once with
+  `ccef_repair_failed`; it does not loop or buy a second full extraction.
+- Existing failed extraction runs are immutable and are not retroactively repaired. A new browser
+  request is required to test a production fix.
+- The generated OpenAPI/TypeScript changes belong to the rollback/API slice and were previously
+  regenerated, but a new agent should run `make check-contracts` before treating the aggregate
+  worktree as release-ready.
+
+### Recommended next action for the new GPT-6 window
+
+1. Read `AGENTS.md`, the top/current Stage 8D sections of `PLANS.md`, this section and the relevant
+   ADR for the task being chosen. Run `git status --short` and inspect the overlapping diff; do not
+   start by formatting or running the whole repository.
+2. Decide with the operator whether the immediate goal is (a) a manual/live smoke of the shared
+   recovery path, (b) formal 8D-7 conflict/multi-source work, or (c) reviewing and splitting the
+   large dirty worktree into coherent commits. Do not infer permission to commit.
+3. If validating recovery, first use saved responses offline. Only with explicit approval, submit
+   one small real extraction that is likely to need a bounded repair, observe its immutable
+   artifacts and review document, and run only the directly owning tests/checks if a concrete bug
+   appears.
+4. Before Stage 8 closeout, reconcile the stale plan/README wording, review all uncommitted slices,
+   regenerate/check contracts, then run the focused Stage 8 acceptance target once it exists. Do
+   not use broad acceptance as the first diagnostic step.

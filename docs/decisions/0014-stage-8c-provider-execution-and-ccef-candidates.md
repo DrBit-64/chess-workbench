@@ -102,6 +102,12 @@ API key 只能来自 server-owned、仓库外部的 secret file，配置中只�
 仍可用；新的 v2 AI Job 以明确非重试
 `provider_unconfigured` 失败。
 
+2026-09-04 补充：默认值仍为官方 DeepSeek Chat Completions endpoint 和
+`deepseek-v4-flash`，但 endpoint 与模型标识改为运行时注入，以兑现 ADR 0010 的 provider
+可替换边界。第三方 DeepSeek-compatible 服务的实际 URL、模型标识和密钥不得写入受 Git 管理的
+文件；URL/模型只放在被忽略的本地 `.env`，密钥仍放在仓库外的权限受限文件。适配器继续要求当前
+非流式 Chat Completions 请求/响应形状；协议不兼容的服务需要单独 adapter，不能靠配置猜测。
+
 provider 的 authentication/invalid_request/invalid_response、binding/输入超限错误为非重试；
 rate_limited/timeout/unavailable 为重试。真实 V4 Flash 验证表明同一请求可能偶发产生非法 JSON 或
 不符合 CCEF 的 JSON，因此 decoder 的 `invalid_json`/`invalid_package` 也使用 Job 既有的最多三次

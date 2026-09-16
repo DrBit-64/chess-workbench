@@ -113,6 +113,12 @@ EvidenceRef 的 `(physical_page, fragment_sha256)`。随后普通增量执行链
 为诊断工件；离线工具可以先重放本地规则，只在仍有歧义时构造、执行或重放模型协议，且不修改
 SQL 权威状态。
 
+独立语义提取与增量提取共用同一个响应恢复编排器，而不是分别维护错误类型清单。编排器负责上述
+确定性规范化、至多一次有界补丁、至多一次 OCR 覆盖补充及每次变更后的完整回调复验；独立流程的
+回调保留 fragment binding 与候选 consolidation，增量流程的回调额外保留 continuation binding
+与文档组合。根级模型校验失败不能阻止对原始、有限的 move sequence 集合继续产生拓扑诊断。
+所有恢复工件仍绑定最初 provider 响应并保留完整修订链，不能把修订后的 JSON 冒充原始输出。
+
 ### 3. 聚合修订是确定性派生，不覆盖任何分段
 
 每次成功追加分段后，系统从“前一聚合修订 + 新 normalized 分段 + 已验证 continuation
@@ -184,6 +190,17 @@ head，并允许以后用新 key 重试。增量 worker 已在 8D-3E3 安装；�
 attempt。登记只排队新的 `pdf_incremental_extraction` Job，并由独立 handler 领取，避免普通
 `pdf_extraction` 路径误处理。所有写入口在 provider 调用前校验 same asset、页界、当前
 version、前驱 revision/hash、active attempt 和 idempotency binding。
+
+操作者可以在尚未产生实质 review history 的前提下回退当前最后一个已提交增量结果。该命令只
+截断逻辑文档的最新 segment/revision/append 关联并把可变 head 恢复到直接前驱；对应 Job 被
+归档，但 ExtractionRun、provider/raw/normalized 工件和 CAS 字节全部保留。若最新 revision
+只有一个仍为 open/version 1 的初始审核 session、一个复用 baseline CAS 的 revision 1、一个
+`created` event 且没有 publication 时，这三行只是尚未产生用户决定的空审核壳，回退会先将其
+一并废弃。只要发生过编辑、确认、拒绝、批准、重新打开或发布，仍以 `resource_referenced`
+拒绝，避免破坏审核或发布审计链。回退同时撤销
+基于被移除 head 登记的后续 append 关联，使操作者能用新的幂等键重新追加相同相邻页段。
+因此“不可变事实”约束适用于仍属于文档历史或已被审核引用的修订；显式回退是仅限未审核
+最新尾段的可恢复分组截断，不是覆盖或删除模型原始输出。
 
 ## 自动验收
 

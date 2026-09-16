@@ -15,6 +15,8 @@ from test_stage8d_review_read_service import (
 )
 
 from chess_workbench.api.app import create_app
+from chess_workbench.extraction.contracts import ExtractionPackageV1_1
+from chess_workbench.extraction.validation import normalize_chess_moves_v1_1
 from chess_workbench.services.content import ServiceError
 from chess_workbench.services.jobs import JobService
 from chess_workbench.services.pdf_documents import (
@@ -24,11 +26,17 @@ from chess_workbench.services.pdf_documents import (
 )
 from chess_workbench.store.database import Database
 from chess_workbench.store.models import (
+    ExtractionArtifact,
+    ExtractionRun,
+    Job,
     PdfAsset,
     PdfExtractionDocument,
     PdfExtractionDocumentAppend,
     PdfExtractionDocumentRevision,
     PdfExtractionDocumentSegment,
+    PdfReviewEvent,
+    PdfReviewRevision,
+    PdfReviewSession,
 )
 
 
@@ -251,5 +259,133 @@ async def test_document_http_adopt_append_and_grouped_read(tmp_path: Path) -> No
         assert listed.status == 200
         assert [item["id"] for item in listed.json["items"]] == [document_id]
         assert len(listed.json["items"][0]["append_attempts"]) == 1
+    finally:
+        await database.close()
+
+
+@pytest.mark.asyncio
+async def test_rollback_latest_append_restores_previous_document_head(tmp_path: Path) -> None:
+    database, settings, initial_run_id = await _setup(
+        tmp_path,
+        "document-rollback",
+        pipeline_version="pdf-extraction:v4",
+    )
+    await _complete_review(
+        database,
+        settings,
+        initial_run_id,
+        normalized_payload=_package_payload_v1_1(initial_run_id, FIRST_PAGE, LAST_PAGE),
+    )
+    try:
+        async with database.session() as session, session.begin():
+            asset = await session.scalar(select(PdfAsset))
+            assert asset is not None
+            asset.page_count = 10
+            service = PdfDocumentService(session, settings)
+            document = (await service.adopt_run(initial_run_id)).document
+            append = await service.register_append(
+                document_id=document.id,
+                expected_version=1,
+                first_page=7,
+                last_page=8,
+                profile=None,
+                idempotency_key="rollback-append",
+            )
+            append.job.status = "running"
+            segment_sha = "a" * 64
+            session.add(
+                ExtractionArtifact(
+                    run_id=append.run.id,
+                    kind="normalized_ccef",
+                    page_number=None,
+                    relative_path="derived/extraction/aa/segment.json",
+                    media_type="application/json",
+                    byte_size=1,
+                    content_sha256=segment_sha,
+                )
+            )
+            aggregate = normalize_chess_moves_v1_1(
+                ExtractionPackageV1_1.model_validate(
+                    _package_payload_v1_1(document.id, FIRST_PAGE, 8)
+                )
+            )
+            committed = await service.commit_verified_append(
+                run_id=append.run.id,
+                segment_normalized_ccef_sha256=segment_sha,
+                aggregate=aggregate,
+            )
+            assert committed.document.version == 2
+            review_session = PdfReviewSession(
+                document_id=document.id,
+                baseline_document_revision_id=committed.revision.id,
+                baseline_ccef_sha256=committed.revision.normalized_ccef_sha256,
+                status="open",
+            )
+            session.add(review_session)
+            await session.flush()
+            review_revision = PdfReviewRevision(
+                session_id=review_session.id,
+                parent_revision_id=None,
+                revision_number=1,
+                relative_path=committed.revision.relative_path,
+                media_type=committed.revision.media_type,
+                byte_size=committed.revision.byte_size,
+                package_sha256=committed.revision.normalized_ccef_sha256,
+            )
+            session.add(review_revision)
+            await session.flush()
+            session.add(
+                PdfReviewEvent(
+                    session_id=review_session.id,
+                    revision_id=review_revision.id,
+                    parent_version=0,
+                    resulting_version=1,
+                    kind="created",
+                    decisions={"target_kind": "document"},
+                )
+            )
+            await session.flush()
+            document_id = document.id
+            appended_run_id = append.run.id
+
+        async with database.session() as session, session.begin():
+            service = PdfDocumentService(session, settings)
+            rolled_back = await service.rollback_latest_append(
+                document_id=document_id,
+                expected_version=2,
+            )
+            assert rolled_back.document.version == 1
+            assert rolled_back.document.last_page == LAST_PAGE
+            assert len(rolled_back.segments) == len(rolled_back.revisions) == 1
+            assert rolled_back.append_attempts == ()
+            assert (
+                await session.scalar(select(func.count()).select_from(PdfExtractionDocumentAppend))
+            ) == 0
+            assert (await session.scalar(select(func.count()).select_from(PdfReviewSession))) == 0
+            assert (await session.scalar(select(func.count()).select_from(PdfReviewRevision))) == 0
+            assert (await session.scalar(select(func.count()).select_from(PdfReviewEvent))) == 0
+            replacement = await service.register_append(
+                document_id=document_id,
+                expected_version=1,
+                first_page=7,
+                last_page=8,
+                profile=None,
+                idempotency_key="replacement-after-rollback",
+            )
+            assert replacement.job.status == "queued"
+
+        async with database.session() as session:
+            assert await session.get(ExtractionRun, appended_run_id) is not None
+            appended_run = await session.get(ExtractionRun, appended_run_id)
+            assert appended_run is not None
+            appended_job = await session.get(Job, appended_run.job_id)
+            assert appended_job is not None and appended_job.archived_at is not None
+            assert (
+                await session.scalar(
+                    select(func.count())
+                    .select_from(ExtractionArtifact)
+                    .where(ExtractionArtifact.run_id == appended_run_id)
+                )
+            ) == 1
     finally:
         await database.close()

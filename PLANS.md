@@ -17,6 +17,10 @@ ADR 0016 is authoritative. Stage 5/6E and Stage 7 remain deferred.
   adopting a successful run as an incremental document and registering the next adjacent append.
 - [x] Add recoverable extraction-task deletion at the authoritative backend boundary: active work
   is cancelled, its Job is archived, and immutable runs/artifacts remain available for audit.
+- [x] Add explicit latest-append rollback for an unreviewed incremental document head, including a
+  pristine open/version-1 review shell with no user decision or publication: restore the predecessor
+  aggregate, archive the removed run, preserve all raw/CAS evidence, and allow a fresh replacement
+  append for the same adjacent page range. Any substantive review history remains protected.
 - [ ] Add review-based modification with its authoritative backend boundary; editing actions that
   are not implemented remain disabled.
 - [x] Let a reviewer resolve unmatched or ambiguous prose/annotation position anchors by explicitly
@@ -47,6 +51,9 @@ sufficient during this product-layout iteration.
 - [x] Permit an incremental page segment to consist entirely of new, diagram-started scores. Any
   declared continuation remains hash/anchor validated, while zero bindings no longer rejects
   independent games that ADR 0018 requires the composer to append in source order.
+- [x] Make the DeepSeek-compatible Chat Completions endpoint and model runtime-configurable while
+  retaining official defaults. Provider-specific values remain local-only, and the API key stays
+  in a permission-restricted file outside the public repository.
 
 ## SQLite reliability correction
 
@@ -220,8 +227,12 @@ publication and UI into one delegated task.
        incremental v5 segments; pipeline-specific code begins only after that shared boundary.
      - Model excerpts expose exact original values under their real JSON Pointer paths; the model
        may edit scalar fields inside flow entries but may not replace, add or remove whole entries.
-     - Semantic v4 keeps thinking enabled without DeepSeek JSON Output mode. A null/blank final
-       answer is retained and fails non-retryably with an explicit manual-retry message.
+   - Semantic v4 keeps thinking enabled without DeepSeek JSON Output mode. A null/blank final
+     answer is retained and fails non-retryably with an explicit manual-retry message.
+   - Standalone semantic v4 and incremental v5 now call one shared recovery orchestration after
+     generation. It owns deterministic canonicalization, one bounded hash-bound patch, one
+     evidence-driven coverage supplement and final callback revalidation; the callbacks retain
+     pipeline-specific evidence, continuation, chess, consolidation and commit authority.
 4. [x] **8D-4 review ledger:** review session/revision/event persistence, evidence fidelity and
    optimistic concurrency.
    - A session is bound to exactly one extraction run or incremental document plus the exact

@@ -3,7 +3,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { SWRConfig } from 'swr';
 import { describe, expect, it, vi } from 'vitest';
 
-import type { PdfExtraction } from '../logic/api/types';
+import type { PdfExtraction, PdfExtractionDocument } from '../logic/api/types';
 
 import { CourseCatalog } from './CourseCatalog';
 import { Dashboard } from './Dashboard';
@@ -128,6 +128,72 @@ const candidate: NonNullable<PdfExtraction['candidate']> = {
   raw_ccef_sha256: 'f'.repeat(64),
   normalized_ccef_sha256: '0'.repeat(64),
 };
+
+const incrementalDocument = (version: 1 | 2 = 2): PdfExtractionDocument => ({
+  id: 'document-1',
+  pdf_asset_id: 'asset-1',
+  version,
+  first_page: 319,
+  last_page: version === 2 ? 337 : 332,
+  normalized_ccef_sha256: (version === 2 ? '2' : '1').repeat(64),
+  segments: [
+    {
+      id: 'segment-1',
+      run_id: 'run-initial',
+      ordinal: 1,
+      first_page: 319,
+      last_page: 332,
+      normalized_ccef_sha256: '1'.repeat(64),
+      created_at: '2026-09-04T00:00:00Z',
+    },
+    ...(version === 2
+      ? [
+          {
+            id: 'segment-2',
+            run_id: 'run-latest',
+            ordinal: 2,
+            first_page: 333,
+            last_page: 337,
+            normalized_ccef_sha256: '2'.repeat(64),
+            created_at: '2026-09-04T01:00:00Z',
+          },
+        ]
+      : []),
+  ],
+  revisions: [
+    {
+      id: 'revision-1',
+      predecessor_revision_id: null,
+      terminal_segment_id: 'segment-1',
+      revision_number: 1,
+      segment_count: 1,
+      first_page: 319,
+      last_page: 332,
+      algorithm_version: 'test',
+      normalized_ccef_sha256: '1'.repeat(64),
+      created_at: '2026-09-04T00:00:00Z',
+    },
+    ...(version === 2
+      ? [
+          {
+            id: 'revision-2',
+            predecessor_revision_id: 'revision-1',
+            terminal_segment_id: 'segment-2',
+            revision_number: 2,
+            segment_count: 2,
+            first_page: 319,
+            last_page: 337,
+            algorithm_version: 'test',
+            normalized_ccef_sha256: '2'.repeat(64),
+            created_at: '2026-09-04T01:00:00Z',
+          },
+        ]
+      : []),
+  ],
+  append_attempts: [],
+  created_at: '2026-09-04T00:00:00Z',
+  updated_at: '2026-09-04T01:00:00Z',
+});
 
 describe('Stage 4A workbench pages', () => {
   it('renders real dashboard statistics and recent-course navigation', async () => {
@@ -526,6 +592,47 @@ describe('Stage 4A workbench pages', () => {
       ),
     );
     expect(await screen.findByText('这本书还没有提取结果')).toBeTruthy();
+  });
+
+  it('rolls a continuous document back to its previous committed segment', async () => {
+    let rolledBack = false;
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (
+        url === '/api/pdf-extraction-documents/document-1/rollback-latest' &&
+        init?.method === 'POST'
+      ) {
+        rolledBack = true;
+        return json(incrementalDocument(1));
+      }
+      if (url === '/api/pdf-assets') return json({ items: [pdfAsset] });
+      if (url === '/api/pdf-extraction-documents') {
+        return json({ items: [incrementalDocument(rolledBack ? 1 : 2)] });
+      }
+      if (url.startsWith('/api/pdf-extractions')) return json({ items: [] });
+      return json([source]);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderPage(<SourcesPage />);
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: '管理提取结果' }),
+    );
+    expect(await screen.findByText('连续提取 · 第 319–337 页')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: '操作' }));
+    fireEvent.click(await screen.findByText('回退第 333–337 页增量结果'));
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/pdf-extraction-documents/document-1/rollback-latest',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ expected_version: 2 }),
+        }),
+      ),
+    );
+    expect(await screen.findByText('连续提取 · 第 319–332 页')).toBeTruthy();
   });
 
   it('requests the expected URLs when status and conflict filters change', async () => {

@@ -188,6 +188,26 @@ async def test_thinking_profile_is_explicit_and_uses_max_effort() -> None:
     assert response.content == '{"ok": true}'
 
 
+async def test_endpoint_and_model_are_constructor_configurable() -> None:
+    endpoint = "https://provider.invalid/v1/chat/completions"
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        assert str(req.url) == endpoint
+        assert json.loads(req.content)["model"] == "private-model"
+        return httpx.Response(200, json=_ok_payload(model="private-model"))
+
+    provider = DeepSeekV4FlashProvider(
+        api_key="test-key",
+        endpoint=endpoint,
+        model="private-model",
+        transport=httpx.MockTransport(handler),
+    )
+
+    response = await provider.generate(_request())
+
+    assert response.model == "private-model"
+
+
 async def test_json_output_can_be_omitted_without_disabling_thinking() -> None:
     def handler(req: httpx.Request) -> httpx.Response:
         body = json.loads(req.content)

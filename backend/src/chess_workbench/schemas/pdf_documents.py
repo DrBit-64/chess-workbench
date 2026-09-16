@@ -54,6 +54,10 @@ class PdfExtractionDocumentAppendCreate(StrictContract):
         return self
 
 
+class PdfExtractionDocumentRollback(StrictContract):
+    expected_version: VersionNumber
+
+
 class PdfExtractionDocumentSegmentRead(StrictContract):
     id: EntityId
     run_id: EntityId
@@ -150,5 +154,6 @@ __all__ = [
     "PdfExtractionDocumentList",
     "PdfExtractionDocumentRead",
     "PdfExtractionDocumentRevisionRead",
+    "PdfExtractionDocumentRollback",
     "PdfExtractionDocumentSegmentRead",
 ]

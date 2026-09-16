@@ -762,6 +762,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/pdf-extraction-documents/{document_id}/rollback-latest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Roll back the latest committed incremental extraction result */
+        post: operations["rollbackLatestPdfExtractionDocumentAppend"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/pdf-extractions": {
         parameters: {
             query?: never;
@@ -9461,6 +9478,256 @@ export interface operations {
             };
             /** @description Invalid append request */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    rollbackLatestPdfExtractionDocumentAppend: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Expected Version */
+                    expected_version: number;
+                };
+            };
+        };
+        responses: {
+            /** @description Rolled-back PDF document */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Append Attempts */
+                        append_attempts: {
+                            /**
+                             * Created At
+                             * Format: date-time
+                             */
+                            created_at: string;
+                            /** Expected Version */
+                            expected_version: number;
+                            /** First Page */
+                            first_page: number;
+                            /**
+                             * Id
+                             * Format: uuid
+                             */
+                            id: string;
+                            /** JobRead */
+                            job: {
+                                /** Attempt Count */
+                                attempt_count: number;
+                                /**
+                                 * Cancel Requested At
+                                 * Format: date-time
+                                 */
+                                cancel_requested_at: string | null;
+                                /**
+                                 * Created At
+                                 * Format: date-time
+                                 */
+                                created_at: string;
+                                /**
+                                 * Id
+                                 * Format: uuid
+                                 */
+                                id: string;
+                                /** Kind */
+                                kind: string;
+                                /** Last Error Code */
+                                last_error_code: string | null;
+                                /** Last Error Message */
+                                last_error_message: string | null;
+                                /** Max Attempts */
+                                max_attempts: number;
+                                /** Payload */
+                                payload: {
+                                    [key: string]: unknown;
+                                };
+                                /** Result */
+                                result: {
+                                    [key: string]: unknown;
+                                } | null;
+                                /**
+                                 * Status
+                                 * @enum {string}
+                                 */
+                                status: "queued" | "running" | "succeeded" | "failed" | "cancelled";
+                                /**
+                                 * Updated At
+                                 * Format: date-time
+                                 */
+                                updated_at: string;
+                            };
+                            /** Last Page */
+                            last_page: number;
+                            /** Pipeline Version */
+                            pipeline_version: string;
+                            /** Predecessor Normalized Ccef Sha256 */
+                            predecessor_normalized_ccef_sha256: string;
+                            /**
+                             * Predecessor Revision Id
+                             * Format: uuid
+                             */
+                            predecessor_revision_id: string;
+                            /** Profile */
+                            profile: {
+                                [key: string]: unknown;
+                            };
+                            /**
+                             * Run Id
+                             * Format: uuid
+                             */
+                            run_id: string;
+                        }[];
+                        /**
+                         * Created At
+                         * Format: date-time
+                         */
+                        created_at: string;
+                        /** First Page */
+                        first_page: number;
+                        /**
+                         * Id
+                         * Format: uuid
+                         */
+                        id: string;
+                        /** Last Page */
+                        last_page: number;
+                        /** Normalized Ccef Sha256 */
+                        normalized_ccef_sha256: string;
+                        /**
+                         * Pdf Asset Id
+                         * Format: uuid
+                         */
+                        pdf_asset_id: string;
+                        /** Revisions */
+                        revisions: {
+                            /** Algorithm Version */
+                            algorithm_version: string;
+                            /**
+                             * Created At
+                             * Format: date-time
+                             */
+                            created_at: string;
+                            /** First Page */
+                            first_page: number;
+                            /**
+                             * Id
+                             * Format: uuid
+                             */
+                            id: string;
+                            /** Last Page */
+                            last_page: number;
+                            /** Normalized Ccef Sha256 */
+                            normalized_ccef_sha256: string;
+                            /**
+                             * Predecessor Revision Id
+                             * Format: uuid
+                             */
+                            predecessor_revision_id: string | null;
+                            /** Revision Number */
+                            revision_number: number;
+                            /** Segment Count */
+                            segment_count: number;
+                            /**
+                             * Terminal Segment Id
+                             * Format: uuid
+                             */
+                            terminal_segment_id: string;
+                        }[];
+                        /** Segments */
+                        segments: {
+                            /**
+                             * Created At
+                             * Format: date-time
+                             */
+                            created_at: string;
+                            /** First Page */
+                            first_page: number;
+                            /**
+                             * Id
+                             * Format: uuid
+                             */
+                            id: string;
+                            /** Last Page */
+                            last_page: number;
+                            /** Normalized Ccef Sha256 */
+                            normalized_ccef_sha256: string;
+                            /** Ordinal */
+                            ordinal: number;
+                            /**
+                             * Run Id
+                             * Format: uuid
+                             */
+                            run_id: string;
+                        }[];
+                        /**
+                         * Updated At
+                         * Format: date-time
+                         */
+                        updated_at: string;
+                        /** Version */
+                        version: number;
+                    };
+                };
+            };
+            /** @description PDF extraction document not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description Stale, initial-only or reviewed document */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

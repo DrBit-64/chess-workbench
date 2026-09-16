@@ -50,11 +50,14 @@ Dashboard、Learn、Sources、三栏课程编辑器与“引擎”工作台均�
 课程草稿。Syzygy 表可选放入 `data/tablebases/syzygy/`。API 文档的机器可读契约位于
 `http://127.0.0.1:8000/docs/openapi.json`。
 
-要运行 Stage 8C PDF AI 候选提取，把密钥保存到仓库外的普通 UTF-8 文件（建议
-`~/.config/chess-workbench/deepseek-api-key`），将文件权限设为 `600`，然后只在本地 `.env`
-中设置 `CHESS_WORKBENCH_DEEPSEEK_API_KEY_FILE` 为它的绝对路径。程序拒绝从 `.env` 直接读取
-`CHESS_WORKBENCH_DEEPSEEK_API_KEY`，也会拒绝组或其他用户可读的密钥文件。未配置密钥文件时
-其他功能仍可用，但新的 v2 提取任务会以 `provider_unconfigured` 明确失败。
+要运行 Stage 8C PDF AI 候选提取，把密钥保存到仓库外的普通 UTF-8 文件（建议放在
+`~/.config/chess-workbench/`），将文件权限设为 `600`。供应商的完整 Chat Completions URL、
+模型标识和密钥文件绝对路径只写入 Git 忽略的本地 `.env`，分别使用
+`CHESS_WORKBENCH_CCEF_PROVIDER_ENDPOINT`、`CHESS_WORKBENCH_CCEF_PROVIDER_MODEL` 和
+`CHESS_WORKBENCH_CCEF_PROVIDER_API_KEY_FILE`。不配置前两项时仍使用官方 DeepSeek 默认值；旧的
+`CHESS_WORKBENCH_DEEPSEEK_API_KEY_FILE` 继续兼容。程序拒绝从 `.env` 直接读取明文密钥，也会
+拒绝组或其他用户可读的密钥文件。未配置密钥文件时其他功能仍可用，但新的 AI 提取任务会以
+`provider_unconfigured` 明确失败。
 扫描棋书中的起始局面图由本地、可替换的 ONNX 识别器处理；模型通过上述安装命令放入
 `data/models/chess-diagram/`，识别证据随后仍进入与普通 PDF 正文完全相同的提取请求。
 

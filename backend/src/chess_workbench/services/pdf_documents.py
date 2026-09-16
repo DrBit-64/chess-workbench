@@ -11,7 +11,7 @@ from typing import cast
 from uuid import NAMESPACE_URL, UUID, uuid5
 
 from pydantic import JsonValue
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -33,6 +33,11 @@ from chess_workbench.store.models import (
     PdfExtractionDocumentAppend,
     PdfExtractionDocumentRevision,
     PdfExtractionDocumentSegment,
+    PdfReviewEvent,
+    PdfReviewPublication,
+    PdfReviewRevision,
+    PdfReviewSession,
+    utc_now,
 )
 
 PDF_INCREMENTAL_EXTRACTION_JOB_KIND = "pdf_incremental_extraction"
@@ -558,6 +563,166 @@ class PdfDocumentService:
         if document is None:
             return None
         return await self._document_view(document)
+
+    async def rollback_latest_append(
+        self, *, document_id: UUID, expected_version: int
+    ) -> PdfDocumentView:
+        """Remove only the current appended head while preserving its run and CAS bytes."""
+
+        if type(document_id) is not UUID:
+            raise TypeError("document_id must be UUID")
+        if type(expected_version) is not int:
+            raise TypeError("expected_version must be int")
+        document = await self.session.scalar(
+            select(PdfExtractionDocument)
+            .where(PdfExtractionDocument.id == document_id)
+            .with_for_update()
+        )
+        if document is None:
+            raise ServiceError("not_found", 404, "PDF extraction document was not found")
+        if document.version != expected_version:
+            raise _stale(document, expected_version)
+        if document.version <= 1:
+            raise ServiceError(
+                "validation_error",
+                409,
+                "PDF extraction document has no incremental result to roll back",
+            )
+
+        head = await self.session.scalar(
+            select(PdfExtractionDocumentRevision).where(
+                PdfExtractionDocumentRevision.document_id == document.id,
+                PdfExtractionDocumentRevision.revision_number == document.version,
+            )
+        )
+        if head is None or head.predecessor_revision_id is None:
+            raise RuntimeError("PDF extraction document head revision is incomplete")
+        predecessor = await self.session.scalar(
+            select(PdfExtractionDocumentRevision).where(
+                PdfExtractionDocumentRevision.id == head.predecessor_revision_id,
+                PdfExtractionDocumentRevision.document_id == document.id,
+            )
+        )
+        segment = await self.session.get(PdfExtractionDocumentSegment, head.terminal_segment_id)
+        if (
+            predecessor is None
+            or predecessor.revision_number != document.version - 1
+            or segment is None
+            or segment.document_id != document.id
+            or segment.ordinal != document.version
+        ):
+            raise RuntimeError("PDF extraction document rollback chain is incomplete")
+        review_sessions = tuple(
+            await self.session.scalars(
+                select(PdfReviewSession)
+                .where(PdfReviewSession.baseline_document_revision_id == head.id)
+                .with_for_update()
+            )
+        )
+        for review_session in review_sessions:
+            if not await self._discard_pristine_review_session(review_session):
+                raise ServiceError(
+                    "resource_referenced",
+                    409,
+                    "The latest PDF extraction revision already has review history",
+                )
+
+        # Attempts registered after the bad head cannot remain bound to a revision
+        # that is about to be removed. Their Jobs/runs/artifacts remain archived audit
+        # evidence, while only the document-association receipts are detached.
+        dependent_attempts = (
+            await self.session.execute(
+                select(PdfExtractionDocumentAppend, ExtractionRun, Job)
+                .join(
+                    ExtractionRun,
+                    ExtractionRun.id == PdfExtractionDocumentAppend.extraction_run_id,
+                )
+                .join(Job, Job.id == ExtractionRun.job_id)
+                .where(PdfExtractionDocumentAppend.predecessor_revision_id == head.id)
+            )
+        ).all()
+        for append, _run, job in dependent_attempts:
+            await self.jobs.archive(job.id)
+            await self.session.delete(append)
+        await self.session.flush()
+
+        head_run = await self.session.get(ExtractionRun, segment.extraction_run_id)
+        if head_run is None:
+            raise RuntimeError("PDF extraction document segment references a missing run")
+        await self.jobs.archive(head_run.job_id)
+        committed_attempt = await self.session.scalar(
+            select(PdfExtractionDocumentAppend).where(
+                PdfExtractionDocumentAppend.extraction_run_id == head_run.id
+            )
+        )
+        if committed_attempt is not None:
+            await self.session.delete(committed_attempt)
+            await self.session.flush()
+        await self.session.delete(head)
+        await self.session.flush()
+        await self.session.delete(segment)
+        await self.session.flush()
+
+        await self.session.execute(
+            update(PdfExtractionDocument)
+            .where(
+                PdfExtractionDocument.id == document.id,
+                PdfExtractionDocument.version == expected_version,
+            )
+            .values(
+                last_page=predecessor.last_page,
+                normalized_ccef_sha256=predecessor.normalized_ccef_sha256,
+                version=predecessor.revision_number,
+                updated_at=utc_now(),
+            )
+        )
+        await self.session.refresh(document)
+        return await self._document_view(document)
+
+    async def _discard_pristine_review_session(self, review_session: PdfReviewSession) -> bool:
+        """Discard an untouched baseline shell so its document head can be rolled back."""
+
+        if review_session.status != "open" or review_session.version != 1:
+            return False
+        revisions = tuple(
+            await self.session.scalars(
+                select(PdfReviewRevision).where(PdfReviewRevision.session_id == review_session.id)
+            )
+        )
+        events = tuple(
+            await self.session.scalars(
+                select(PdfReviewEvent).where(PdfReviewEvent.session_id == review_session.id)
+            )
+        )
+        publication_id = await self.session.scalar(
+            select(PdfReviewPublication.id)
+            .where(PdfReviewPublication.session_id == review_session.id)
+            .limit(1)
+        )
+        if len(revisions) != 1 or len(events) != 1 or publication_id is not None:
+            return False
+        revision = revisions[0]
+        event = events[0]
+        if (
+            revision.revision_number != 1
+            or revision.parent_revision_id is not None
+            or revision.package_sha256 != review_session.baseline_ccef_sha256
+            or event.revision_id != revision.id
+            or event.parent_version != 0
+            or event.resulting_version != 1
+            or event.kind != "created"
+        ):
+            return False
+
+        # Revision 1 reuses the extraction aggregate's CAS object, so removing this
+        # untouched ledger shell never removes or copies source/provider bytes.
+        await self.session.delete(event)
+        await self.session.flush()
+        await self.session.delete(revision)
+        await self.session.flush()
+        await self.session.delete(review_session)
+        await self.session.flush()
+        return True
 
     async def list_documents(self) -> list[PdfDocumentView]:
         documents = tuple(

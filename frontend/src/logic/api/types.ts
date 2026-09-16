@@ -55,6 +55,9 @@ export type PdfExtractionDocumentEnvelope =
 export type PdfExtractionDocumentAppendEnvelope =
   paths['/api/pdf-extraction-documents/{document_id}/appends']['post']['responses'][202]['content']['application/json'];
 
+export type PdfExtractionDocumentRollbackResult =
+  paths['/api/pdf-extraction-documents/{document_id}/rollback-latest']['post']['responses'][200]['content']['application/json'];
+
 export type PdfReviewDocument =
   paths['/api/pdf-extractions/{run_id}/review']['get']['responses'][200]['content']['application/json'];
 

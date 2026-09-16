@@ -3,8 +3,14 @@ from pathlib import Path
 from typing import Any, cast
 
 import pytest
-from chess_workbench.config import SecretFileError, Settings, load_deepseek_api_key
 from pydantic import SecretStr, ValidationError
+
+from chess_workbench.config import (
+    SecretFileError,
+    Settings,
+    load_ccef_provider_api_key,
+    load_deepseek_api_key,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -62,6 +68,9 @@ def test_ccef_runtime_settings_defaults_and_field_types() -> None:
 
     assert settings.deepseek_api_key is None
     assert settings.deepseek_api_key_file is None
+    assert settings.ccef_provider_api_key_file is None
+    assert settings.ccef_provider_endpoint == "https://api.deepseek.com/chat/completions"
+    assert settings.ccef_provider_model == "deepseek-v4-flash"
     assert settings.ccef_provider_timeout_seconds == 600.0
     assert settings.ccef_max_output_tokens == 128_000
     assert settings.ccef_max_prompt_chars == 2_000_000
@@ -93,6 +102,29 @@ def test_ccef_runtime_settings_load_from_environment(
     assert settings.ccef_max_prompt_chars == 1_500_000
 
 
+def test_alternate_provider_configuration_loads_without_inline_secret(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    secret_file = tmp_path / "provider-api-key"
+    secret_file.write_text("private-test-key\n", encoding="utf-8")
+    secret_file.chmod(0o600)
+    monkeypatch.setenv("CHESS_WORKBENCH_CCEF_PROVIDER_API_KEY_FILE", str(secret_file))
+    monkeypatch.setenv(
+        "CHESS_WORKBENCH_CCEF_PROVIDER_ENDPOINT",
+        "https://provider.invalid/v1/chat/completions",
+    )
+    monkeypatch.setenv("CHESS_WORKBENCH_CCEF_PROVIDER_MODEL", "private-model")
+
+    settings = Settings(database_url="sqlite+aiosqlite:///./data/database/settings.db")
+
+    assert settings.ccef_provider_api_key_file == secret_file
+    assert settings.ccef_provider_endpoint == "https://provider.invalid/v1/chat/completions"
+    assert settings.ccef_provider_model == "private-model"
+    key = load_ccef_provider_api_key(settings)
+    assert key is not None
+    assert key.get_secret_value() == "private-test-key"
+
+
 def test_external_secret_is_not_retained_in_settings_and_is_available_to_trusted_code(
     tmp_path: Path,
 ) -> None:
@@ -115,7 +147,7 @@ def test_external_secret_is_not_retained_in_settings_and_is_available_to_trusted
 
 def test_legacy_inline_secret_is_rejected_without_disclosure() -> None:
     secret = "sk-must-not-appear-in-validation"
-    with pytest.raises(ValidationError, match="use deepseek_api_key_file") as caught:
+    with pytest.raises(ValidationError, match="use ccef_provider_api_key_file") as caught:
         Settings(
             database_url="sqlite+aiosqlite:///./data/database/settings.db",
             deepseek_api_key=SecretStr(secret),

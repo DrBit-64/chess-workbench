@@ -1,4 +1,4 @@
-"""Focused 8D-3E2B OpenAPI contract oracles for incremental PDF extraction documents.
+"""Focused OpenAPI contract checks for incremental PDF extraction documents.
 
 Asserts the frozen public contract of the four document operations against the
 generated ``backend/openapi.json`` and the generated TypeScript client. The
@@ -21,6 +21,10 @@ FROZEN_OPERATIONS: dict[str, tuple[str, str]] = {
     "getPdfExtractionDocument": ("/api/pdf-extraction-documents/{document_id}", "get"),
     "createPdfExtractionDocumentAppend": (
         "/api/pdf-extraction-documents/{document_id}/appends",
+        "post",
+    ),
+    "rollbackLatestPdfExtractionDocumentAppend": (
+        "/api/pdf-extraction-documents/{document_id}/rollback-latest",
         "post",
     ),
 }
@@ -128,6 +132,20 @@ def test_get_document_contract() -> None:
     ), "getPdfExtractionDocument must declare the required document_id path parameter"
     schema = _response_schema(doc, "getPdfExtractionDocument", "200")
     assert schema.get("title") == "PdfExtractionDocumentRead"
+
+
+def test_rollback_latest_document_append_contract() -> None:
+    doc = _openapi_document()
+    op = _operation(doc, "rollbackLatestPdfExtractionDocumentAppend")
+    assert sorted(op["responses"].keys()) == ["200", "404", "409"]
+    body = op["requestBody"]
+    assert body.get("required") is True
+    request_schema = body["content"]["application/json"]["schema"]
+    assert request_schema.get("title") == "PdfExtractionDocumentRollback"
+    assert sorted(request_schema.get("properties", {}).keys()) == ["expected_version"]
+    assert request_schema.get("required") == ["expected_version"]
+    response = _response_schema(doc, "rollbackLatestPdfExtractionDocumentAppend", "200")
+    assert response.get("title") == "PdfExtractionDocumentRead"
 
 
 def test_append_document_contract() -> None:

@@ -16,13 +16,14 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from chess_workbench.config import SecretFileError, Settings, load_deepseek_api_key
+from chess_workbench.config import SecretFileError, Settings, load_ccef_provider_api_key
 from chess_workbench.extraction.candidates import (
     CcefCandidateArtifacts,
     CcefCandidateError,
     assemble_ccef_candidate_artifacts,
     assemble_ccef_candidate_artifacts_v1_1,
     assemble_ccef_candidate_artifacts_v1_1_semantic,
+    assemble_recovered_ccef_candidate_artifacts_v1_1_semantic,
     summarize_ccef_candidate,
 )
 from chess_workbench.extraction.contracts import ExtractionPackage, ExtractionPackageV1_1
@@ -74,6 +75,8 @@ from chess_workbench.extraction.provider import (
     StructuredGenerationRequest,
     StructuredGenerationResponse,
 )
+from chess_workbench.extraction.recovery import CcefRecoveryError, recover_ccef_response
+from chess_workbench.extraction.validation import normalize_chess_moves_v1_1
 from chess_workbench.services.ccef_failure_debug import (
     store_ccef_failure_capture,
     store_deepseek_invalid_response_capture,
@@ -892,6 +895,13 @@ async def _load_committed_candidate_result(
     response_sha256 = normalized_package.provenance.response_sha256
     provider_schema = provider_document.get("artifact_schema")
     provider_identity: object = provider_document
+    if provider_schema == "chess-workbench/ccef-coverage-chain/1.0":
+        provider_identity = provider_document.get("base_generation")
+        if (
+            isinstance(provider_identity, dict)
+            and provider_identity.get("artifact_schema") == "chess-workbench/ccef-repair-chain/2.1"
+        ):
+            provider_identity = provider_identity.get("original_response")
     if provider_schema == "chess-workbench/ccef-repair-chain/2.1":
         provider_identity = provider_document.get("original_response")
     if not isinstance(provider_identity, dict):
@@ -908,6 +918,8 @@ async def _load_committed_candidate_result(
     allowed_provider_schemas = {expected_provider_schema}
     if source.pipeline_version != PDF_EXTRACTION_PIPELINE_VERSION:
         allowed_provider_schemas.add("chess-workbench/ccef-repair-chain/2.1")
+    if source.pipeline_version == PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION:
+        allowed_provider_schemas.add("chess-workbench/ccef-coverage-chain/1.0")
     content = provider_identity.get("content")
     if (
         provider_schema not in allowed_provider_schemas
@@ -955,7 +967,7 @@ def _active_provider(
     if provider is not None:
         return provider
     try:
-        api_key = load_deepseek_api_key(settings)
+        api_key = load_ccef_provider_api_key(settings)
     except SecretFileError:
         raise EngineError(
             "provider_secret_invalid",
@@ -970,6 +982,8 @@ def _active_provider(
         )
     return DeepSeekV4FlashProvider(
         api_key=api_key.get_secret_value(),
+        endpoint=settings.ccef_provider_endpoint,
+        model=settings.ccef_provider_model,
         timeout_seconds=settings.ccef_provider_timeout_seconds,
         max_output_tokens_limit=settings.ccef_max_output_tokens,
         thinking_enabled=thinking_enabled,
@@ -1025,44 +1039,81 @@ async def _process_ccef_candidate(
         response = await active_provider.generate(request)
     except StructuredGenerationProviderError as error:
         raise EngineError(error.code, str(error), retryable=error.retryable) from None
-    try:
-        artifacts = assemble(committed.context, request, response)
-    except CcefDecodeError as error:
-        if source.pipeline_version == PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION:
+    if source.pipeline_version == PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION:
+        recovery_provider = active_provider
+        if provider is None:
+            recovery_provider = _active_provider(
+                settings,
+                None,
+                thinking_enabled=False,
+                json_output_enabled=True,
+                invalid_response_recorder=_deepseek_invalid_response_recorder(settings, source),
+            )
+
+        async def record_failure(
+            failed_response: StructuredGenerationResponse,
+            error_code: str,
+            error_message: str,
+            diagnostics: tuple[str, ...],
+        ) -> None:
             await _capture_failed_generation(
                 settings,
                 source,
-                response,
-                error_code=f"ccef_{error.code}",
-                error_message=str(error),
-                diagnostics=error.diagnostics,
+                failed_response,
+                error_code=error_code,
+                error_message=error_message,
+                diagnostics=diagnostics,
             )
-        raise EngineError(
-            f"ccef_{error.code}",
-            str(error),
-            retryable=(
-                source.pipeline_version != PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION
-                and error.code in {"invalid_json", "invalid_package"}
-            ),
-        ) from None
-    except CcefCandidateError as error:
-        if source.pipeline_version == PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION:
-            await _capture_failed_generation(
-                settings,
-                source,
+
+        def validate(
+            candidate_response: StructuredGenerationResponse,
+        ) -> CcefCandidateArtifacts:
+            return assemble(committed.context, request, candidate_response)
+
+        try:
+            recovery = await recover_ccef_response(
                 response,
-                error_code=f"ccef_{error.code}",
-                error_message=str(error),
-                diagnostics=error.diagnostics,
+                committed.context,
+                validate=validate,
+                normalized_package=lambda candidate: normalize_chess_moves_v1_1(
+                    ExtractionPackageV1_1.model_validate_json(candidate.raw_ccef_bytes)
+                ),
+                repair_provider=recovery_provider,
+                coverage_provider=recovery_provider,
+                record_failure=record_failure,
             )
-        raise EngineError(
-            f"ccef_{error.code}",
-            str(error),
-            retryable=(
-                source.pipeline_version != PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION
-                and error.code == "semantic_incomplete"
-            ),
-        ) from None
+        except CcefRecoveryError as error:
+            raise EngineError(error.code, str(error), retryable=False) from None
+        artifacts = recovery.value
+        if recovery.changed:
+            if not isinstance(recovery.provider_document, dict):
+                raise EngineError(
+                    "ccef_repair_failed",
+                    "CCEF recovery audit document is invalid",
+                    retryable=False,
+                )
+            artifacts = assemble_recovered_ccef_candidate_artifacts_v1_1_semantic(
+                committed.context,
+                request,
+                recovery.original_response,
+                recovery.accepted_response,
+                recovery.provider_document,
+            )
+    else:
+        try:
+            artifacts = assemble(committed.context, request, response)
+        except CcefDecodeError as error:
+            raise EngineError(
+                f"ccef_{error.code}",
+                str(error),
+                retryable=error.code in {"invalid_json", "invalid_package"},
+            ) from None
+        except CcefCandidateError as error:
+            raise EngineError(
+                f"ccef_{error.code}",
+                str(error),
+                retryable=error.code == "semantic_incomplete",
+            ) from None
 
     provider_blob = await _store_blob(
         settings, suffix=".json", raw_bytes=artifacts.provider_response_bytes

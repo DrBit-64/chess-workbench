@@ -19,8 +19,13 @@ _FORMAL_MOVE = re.compile(
     r"[KQRBN]?[a-h]?[1-8]?x?[a-h][1-8](?:=[QRBN])?)[+#?!]*)"
 )
 _MOVE_ANNOTATION = re.compile(r"[!?]+$")
+_SIDE_TO_MOVE_CAPTION = re.compile(
+    r"\b(?P<side>white|black)\s+(?:to\s+(?:move|play)|moves?)\b",
+    re.IGNORECASE,
+)
 _MAX_LOOKAHEAD_PAGES = 2
 _MAX_MOVE_CANDIDATES = 16
+_MAX_CAPTION_DISTANCE = 0.18
 
 
 class _StrictModel(BaseModel):
@@ -103,6 +108,28 @@ def _move_candidates(
     return candidates
 
 
+def _explicit_side_to_move(
+    page: DiagramEvidencePage, recognition: ChessDiagramRecognition
+) -> str | None:
+    """Read an immediate diagram caption before considering nearby prose moves."""
+
+    diagram_bottom = recognition.page_box.y1 / page.height
+    hints: set[str] = set()
+    for fragment in sorted(page.fragments, key=lambda value: (value.box.y0, value.box.x0)):
+        if fragment.box.y1 <= diagram_bottom:
+            continue
+        if fragment.box.y0 > diagram_bottom + _MAX_CAPTION_DISTANCE:
+            break
+        match = _SIDE_TO_MOVE_CAPTION.search(fragment.text)
+        if match is not None:
+            hints.add("w" if match.group("side").lower() == "white" else "b")
+        if _FORMAL_MOVE.search(fragment.text) is not None:
+            break
+    if len(hints) == 1:
+        return next(iter(hints))
+    return None
+
+
 def _resolve_operational_position(
     pages: list[DiagramEvidencePage], recognition: ChessDiagramRecognition
 ) -> tuple[str, int, str, str] | None:
@@ -111,7 +138,11 @@ def _resolve_operational_position(
         rotated = _rotate_placement(recognition.piece_placement)
         if rotated != placements[0]:
             placements.append(rotated)
+    source_page = next(page for page in pages if page.physical_page == recognition.physical_page)
+    explicit_side = _explicit_side_to_move(source_page, recognition)
     for move_number, side, source_move in _move_candidates(pages, recognition):
+        if explicit_side is not None and side != explicit_side:
+            continue
         legal: list[tuple[str, str]] = []
         san = _MOVE_ANNOTATION.sub("", source_move.replace("0", "O"))
         for placement in placements:
