@@ -1,0 +1,470 @@
+{
+  "schema": "chess-workbench/extraction-evaluation-manifest/0.1",
+  "status": "proposed_unannotated",
+  "created_on": "2026-09-24",
+  "page_numbering": "physical_1_based",
+  "scoring_unit": "owned_source_occurrence",
+  "split_policy": "Two development windows and one page-window holdout per book. Layout inventory is already observed. This is not unseen-book generalization. Resolve same-game leakage before freezing gold; log any split changes. Historical failures are development only.",
+  "context_policy": "Owned pages are fixed. Annotators may add explicit read-only context to reach a verified game start, diagram or predecessor; context is not scored as owned output. Never invent starting FEN.",
+  "gold_policy": "All windows pending human annotation. Source spans, chess paths, parent occurrences, annotations, diagrams and admissible uncertainty must be labeled independently of extractor output.",
+  "books": [
+    {
+      "book_id": "scandinavian",
+      "local_filename": "Smerdons Scandinavian (David Smerdon) (z-library.sk, 1lib.sk, z-lib.sk).pdf",
+      "pdf_sha256": "07cabd918396d7a7f4a0ccc2db8c0e76be6951ad426c5c6a8908c6526a05d92f",
+      "page_count": 672
+    },
+    {
+      "book_id": "catalan",
+      "local_filename": "The Catalan – Move By Move (Neil McDonald) (z-library.sk, 1lib.sk, z-lib.sk).pdf",
+      "pdf_sha256": "e498b61b902dda5339c1923c4aa619fcfaa09f6abb89818841dd6357ef2ca594",
+      "page_count": 209
+    },
+    {
+      "book_id": "makogonov",
+      "local_filename": "The Makogonov Variation (Cyrus Lakdawala, Carsten Hansen) (z-library.sk, 1lib.sk, z-lib.sk).pdf",
+      "pdf_sha256": "c8dd6b77515909043e2f743b6a94db1751045df32f2f7bd6b8d6c7f2544bdaa8",
+      "page_count": 320
+    },
+    {
+      "book_id": "endgame",
+      "local_filename": "Endgame Strategy (Mikhail Shereshevsky) (z-library.sk, 1lib.sk, z-lib.sk).pdf",
+      "pdf_sha256": "47412de1ce54ef70e965edfbe121507bf2e584adac97f0c6587d203ce9515545",
+      "page_count": 678
+    },
+    {
+      "book_id": "chess_bible",
+      "local_filename": "1.d4 - The Chess Bible - Armin Juhasz (Armin Juhasz) (Z-Library).pdf",
+      "pdf_sha256": "28434ba2cdb40ddf03d4a436747af699adf4826d048709979295eaac6f13008d",
+      "page_count": 548
+    },
+    {
+      "book_id": "attacking",
+      "local_filename": "Attacking Chess for Club Players Improve Your Skills to Overpower Your Opponents (Herman Grooten Peter Boel) (z-library.sk, 1lib.sk, z-lib.sk).pdf",
+      "pdf_sha256": "d1a1315f76e50bd771a33d25074a5b6937ed27ef53e7ace25a4ae914766768ea",
+      "page_count": 545
+    },
+    {
+      "book_id": "chinese_endgame",
+      "local_filename": "从入门到大师：国际象棋残局大全.pdf",
+      "pdf_sha256": "dc8a78d794293e9b71a8d6f1b5fbc892d4946f5a2d66c3861051e930ff466239",
+      "page_count": 521
+    }
+  ],
+  "windows": [
+    {
+      "window_id": "scandinavian-dev1",
+      "book_id": "scandinavian",
+      "owned_pages": {
+        "start": 319,
+        "end": 323
+      },
+      "split": "development",
+      "tags": [
+        "plain_score",
+        "undotted_move_numbers",
+        "cross_page",
+        "annotation_bodies"
+      ],
+      "context_ranges": [],
+      "context_status": "pending_annotation",
+      "gold_status": "not_annotated",
+      "gold_artifact": null
+    },
+    {
+      "window_id": "scandinavian-dev2",
+      "book_id": "scandinavian",
+      "owned_pages": {
+        "start": 224,
+        "end": 232
+      },
+      "split": "development",
+      "tags": [
+        "plain_score",
+        "undotted_move_numbers",
+        "cross_page",
+        "annotation_bodies"
+      ],
+      "context_ranges": [],
+      "context_status": "pending_annotation",
+      "gold_status": "not_annotated",
+      "gold_artifact": null
+    },
+    {
+      "window_id": "scandinavian-holdout1",
+      "book_id": "scandinavian",
+      "owned_pages": {
+        "start": 180,
+        "end": 183
+      },
+      "split": "holdout",
+      "tags": [
+        "plain_score",
+        "undotted_move_numbers",
+        "cross_page",
+        "annotation_bodies"
+      ],
+      "context_ranges": [],
+      "context_status": "pending_annotation",
+      "gold_status": "not_annotated",
+      "gold_artifact": null
+    },
+    {
+      "window_id": "catalan-dev1",
+      "book_id": "catalan",
+      "owned_pages": {
+        "start": 6,
+        "end": 9
+      },
+      "split": "development",
+      "tags": [
+        "two_columns",
+        "alternatives",
+        "prose_plan",
+        "font_encoding",
+        "qa"
+      ],
+      "context_ranges": [],
+      "context_status": "pending_annotation",
+      "gold_status": "not_annotated",
+      "gold_artifact": null
+    },
+    {
+      "window_id": "catalan-dev2",
+      "book_id": "catalan",
+      "owned_pages": {
+        "start": 14,
+        "end": 17
+      },
+      "split": "development",
+      "tags": [
+        "two_columns",
+        "alternatives",
+        "prose_plan",
+        "font_encoding",
+        "qa"
+      ],
+      "context_ranges": [],
+      "context_status": "pending_annotation",
+      "gold_status": "not_annotated",
+      "gold_artifact": null
+    },
+    {
+      "window_id": "catalan-holdout1",
+      "book_id": "catalan",
+      "owned_pages": {
+        "start": 80,
+        "end": 83
+      },
+      "split": "holdout",
+      "tags": [
+        "two_columns",
+        "alternatives",
+        "prose_plan",
+        "font_encoding",
+        "qa"
+      ],
+      "context_ranges": [],
+      "context_status": "pending_annotation",
+      "gold_status": "not_annotated",
+      "gold_artifact": null
+    },
+    {
+      "window_id": "makogonov-dev1",
+      "book_id": "makogonov",
+      "owned_pages": {
+        "start": 6,
+        "end": 14
+      },
+      "split": "development",
+      "tags": [
+        "nested_variations",
+        "annotations",
+        "cross_page"
+      ],
+      "context_ranges": [],
+      "context_status": "pending_annotation",
+      "gold_status": "not_annotated",
+      "gold_artifact": null
+    },
+    {
+      "window_id": "makogonov-dev2",
+      "book_id": "makogonov",
+      "owned_pages": {
+        "start": 15,
+        "end": 19
+      },
+      "split": "development",
+      "tags": [
+        "nested_variations",
+        "annotations",
+        "cross_page"
+      ],
+      "context_ranges": [],
+      "context_status": "pending_annotation",
+      "gold_status": "not_annotated",
+      "gold_artifact": null
+    },
+    {
+      "window_id": "makogonov-holdout1",
+      "book_id": "makogonov",
+      "owned_pages": {
+        "start": 100,
+        "end": 103
+      },
+      "split": "holdout",
+      "tags": [
+        "nested_variations",
+        "annotations",
+        "cross_page"
+      ],
+      "context_ranges": [],
+      "context_status": "pending_annotation",
+      "gold_status": "not_annotated",
+      "gold_artifact": null
+    },
+    {
+      "window_id": "endgame-dev1",
+      "book_id": "endgame",
+      "owned_pages": {
+        "start": 19,
+        "end": 22
+      },
+      "split": "development",
+      "tags": [
+        "diagram_start",
+        "side_caption",
+        "repeated_moves",
+        "independent_games"
+      ],
+      "context_ranges": [],
+      "context_status": "pending_annotation",
+      "gold_status": "not_annotated",
+      "gold_artifact": null
+    },
+    {
+      "window_id": "endgame-dev2",
+      "book_id": "endgame",
+      "owned_pages": {
+        "start": 23,
+        "end": 27
+      },
+      "split": "development",
+      "tags": [
+        "diagram_start",
+        "side_caption",
+        "repeated_moves",
+        "independent_games"
+      ],
+      "context_ranges": [],
+      "context_status": "pending_annotation",
+      "gold_status": "not_annotated",
+      "gold_artifact": null
+    },
+    {
+      "window_id": "endgame-holdout1",
+      "book_id": "endgame",
+      "owned_pages": {
+        "start": 100,
+        "end": 103
+      },
+      "split": "holdout",
+      "tags": [
+        "diagram_start",
+        "side_caption",
+        "repeated_moves",
+        "independent_games"
+      ],
+      "context_ranges": [],
+      "context_status": "pending_annotation",
+      "gold_status": "not_annotated",
+      "gold_artifact": null
+    },
+    {
+      "window_id": "chess_bible-dev1",
+      "book_id": "chess_bible",
+      "owned_pages": {
+        "start": 10,
+        "end": 13
+      },
+      "split": "development",
+      "tags": [
+        "headings",
+        "plans",
+        "bracket_variation",
+        "exercises"
+      ],
+      "context_ranges": [],
+      "context_status": "pending_annotation",
+      "gold_status": "not_annotated",
+      "gold_artifact": null
+    },
+    {
+      "window_id": "chess_bible-dev2",
+      "book_id": "chess_bible",
+      "owned_pages": {
+        "start": 18,
+        "end": 21
+      },
+      "split": "development",
+      "tags": [
+        "headings",
+        "plans",
+        "bracket_variation",
+        "exercises"
+      ],
+      "context_ranges": [],
+      "context_status": "pending_annotation",
+      "gold_status": "not_annotated",
+      "gold_artifact": null
+    },
+    {
+      "window_id": "chess_bible-holdout1",
+      "book_id": "chess_bible",
+      "owned_pages": {
+        "start": 300,
+        "end": 303
+      },
+      "split": "holdout",
+      "tags": [
+        "headings",
+        "plans",
+        "bracket_variation",
+        "exercises"
+      ],
+      "context_ranges": [],
+      "context_status": "pending_annotation",
+      "gold_status": "not_annotated",
+      "gold_artifact": null
+    },
+    {
+      "window_id": "attacking-dev1",
+      "book_id": "attacking",
+      "owned_pages": {
+        "start": 18,
+        "end": 21
+      },
+      "split": "development",
+      "tags": [
+        "unicode_pieces",
+        "ellipsis",
+        "tactical_diagrams",
+        "narrative"
+      ],
+      "context_ranges": [],
+      "context_status": "pending_annotation",
+      "gold_status": "not_annotated",
+      "gold_artifact": null
+    },
+    {
+      "window_id": "attacking-dev2",
+      "book_id": "attacking",
+      "owned_pages": {
+        "start": 28,
+        "end": 31
+      },
+      "split": "development",
+      "tags": [
+        "unicode_pieces",
+        "ellipsis",
+        "tactical_diagrams",
+        "narrative"
+      ],
+      "context_ranges": [],
+      "context_status": "pending_annotation",
+      "gold_status": "not_annotated",
+      "gold_artifact": null
+    },
+    {
+      "window_id": "attacking-holdout1",
+      "book_id": "attacking",
+      "owned_pages": {
+        "start": 200,
+        "end": 203
+      },
+      "split": "holdout",
+      "tags": [
+        "unicode_pieces",
+        "ellipsis",
+        "tactical_diagrams",
+        "narrative"
+      ],
+      "context_ranges": [],
+      "context_status": "pending_annotation",
+      "gold_status": "not_annotated",
+      "gold_artifact": null
+    },
+    {
+      "window_id": "chinese_endgame-dev1",
+      "book_id": "chinese_endgame",
+      "owned_pages": {
+        "start": 18,
+        "end": 21
+      },
+      "split": "development",
+      "tags": [
+        "scanned",
+        "chinese",
+        "faint_text",
+        "diagram_overlays"
+      ],
+      "context_ranges": [],
+      "context_status": "pending_annotation",
+      "gold_status": "not_annotated",
+      "gold_artifact": null
+    },
+    {
+      "window_id": "chinese_endgame-dev2",
+      "book_id": "chinese_endgame",
+      "owned_pages": {
+        "start": 28,
+        "end": 31
+      },
+      "split": "development",
+      "tags": [
+        "scanned",
+        "chinese",
+        "faint_text",
+        "diagram_overlays"
+      ],
+      "context_ranges": [],
+      "context_status": "pending_annotation",
+      "gold_status": "not_annotated",
+      "gold_artifact": null
+    },
+    {
+      "window_id": "chinese_endgame-holdout1",
+      "book_id": "chinese_endgame",
+      "owned_pages": {
+        "start": 258,
+        "end": 261
+      },
+      "split": "holdout",
+      "tags": [
+        "scanned",
+        "chinese",
+        "faint_text",
+        "diagram_overlays"
+      ],
+      "context_ranges": [],
+      "context_status": "pending_annotation",
+      "gold_status": "not_annotated",
+      "gold_artifact": null
+    }
+  ],
+  "replay_bank": {
+    "local_index": "data/debug/extraction-audit-20260924/failures.json",
+    "sidecars": 31,
+    "run_count": 23,
+    "role": "development_only",
+    "limitation": "Historical transport and model output under mixed versions; not a live provider evaluation."
+  },
+  "initial_gold_windows": [
+    "catalan-dev1",
+    "scandinavian-dev1",
+    "makogonov-dev1",
+    "endgame-dev1",
+    "attacking-dev1",
+    "chinese_endgame-dev1"
+  ]
+}

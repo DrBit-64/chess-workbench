@@ -21,6 +21,7 @@ from typing import Any, Literal
 import httpx
 import pytest
 
+from chess_workbench.config import Settings
 from chess_workbench.extraction import DeepSeekV4FlashProvider
 from chess_workbench.extraction.provider import (
     StructuredGenerationProvider,
@@ -139,12 +140,14 @@ async def test_successful_request_mapping_with_non_ascii_schema() -> None:
             "model",
             "messages",
             "thinking",
+            "reasoning_effort",
             "response_format",
             "max_tokens",
             "stream",
         }
         assert body["model"] == "deepseek-v4-flash"
         assert body["thinking"] == {"type": "disabled"}
+        assert body["reasoning_effort"] == "none"
         assert body["response_format"] == {"type": "json_object"}
         assert body["stream"] is False
         assert body["max_tokens"] == 777
@@ -172,16 +175,20 @@ async def test_successful_request_mapping_with_non_ascii_schema() -> None:
     assert request.model_dump() == snapshot
 
 
-async def test_thinking_profile_is_explicit_and_uses_max_effort() -> None:
+@pytest.mark.parametrize("effort", ["low", "high", "max"])
+async def test_thinking_profile_uses_configured_effort(
+    effort: Literal["low", "high", "max"],
+) -> None:
     def handler(req: httpx.Request) -> httpx.Response:
         body = json.loads(req.content)
         assert body["thinking"] == {"type": "enabled"}
-        assert body["reasoning_effort"] == "max"
+        assert body["reasoning_effort"] == effort
         return httpx.Response(200, json=_ok_payload())
 
     provider = DeepSeekV4FlashProvider(
         api_key="test-key",
         thinking_enabled=True,
+        reasoning_effort=effort,
         transport=httpx.MockTransport(handler),
     )
     response = await provider.generate(_request())
@@ -224,6 +231,54 @@ async def test_json_output_can_be_omitted_without_disabling_thinking() -> None:
     )
     response = await provider.generate(_request())
     assert response.content == '{"ok": true}'
+
+
+async def test_empty_reasoning_only_response_reports_budget_exhaustion() -> None:
+    def handler(req: httpx.Request) -> httpx.Response:
+        body = json.loads(req.content)
+        assert body["reasoning_effort"] == "none"
+        payload = _ok_payload(content="", finish_reason="length")
+        payload["usage"]["completion_tokens_details"] = {"reasoning_tokens": 32768}
+        return httpx.Response(200, json=payload)
+
+    provider = DeepSeekV4FlashProvider(api_key="test", transport=httpx.MockTransport(handler))
+    with pytest.raises(StructuredGenerationProviderError, match="32768 reasoning tokens") as error:
+        await provider.generate(_request())
+    assert error.value.retryable is False
+
+
+async def test_recovery_factory_uses_independent_profile(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    from chess_workbench.services.pdf_extraction import _active_provider
+
+    monkeypatch.chdir(tmp_path)
+    key = tmp_path / "test-key"
+    key.write_text("fixture-key")
+    key.chmod(0o600)
+    settings = Settings(
+        ccef_provider_api_key_file=key,
+        ccef_provider_model="main-model",
+        ccef_provider_reasoning_effort="high",
+        ccef_recovery_model="repair-model",
+        ccef_recovery_reasoning_effort="none",
+        ccef_recovery_json_output=True,
+    )
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        payload = json.loads(req.content)
+        assert payload["model"] == "repair-model"
+        assert payload["thinking"] == {"type": "disabled"}
+        assert payload["reasoning_effort"] == "none"
+        assert payload["response_format"] == {"type": "json_object"}
+        return httpx.Response(200, json=_ok_payload())
+
+    monkeypatch.setattr(
+        "chess_workbench.services.pdf_extraction.DeepSeekV4FlashProvider",
+        lambda **kwargs: DeepSeekV4FlashProvider(**kwargs, transport=httpx.MockTransport(handler)),
+    )
+    await _active_provider(settings, None, recovery=True).generate(_request())
 
 
 async def test_successful_request_mapping_with_empty_schema() -> None:
@@ -416,7 +471,9 @@ async def test_invalid_null_content_records_exact_raw_response() -> None:
     with pytest.raises(StructuredGenerationProviderError) as excinfo:
         await provider.generate(_request())
 
-    _assert_empty_response_error(excinfo.value)
+    assert excinfo.value.code == "invalid_response"
+    assert excinfo.value.retryable is False
+    assert excinfo.value.message == "Generation exhausted its output budget without final content"
     assert excinfo.value.__cause__ is None
     assert excinfo.value.__context__ is None
     assert private_marker not in str(excinfo.value)

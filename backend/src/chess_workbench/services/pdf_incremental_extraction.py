@@ -449,6 +449,7 @@ async def _generate_candidate(
             None,
             thinking_enabled=False,
             json_output_enabled=True,
+            recovery=True,
             invalid_response_recorder=_deepseek_invalid_response_recorder(settings, source),
         )
 

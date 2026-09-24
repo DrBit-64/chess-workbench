@@ -895,15 +895,19 @@ async def _load_committed_candidate_result(
     response_sha256 = normalized_package.provenance.response_sha256
     provider_schema = provider_document.get("artifact_schema")
     provider_identity: object = provider_document
-    if provider_schema == "chess-workbench/ccef-coverage-chain/1.0":
-        provider_identity = provider_document.get("base_generation")
-        if (
-            isinstance(provider_identity, dict)
-            and provider_identity.get("artifact_schema") == "chess-workbench/ccef-repair-chain/2.1"
-        ):
+    for _ in range(4):
+        if not isinstance(provider_identity, dict):
+            break
+        schema = provider_identity.get("artifact_schema")
+        if schema in {
+            "chess-workbench/ccef-coverage-chain/1.0",
+            "chess-workbench/ccef-structural-chain/1.0",
+        }:
+            provider_identity = provider_identity.get("base_generation")
+        elif schema == "chess-workbench/ccef-repair-chain/2.1":
             provider_identity = provider_identity.get("original_response")
-    if provider_schema == "chess-workbench/ccef-repair-chain/2.1":
-        provider_identity = provider_document.get("original_response")
+        else:
+            break
     if not isinstance(provider_identity, dict):
         raise EngineError(
             "artifact_conflict",
@@ -920,6 +924,7 @@ async def _load_committed_candidate_result(
         allowed_provider_schemas.add("chess-workbench/ccef-repair-chain/2.1")
     if source.pipeline_version == PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION:
         allowed_provider_schemas.add("chess-workbench/ccef-coverage-chain/1.0")
+        allowed_provider_schemas.add("chess-workbench/ccef-structural-chain/1.0")
     content = provider_identity.get("content")
     if (
         provider_schema not in allowed_provider_schemas
@@ -962,10 +967,18 @@ def _active_provider(
     *,
     thinking_enabled: bool = False,
     json_output_enabled: bool = True,
+    recovery: bool = False,
     invalid_response_recorder: DeepSeekInvalidResponseRecorder | None = None,
 ) -> StructuredGenerationProvider:
     if provider is not None:
         return provider
+    effort = settings.ccef_provider_reasoning_effort
+    if recovery:
+        recovery_effort = settings.ccef_recovery_reasoning_effort
+        thinking_enabled = recovery_effort != "none"
+        if recovery_effort != "none":
+            effort = recovery_effort
+        json_output_enabled = settings.ccef_recovery_json_output
     try:
         api_key = load_ccef_provider_api_key(settings)
     except SecretFileError:
@@ -983,10 +996,13 @@ def _active_provider(
     return DeepSeekV4FlashProvider(
         api_key=api_key.get_secret_value(),
         endpoint=settings.ccef_provider_endpoint,
-        model=settings.ccef_provider_model,
+        model=(settings.ccef_recovery_model or settings.ccef_provider_model)
+        if recovery
+        else settings.ccef_provider_model,
         timeout_seconds=settings.ccef_provider_timeout_seconds,
         max_output_tokens_limit=settings.ccef_max_output_tokens,
         thinking_enabled=thinking_enabled,
+        reasoning_effort=effort,
         json_output_enabled=json_output_enabled,
         invalid_response_recorder=invalid_response_recorder,
     )
@@ -1047,6 +1063,7 @@ async def _process_ccef_candidate(
                 None,
                 thinking_enabled=False,
                 json_output_enabled=True,
+                recovery=True,
                 invalid_response_recorder=_deepseek_invalid_response_recorder(settings, source),
             )
 

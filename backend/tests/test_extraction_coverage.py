@@ -174,6 +174,8 @@ def test_additive_supplement_fills_gap_without_changing_existing_content() -> No
     )
     updated = ExtractionPackageV1_1.model_validate_json(updated_response.content)
 
+    assert updated.items[0].kind == "move_sequence"
+    assert package.items[0].kind == "move_sequence"
     assert updated.items[0].nodes[:2] == package.items[0].nodes
     assert inspect_ccef_move_coverage(updated, context).gaps == []
 

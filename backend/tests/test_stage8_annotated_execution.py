@@ -712,8 +712,10 @@ async def test_v4_job_uses_semantic_prompt_and_exact_fragment_bindings(tmp_path:
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("failure_kind", ["flow_order", "missing_content"])
 async def test_v4_job_uses_shared_bounded_repair_for_parent_after_child_flow(
     tmp_path: Path,
+    failure_kind: str,
 ) -> None:
     database, settings, extraction = await _setup(
         tmp_path,
@@ -734,14 +736,53 @@ async def test_v4_job_uses_shared_bounded_repair_for_parent_after_child_flow(
                 response = await _Provider().generate(request)
                 package = json.loads(response.content)
                 flow = package["items"][1]["reading_flow"]
-                flow[12]["node_id"], flow[13]["node_id"] = (
-                    flow[13]["node_id"],
-                    flow[12]["node_id"],
-                )
+                if failure_kind == "missing_content":
+                    del package["items"][1]["annotations"]
+                    package["items"][1]["reading_flow"] = [
+                        entry for entry in flow if entry.get("node_id") != "n16"
+                    ]
+                else:
+                    flow[12]["node_id"], flow[13]["node_id"] = (
+                        flow[13]["node_id"],
+                        flow[12]["node_id"],
+                    )
                 self.original_content = json.dumps(package, ensure_ascii=False)
                 return response.model_copy(update={"content": self.original_content})
 
             repair_case = json.loads(request.messages[-1].content)
+            if failure_kind == "missing_content":
+                sequence = repair_case["sequences"][0]
+                fragment_id = repair_case["source_fragments"][0]["fragment_id"]
+                return StructuredGenerationResponse(
+                    content=json.dumps(
+                        {
+                            "supplement_schema": "chess-workbench/ccef-structural-supplement/1.0",
+                            "base_response_sha256": repair_case["base_response_sha256"],
+                            "annotations": [
+                                {
+                                    "sequence_id": "seq1",
+                                    "annotation_id": identity,
+                                    "spans": [{"fragment_id": fragment_id, "excerpt": text}],
+                                }
+                                for identity, text in [
+                                    ("a1", "Synthetic annotated opening:"),
+                                    ("a2", "1. e4 e5."),
+                                ]
+                            ],
+                            "flow_insertions": [
+                                {
+                                    "sequence_id": "seq1",
+                                    "kind": "move",
+                                    "ref_id": "n16",
+                                    "after_flow_index": len(sequence["reading_flow"]) - 2,
+                                }
+                            ],
+                        }
+                    ),
+                    provider="scripted-provider",
+                    model="scripted-repair-model",
+                    finish_reason="stop",
+                )
             resolves = [
                 diagnostic["diagnostic_id"]
                 for diagnostic in repair_case["diagnostics"]
@@ -795,9 +836,16 @@ async def test_v4_job_uses_shared_bounded_repair_for_parent_after_child_flow(
         provider_document = json.loads(
             (settings.source_storage_root / provider_row.relative_path).read_bytes()
         )
-        assert provider_document["artifact_schema"] == "chess-workbench/ccef-repair-chain/2.1"
-        assert provider_document["original_response"]["content"] == provider.original_content
-        assert provider_document["repair_response"]["model"] == "scripted-repair-model"
+        if failure_kind == "missing_content":
+            assert (
+                provider_document["artifact_schema"] == "chess-workbench/ccef-structural-chain/1.0"
+            )
+            assert provider_document["base_generation"]["content"] == provider.original_content
+            assert provider_document["supplement_response"]["model"] == "scripted-repair-model"
+        else:
+            assert provider_document["artifact_schema"] == "chess-workbench/ccef-repair-chain/2.1"
+            assert provider_document["original_response"]["content"] == provider.original_content
+            assert provider_document["repair_response"]["model"] == "scripted-repair-model"
 
         replayed = await process_pdf_extraction_job(
             database,

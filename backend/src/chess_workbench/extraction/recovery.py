@@ -30,6 +30,13 @@ from .provider import (
     StructuredGenerationProviderError,
     StructuredGenerationResponse,
 )
+from .structural_recovery import (
+    apply_structural_supplement,
+    build_structural_request,
+    inspect_structural_gaps,
+    local_structural_response,
+    structural_chain,
+)
 
 FailureRecorder = Callable[
     [StructuredGenerationResponse, str, str, tuple[str, ...]], Awaitable[None]
@@ -102,6 +109,57 @@ async def recover_ccef_response[RecoveryValue](
         repair_base = response
         deterministic_operations = ()
 
+    provider_document: object = response.model_dump(mode="json")
+    if deterministic_operations:
+        provider_document = ccef_repair_chain_document(
+            response, repair_base, deterministic_operations=deterministic_operations
+        )
+    structural_response: StructuredGenerationResponse | None = None
+    try:
+        gaps = inspect_structural_gaps(repair_base)
+    except CcefDecodeError:
+        # The existing validator reports malformed/truncated JSON without a provider call.
+        gaps = ()
+    except CcefRepairError as error:
+        await record_failure(response, f"ccef_{error.code}", str(error), ())
+        raise CcefRecoveryError(f"ccef_{error.code}", str(error)) from None
+    if gaps:
+        await record_failure(
+            response,
+            "ccef_missing_content",
+            "CCEF annotation or reading-flow content is missing",
+            (),
+        )
+        try:
+            structural_response = local_structural_response(repair_base, context, gaps)
+            if structural_response is None:
+                structural_request = build_structural_request(repair_base, context, gaps)
+                structural_response = await repair_provider.generate(structural_request)
+            supplemented = apply_structural_supplement(
+                repair_base, structural_response, context, gaps
+            )
+            provider_document = structural_chain(
+                provider_document, repair_base, structural_response, supplemented, context
+            )
+            repair_base, extra_operations = canonicalize_ccef_response(supplemented)
+            deterministic_operations += extra_operations
+        except StructuredGenerationProviderError as error:
+            raise CcefRecoveryError(
+                "ccef_structural_repair_failed",
+                "CCEF content supplement could not be generated: " + str(error),
+            ) from None
+        except (CcefRepairError, CcefDecodeError, ValidationError) as error:
+            if structural_response is not None:
+                await record_failure(
+                    structural_response, "ccef_structural_repair_failed", str(error), ()
+                )
+            code = (
+                "ccef_recovery_unsupported"
+                if isinstance(error, CcefRepairError) and error.code == "recovery_unsupported"
+                else "ccef_structural_repair_failed"
+            )
+            raise CcefRecoveryError(code, "CCEF content supplement failed: " + str(error)) from None
+
     repair_response: StructuredGenerationResponse | None = None
     accepted_response = repair_base
     try:
@@ -136,10 +194,10 @@ async def recover_ccef_response[RecoveryValue](
             ) from None
         try:
             repair_response = await repair_provider.generate(repair_request)
-        except StructuredGenerationProviderError:
+        except StructuredGenerationProviderError as error:
             raise CcefRecoveryError(
                 "ccef_repair_failed",
-                "CCEF repair could not be generated",
+                "CCEF repair could not be generated: " + str(error),
             ) from None
         try:
             accepted_response = apply_ccef_repair(
@@ -167,15 +225,17 @@ async def recover_ccef_response[RecoveryValue](
                 "CCEF repair did not pass local validation",
             ) from None
 
-    provider_document: object = response.model_dump(mode="json")
     if deterministic_operations or repair_response is not None:
-        provider_document = ccef_repair_chain_document(
+        patch_document = ccef_repair_chain_document(
             response,
             accepted_response,
             deterministic_operations=deterministic_operations,
             repair=repair_response,
             repair_base=repair_base,
         )
+        if structural_response is not None:
+            patch_document["base_generation"] = provider_document
+        provider_document = patch_document
 
     package = normalized_package(value)
     coverage_report = inspect_ccef_move_coverage(package, context)
@@ -203,10 +263,10 @@ async def recover_ccef_response[RecoveryValue](
                     "coverage_incomplete",
                     "CCEF coverage supplement left numbered move gaps",
                 )
-        except StructuredGenerationProviderError:
+        except StructuredGenerationProviderError as error:
             raise CcefRecoveryError(
                 "ccef_coverage_repair_failed",
-                "Missing CCEF variations could not be generated",
+                "Missing CCEF variations could not be generated: " + str(error),
             ) from None
         except (
             CcefCandidateError,
@@ -234,7 +294,12 @@ async def recover_ccef_response[RecoveryValue](
             coverage_report,
         )
 
-    changed = bool(deterministic_operations or repair_response is not None or coverage_response)
+    changed = bool(
+        deterministic_operations
+        or structural_response is not None
+        or repair_response is not None
+        or coverage_response
+    )
     return CcefRecoveryResult(
         value=value,
         original_response=response,

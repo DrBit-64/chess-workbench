@@ -7360,3 +7360,188 @@ single blob without first reviewing logical boundaries and generated-contract co
 4. Before Stage 8 closeout, reconcile the stale plan/README wording, review all uncommitted slices,
    regenerate/check contracts, then run the focused Stage 8 acceptance target once it exists. Do
    not use broad acceptance as the first diagnostic step.
+
+## 2026-09-17 — Configurable extraction thinking effort
+
+- The operator requested lowering thinking effort before manually submitting another Catalan
+  physical-pages 6--9 extraction. The previous run `6d4b9bc2-1fe9-5ab1-9001-7d12731235fc`
+  ended with `ccef_truncated`: provider finish reason `length`, reported 128,000 output tokens,
+  and 20,569 bytes of JSON cut off inside node `m053`. High reasoning consumption is a hypothesis;
+  the saved mapped response has no reasoning-token breakdown.
+- Added `CHESS_WORKBENCH_CCEF_PROVIDER_REASONING_EFFORT` (`low`, `high`, `max`) to Settings,
+  the transport constructor and the shared provider factory used by standalone/incremental jobs.
+  The default stays `max` for compatibility; the ignored local `.env` now selects `high`.
+  Thinking remains enabled for main generation, and non-thinking repair sends no effort field.
+  The local output limit remains 128,000. Endpoint/model/key and extraction state were not changed.
+- Checked the official thinking-mode documentation for supported effort values:
+  https://api-docs.deepseek.com/guides/thinking_mode/
+- Seven focused config/request-mapping tests passed, plus targeted Ruff format/lint, strict MyPy
+  (five files) and diff whitespace checking. Ruff lint needed an explicit `src = ["backend/src"]`
+  override to resolve the existing first-party test imports from the repository root. An initial
+  pytest selector named a nonexistent test and was corrected; `uv run` could not lock its read-only
+  cache, so verification used the installed backend virtualenv executables.
+- Fresh Settings loading confirms `high`; local debug/automatic reload is disabled. The running
+  backend must be restarted before the operator submits the comparison request. No live provider
+  call, service restart, database mutation or commit was performed. Compatibility and extraction
+  quality at `high` remain to be established by that manual request.
+
+## 2026-09-17 — Structural recovery routing and explicit non-thinking repair
+
+- The subsequent 02:08 Catalan pages 6--9 run `73fb52a5-668d-5635-9830-77075507c9e0`
+  returned complete JSON (112,241 bytes, `stop`, 90,015 reported output tokens), but omitted all
+  annotation bodies despite 45 annotation flow references, and omitted node `n128` from flow.
+  Its bounded repair returned empty final content: all 32,768 completion tokens were reasoning.
+  These are saved-response observations, not inferred token consumption.
+- Implemented ADR 0021. Shared standalone/incremental recovery now classifies cardinality failures
+  before a paid scalar patch. Unsupported missing move bodies/ambiguous identities stop explicitly;
+  missing annotation bodies and references to existing content use one dedicated hash-bound
+  structural supplement. The existing generic patch's no-resize authority remains unchanged.
+- The supplement selects trusted fragments/exact excerpts; local code copies prose and constructs
+  citations. It must cover all listed gaps, cannot rewrite existing nodes/flow/annotations, and
+  rejects unknown fragments, invented excerpts and repeated source spans. Node evidence and source
+  text share short fragment IDs, enumerated in the request Schema. Bounds are 64 missing entries,
+  eight sequences, 64 line fragments per annotation, 16,384 output tokens and 256 KiB response.
+  Full owning-pipeline validation remains mandatory, and nested recovery audit artifacts retain
+  original content. Candidate replay recognizes the new structural chain.
+- Recovery has optional independent model, effort and JSON-mode settings. Defaults/local settings
+  are `none` + JSON output; main extraction remains `high`. Disabled thinking now explicitly sends
+  `reasoning_effort=none` as documented by the provider. Empty `length` responses explain budget
+  exhaustion and include reported reasoning-token count when available; recovery preserves that
+  bounded diagnostic in the Job error. Endpoint/key settings are unchanged.
+- Focused verification: 158 config/transport/general-repair/coverage/structural cases passed across
+  the focused run and corrected rerun, plus five selected standalone execution cases including
+  structural/scalar repair persistence and replay, normal generation, malformed input capture and
+  evidence rejection. The null-content regression was updated to the intentionally more specific
+  length-exhaustion message. An initial preflight swallowed malformed-package diagnostics; it now
+  leaves missing item collections to the existing decoder/builder and that regression passes.
+  SQLite tests used the external runner after the sandboxed initializer stalled. No full gate.
+- Three explicitly authorized small live checks: a synthetic `none` probe used 39 input / five
+  output tokens; the one separately approved real-book supplement used 17,948 input / 3,222 output
+  tokens and returned all 45 mappings plus one flow insertion; a synthetic structural supplement
+  used 1,097 input / 131 output tokens and passed local CCEF validation. The real supplement was
+  rejected for unknown source IDs (also contained repeated spans); it was NOT accepted or published.
+  The later compact evidence/enum prompt tightening is covered offline but has not been retested
+  against the live book. Do not claim this historical sample is repaired or that a new full run
+  is guaranteed to pass. No further real-book call was made after the one approved call.
+- Initial automatic approval rejected book-content egress under the general debug allowance; the
+  operator then explicitly approved sending these saved pages to the configured DeepSeek endpoint
+  once. Saved probe responses and the sent-request snapshot live under ignored
+  `data/debug/recovery-probe-20260917/`; raw failed-run evidence and runtime SQL remain unchanged.
+  Temporary drivers under `/tmp/chess-*-probe.py` and `/tmp/chess-structural-replay.py` are disposable
+  and must not be used to silently buy another request.
+- Backend restart is required to load code/config before a new operator request. No service restart,
+  full PDF extraction, historical-job retry, commit, reset or file deletion was performed.
+
+## 2026-09-17 — Local annotation evidence windows (first repair step)
+
+- The operator requested only the first repair step and renewed permission for a small live
+  DeepSeek check, explicitly requiring completion notification instead of model-response polling.
+  Added `extraction/annotation_windows.py` and integrated it into shared structural recovery.
+  Missing annotations now receive bounded evidence windows from their neighboring flow moves;
+  backward jumps and shared anchors remain ambiguous and use local neighborhoods. Oversized or
+  unanchored windows fail preflight instead of exposing the entire book to supplementation.
+- Local recovery copies source prose only for a unique annotation between direct parent/child
+  moves with pure-score boundaries, an ordered short interval and no competing evidence claim.
+  Board/page furniture is excluded. Other annotations remain model work. Requests include only
+  pending annotations, their candidate fragments and relevant nodes; application additionally
+  enforces each annotation's own allowed window, exact excerpts and non-overlapping source spans.
+  Local assignments are recorded in the recovery chain for deterministic replay. Existing nodes,
+  flow and annotations retain the prior recovery invariants; full pipeline validation still owns
+  candidate acceptance. All-local recovery skips the provider entirely.
+- Offline reconstruction of saved run `73fb52a5-668d-5635-9830-77075507c9e0` found 45 missing
+  annotations: eight deterministic assignments (`a1`, `a22`, `a23`, `a30`, `a33`, `a34`, `a35`,
+  `a39`) and 37 pending, with at most 23 candidate fragments per window. These are localization
+  results, not proof that the complete historical candidate now validates.
+- Exactly one newly authorized live call checked ambiguous annotations `a4` and `a5`, sending
+  15 source fragments and three relevant nodes with a 1,024-output-token cap and no retries.
+  It finished with `stop`, reporting 3,554 input / 293 output tokens. Both returned selections
+  passed strict supplement shape/hash/identity checks, their individual window boundaries,
+  exact-source excerpt checks and overlap checks. This was a selected-window probe, NOT a full
+  45-annotation supplement or normalized-course acceptance. No more API calls followed.
+- The probe script awaits the single provider call, writes artifacts once and returns a compact
+  report; the tool orchestration emits a completion notification. No response/status polling was
+  used. Reproducible ignored artifacts and the driver are under
+  `data/debug/annotation-windows-20260917/` (`offline/`, `live-a4-a5/`, `probe.py`). A new paid
+  probe requires an appropriate authorization and fresh output directory; never silently rerun it.
+- Focused verification: six annotation-window cases and eight structural-recovery cases passed
+  across focused runs, plus two shared-recovery execution/persistence/replay cases (flow ordering
+  and missing content): 16 distinct cases. Targeted Ruff format/lint and strict MyPy passed for
+  the three owning modules and two focused test files. SQLite execution tests used the external
+  runner for the known sandbox initializer stall. No full suite or Stage acceptance gate ran.
+- Updated ADR 0021 and the Stage 8D plan note. Preserved the existing dirty worktree and immutable
+  failed-run artifacts; no runtime SQL writes, service restart, historical retry, full PDF rerun,
+  commit, reset or deletion. Backend restart is still required before a new operator request.
+
+## 2026-09-17 — Latest Catalan failure: coverage false positives (diagnosis only)
+
+- Latest failed Catalan physical-pages 6--9 run is `1a948782-9a7f-5c97-8ac3-67bb18e958d9`,
+  created 19:45:07 and finished 19:49:31 Asia/Shanghai. A newer pages 224--232 run was still
+  running at inspection; it is a separate task and was not modified.
+- The saved main response ended with `stop`: 146 nodes, 32 annotation bodies, no missing
+  annotation bodies, and only `n12` (6...c6) absent from reading flow. The terminal Job error
+  is `ccef_coverage_repair_failed`, proving execution advanced past structural recovery and
+  candidate validation to coverage supplementation. This failure is not the earlier missing
+  annotation-window problem. Successful intermediate supplements are not retained by the current
+  failure recorder when a later recovery stage fails, so their exact response is unavailable.
+- The saved failed coverage transport response reports HTTP 200, `finish_reason=length`, empty
+  final content, 16,392 input tokens and 8,192 completion tokens, all 8,192 marked reasoning.
+  Local recovery configuration is `none` and current transport sends disabled thinking plus
+  `reasoning_effort=none`. The actual outbound request for this historical call is not saved;
+  whether a runtime override or upstream behavior caused this mismatch is still unverified.
+- Read-only OCR reconstruction and an in-memory placement of the missing `n12` flow reference
+  reproduce two coverage gaps. This placement is an offline diagnostic assumption, not recovery
+  of the missing intermediate artifact. The same gaps are independently reproduced directly
+  from the source strings by `_notation_candidates`:
+  - Page 7's choice between 9...dxe4 and 9...Na6 is merged into one path with ply delta zero.
+    Both moves already exist as valid nodes `n84` and `n104`, sharing parent `n17`, and each
+    individually passes `_path_covers`. They are alternatives, not successive moves.
+  - Page 9's plan 17...Nc4 and 18...Nxe3 is merged into one path with ply delta two, omitting
+    White's intervening move. This prose does not supply a complete directly playable variation.
+- Root implementation issue: coverage connector merging accepts commas/"and" without checking
+  consecutive plies, while `_path_covers` requires direct parent-child continuity. Recommended
+  next repair: separate alternatives, require consecutive plies for forced playable-line coverage,
+  retain incomplete plans as prose/review information, and add focused regressions from these two
+  strings. Diagnose the effective non-thinking request separately using sanitized request metadata;
+  increasing the token cap alone cannot correct these false positive coverage demands.
+- No live API call, service restart, runtime write or implementation change in this diagnosis.
+  Existing failed artifacts and dirty worktree were preserved. Only this handoff note was added.
+
+## 2026-09-24 — PDF extraction diagnosis and proposed redesign (no implementation)
+
+- Operator requested repository/parser/failed-PDF analysis before further fixes. Preserved all
+  pre-existing dirty implementation, tests, config and ADR changes. No product code changes,
+  runtime SQL writes, paid provider calls, service restarts, retries, commits or deletions.
+- Deliverables: `docs/pdf-extraction-diagnosis-2026-09-24.md` and
+  `docs/pdf-extraction-evaluation-set-v0.json`. These are proposals, not accepted architecture or
+  implemented behavior. The manifest has 21 windows across all seven books: 14 development and
+  seven page-window holdouts, all pending gold annotation. It is not an unseen-book benchmark.
+- Read-only DB census: 68 runs, 23 succeeded / 39 failed / six cancelled across mixed historical
+  versions; do not interpret as current quality. Inspected 31 failure sidecars for 23 runs and
+  verified their raw-response hashes. Current canonicalization + strict decoding accepted six of
+  19 complete candidate responses; this is only structural replay, not full pipeline acceptance.
+- Scanned embedded-text counts for all 3,493 pages in seven `data/books` PDFs and inspected selected
+  texts/renderings. Chinese endgame PDF has no embedded text on 520 of 521 pages; OCR quality was
+  not evaluated. Observed Catalan double columns/board-font noise, Scandinavian undotted notation,
+  Unicode figurine notation in Attacking Chess, and diagram-started endgames.
+- Independently reproduced Catalan p7 alternatives merged with ply delta zero and p9 prose plan
+  merged with delta two by current coverage detection. Existing source response already contains
+  both p7 alternatives as siblings. Coverage also returns no candidates for undotted notation and
+  Unicode figurines. Existing owning coverage tests still pass (3/3), so they miss these cases.
+- Latest historical Scandinavian p224--232 run `0aec19b4-404a-5c85-bf3b-9397c08f8639` is now failed:
+  main output has 224 move nodes and 27 dangling annotation-body references; structural recovery
+  returned empty content after 16,384 reported reasoning tokens. Latest Catalan recovery likewise
+  exhausted 8,192 reasoning tokens. Historical outbound effective settings remain unverified.
+- Recommended direction: retain CAS, strict schemas, python-chess, CCEF review/export and human
+  publication; introduce source-span IR and local compilation, semantic chunk ownership, localized
+  uncertainty, stage receipts and typed quality metrics. Do not weaken source binding, silently
+  drop source content or count all-unresolved output as extraction success. Complete representative
+  gold/baseline first, then a narrow experimental vertical slice before changing production flow.
+- Reproducible local diagnostics/scripts/renderings are under ignored
+  `data/debug/extraction-audit-20260924/`; they contain book material and are not public fixtures.
+  No network operations are in the inventory/failure/replay scripts. Run them from repository root
+  using `PYTHONPATH=backend/src backend/.venv/bin/python <script>` when needed.
+- Verification: direct current-function probes and 3/3 focused coverage tests passed; manifest
+  paths/hashes/page bounds, JSON syntax and documentation whitespace checked. No full/Stage gate.
+  Default shell/image sandbox initialization failed (`mountinfo path is not absolute`); read-only
+  probes used approved external execution. A temporary probe's decoder import was corrected before
+  successful replay. Analysis does not establish new extraction quality or repair historical jobs.

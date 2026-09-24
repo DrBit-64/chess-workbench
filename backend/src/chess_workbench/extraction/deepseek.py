@@ -22,7 +22,7 @@ from __future__ import annotations
 import json
 import math
 from collections.abc import Awaitable, Callable
-from typing import Any, cast
+from typing import Any, Literal, cast
 
 import httpx
 from pydantic import ValidationError
@@ -213,6 +213,7 @@ class DeepSeekV4FlashProvider:
         timeout_seconds: float = 600.0,
         max_output_tokens_limit: int = 128_000,
         thinking_enabled: bool = False,
+        reasoning_effort: Literal["low", "high", "max"] = "max",
         json_output_enabled: bool = True,
         transport: httpx.AsyncBaseTransport | None = None,
         invalid_response_recorder: DeepSeekInvalidResponseRecorder | None = None,
@@ -257,6 +258,9 @@ class DeepSeekV4FlashProvider:
         if type(thinking_enabled) is not bool:
             raise TypeError("thinking_enabled must be an actual boolean")
         self._thinking_enabled = thinking_enabled
+        if reasoning_effort not in ("low", "high", "max"):
+            raise ValueError("reasoning_effort must be low, high or max")
+        self._reasoning_effort = reasoning_effort
         if type(json_output_enabled) is not bool:
             raise TypeError("json_output_enabled must be an actual boolean")
         self._json_output_enabled = json_output_enabled
@@ -289,7 +293,9 @@ class DeepSeekV4FlashProvider:
         if self._json_output_enabled:
             payload["response_format"] = {"type": "json_object"}
         if self._thinking_enabled:
-            payload["reasoning_effort"] = "max"
+            payload["reasoning_effort"] = self._reasoning_effort
+        else:
+            payload["reasoning_effort"] = "none"
         headers = {
             "Authorization": f"Bearer {self._api_key}",
             "Accept": "application/json",
@@ -343,6 +349,21 @@ class DeepSeekV4FlashProvider:
             # Pydantic errors include the rejected provider values; detach them for the same reason.
             await self._record_invalid_response(response, invalid_diagnostics)
             if invalid_diagnostics[0] in {"content_blank", "content_null"}:
+                choice = body["choices"][0]
+                if choice.get("finish_reason") == "length":
+                    usage = body.get("usage")
+                    details = (
+                        usage.get("completion_tokens_details") if isinstance(usage, dict) else None
+                    )
+                    count = details.get("reasoning_tokens") if isinstance(details, dict) else None
+                    suffix = (
+                        f" ({count} reasoning tokens)" if type(count) is int and count >= 0 else ""
+                    )
+                    raise StructuredGenerationProviderError(
+                        "invalid_response",
+                        "Generation exhausted its output budget without final content" + suffix,
+                        False,
+                    ) from None
                 # A successful HTTP response without final assistant content is retained for
                 # diagnosis, but deliberately remains a manual-retry condition.  Retrying the
                 # same expensive request automatically is unlikely to improve it.

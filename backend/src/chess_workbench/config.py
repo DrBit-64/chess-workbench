@@ -1,6 +1,7 @@
 import os
 import stat
 from pathlib import Path
+from typing import Literal
 from urllib.parse import urlsplit
 
 from pydantic import Field, SecretStr, field_validator, model_validator
@@ -118,6 +119,10 @@ class Settings(BaseSettings):
     ccef_provider_model: str = Field(
         default=DEFAULT_CCEF_PROVIDER_MODEL, min_length=1, strict=False
     )
+    ccef_provider_reasoning_effort: Literal["low", "high", "max"] = "max"
+    ccef_recovery_model: str | None = Field(default=None, min_length=1)
+    ccef_recovery_reasoning_effort: Literal["none", "low", "high", "max"] = "none"
+    ccef_recovery_json_output: bool = Field(default=True, strict=False)
     ccef_provider_timeout_seconds: float = Field(
         default=600.0, ge=1.0, le=1800.0, allow_inf_nan=False, strict=True
     )
@@ -153,9 +158,11 @@ class Settings(BaseSettings):
             raise ValueError("ccef_provider_endpoint must not contain credentials")
         return value
 
-    @field_validator("ccef_provider_model")
+    @field_validator("ccef_provider_model", "ccef_recovery_model")
     @classmethod
-    def ccef_provider_model_must_not_be_blank(cls, value: str) -> str:
+    def ccef_provider_model_must_not_be_blank(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
         if not value.strip() or value != value.strip():
             raise ValueError("ccef_provider_model must be a non-blank trimmed string")
         return value

@@ -233,6 +233,14 @@ publication and UI into one delegated task.
      generation. It owns deterministic canonicalization, one bounded hash-bound patch, one
      evidence-driven coverage supplement and final callback revalidation; the callbacks retain
      pipeline-specific evidence, continuation, chess, consolidation and commit authority.
+   - ADR 0021 adds preflight recovery routing and one separate hash-bound structural supplement
+     for missing annotation bodies and references to existing moves. Annotation text is copied
+     locally from selected trusted evidence; existing content cannot be rewritten or discarded.
+     Recovery has its own model/effort/JSON-mode settings and explicitly sends effort `none` when
+     thinking is disabled. Source-invalid supplements fail without retry or publication.
+   - Missing annotations now have individual bounded source windows derived from surrounding
+     flow moves. Unique direct-child prose intervals are filled locally; model requests contain
+     only pending windows, and the local applicator enforces each annotation's evidence boundary.
 4. [x] **8D-4 review ledger:** review session/revision/event persistence, evidence fidelity and
    optimistic concurrency.
    - A session is bound to exactly one extraction run or incremental document plus the exact

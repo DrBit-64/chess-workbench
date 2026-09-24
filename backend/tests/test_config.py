@@ -71,6 +71,7 @@ def test_ccef_runtime_settings_defaults_and_field_types() -> None:
     assert settings.ccef_provider_api_key_file is None
     assert settings.ccef_provider_endpoint == "https://api.deepseek.com/chat/completions"
     assert settings.ccef_provider_model == "deepseek-v4-flash"
+    assert settings.ccef_provider_reasoning_effort == "max"
     assert settings.ccef_provider_timeout_seconds == 600.0
     assert settings.ccef_max_output_tokens == 128_000
     assert settings.ccef_max_prompt_chars == 2_000_000
@@ -114,12 +115,14 @@ def test_alternate_provider_configuration_loads_without_inline_secret(
         "https://provider.invalid/v1/chat/completions",
     )
     monkeypatch.setenv("CHESS_WORKBENCH_CCEF_PROVIDER_MODEL", "private-model")
+    monkeypatch.setenv("CHESS_WORKBENCH_CCEF_PROVIDER_REASONING_EFFORT", "high")
 
     settings = Settings(database_url="sqlite+aiosqlite:///./data/database/settings.db")
 
     assert settings.ccef_provider_api_key_file == secret_file
     assert settings.ccef_provider_endpoint == "https://provider.invalid/v1/chat/completions"
     assert settings.ccef_provider_model == "private-model"
+    assert settings.ccef_provider_reasoning_effort == "high"
     key = load_ccef_provider_api_key(settings)
     assert key is not None
     assert key.get_secret_value() == "private-test-key"
