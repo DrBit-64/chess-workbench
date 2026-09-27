@@ -6,12 +6,12 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 import pytest
-
 from chess_workbench.extraction.contracts import ExtractionPackageV1_1
 from chess_workbench.extraction.coverage import (
     CCEF_COVERAGE_SUPPLEMENT_SCHEMA,
     CcefCoverageError,
     apply_ccef_coverage_supplement,
+    build_ccef_coverage_supplement_request,
     inspect_ccef_move_coverage,
 )
 from chess_workbench.extraction.evidence import (
@@ -205,3 +205,13 @@ def test_supplement_rejects_line_that_has_no_legal_attachment() -> None:
 
     with pytest.raises(CcefCoverageError, match="unique legal position"):
         apply_ccef_coverage_supplement(original, supplement, context, report, authority)
+
+
+def test_coverage_supplement_uses_configured_output_budget() -> None:
+    package, context = _fixture()
+    authority = normalize_chess_moves_v1_1(package)
+    report = inspect_ccef_move_coverage(authority, context)
+    request = build_ccef_coverage_supplement_request(
+        _response(package.model_dump(mode="json")), context, report, authority
+    )
+    assert request.max_output_tokens == 128_000

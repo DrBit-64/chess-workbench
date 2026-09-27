@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import json
 import math
+import time
 from collections.abc import Awaitable, Callable
 from typing import Any, Literal, cast
 
@@ -180,6 +181,10 @@ def _map_success(body: Any) -> StructuredGenerationResponse:
             raise _invalid_shape(f"{field_name}_missing")
         if not isinstance(token_count, int) or isinstance(token_count, bool) or token_count < 0:
             raise _invalid_shape(f"{field_name}_invalid")
+    details = usage.get("completion_tokens_details")
+    reasoning = details.get("reasoning_tokens") if isinstance(details, dict) else None
+    hit = usage.get("prompt_cache_hit_tokens")
+    miss = usage.get("prompt_cache_miss_tokens")
     return StructuredGenerationResponse(
         content=content,
         provider="deepseek",
@@ -189,6 +194,9 @@ def _map_success(body: Any) -> StructuredGenerationResponse:
             input_tokens=usage["prompt_tokens"],
             output_tokens=usage["completion_tokens"],
             total_tokens=usage["total_tokens"],
+            prompt_cache_hit_tokens=hit if type(hit) is int and hit >= 0 else None,
+            prompt_cache_miss_tokens=miss if type(miss) is int and miss >= 0 else None,
+            reasoning_tokens=reasoning if type(reasoning) is int and reasoning >= 0 else None,
         ),
     )
 
@@ -300,6 +308,7 @@ class DeepSeekV4FlashProvider:
             "Authorization": f"Bearer {self._api_key}",
             "Accept": "application/json",
         }
+        started = time.perf_counter()
         response: httpx.Response | None = None
         mapped_transport_error: StructuredGenerationProviderError | None = None
         try:
@@ -370,7 +379,9 @@ class DeepSeekV4FlashProvider:
                 raise _empty_final_content_error() from None
             raise _invalid_response_error() from None
         assert mapped_response is not None
-        return mapped_response
+        return mapped_response.model_copy(
+            update={"elapsed_ms": int((time.perf_counter() - started) * 1000)}
+        )
 
     async def _record_invalid_response(
         self,

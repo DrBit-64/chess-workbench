@@ -70,6 +70,42 @@ def test_recognized_diagram_joins_the_shared_evidence_stream_with_legal_fen() ->
     assert resolved.unresolved_diagram_count == 0
 
 
+def test_figurine_score_anchors_diagram_before_later_legal_prose_move() -> None:
+    recognition = ChessDiagramRecognition(
+        physical_page=1,
+        page_box=PixelBox(x0=100, y0=100, x1=500, y1=500),
+        image_sha256="c" * 64,
+        piece_placement="r1qr2k1/1p3pp1/2pbbn2/p3N3/3P3Q/P5PB/1B3P2/R3R1K1",
+        orientation="white",
+        mean_confidence=0.9,
+        min_confidence=0.9,
+        square_confidences=[0.9] * 64,
+        engine_name="local-test",
+        engine_version="1",
+    )
+    resolved = resolve_diagram_evidence(
+        [
+            DiagramEvidencePage(
+                physical_page=1,
+                width=1000,
+                height=1000,
+                fragments=[
+                    _text_fragment("1.♘g6!", y0=0.55, y1=0.58),
+                    _text_fragment("The later line has 4.d5+!", y0=0.60, y1=0.64),
+                ],
+                recognitions=[recognition],
+            )
+        ]
+    )[0]
+    marker = json.loads(resolved.fragments[0].text)
+    assert marker["operational_fen"].endswith(" w - - 0 1")
+    assert marker["next_formal_move"] == {
+        "move_number": 1,
+        "side_to_move": "w",
+        "source_token": "♘g6!",
+    }
+
+
 def test_page_without_diagram_keeps_ordinary_evidence_unchanged() -> None:
     fragment = _text_fragment("Ordinary prose without a chessboard image")
 
@@ -111,7 +147,7 @@ def test_explicit_side_caption_filters_conflicting_prose_move_context() -> None:
                 fragments=[
                     _text_fragment("Black to move", y0=0.51, y1=0.54),
                     _text_fragment(
-                        "The threat is 33.f4, but the game continued 32...e4?",
+                        "The threat is 33.f4, but the game continued 32…e4?",
                         y0=0.55,
                         y1=0.62,
                     ),

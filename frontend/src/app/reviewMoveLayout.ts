@@ -1,4 +1,5 @@
 import type { PdfReviewDocument } from '../logic/api/types';
+import { buildScoreTreeLayout } from './scoreTreeLayout';
 import { parentheticalVariationRoots } from './variationPresentation';
 
 type ReviewItem = NonNullable<PdfReviewDocument['package']['items']>[number];
@@ -61,29 +62,66 @@ export type CompactReviewBlock =
     }
   | Extract<ReviewReadingBlock, { kind: 'annotation' }>;
 
-/**
- * Project a normalized move sequence into conventional two-ply score rows.
- *
- * Nodes are consumed exactly once in their existing array order and never
- * mutated, sorted or deduplicated. Indentation reflects only actual
- * alternative branches: a child inherits its parent's variation depth and
- * increases it solely when its own `sibling_order > 0`; an arbitrarily long
- * primary line therefore never indents. Flattening every row's
- * white/black/fallback nodes in visual order reproduces the exact input array
- * by object identity.
- */
+/** Chess-tree display order, with alternatives beside their branch point. */
+function visibleScoreMoves(nodes: MoveNode[]): MoveNode[] {
+  const tree = buildScoreTreeLayout(nodes, null, (node) => ({
+    id: node.id,
+    parentId: node.parent_id,
+    order: node.sibling_order,
+  }));
+  const ordered: MoveNode[] = [];
+
+  function addLine(moves: MoveNode[], isVariation = false) {
+    for (const [index, node] of moves.entries()) {
+      ordered.push(node);
+      // An alternative belongs after the move it replaces, not after their
+      // shared parent. A white alternative therefore separates White's move
+      // from Black's reply; uninterrupted pairs remain on the same row.
+      if (!isVariation || index > 0) {
+        for (const variation of tree.variationsByParent.get(node.parent_id) ??
+          []) {
+          addLine(variation.moves, true);
+        }
+      }
+    }
+  }
+  addLine(tree.mainline);
+  return ordered;
+}
+
+/** Display turn metadata from the server-validated position, including old runs. */
+export function reviewMoveTurn(node: MoveNode): {
+  moveNumber: number | null;
+  side: 'w' | 'b' | null;
+} {
+  const fields =
+    node.validation_status === 'valid'
+      ? node.fen_before?.split(/\s+/)
+      : undefined;
+  const fenSide = fields?.[1];
+  const fenNumber = Number(fields?.[5]);
+  return {
+    moveNumber:
+      node.move_number ??
+      (Number.isInteger(fenNumber) && fenNumber > 0 ? fenNumber : null),
+    side:
+      node.side_to_move ??
+      (fenSide === 'w' || fenSide === 'b' ? fenSide : null),
+  };
+}
+
+/** Project the chess tree into score rows; never mutate the source package. */
 export function buildReviewMoveRows(nodes: MoveNode[]): ReviewMoveRow[] {
-  const paths = variationPaths(nodes);
-  const parentheticalRoots = reviewParentheticalRoots(nodes);
-  return buildMoveRowsWithPaths(nodes, paths, parentheticalRoots);
+  return buildMoveRowsWithPaths(
+    visibleScoreMoves(nodes),
+    variationPaths(nodes),
+    reviewParentheticalRoots(nodes),
+  );
 }
 
 /**
- * Project a CCEF 1.1 reading flow into move rows interleaved with annotations.
- *
- * Topology remains authoritative for variation depth, while reading_flow is
- * authoritative for presentation. An annotation flushes a pending half-row,
- * so notes can genuinely interrupt a main line before it resumes.
+ * Display a CCEF score by chess parentage while retaining source reading_flow
+ * for annotation placement and publication semantics.
  */
 export function buildReviewReadingFlow(
   item: AnnotatedMoveSequenceItem,
@@ -94,9 +132,34 @@ export function buildReviewReadingFlow(
   const annotations = new Map(
     (item.annotations ?? []).map((annotation) => [annotation.id, annotation]),
   );
+  const before = new Map<string | null, SequenceAnnotation[]>();
+  const after = new Map<string | null, SequenceAnnotation[]>();
+  let precedingSourceMove: string | null = null;
+  for (const entry of item.reading_flow) {
+    if (entry.kind === 'move') {
+      precedingSourceMove = entry.node_id;
+      continue;
+    }
+    const annotation = annotations.get(entry.annotation_id);
+    if (annotation === undefined) {
+      throw new Error('review reading flow contains an unknown annotation');
+    }
+    const anchor = annotation.anchor;
+    const anchorId =
+      anchor?.kind === 'move_node' && nodes.has(anchor.node_id)
+        ? anchor.node_id
+        : precedingSourceMove;
+    const destination =
+      anchor?.kind === 'move_node' && anchor.relation === 'before'
+        ? before
+        : after;
+    const bucket = destination.get(anchorId) ?? [];
+    bucket.push(annotation);
+    destination.set(anchorId, bucket);
+  }
+
   const blocks: ReviewReadingBlock[] = [];
   let bufferedMoves: MoveNode[] = [];
-
   function flushMoves() {
     for (const row of buildMoveRowsWithPaths(
       bufferedMoves,
@@ -107,40 +170,57 @@ export function buildReviewReadingFlow(
     }
     bufferedMoves = [];
   }
-
-  for (const entry of item.reading_flow) {
-    if (entry.kind === 'move') {
-      const node = nodes.get(entry.node_id);
-      if (node === undefined) {
-        throw new Error('review reading flow contains an unknown move');
-      }
-      bufferedMoves.push(node);
-      continue;
+  function addAnnotations(
+    key: string | null,
+    grouped: Map<string | null, SequenceAnnotation[]>,
+  ) {
+    for (const annotation of grouped.get(key) ?? []) {
+      flushMoves();
+      const path = key === null ? [] : (paths.get(key) ?? []);
+      blocks.push({
+        kind: 'annotation',
+        key: `annotation:${annotation.id}`,
+        annotation,
+        variationDepth: path.length,
+        variationPath: path,
+        variationPresentation: presentationForPath(path, parentheticalRoots),
+      });
     }
-
-    flushMoves();
-    const annotation = annotations.get(entry.annotation_id);
-    if (annotation === undefined) {
-      throw new Error('review reading flow contains an unknown annotation');
-    }
-    const variationPath =
-      annotation.anchor?.kind === 'move_node'
-        ? (paths.get(annotation.anchor.node_id) ?? [])
-        : [];
-    blocks.push({
-      kind: 'annotation',
-      key: `annotation:${annotation.id}`,
-      annotation,
-      variationDepth: variationPath.length,
-      variationPath,
-      variationPresentation: presentationForPath(
-        variationPath,
-        parentheticalRoots,
-      ),
-    });
+  }
+  addAnnotations(null, before);
+  addAnnotations(null, after);
+  for (const node of visibleScoreMoves(item.nodes)) {
+    addAnnotations(node.id, before);
+    bufferedMoves.push(node);
+    addAnnotations(node.id, after);
   }
   flushMoves();
   return blocks;
+}
+
+/** Select one actual line, even when other variations are displayed between its moves. */
+export function reviewLinePath(
+  nodes: MoveNode[],
+  anchorId: string,
+  focusId: string,
+): string[] | null {
+  const byId = new Map(nodes.map((node) => [node.id, node]));
+  function pathToRoot(nodeId: string): string[] {
+    const path: string[] = [];
+    let current: string | null = nodeId;
+    while (current !== null && byId.has(current)) {
+      path.push(current);
+      current = byId.get(current)!.parent_id;
+    }
+    return path;
+  }
+  const fromFocus = pathToRoot(focusId);
+  const anchorIndex = fromFocus.indexOf(anchorId);
+  if (anchorIndex >= 0) return fromFocus.slice(0, anchorIndex + 1).reverse();
+  const fromAnchor = pathToRoot(anchorId);
+  const focusIndex = fromAnchor.indexOf(focusId);
+  if (focusIndex >= 0) return fromAnchor.slice(0, focusIndex + 1).reverse();
+  return null;
 }
 
 /** Group adjacent rows of one real variation into a dense inline line. */
@@ -219,8 +299,7 @@ function buildMoveRowsWithPaths(
 
   for (const node of nodes) {
     const path = paths.get(node.id) ?? [];
-    const moveNumber = node.move_number;
-    const side = node.side_to_move;
+    const { moveNumber, side } = reviewMoveTurn(node);
 
     if (side === null || moveNumber === null) {
       flushWhite();

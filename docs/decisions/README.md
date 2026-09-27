@@ -23,3 +23,4 @@ ADR 记录会长期影响数据兼容性、模块边界或运维方式的决定�
 - [0019：SQLite 写协调与基于工件的任务恢复](0019-sqlite-write-coordination-and-job-recovery.md)
 - [0020：本地棋盘图识别作为共享 PDF 证据](0020-local-chess-diagram-evidence.md)
 - [0021：有界结构补全与提取恢复路由](0021-bounded-structural-extraction-recovery.md)
+- [0022：来源片段驱动的 PDF 提取重构与分步开发（Proposed）](0022-source-first-pdf-extraction-redesign.md)

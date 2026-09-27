@@ -21,6 +21,7 @@ from .evidence import (
     RenderedPage,
     RenderProfile,
     TextFragment,
+    TextStyleRun,
 )
 
 _INVALID_PDF = ("invalid_pdf", "PDF document could not be opened for rendering")
@@ -68,6 +69,39 @@ def _pixel_box(
     return PixelBox(x0=x0, y0=y0, x1=x1, y1=y1)
 
 
+def _character_style(
+    text_page: pypdfium2.PdfTextPage, text_index: int
+) -> tuple[str | None, float | None, bool | None, str | None]:
+    """Read the style of one character without collapsing mixed-color lines."""
+    char_index = pdfium_c.FPDFText_GetCharIndexFromTextIndex(text_page.raw, text_index)
+    if char_index < 0:
+        return None, None, None, None
+    flags = pdfium_c.c_int()
+    font_length = pdfium_c.FPDFText_GetFontInfo(
+        text_page.raw, char_index, None, 0, pdfium_c.byref(flags)
+    )
+    font_name = None
+    if font_length:
+        buffer = pdfium_c.create_string_buffer(font_length)
+        pdfium_c.FPDFText_GetFontInfo(
+            text_page.raw, char_index, buffer, font_length, pdfium_c.byref(flags)
+        )
+        font_name = buffer.value.decode("utf-8", errors="replace") or None
+    font_size = pdfium_c.FPDFText_GetFontSize(text_page.raw, char_index)
+    size = round(font_size, 2) if math.isfinite(font_size) and font_size > 0 else None
+    bold = None
+    if font_name is not None:
+        lowered = font_name.lower()
+        bold = any(word in lowered for word in ("bold", "black", "heavy", "demi"))
+    channels = [pdfium_c.c_uint() for _ in range(4)]
+    color = None
+    if pdfium_c.FPDFText_GetFillColor(
+        text_page.raw, char_index, *(pdfium_c.byref(channel) for channel in channels)
+    ):
+        color = "#" + "".join(f"{channel.value:02x}" for channel in channels[:3])
+    return font_name, size, bold, color
+
+
 def _embedded_fragments(
     page: pypdfium2.PdfPage,
     *,
@@ -97,6 +131,19 @@ def _embedded_fragments(
         lines.append((line_start, text[line_start:]))
         if len(lines) > MAX_FRAGMENTS:
             raise _error(_RENDER_LIMIT)
+        colored_objects: list[tuple[tuple[float, float, float, float], str]] = []
+        for page_object in page.get_objects(
+            filter=[pdfium_c.FPDF_PAGEOBJ_TEXT], textpage=text_page
+        ):
+            try:
+                channels = [pdfium_c.c_uint() for _ in range(4)]
+                if pdfium_c.FPDFPageObj_GetFillColor(
+                    page_object.raw, *(pdfium_c.byref(channel) for channel in channels)
+                ):
+                    color = "#" + "".join(f"{channel.value:02x}" for channel in channels[:3])
+                    colored_objects.append((page_object.get_bounds(), color))
+            finally:
+                page_object.close()
         for start, line in lines:
             if not line.strip():
                 continue
@@ -124,8 +171,51 @@ def _embedded_fragments(
             )
             if box is None:
                 continue
+            color_areas: dict[str, float] = {}
+            for bounds, color in colored_objects:
+                overlap = max(0, min(rect[2], bounds[2]) - max(rect[0], bounds[0]))
+                overlap *= max(0, min(rect[3], bounds[3]) - max(rect[1], bounds[1]))
+                if overlap:
+                    color_areas[color] = color_areas.get(color, 0.0) + overlap
+            font_color = (
+                max(color_areas, key=lambda color: color_areas[color]) if color_areas else None
+            )
+            style_runs: list[TextStyleRun] = []
+            for offset, character in enumerate(line):
+                if character.isspace():
+                    continue
+                font_name, font_size, bold, color = _character_style(text_page, start + offset)
+                if style_runs and (
+                    style_runs[-1].end == offset
+                    and (
+                        style_runs[-1].font_family,
+                        style_runs[-1].font_size,
+                        style_runs[-1].bold,
+                        style_runs[-1].color,
+                    )
+                    == (font_name, font_size, bold, color)
+                ):
+                    style_runs[-1] = style_runs[-1].model_copy(update={"end": offset + 1})
+                else:
+                    style_runs.append(
+                        TextStyleRun(
+                            start=offset,
+                            end=offset + 1,
+                            font_family=font_name,
+                            font_size=font_size,
+                            bold=bold,
+                            color=color,
+                        )
+                    )
             fragments.append(
-                TextFragment(order=len(fragments), text=line, box=box, confidence=None)
+                TextFragment(
+                    order=len(fragments),
+                    text=line,
+                    box=box,
+                    font_color=font_color,
+                    style_runs=style_runs,
+                    confidence=None,
+                )
             )
     finally:
         text_page.close()

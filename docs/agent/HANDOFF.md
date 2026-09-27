@@ -1,5 +1,127 @@
 # Agent handoff
 
+## 最新接点 — 2026-09-27 修复审核评注消失及发布遗漏
+
+操作者发现审核棋谱的 `!/?` 不显示。根因不是正常的 SAN 规范化：v8
+来源编译器把 `g4!` 等原文字段存为 `move_text`，验证得到无评注的
+`san_candidate`，但未填 `nags`；上轮前端优先显示规范 SAN 后符号消失，
+发布服务又只取 `node.nags[0]`，因此直接发布旧任务也会丢评注。
+本地四个最近真实审核修订分别有 37、12、26、34 个此类节点。
+
+现已修复：新来源编译与自动恢复节点将尾随 `!/?` 存入数字 NAG；
+旧审核修订在显示和发布时从 `move_text` 补读（四个真实修订只读核对
+37/37、12/12、26/26、34/34）；人工在审核中设定或清除 NAG
+会写入节点扩展标记，优先于来源补读，原文保持不变。尚未发布的旧审核
+结果可直接按修复后的代码发布并保留这些符号；**已发布的课程不会自动回填**。
+未修改真实审核修订、数据库或现有课程。
+
+定向验证：来源编译、审核编辑/撤销、发布持久化、审核 UI 均通过；
+改动 Python 模块 Ruff/Mypy、前端 TypeScript/ESLint 通过。没有调用 DeepSeek。
+已存在的大量未提交工作保留。
+
+## 最新接点 — 2026-09-27 棋谱显示规范化
+
+审核棋谱和课程学习棋谱现共用 `frontend/src/app/moveNotation.ts` / `MoveNotation.tsx`：
+已验证审核节点优先显示 `san_candidate`，两页均把吃子 `X/×` 显示成标准小写
+`x`、`0-0` 显示成 `O-O`；书中尾随 `!/?` 与保存的 NAG 拆开，保存的 NAG
+优先，避免重复。常见六种招法评价按好/坏/有趣/可疑着法区分颜色；图中
+Lichess 类别的局面与计划符号按数字 NAG 显示，未知代码保留 `$n`。只修改前端
+显示，不改来源原文或持久化棋步。审核预览和棋步菜单也使用同一格式。
+
+定向验证：`MoveNotation.test.tsx`、`PdfReviewPage.test.tsx`、
+`CourseEditor.test.tsx` 共 52 项通过；前端 TypeScript 和改动文件 ESLint 通过。
+本轮未调用 DeepSeek，未启动网站、提交代码或修改已有审核会话。之前大量未提交
+工作仍在；其恢复算法和 R5/P6 状态见下一节。
+
+## 最新接点 — 2026-09-27 真实 Catalan 下一局恢复验收
+
+新恢复算法已接入原 v8 审核预览/确认路径。用真实 DeepSeek 输出的 Catalan p18–24
+Giri–Topalov 完整例局（run `bf7260c9-35a1-51b4-9a20-96610a13caab`），没有注入错误：
+原任务 25 招/272 待审；通用只读前文处理重放成 54 招/96 待审；agent 用正式审核
+`add_line` 在真实错误的 `25...Rd7` 后补一次 `26.Nc4`，程序恢复到 196 招、主线 111 半回合、
+3 待审。后半局 61 半回合与书页逐招匹配，19 个变化入口父来源独立核对全对。
+真实试验与剩余三张卡见[验收记录](pdf-review-recovery-real-acceptance-2026-09-27.md)；
+隔离报告在 `data/debug/review-recovery-20260927/next-game-p18-24/recovery-acceptance.json`。
+
+算法从局内已确认着法学习主线样式，仅在对照变化样式清楚时以来源顺序、步号、合法性
+补全主线/变化；不含书名、页码、颜色特判。原 p10–17 用户会话 v24 **只读**预览仍为
+3 入口校正、42 新招、14 解决卡、0 冲突；其独立第 19 步语义问题未自动证明正确。
+本轮没有写真实审核修订，新增 5 次 DeepSeek 调用仅用于隔离的下一局提取；恢复阶段复用响应。
+聚焦来源关系/审核编辑 44 项通过，恢复模块 Ruff/MyPy 与真实脚本通过。
+R5/P6 全书集及 v8 增量仍开放。保留所有未提交修改，不要覆盖。
+
+## 最新反馈 — 2026-09-27 Catalan v24 连续恢复未通过
+
+算法已进一步细化为[设计草案](pdf-review-recovery-algorithm-2026-09-27.md)：区分原请求证据、模型关系提议与有效人工字段约束；包含逐招来源对齐、主线身份、重复恢复与合法错挂的边界。未实施。特别注意：第 19 步独立错误不能仅靠棋规/重放保证发现，需额外来源疑点或人工/模型判断。
+
+用户已确认 v16 恢复并操作到 v24。只读诊断发现 `_human_patch` 只遍历修订 1 原节点的父节点变化，忽略待审转棋步、主线提升、对自动恢复节点的再改挂；所以 v24 仍只重放最初 `Ba6 → Bf4`，无法利用用户修好的 `Nh5/Be3` 主线。当前恢复功能的多轮人工闭环验收失败，尚未修复代码。只在离线副本翻译 v20–v22 既有事实，就能续到 `18...Qa3`；但第 19 步原响应还有独立错误，新增 42 候选仅 17 条完整来源父链正确。详情与下一切片验收见 [v24 诊断](pdf-review-recovery-v24-diagnosis-2026-09-27.md)。本轮未写用户审核修订或调用模型。
+
+## 最新接点 — 2026-09-27 审核人工修入口后的依赖恢复已接网页
+
+v8 审核页已提供「根据人工修正恢复后续」：从已保存的来源关系重放，候选可与原稿切换比较，按版本和候选哈希确认一版修订，并可撤销；人工新增棋步、NAG、正文保留。真实 Catalan p6–9 完整棋局的模拟错挂/人工改挂试验恢复 122 招，148/148 来源父链与 138/138 主线角色匹配；当前 p10–17 用户会话 v15 的只读预览新增 38 招、保留 48 招人工补录，但该范围还有独立语义错误。详情、适用边界与命令见 [本轮记录](pdf-review-dependency-replay-2026-09-27.md)。没有写真实审核修订或调用 DeepSeek，网页可由用户手动验收。R5/P6 仍开放，v8 增量仍未实现。保留全部已有未提交修改，不要覆盖。
+
+## 最新接点 — 2026-09-27 人工修正后的恢复试验
+
+操作者要求试验“人工修关键入口，程序/模型继续恢复”。最新结果见
+[试验报告](pdf-review-recovery-experiment-2026-09-27.md) 与
+[独立来源核对表](pdf-review-catalan-recovery-oracle-2026-09-27.json)。
+仅用 Catalan 当前任务 v2 的一次改挂，程序重放已恢复后来人工新增的 48 招（路径/来源唯一匹配 48/48），
+可以避免十次重复补录；但剩余独立主线错误使整局仅 132/262 来源路径正确，缺 121 招。
+三次模型实测均未获合格补丁：高/低推理分别耗尽 24000/16000 无最终内容；关闭推理返回的 JSON
+有重复领取、自依赖、错误主线关系，被现有编译器拒绝。没有削弱校验或篡改响应为成功结果。
+
+用户本轮已补充授权 Catalan p10–12 与 p13–17 一起发送；实际调用 3 次，观察到余额 ¥18.99 → ¥18.87，
+本轮生成请求已停止。工件位于 `data/debug/review-recovery-20260927/`，其中 `program-v2/` 是仅用 v2 的验证，
+`model1..3/` 是真实请求/响应/异常。不要因看到 `model3/replay/` 空目录就误判存在成功模型候选。
+
+新增三个实验/评估脚本，`replay_pdf_relations.py` 抽出只读加载助手；定向 Ruff 与真实工件重放完成。
+没有产品后端/UI 修改，没有启动网站/写审核 SQL；真实修订只读核对仍为 v15。保留全部既有未提交修改。
+下一步若继续产品化，先做来源约束→依赖重放→人工节点/正文保留→一次可撤销预览确认；
+当前试验原型仅支持已有源棋步接回线路尾部，不能当作任意人工编辑的通用合并。
+模型应先实测“完整阅读上下文 + 少量来源父节点判定”，由程序生成结构补丁，不能直接采用本次整局修复调用。
+R5/P6 未通过，v8 增量与正文碎片整理本轮未实施。
+
+
+## 最新接点 — 2026-09-27 审核待审片段转棋步
+
+本轮在已有审核排版修复后实现 `转为棋步`：直接进入棋谱点选目标，用户选接续/替代，原文 SAN 自动带入并逐步校验印刷步号；
+也可在棋盘落子，原文不能解析时棋盘从选定起点打开并用落子替换错误文字。预览线路与走后局面，常见 `!/?` 评价符号保存为 NAG；保存由原有审核修订处理，支持撤销/恢复。
+`resolve_unresolved` 的新可选 `following` 一次接入同序列、来源相邻、能够按局面合法接续的后续 `semantic_chunk_failed` 片段，
+保留每段的完整 evidence，失败不改变原包。已更新 OpenAPI/前端类型。此前大量未提交改动应完整保留；本轮未触碰真实审核数据、未启动网站、未调用 DeepSeek。
+
+聚焦验证：审核页与记谱解析共 33 项通过；后端源证据/连续恢复 2 项通过；前端类型检查、后端 Ruff/Mypy 和 `make check-contracts` 通过。
+交付范围不是跨分支语义依赖重放；Catalan 上游断点之后的大量关系失败仍需要源关系编译器重放和冲突处理，见
+[p10–17 诊断](pdf-review-catalan-diagnosis-2026-09-27.md)。下一步先由操作者在网站验收本轮界面，再决定该提取管线改造。
+
+
+## Current entry point — 2026-09-26 architecture clarification
+
+**Current scope: architecture design only; no functional edits.** The model input/output and compiler boundary
+are now specified in the [R3 relation protocol draft](pdf-extraction-relation-protocol-2026-09-26.md).
+Its latest revision separates broad continuous reading context (including lookahead) from bounded
+owned output; do not implement it as isolated excerpts plus a prior-tree summary. Prefer fewer calls
+covering coherent segments, keep source prefixes stable and measure cache/total usage; see section 3.6.
+The R1–R5 plan and development roadmap are synchronized through the latest examples: these are
+conditional call policies, not four mandatory rounds; R3/R5 include their acceptance/reporting.
+**Next implementation task: R1** in [PDF R1–R5 execution and acceptance plan](pdf-extraction-r1-r5-plan-2026-09-25.md).
+The operator is switching to Codex / Sol for implementation. This handoff turn updated documents only;
+R1–R5 are all open. Do not invoke DeepCode, repeat the v6 wiring work or start a manual book-format UI.
+
+Current facts: website/API default v6 and legacy coverage budget/provider fixes were verified. Actual
+Catalan p6–9 and Magnus p137–149 runs still have 27/141 and 110/196 invalid nodes, plus valid-but-wrong
+attachments; P6 is unaccepted. Preserve the broad existing uncommitted worktree (current committed
+baseline `ebd1c5e`); no commit/reset/rebase/delete is authorized.
+
+Current design supersedes earlier “wait for discussion / configure each book” entries: automatically
+observe token styles and representative source pages, use revisable reading hints and scoped whole-line
+attachment, then provide content-level correction and visual undo/redo. R1 fixes stale-position relinking;
+R2 delivers style/role preview; R3 establishes source-correct complete trees; R4 delivers review editing;
+R5 performs fresh website/source acceptance and remaining P6 evaluation. Details and per-step oracles are
+in the linked plan. Chinese samples stay excluded; Magnus is additional development data.
+
+The remaining sections are historical records. When statuses conflict, use this entry and the newest
+record at the end, together with PLANS.md; do not treat old Stage 8B/default-legacy claims as current.
+
 ## Goal
 
 Stage 8A is accepted. Stage 8B is active under ADR 0013: evidence ports, PDFium rendering,
@@ -7545,3 +7667,353 @@ single blob without first reviewing logical boundaries and generated-contract co
   Default shell/image sandbox initialization failed (`mountinfo path is not absolute`); read-only
   probes used approved external execution. A temporary probe's decoder import was corrected before
   successful replay. Analysis does not establish new extraction quality or repair historical jobs.
+
+## 2026-09-24 — File-level PDF redesign and personal-project development requirements
+
+- Operator requested the refactor file map, replacement architecture and stepwise development mode
+  in both chat and a design document, plus explicit requirements against overdefensive engineering
+  and global proof/testing after every small edit. This turn is documentation only; worktree was
+  clean at entry. No implementation, schema migration, real provider call or runtime mutation.
+- Added proposed `docs/decisions/0022-source-first-pdf-extraction-redesign.md`: retain existing Jobs,
+  CAS, CCEF 1.1, python-chess, courses and review/publication; replace model-authored full CCEF with
+  source-span interpretation and local score/CCEF compilation. The file map specifies primary
+  refactors, limited adaptations, reused modules and old recovery code excluded from the new path.
+- Narrow initial scope: two baseline windows, then one readable vertical slice. Expand to six input
+  types, then chunk continuation, website integration and a single 21-window closeout evaluation.
+  No prerequisite to finish all gold labels, generic workflow engine, per-block SQL tables, second
+  Job state machine, or arbitrary-step crash recovery. Keep model responses and a final manifest;
+  proposed production integration adds only one artifact kind plus its required CHECK migration.
+- Keep existing Job states; proposed candidate completeness is complete/partial plus existing
+  review issues. Partial CCEF remains inspectable but unresolved chess/publication blockers remain.
+  Programming/storage failures are not hidden as normal semantic uncertainty. API/result loaders
+  require explicit new-version support, including their current exact-key/allowlist checks.
+- Updated `AGENTS.md` and reconciled section 2 of `docs/development-plan.md`: visible outcomes first;
+  boundary validation; human source/output comparison is valid semantic evidence; focused regression
+  tests by actual risk; local / slice / Stage-CI verification rhythms; stop checking after relevant
+  checks pass. Coverage floors and persisted-data invariants remain unchanged. The old wording
+  requiring Stage acceptance for every step no longer governs incremental work.
+- Added the current priority and P0–P6 checklist to `PLANS.md`, linked ADR 0022 in the ADR index and
+  annotated the earlier diagnosis so its broader exploratory targets do not become per-edit gates.
+  ADR 0022 remains proposed, not accepted or implemented. Next implementation unit is P0, then P1.
+- Verification for this documentation-only change: reviewed diff/stat, local Markdown references,
+  whitespace, file boundaries and development-rule consistency. No application tests or Stage/full
+  gates were run; they would not validate these documentation edits. No commit or deletion.
+
+
+## 2026-09-24 — Diagram starts, mixed nested variations and actionable partial results
+
+- Answered operator design questions by inspecting current diagram context/review commands and
+  saved source text. No implementation or provider calls. Existing documentation changes retained.
+- Rechecked saved Endgame Strategy p19--22 run `976c919a-ce51-576b-ad77-be9284d6ad47`: four recognized
+  diagram evidence entries have operational FENs; normalized candidate contains two FEN-started
+  sequences (moves 36 and 53), 102 nodes. Recognition exists but is not universal; current resolver
+  uses limited notation/caption matching and default castling/en-passant/halfmove assumptions.
+- Added ADR 0022 sections 3.7--3.9: physical blocks can contain multiple semantic events; model
+  requests include adjacent blocks/context and resolve nested variations, mainline resumption and
+  mentions, not a single label per block. Concrete examples cover Makogonov p7, Chess Bible p20,
+  Catalan p7/p9, Scandinavian, Endgame p20 and Attacking Chess p20.
+- Corrected an earlier design gap: current review operations cannot resolve an unresolved item to
+  a score/prose/annotation, change an initial FEN or reattach a variation. These minimal operations
+  are required in P5, reusing existing revision/command infrastructure. Excluding content is not a
+  substitute for correcting it. Source viewing must not depend on complete candidate success.
+- Semantic failures isolate the event and actual dependent subtree; an invalid mainline position
+  still blocks its dependent descendants. Unparseable JSON falls back at request-window scope.
+  Do not use a single aggregate draft validator that discards all good events for one bad anchor.
+- Updated P1/P2 acceptance examples and P5 scope in the ADR and PLANS. Checked documentation diff
+  and whitespace only; no code tests were needed for these documentation clarifications.
+
+
+## 2026-09-25 — PDF redesign P4/P5 implementation
+
+- P4 sequential source chunks now preserve original fragment orders across same-page section/size boundaries and pass verified prior move IDs/SAN/FEN. Synthetic tests cover cross-page mainline plus branch, a later independent game, same-page heading split, a malformed later response retaining prior work, and trusted external document anchors. A live authorized Scandinavian p321–322 two-chunk trial was replayed: 38/53 legal move nodes, 2 unresolved, all 37 fragments represented. Nested branch accuracy remains an evaluation target, not a successful full-book extraction.
+- P5 v6 source-first standalone and v7 incremental Job paths use existing persistence, a new `semantic_manifest` artifact CHECK migration, and existing review/document ledgers. Provider responses are saved locally as they arrive; normalized partial CCEF and manifest are immutable. Fresh and existing SQLite-copy upgrade checks passed; production DB remains at 0015 until normal migration.
+- Added independent source evidence/page API and UI; v6 candidate loads in existing review service. Review commands now resolve one unresolved fragment as prose, annotation or line, set a manual legal initial FEN, and reattach a legal variation. Existing revision ledger handles edits. Sources UI explicitly selects source-first or legacy and preserves mode on rerun.
+- Focused backend tests (chunk/compiler/review editing/v6 Job/v7 append), Ruff/MyPy, frontend TypeScript, generated contract check and focused ESLint were run. The 21-window gold evaluation and default-policy decision remain P6. OCR for scanned Chinese and real-book branch accuracy remain known quality limits. No commit or live database migration.
+
+
+## 2026-09-25 — P6 first-round acceptance failed (source-first remains opt-in)
+
+- All 21 frozen windows were checked against the seven PDF hashes and embedded-text availability. Eighteen windows have readable embedded text; the three Chinese scanned windows (12 pages) have none and no OCR runner is configured. Per-window evidence inventory is in ignored `data/debug/extraction-audit-20260924/p6/source-preflight.json`.
+- One fixed live DeepSeek pass was run for Scandinavian dev1, Catalan dev1 and Endgame dev1; 17 calls total, 54,780 input and 38,323 output tokens. Chinese dev1 failed with `ocr_unavailable` before a provider call. Current-code offline replay: Scandinavian 56/116 valid moves and 20 unresolved, Catalan 17/81 and 109 unresolved, Endgame 97/101 and 11 unresolved with four diagrams. These are chess-validity counts, not independent gold accuracy. Stop condition triggered, so remaining dev and holdout calls were not purchased. Full P6 gold evaluation remains open.
+- Fixed only an observed exact-source bug: a quote cited at the wrong fragment order is rebound when it occurs exactly once on the same page. Scandinavian unresolved count improved from 38 to 20 on saved-response replay; 60 invalid move nodes remained. Added focused regression.
+- Fixed source visibility for failed OCR-before-commit Jobs: source response reports `unavailable` and error code, while page PNG is rendered on demand from the verified original PDF. Verified against the actual failed Chinese evaluation run and with a focused backend test. Regenerated API/TS contracts and displayed the status in the source UI.
+- Kept backend and Sources UI defaults on legacy extraction; source-first is explicitly labelled experimental. The quality/availability findings and 21-window disposition are in `docs/agent/pdf-extraction-p6-acceptance-2026-09-25.md`. No commit or production database migration.
+
+## 2026-09-25 — P6 scope narrowed to six English books
+
+- At operator request, the Chinese endgame PDF is excluded from subsequent P6 tests. The active manifest is `docs/pdf-extraction-evaluation-set-v1.json`: six books, 18 windows, 85 owned pages. V0 and the Chinese OCR diagnostic remain historical evidence; OCR is not an active P6 blocker.
+- `scripts/evaluate_pdf_p6.py` now defaults to v1 and English OCR language. Three English development windows have already run; nine development and six holdout windows remain. P6 is still unaccepted due to branch/starting-position errors and missing independent gold. Legacy remains the default.
+- This scope change touched only the evaluation manifest, runner selection and documentation; no model call, production DB migration or commit.
+
+## 2026-09-25 — Codex CLI continuation handoff for P6
+
+**Current state and boundary.** P0–P5 of ADR 0022 are implemented in the uncommitted worktree; P6 remains open and the source-first pipeline is opt-in (`legacy` is the backend/UI default). The operator excluded the Chinese endgame PDF from subsequent tests. Use `docs/pdf-extraction-evaluation-set-v1.json` as the active six-book, 18-window, 85-owned-page set. Keep v0 and the Chinese OCR run as historical evidence only; Chinese OCR is not an active acceptance blocker. No production SQLite migration, commit, rebase, reset or deletion has occurred. The worktree contains many P0–P6 changes; inspect `git status --short` before editing and preserve them.
+
+**What has actually been measured.** Three English development windows were run with 17 selected-page DeepSeek calls (54,780 input and 38,323 output tokens); raw requests, responses, evidence and CCEF are in ignored `data/debug/extraction-audit-20260924/p6/`. Current-code replay reports Scandinavian dev1 p319–323: 56/116 legal output moves, 20 unresolved and 97/110 represented fragments; Catalan dev1 p6–9: 17/81 legal, 109 unresolved and 169/244 represented fragments; Endgame dev1 p19–22: 97/101 legal, 11 unresolved, 70/70 represented fragments and four diagrams. These counts are diagnostics, not gold accuracy. The exact-quote source order fix reduced Scandinavian unresolved from 38 to 20 but left 60 invalid moves. The first-round P6 report is `docs/agent/pdf-extraction-p6-acceptance-2026-09-25.md`.
+
+**Blocking issues.** Scandinavian has incorrect nested/cross-page variation parents; Catalan has double-column/font extraction noise, missing verified starting context and wrong alternative attachments; Endgame still has four invalid moves. None of the active windows has independently annotated gold, so mainline/variation precision, parent accuracy and source fidelity are unproven. Nine development windows and all six holdouts remain unrun. Do not promote source-first to default based on legal-move counts or fragment representation.
+
+**Recommended next sequence.** (1) Inspect the three saved development runs alongside the exact source PDF pages, and create a small independent, source-cited gold/oracle for the specific mainlines, branch parents, starting positions/diagrams and prose spans that caused failure. Do not copy extractor output as gold or invent a FEN. (2) Trace the earliest divergence in the interpretation → chunk continuation → local compiler path; fix observed branch/context/layout causes in coherent user-visible slices, retaining inspectable partial output. Prefer replay of saved responses and one focused regression per actual bug. (3) Rerun the same three development windows only where a new model call is necessary and compare against that oracle. (4) Expand to the other nine development windows, annotate observed disagreements, then run the six untouched holdouts once the development quality bar is credible. Document numerator/denominator and source comparisons; decide the default only at P6 closeout. DeepSeek calls to selected test pages were authorized by the operator, but keep usage bounded and record it; do not send whole PDFs.
+
+**Files and verification.** Relevant code: `backend/src/chess_workbench/extraction/{interpretation,chunks,source_compiler,score}.py`, `backend/src/chess_workbench/services/{pdf_source_extraction,pdf_source_read}.py`, `scripts/{evaluate_pdf_p6,replay_pdf_p6}.py`; design: ADR 0022 and `PLANS.md`. For the latest v1 scope edit, JSON counts were checked (v0 7/21/97; v1 6/18/85), Ruff and MyPy passed for `scripts/evaluate_pdf_p6.py`, and `git diff --check` passed. This handoff/AGENTS wording update is documentation-only; no application tests were run for it. Follow `AGENTS.md` proportional checks, preserve human review and legal persisted moves, and update this handoff after each substantive slice.
+
+## 2026-09-25 — P6 source oracle and saved-response repair continuation
+
+**Completed and inspectable result.** Read the original physical PDF pages for Scandinavian p319–323, Catalan p6–9 and Endgame p19–22, including the Catalan p6/p7 and Endgame p19/p21 page images. Created `docs/agent/pdf-extraction-p6-dev-oracle-2026-09-25.md`: 25 small source-cited checks across mainline, branch parent, initial diagram placement and prose, deliberately independent of model/CCEF output. Manual source comparison on saved-response replay improved from **13/25 to 18/25** (Scandinavian 5/9→8/9, Catalan 2/8→3/8, Endgame 6/8→7/8). These are local checks, not whole-window gold or a claim of P6 acceptance. `docs/agent/pdf-extraction-p6-acceptance-2026-09-25.md` and the P6 entry in `PLANS.md` now point to the result.
+
+**Code changed this continuation.** In `extraction/source_compiler.py`, uniquely legal same-turn siblings are attached beside their printed predecessor; a following numbered move can disambiguate a currently legal but wrong branch parent; a sole open `1.d4` may accept a printed `1...d5` reply on the same page; and a repeated SAN source occurrence may be rebound only when the verified parent fixes one matching printed turn. `extraction/interpretation.py` now sends source bbox and explicit two-column/parenthesis/move-order guidance; its resolver handles an otherwise impossible page-wide occurrence count for repeated SAN. `scripts/replay_pdf_p6.py` reads the saved evidence artifacts with read-only synchronous SQLite, because this CLI sandbox's `aiosqlite` session stalled, and replays without any network or production DB access. Focused regressions were added to `backend/tests/test_extraction_source_compiler.py`. The old pipeline remains the default; the source-first pipeline remains opt-in.
+
+**Offline observations.** Scandinavian: 68/116 legal output nodes, 48 invalid, 20 unresolved; the p322 nested `7.c4`/`7.Nc3` and p323 `8.h3` parents are now correct, but the model omitted `14...Rd5` and the long branch remains wrong. Catalan: 29/81 legal, 52 invalid, 109 unresolved; p6 `1...d5` now continues the unique standalone `1.d4`, and `3...Nf6 4.g3` resumes the `3.Nf3` branch, but the p6 fifth/sixth moves and p7–9 relationships remain incomplete. Endgame: 102/102 legal, 10 unresolved; p21 `55.Bg7` and `57.Bg7` now use their distinct printed occurrences, while the repeated p20 `36.Rxe6?` source mention is still absent. Legal-node and represented-fragment counts are diagnostics only; see the 18/25 source comparison for the bounded semantic measure.
+
+**Verification and model usage.** Focused owning tests: `backend/tests/test_extraction_source_compiler.py` plus `backend/tests/test_extraction_chunks.py`, **17 passed** with coverage addopts disabled for the local selection. Ruff format/check passed on the changed Python files; MyPy passed on `interpretation.py`, `source_compiler.py`, and `scripts/replay_pdf_p6.py`; all three saved windows replayed offline; `git diff --check` passed. An earlier focused pytest invocation returned exit 1 solely because the repository's global 80% coverage threshold was applied to a two-file selection (8 tests themselves passed); rerunning the focused selection without that global gate passed. One selected-page Catalan p6 DeepSeek request was prepared and attempted, but returned `DeepSeek transport unavailable`; no response or provider usage was reported. This continuation has **0 successful model calls** and no new known token usage. Known P6 cumulative successful calls remain 17 / 54,780 input / 38,323 output tokens; any provider-side accounting for the failed transport attempt is unknown. The failed request receipt is in ignored `data/debug/extraction-audit-20260924/p6/catalan-dev1/probe-20260925-chunk001/`.
+
+**Remaining work and boundaries.** P6 is unaccepted. Catalan's source-to-score interpretation still needs a trustworthy fifth/sixth move continuation and p7–9 branch parents; the added bbox/prompt guidance has not been validated by a new response because transport failed. Scandinavian's omitted `14...Rd5` and Endgame's repeated p20 move mention remain. Nine other development windows and all six holdouts remain untouched until the three existing windows reach credible source quality. No production database migration, commit, reset, rebase or deletion occurred; preserve all existing P0–P6 uncommitted work.
+
+## 2026-09-25 P6 failed-development-window follow-up
+
+The operator asked Codex to analyze and fix the three P6 development windows that failed, without testing the Chinese book. This turn changed the source-first extraction path in `extraction/{pdfium,evidence,draft,chunks,interpretation,source_compiler,validation}.py`, `services/pdf_extraction.py`, and the saved-response replay helper; added focused regressions in the relevant extraction/PDFium tests. No commits, resets, deletions or production DB writes. The pre-existing broad P0–P5 worktree remains uncommitted; do not infer it is accepted from this turn.
+
+Source-cited local oracle: 25/25 across Scandinavian p319–323, Catalan p6–9 and Endgame p19–22, using the specifically named saved-response combinations in `pdf-extraction-p6-dev-oracle-2026-09-25.md`. Catalan: 148/148 legal moves, 2 unresolved quotes; Endgame: 102/102 legal, 0 unresolved, repeat `36.Rxe6?` retained as an annotation; Scandinavian best local-oracle combination: 88/117 legal, 19 unresolved, with 29 invalid nested-variation moves on p321–322. Fresh whole-window Scandinavian reruns remain variable and do not establish stable passage. P6 remains **not accepted**; the legacy extractor remains the default; nine development windows and six holdouts were not used. The Chinese book remains outside the active evaluation set.
+
+Actual failure causes and current fixes: prior move hints were ordered by CCEF item instead of physical source; branch descendants were mislabelled as globally mainline; PDF color was missing from source evidence, hiding Catalan blue illustrative branches versus black resumed score; full p8 exceeded the 7,000-token evaluation cap, so a chess-density bound now splits it; source parser missed unspaced move numbers, spaced black ellipses, a first unnumbered SAN after a wrapped score, and a move number at the end of a line; model annotations without a sequence but with a known move anchor were dropped; Endgame's repeated move was not retained as a source mention. Local compiler corrections require source/turn/chess evidence, emit diagnostics and preserve original citations. Parenthesis depth is now an advisory hint to the interpreter, but Scandinavian nested branches still need a more reliable source-scope/relationship pass.
+
+Focused verification after edits: 165 selected backend tests passed, strict MyPy passed on eight directly changed backend modules, and scoped Ruff/format checks passed after resolving local lint findings. The final product outcome was checked against real PDF pages and saved responses, not only tests. New authorized DeepSeek calls: 21 with responses, 118,931 input and 75,176 output tokens (one p8 `length` truncation counted); cumulative stored successful calls are 38, 173,711 input and 113,499 output tokens. Full Stage/P6 acceptance was intentionally not run because the three-window gate remains open. See the local oracle and P6 report for precise artifact paths and limits.
+
+Next work: establish complete p321–322 move/parent gold, then replace the model-only nested variation relationship guess with a small source-scope and legal-position resolver. Once Scandinavian is stable on a fresh single run, run the remaining nine development windows, then the six untouched holdouts under the active 18-window manifest; only then decide on default switching. Keep the personal-site proportional testing rule in `AGENTS.md`.
+
+## 2026-09-25 P6 三个开发窗继续修复与验证（最新）
+
+本节取代上节的当前状态数字，不改写其历史过程。用户要求继续修复失败开发样本；没有触碰中文书、其他九个开发窗或六个 holdout，没有提交或改写生产数据库。当前三个真实页窗的 25 项原页 oracle 在明确选定的离线保存响应组合上仍为 25/25。Scandinavian p319–323 最新一致的保存请求/响应链 `probe-20260925-latest-single-compiled.json` 为 121/121 合法、5 个局部待审原文；Catalan p6–9 `probe-20260925-p6p9-styled-compiled.json` 为 148/148 合法、2 待审；Endgame p19–22 `replayed-package.json` 为 102/102 合法、0 待审。Scandinavian p322 的 `7.O-O`、`7.c4`、括号内 `7.Nc3` 与括号外 `7...Qf5` 均有正确父节点；p323 长变化包含合法 `14...Rd5!`。
+
+本轮在 `extraction/{chunks,draft,interpretation,source_compiler,validation}.py` 中完成来源/括号/颜色线索约束的局部续接、断行着法识别及最多两步的唯一印刷缺口恢复；正文中夹着的非法棋步误判保留为 prose。`chunks.py` 语义预算微调到 136，是因为新 token 识别让 Catalan p8 切块从已验证的 52/15 变为 48/19，旧响应引用因此错位；调回后两个完整样本均复核通过。增加聚焦回归，包括 p322 分支、漏印刷着法、独立编号着法误判标题、正文提及误判和模型父事件前向引用。
+
+**最新根因与限制：** 最近一次 p323 响应并未漏掉长变化，而是把 `13.Ng5 Qg6 14.Qc4` 父事件置于依赖它们的第 14 回合事件之后；单遍编译曾把后续 19 招和文字降为待审。`chunks.py` 现于同块内按父/锚点依赖重排，保存的第六块请求与当前请求完全相同，原响应无需 ID 修补即恢复整行。此前较早的 p323 响应仍有独立的 ID 映射候选，但不再是最佳结果。局部 oracle 通过和合法率不等于全部原文无疑点；五处原文仍待审。P6 不验收，旧管线仍为默认。下一步对其余九个开发窗和六个 holdout 做有预算的原页核对，观察是否出现新的失败类型，再决定默认切换。
+
+本轮模型用量：新 22 个有响应请求，125,421 输入、78,799 输出 tokens；P6 已保存成功调用累计 39 次、180,201 输入、117,122 输出 tokens。所有新调用只涉及已授权选定英文页；一例早期传输失败是否计费未知。最终以编辑后的代码状态复核：170 项聚焦后端测试通过，12 个相关 Python 文件 Ruff 格式与 lint 通过，8 个后端模块 MyPy 通过，`git diff --check` 通过。
+
+## 2026-09-25 网站最新失败诊断：实际为旧 v4，补全 provider 选择有误
+
+用户报告 `Missing CCEF variations ... 8192 reasoning tokens`，要求判断架构还是提高预算。只读 SQL 确认最新 Catalan p6–9 run `585796cd-a225-5bbb-ac66-7e66bab5faf6` 为 **v4**，不是 v6；05:20:42 UTC 创建，05:26:32 UTC 失败，错误 `ccef_coverage_repair_failed`。实际 provider 响应为输入 17,025、输出/推理均 8,192 tokens，content 空、finish_reason=length。全局上限当前已是 128000，但 `coverage.py` 的内部请求上限固定 8192。
+
+发现确定的功能 bug，**本次仅分析、尚未修复**：`process_pdf_extraction_job` 预建开启 thinking 的主 provider 后传给 `_process_ccef_candidate`；后者仅在 `provider is None` 时建立 recovery provider，导致配置 `ccef_recovery_reasoning_effort=none` 在真实 v4 路径被绕过。离线 fake-provider 调用链探针复现 coverage 与主 provider 同一实例、thinking=True、effort=high。提高全局额度不解决硬上限，单增补全额度也不解决旧链局部失败阻断整任务。
+
+UI 默认 legacy，且“重新提取同一页段”沿用原任务版本，不读取新任务表单选择器；具体点击来源无法由数据库确定。建议下一步先明确网站任务使用方式；新流程必须从新任务表单选择 source_first/v6。若仍维护旧链，修复主生成/恢复 provider 的混用，增加一个实际入口的聚焦回归即可。本次没有修改功能代码、配置或数据库，没有新付费模型调用；生产库当前迁移已到 0016。详细证据：[最新失败诊断](pdf-extraction-latest-failure-2026-09-25.md)。
+
+
+## 2026-09-25 v6 接线验证完成；两次网页实跑诊断与下一轮讨论（最新）
+
+用户本轮只要求先验证接线／额度，再依据两次网页结果讨论方案。**接线与额度已验证；没有实施
+下一轮结构改造。** 网站新建默认 source_first，重新提取使用当前选择，API 默认映射 v6；
+显式 legacy 仍可用。旧 coverage 补全不再截到 8192，当前配置 128000；v4 正确单独创建
+recovery provider（none/关闭 thinking），不再误用主 provider（high）。补齐前次中断遗留的
+pytest 导入并格式化，修正 source-read 测试 cast 与审核页可选 items 访问两个类型问题，重新生成契约。
+
+生产库只读确认最新 run：Catalan `3ca28e55-c8ec-5548-84df-48a9d0c63514` p6–9，141 棋步／27 非法／
+12 unresolved；Magnus Wins With White `be46d17a-7287-5e17-a682-1eedbfca4259` p137–149，196／110／74。
+两者都是 v6/succeeded。20 个保存响应全部 stop；离线重放复现同样数量。P6 仍不通过，合法率不能
+当正确率。Magnus 是额外开发样本，不属于原六本／18 窗口；未动其他九个开发窗或六个 holdout。
+
+关键新证据：Catalan p6 同行黑主谱／蓝变例的字符颜色真实存在，但 renderer 压成整行单色；
+Magnus 的粗体主谱字体真实可读但未存。模型混淆主线及示例；编译器一轮多次 relink、最后才 normalize，
+在修正父节点后仍按旧 invalid/FEN 改子节点，已确定重放 Catalan p7 cxd5 从 b6 被误移到 c6、
+Magnus p139 Qxc4 从 dxc4 被误移到 cxd5。最近同色合法位置不是来源正确的证明。跨块只保留最近16个
+合法节点且从错误 sibling_order 推导主线，Magnus p141 起提示无主线，p145 后持续发送旧分支。
+还有计划（Nb1-c3、缺应招的威胁）误当连续棋谱、连写 SAN 漏失、图示字形进入正文。
+
+完整证据、文件边界及 R1–R5 讨论方案：
+[最新诊断与方案](pdf-v6-latest-runs-and-next-design-2026-09-25.md)。下一步等待讨论，不自动执行该方案。
+建议先修 harmful relink，再做 token 样式／网站书籍格式配置／主线预览、整段分支作用域装配，
+之后可视化改挂与撤销／恢复（现接口只支持同 sequence，误拆例局需跨序列处理），最后新实跑验收。
+保留 v6 存档与人工批准，避免追加通用修复框架。诊断脚本与结果在 ignored
+`data/debug/pdf-latest-audit-20260925/`，没有修改生产库／原工件或新调用 DeepSeek。
+
+验证：相关后端 70 passed；前端两个新建／重提交互测试 passed；相关 Python 7 文件 Ruff/MyPy、
+前端 tsc、3 文件 ESLint/Prettier、生成契约一致性均通过。未跑全局／覆盖率门禁。本机 API 8000
+在复核时未运行，未声称另做现场浏览器验收；使用真实持久化结果及隔离 HTTP/前端测试。
+Node 当前为24而项目要求22，工具给出 engine 提示但上述检查通过；Ant Design Drawer width 弃用提示
+也不是测试失败。没有提交、reset、rebase 或删除；保留大量先前 P0–P6 未提交改动。
+
+
+## 2026-09-25 — R1–R5 开发验收计划交接（文档完成，功能待做）
+
+用户要求将讨论后的开发顺序与逐步验收落到文档，随后切换 Sol 开发。本轮使用 project-handoff
+技能整理，未修改功能代码、调用模型、运行应用测试或更改生产库。未提交。
+
+新增 `docs/agent/pdf-extraction-r1-r5-plan-2026-09-25.md`，明确五步的可见产物、文件职责、
+真实来源通过条件、最小检查、R5 新实跑与 P6 边界。同步修改 `PLANS.md`、本 HANDOFF、
+`docs/development-plan.md`、ADR 0022 及原网页实跑设计稿。开发尺度保持个人网站：
+每个真实 bug 的少量关键回归、局部/切片/收尾三级验证，不逐小块跑全局验收。
+
+关键方案变更：取消手动书籍格式配置，改为自动保存样式并观察代表页，形成可修正的阅读提示；
+结合来源语义和棋规建立主线及完整变例。用户修正具体段落，不填写模板，不静默批量改写全书。
+R1–R5 全部仍未完成。下一轮无需继续等待本轮方案讨论，直接从 R1 两处已定位的错误关系开始，
+相关标准通过后推进后续步骤，不逐函数请求批准。
+
+验收注意：R1 只验明确改挂 bug，不要求此时两本全部通过；R2 交付来源角色／顺序预览，
+完整拓扑属于 R3；R4 验证无 ID 的改挂、跨序列转移及撤销／恢复；R5 需要新的完整网站结果，
+不能使用人工挑选的保存响应组合代替。完整主线、明确变例根、漏失、局部疑点和用户操作数
+分别报告，不能把大量 unresolved 或合法节点数当作正确性。扩大到原九个开发窗和六个 holdout
+仅在收尾，Magnus 不占用原18窗名额，中文仍排除。
+
+本轮验证仅为文档一致性、链接存在性和 git diff 空白检查；功能测试未运行（没有功能改动）。
+最新代码验证结果仍是上一条记录的70后端／2前端及相关静态与契约检查，不算本轮重新验证。
+现有 API 调试授权按原范围沿用，超出选定页范围时才确认缺口；正常回归不调用真实模型。
+
+
+## 2026-09-26 — 父子关系协议架构细化（未实现）
+
+用户要求形式化说明模型输出与程序职责，并强调本轮是架构设计。上一轮写协议文档的请求因自动审批
+服务额度失败而未执行；本轮成功写入 `docs/agent/pdf-extraction-relation-protocol-2026-09-26.md`，
+同步 R1–R5 计划、PLANS、ADR 0022 和本 HANDOFF；没有改功能代码或调用 DeepSeek。
+
+核心澄清：例局／线路归属、替代哪次来源着法、何处恢复仍是模型的语义选择；程序负责把模型给出的
+root/continue/alternative_to/branch_after 入口转换为确定父节点，再顺序连接一个连续片段。
+模型不逐步写全局 parent，不生成权威 FEN/UCI；程序不使用“最近同色合法位置”覆写关系。
+图示起局引用已知 seed；同 SAN 的不同来源出现有不同 ID；首次主线也需模型识别，不假设先有正确树。
+完整 JSON 示例和入口公式在草案中，示例仅为结构演示，不是已通过棋规的真实 fixture。
+
+必须承认：所选错误线路有时全段合法，程序约束无法证明模型语义正确；来源父关系是最终评估依据。
+拟议协议独立于当前 events 格式，需在 R2/R3 改造解码、跨块目录与装配接缝；不能只转换成旧 events
+又走原有自由 relink。R1–R5 均未实施，架构讨论没有改变既有接线通过、内容质量未验收的状态。
+
+本轮验证只检查 Markdown 本地链接、JSON 示例语法／入口公式及 diff 空白，没有运行应用测试。
+未提交、未改生产数据，保留当前全部既有未提交改动。
+
+
+## 2026-09-26 — 模型输入内容与格式细化（未实现）
+
+用户继续架构讨论，要求说明模型输入。扩展关系协议草案第3节，写明 system 任务指令 + user
+JSON 文本 + 输出 schema 的调用形式，以及来源原文/字符样式、词法 token、既有线路目录、
+图示 seeds、自动阅读提示和 owned/只读上下文。补齐与既有12...Rc8输出完全对应的输入示例。
+示例是合成协议说明，不是两本真实棋书摘录或已验证棋谱，未调用外部 API。
+
+输入不能提前替模型解决本窗父关系：原文样式是证据，prior_structure 是先前解释草稿；
+初始目录可为空。跨页携带相关主线、活动分支和返回锚点，不能只截最后16个合法节点。
+图示 seed 来自本地识别/确认；当前 provider 消息为文本，此设计不声称模型直接读取PDF截图。
+
+只修改协议文档、PLANS、本 HANDOFF 和 ADR 0022 的相应说明；R1–R5 仍未实施，下一实施任务
+仍为R1。文档检查验证 JSON 语法、示例引用/字符区间与输入输出对应，以及本地链接和空白；
+没有功能改动，不运行应用测试或全局门禁。保留全部既有未提交代码和生产数据，未提交。
+
+
+## 2026-09-26 — 连续正文阅读范围修订（设计，未实现）
+
+用户质疑模型是否需要更多连续正文。本轮读取两次原run的semantic_manifest（SQLite只读），
+确认Catalan p6–9拆成5次、每次690–3087原文字符；Magnus p137–149拆成15次、每次17–1891字符。
+分别总计7278/20339原文字符；此统计不含提示/元数据，也不是API token计费。每次只读当前单页块，
+无前页连续原文或后文；请求只有system/user两条消息。跨块主要传最多16个合法棋步提示。
+Magnus p141开始没有mainline=true，p145–149的提示来源冻结在p143–144。20次全部finish=stop。
+
+据此细化协议第3.4/3.5、R3验收、ADR0022、PLANS及本HANDOFF：优先读预算内完整本局/本节连续
+原文，含前后文；仅输出有界owned范围。长范围才分重叠窗口，目录/阅读提示不能代替原文。
+不用已出错的树先筛掉来源，不新增全文摘要/多agent框架。对照评估需固定样式、输出协议和编译器，
+先用已知几个分支点确认扩大阅读范围的作用；尚未实跑验证，不能宣称解决全部失败。
+
+本轮仅文档改动、只读证据统计和文档检查；没有功能代码/数据修改、外部API调用或应用测试。
+默认沙箱仍报mountinfo错误，已使用获批的隔离外执行读取/更新工作区文档。未提交；R1–R5仍未实施。
+
+
+## 2026-09-26 — DeepSeek缓存与调用成本设计核对（未实现）
+
+用户担心宽阅读范围逐页调用重复开销。本轮查询DeepSeek官方缓存、当前定价和Chat Completions
+usage文档，未调用付费推理API。确认自动缓存匹配已持久化前缀且best-effort，不能承诺第二次全部
+命中；缓存复用输入计算，新输出/推理仍产生费用。当前官方Flash美元百万token价格为非高峰
+hit0.003/miss0.15/output0.60，高峰0.006/0.30/1.20；仅作为查询日例子，不能固化成运行时费率。
+
+协议第3.6记录官方链接、边界与方案：按完整解释段尽量合并输出，逐页仅是读/写范围示例；
+固定schema及来源原文/token前置，变化的prior_structure/window后置。同步调整输入示例字段顺序
+（所有值不变）、R3验收、ADR0022、PLANS与本HANDOFF。滑窗重叠不等于相同前缀；不额外付费预热。
+缺缓存时仍以合并调用、合理连续窗口、本地保存响应重放降低成本，不能删掉必要原文。
+
+代码核对：DeepSeek adapter前置固定schema system消息；之前所谓“两条消息”指内部保存的request，
+实际发送另有该system，未包含此前全文的结论不变。成功响应目前只保留input/output/total，丢弃
+cache hit/miss和reasoning明细，不能由旧semantic_manifest确认实际命中率；后续复用现有工件记录。
+
+本轮仅设计文档修改与文档检查；无功能/生产数据修改、付费调用或应用测试，未提交。
+R1–R5均仍待实施；缓存价格和命中效果不是样本质量通过的证据。
+
+
+## 2026-09-26 — 最新开发计划与验收同步核对（文档完成，功能未动）
+
+用户确认文档是否已更新。本轮核对PLANS、R1–R5计划、关系协议、ADR0022、开发总计划及交接入口。
+主要设计已在前轮同步；本轮将上轮示例明确落为条件策略表（整段优先/必要分批/疑点补问/本地重放），
+补入R3的调用轨迹与关系协议验收、R5的总调用/耗时/实际用量报告，并在开发总计划增加最新协议入口。
+计划首页注明最后同步日期；四条调用策略没有变成四轮强制调用或新增开发阶段。
+
+文档检查仅核对本地链接、JSON示例、要求归属及diff空白；没有应用测试、功能改动、付费API调用
+或生产数据操作。R1–R5全部仍未实施，P6未验收，下一实施起点仍为R1；未提交。
+
+## 2026-09-27 — R1–R5 v8 恢复现场、实跑与 P6 续验（进行中）
+
+
+本节为蓝屏后继续执行的即时状态；较早章节的“R1–R5 未实现”和 P6 旧默认状态是历史记录。用户已授权 Magnus 相关内容及 P6 manifest 中全部其余英文选定页发送到 DeepSeek，仅发对应测试页，不发整本 PDF。中文残局书排除。
+
+R1–R4 实现及浏览器拖动／保存／撤销／恢复证据见 `pdf-extraction-r1-r5-implementation-2026-09-27.md`。Catalan p6–9 两次新 v8 结果 `96e60d11-...`、`eacc243e-...` 都 148/148 合法、0 待审，局部来源核点通过。Scandinavian dev1 `28284adc-...` 118/118、0 待审，S1–S9 全过。Endgame dev1 复跑 `cf2aa219-...` 102/102、0 待审、4 图，E1–E8 全过。Magnus 上次 `867aecfa-...` 217/217 合法，p145 漏支 `28.Bxg5? Rg6` 已提取；10 条重复标为注释与空候选疑点经本地去重重放为 0 待审，最新网页复跑排队。
+
+Makogonov dev1 初跑 `736f2e8d-...` 194/194 合法、0 待审，但来源 M1/M2 **失败**：p6 另一走法次序被共享 token 前缀遮掉，p7 `6...c5` 长变化只在正文中。M3–M8 来源核点通过。新增通用检查：共享 token 前缀后仍有独有棋步时保留局部待审并发 `uncompiled_segment` 补问；具有至少四个明确编号的正文长谱行可发 `embedded_score_note`，计划/短提及不触发。补问替换允许只去掉已在别处使用的共享前缀。保存响应重放现在 194/194、1 局部待审，并准确发出 p6/p7 两个来源问题；Catalan、Scandinavian、Endgame、Magnus 已通过响应没有新增问题。相关 pytest 29 passed，Ruff/MyPy 通过；未跑全局覆盖率门禁。
+
+最新网站任务顺序队列：Makogonov `214024ad-99cf-590e-9d3e-5d013d1aa1a9`、Magnus `45143426-3da6-5526-9095-11f5e383ba01`、Chess Bible dev1 `496c3f61-edaa-5bb3-842a-edea1d5e5419`、Attacking dev1 `afd01cc8-58d6-5a08-b820-33e0407dc9fb`。首次 Mak 在新阈值调整前的已启动 backend 进程上执行；其余排队任务也是同一进程，完成后应以保存响应和当前代码重放，必要时重启后再做正式新跑。前端 `127.0.0.1:5173`，后端 `127.0.0.1:8000`。这些任务尚未完成时不得声称 P6 通过。
+
+进展补充：Makogonov 上述新 run 已完成但**未通过**（151 节点、0 非法、22 待审）；模型把多个第 10／13 步的引用谱误建为独立 `start` 棋局。补问给出三条关系修正但整体未被采纳，其中 p6 修正的目标 token 指向前一黑步，却标成 `alternative_to`。从此提炼出的通用修正：主提示仅允许有独立从第 1 步印刷谱或确认图示的例局起新 game；共享开局来源 token 不能二次领取；模型明确引用前一回合而入口类型矛盾时，由印刷回合规范化为 `branch_after`。补问采纳路径可独立尝试单条有效修正，并裁去已经由别的线拥有的共享开局前缀。保存响应只应用 p6 有效修正后为 158/158 合法、21 待审，尚非通过。`embedded_score_note` 检测已从固定“四个编号”阈值改为相邻回合连续谱链与已表示重复链比较；此处遵循用户“不按个别样本特判”的最新要求。31 条相关测试通过，Ruff/MyPy 通过。以上代码变动在该 run 启动后发生，仍需重启后新跑。
+
+Magnus 第四次网站 run `45143426-3da6-5526-9095-11f5e383ba01` 亦未通过（网站 212 节点、12 非法、1 待审）；保存响应按当前代码重放为 202/212 合法、1 待审，p143 `19...Rad8` 又被模型挂回错误主线，p145 `28.Bxg5? Rg6` 再次漏提。模型四个主解释响应均 finish=stop；未保存成功的补问响应，具体是否传输失败需继续核实。Chess Bible 和 Attacking 首窗仍在网站 Job 队列。已在运行前另建六个 dev2 原页核点文档 `pdf-extraction-p6-dev2-oracle-2026-09-27.md`；Catalan/Endgame/Chess Bible dev2 有前页棋局语境缺口，不能未经补足读窗就算有效 P6 质量结果。
+
+
+## 2026-09-27 04:20 CST — R5/P6 费用受限续验（进行中）
+
+本节覆盖上方较旧队列状态。v8 `source_first` 仍为网站默认；R1–R4 和真实 Chromium 审核拖动/保存/撤销/恢复已验证。六个原 dev1 窗口及三个自包含 dev2 窗口有网站新结果：Catalan 148/148、Scandinavian 118/118、Endgame 102/102、Chess Bible 45/45、Makogonov 202/202、Attacking 49/49；后三个 dev2 分别 Scandinavian 219/219、Makogonov 143/143、Attacking 90/90。局部来源核点除少量漏支/漏尾外符合预定义标准；Attacking dev1 两个 p19 矛盾内层关系已作为可审问题局部隔离，另有 p18 前局缺起点和一图待确认，详见实施记录。Magnus 额外样本最新 213/213、0 待审，仍有一条两招备选留正文。没有按书名、页码或 SAN 特判。
+
+用户接受每任务约 1–3 处可审核的局部分支／注释挂载失误，并要求控制 DeepSeek 约 ¥20 的余额；用户允许再做至多十个单窗口任务。只读官方余额查询显示 ¥22.42（查询时点），不含后续进行中的扣款。用户另授权 Catalan p13 和 Chess Bible p17 外发；之前英文 P6 列出的 owned 页及 Endgame p22 已获授权。现已用五个任务名额：Bible p17–21 初跑 `0e147384-...`、Endgame p22–27 `86275b3a-...`、Catalan p13–17 初跑 `039ee083-...`，以及 Bible 复跑 `1f744503-...`、Catalan 复跑 `543ec83c-...`。后两项目前依次运行／排队，不要重复提交。
+
+Endgame 扩展任务 212/212 合法、0 unresolved、7 图，p23 起自 p22 图示 FEN，E2-1/E2-2 通过，E2-3 的 p26 `54...Ra3+` 留正文，p25 一图需人工确认。Bible/Catalan 扩展初跑分别在 130／137+ 个同组关系候选处耗尽 48k 输出额度，网站结果 0 招、65／114 待审；Bible 保存响应的 games/segments 已完整，仅 notes 截断，离线可保留 65/65 合法关系、9 待审；Catalan 在 segments 中途截断不能安全恢复。通用生成组阈值从 160 降为 100 来源 move tokens；完整 games/segments 但尾部 notes 截断时保留已完整关系，正文仍本地复制；没有扩大预算或增加每窗默认轮次。关系/分块所属 41 tests 通过，局部 Ruff/format 与两个生产模块 Mypy 通过。全仓 `make backend-typecheck` 仍有当前工作树其它 8 文件的 62 个错误，未因本切片修改压制；完整门禁尚未闭合。
+
+P6 三个需前页的开发窗目前用扩大输出页段验证连续上下文：owned 仍分别是 Catalan p14–17、Endgame p23–27、Bible p18–21，不能把扩展任务冒充严格只读 context 的 manifest 运行。`docs/pdf-extraction-evaluation-set-v1.json` 已明列三页 context 需求。六个 holdout 尚未向模型提交，独立源页核点已在 `pdf-extraction-p6-holdout-oracle-2026-09-27.md` 冻结；有些窗口页首从前局中途起，合理缺起点待审不得当作正确抽取。下一步：等 Bible/Catalan 两个缩组网站复跑结果，核对原页与实际 usage；最多再启动五个 holdout 首次提取，在用户十次限额内保留一个未跑窗口；更新 P6 报告和交接，不能宣称全 18 窗口通过。前端 `127.0.0.1:5173`，后端 `127.0.0.1:8000`，当前 backend session 75834。未提交、未删除、未重置。
+
+
+## 2026-09-27 05:10 CST — 十次受限 P6 续验与下一步
+
+覆盖此前 04:20 进行中记录。当前网站默认 v8 `source_first`；前端 `127.0.0.1:5173`、后端 `127.0.0.1:8000`，最新后端 session 51435，服务 200。R1–R4 已实施；R5/P6 **未完成**。操作者授权的十次进一步单窗口提取已全部启动并完成（六个扩展开发试验、四个首次 holdout），本轮不再启动 DeepSeek；只读余额 ¥20.07。详细 run ID、原页核点、用量与错误归类见 `pdf-extraction-r1-r5-implementation-2026-09-27.md` 尾节及 `pdf-extraction-p6-acceptance-2026-09-25.md` 尾节。Bible dev2 最新 93/93 合法、2 待审、一处 `10.f3` 合法错父，已从先前四处主谱错挂恢复；Catalan dev2 12 招，大段缺谱；Endgame dev2 212 招、一处漏支。holdout Bible p300–303 局部核点全过；Endgame p100–103、Attacking p200–203 因前局起点缺失仅部分过；Makogonov p100–103 9 招/8 待审，失败。Scandinavian p180–183、Catalan p80–83 尚未跑；完整逐招/注释 gold 尚缺。Catalan p10–12 逐页外发授权另问未答，不能发送；其它新需前页也未获对应外发授权。
+
+本轮通用代码改动：`chunks.py` 关系组上限 160→100、完成的 games/segments 遇尾部 notes 截断可保留、样式连续性局部核对/待审；`relations.py` 样式来源检查、前缀恢复及来源引用补问；`pdf_source_extraction.py` 与 `pdf_extraction.py` 将**可选关系补问**接到已有非推理恢复 provider。主生成仍读连续来源，不因样式自动重挂父节点。Mak 新 run 的低推理补问实际正常返回（735 输出 token），因缺上游棋局且建议无效未采纳。无书名、页码、特定 SAN 规则。聚焦关系/分块 pytest 42 passed，恢复 provider pytest 1 passed；Ruff 通过，三个改动生产模块 MyPy 通过；此前全仓 typecheck 有 62 个其它当前工作树错误，未宣称全局门禁通过。`git diff --check` 已通过；所有修改仍未提交。
+
+下一步先实现 **可验证的前驱关系/边界 FEN**，然后才把 read-only context pages 与 owned 输出页分离：首轮按完整本局或小节生成并保存关系；后续窗口引用已编译的前文节点，或用确认图示 FEN 起局。只读前页 OCR 本身不会进入 `state.parent`，不能仅加输入框就称已修好。再按冻结的来源核点重测失败开发/holdout；不要提高推理 token 当作修复。必须先获得额外前页外发授权与新的调用预算，才可对 DeepSeek 发新页。完成剩余两 holdout、逐招/注释 gold 和浏览器审核后才能判 R5/P6。保留所有当前未提交代码和生产数据，不 reset/commit/delete。
+
+
+## 2026-09-27 — 审核棋谱与课程棋谱共用父子树排版
+
+本节覆盖上方仍要求先修 Catalan dev2/Makogonov p100–103 的旧后续计划。操作者已接受这两个因跨窗口缺起点而失败的样本，并指定先让其在网站检验**独立提取**，之后再做能够跨任务续局的 v8 增量提取。本轮未启动 DeepSeek 或修改增量后端。
+
+新增 `frontend/src/app/scoreTreeLayout.ts`，从课程 `Occurrence` 和审核 CCEF `MoveNode` 的小型适配输入统一投影主线和变化；课程页仍使用原有交互组件。`reviewMoveLayout.ts` 改为按 `parent_id`/`sibling_order` 在分叉点附近展示变化，原 `reading_flow` 不因排版被写回；注释优先按语义锚点放置，无锚点时跟随原阅读流中的前一棋步。`PdfReviewPage.tsx` 发布拖选改为真实祖先—后代线路，避免视觉顺序变化时按 `sequence.nodes` 数组切入旁支。挂接继续用原来的节点 ID、服务器预览和审核 revision；原有拖动/保存/撤销/恢复页面测试通过。
+
+验收证据：`pnpm exec tsc -b --pretty false`、改动文件的 ESLint 与 Prettier 通过；四个直接相关测试文件 53 passed，包括新加的“第 3 步分支在第 12 步后印出仍显示在第 3 步附近”回归。真实本地 Chromium 打开已存在的 Catalan v8 p6–9 run `eacc243e-261f-56a5-be8a-c8259f71b83c`，审核棋谱显示 148 个 move cell、10 个变化行，截图观察到第 3/4 步附近的变化已靠近分叉点；前后端本地服务均返回 200。`git diff --check` 通过。没有提交或触碰现有未提交后端工作。若数据本身的 `parent_id` 错误，排版不会自动修正关系；操作者需要在网站确认独立提取的语义效果。
+
+
+## 2026-09-27 — 最新用户实测：审核显示修复与 Catalan 根因诊断
+
+本节覆盖此前“等待首次独立提取用户反馈”的状态。用户反馈 Endgame p42–45 可用，但 Catalan
+p10–17 第十步后大面积失败；要求本轮修显示，分析待审转换和提取改造。细节见
+[pdf-review-catalan-diagnosis-2026-09-27.md](pdf-review-catalan-diagnosis-2026-09-27.md)。
+
+本轮修改 `reviewMoveLayout.ts` 和 `PdfReviewPage.tsx` 及对应两个测试文件：变化紧跟其替代着法，
+白方有变化时与黑方拆行，其余无注释/分支插入的同回合黑白着法同行；合法旧节点缺打印元数据时
+使用后端已验证 `fen_before` 的回合/行棋方，仍保留原节点对象与 ID。课程共享投影和审核持久化未改。
+最终两文件 Vitest 35 passed，前端 tsc、修改文件 ESLint/Prettier、git diff --check 通过。
+初次回归发现变化根重复展开（既有非规范合成 fixture）及旧页面测试顺序不符，均已修正后通过。
+
+真实 Chromium 使用 Endgame 保存候选 `2006ac97-43b1-56cd-972e-cff45b15c473`，API 在临时前端
+5174 上拦截为真实工件 + 现有只读 inspection（未启动后端 worker/写入生产）：确认
+`36.Rc1?!`、`36.Kf3 Rd3+ 37.Ke2 Rd7 38.Rc1` 变化、`36...Rxf2` 的 DOM 顺序；
+第 37–41 步黑白同行，第 37 步两格 y 坐标相等且黑格在右，棋步可点击，pageerror 为空。
+截图 `/tmp/chess-review-endgame-fixed.png`，临时脚本/输入均在 `/tmp`，不属于产品接口。
+
+Catalan `96b116f8-ee91-563d-b78c-692ea811f7f9` 是完整起局页段，4 主响应和 1 补问均 stop；
+生产 55 步、70 unresolved、228 prose。明确错误：黑色 `10...Ba6` 被归入蓝色 `10.b3` 支线，
+后续 main continue 与线路 tip 矛盾而批量失败；p13 又有主线/支线混组。样式启发式按频次误选蓝色，
+样式疑点占满 `issues[:4]`，并因“合法且样式问题减少”采纳错误 `7...c6` 重挂。45 个 prose 仅数字/标点。
+只读反事实重放（不应用可选样式补丁）仅拆第十步段：55 步/55 合法/67 problems →
+186 步/141 合法/31 problems，证明级联，也证明仍不够验收。不要把诊断固定 token ID 写进功能。
+
+待讨论实施：明确主线骨架和角色边界、优先补问依赖根因、来源约束评分；合并真实段落/消费记谱编号、
+按入口分组 unresolved 并重放后代；“转为棋步”复用目标点击、继续/替代、SAN/棋盘录入和预览，
+所属棋局/ID/UCI/FEN 自动取得。上述后端/编辑交互本轮只分析，未实现；不得宣称 Catalan 已修好。
+本轮没有 DeepSeek 付费调用、生产数据改动、提交、重置或删除。工作树包含大量此前改动，保留原状。

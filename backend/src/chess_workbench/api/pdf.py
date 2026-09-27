@@ -27,6 +27,7 @@ from chess_workbench.schemas.pdf import (
     PdfExtractionEnvelope,
     PdfExtractionList,
     PdfExtractionRead,
+    PdfSourceEvidenceRead,
 )
 from chess_workbench.schemas.pdf_documents import (
     PdfExtractionDocumentAppendCreate,
@@ -46,6 +47,10 @@ from chess_workbench.schemas.review import (
     PdfReviewDocumentRead,
     PdfReviewPublicationRead,
     PdfReviewPublishRequest,
+    PdfReviewReattachPreviewRead,
+    PdfReviewReattachPreviewRequest,
+    PdfReviewRecoveryPreviewRead,
+    PdfReviewRecoveryPreviewRequest,
     PdfReviewSessionEnvelope,
     PdfReviewSessionRead,
 )
@@ -61,7 +66,9 @@ from chess_workbench.services.pdf_persistence import (
     PDF_ANNOTATED_EXTRACTION_PIPELINE_VERSION,
     PDF_EVIDENCE_PIPELINE_VERSION,
     PDF_EXTRACTION_PIPELINE_VERSION,
+    PDF_RELATION_EXTRACTION_PIPELINE_VERSION,
     PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION,
+    PDF_SOURCE_EXTRACTION_PIPELINE_VERSION,
     PdfAssetView,
     PdfExtractionView,
     PdfPersistenceService,
@@ -69,6 +76,7 @@ from chess_workbench.services.pdf_persistence import (
 from chess_workbench.services.pdf_review import PdfReviewReadService
 from chess_workbench.services.pdf_review_ledger import PdfReviewLedgerService
 from chess_workbench.services.pdf_review_publication import PdfReviewPublicationService
+from chess_workbench.services.pdf_source_read import PdfSourceReadService
 from chess_workbench.store.database import Database
 
 pdf_blueprint = Blueprint("pdf", url_prefix="/api")
@@ -190,7 +198,11 @@ async def create_pdf_extraction(request: Request) -> HTTPResponse:
             last_page=body.last_page,
             idempotency_key=request.headers.get("idempotency-key"),
             profile=body.profile,
-            pipeline_version=PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION,
+            pipeline_version=(
+                PDF_RELATION_EXTRACTION_PIPELINE_VERSION
+                if body.pipeline == "source_first"
+                else PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION
+            ),
         )
         view = await service.get_extraction(outcome.run.id)
         if view is None:
@@ -406,6 +418,48 @@ async def rollback_latest_pdf_extraction_document_append(
     return json(payload.model_dump(mode="json"))
 
 
+@pdf_blueprint.get("/pdf-extractions/<run_id:uuid>/source", name="get_pdf_extraction_source")
+@openapi.operation("getPdfExtractionSource")
+@openapi.summary("Read committed source fragments independently of candidate status")
+@openapi.tag("pdf")
+@openapi.response(200, _media(PdfSourceEvidenceRead), "Committed PDF source evidence")
+@openapi.response(404, ERROR_SCHEMA, "PDF source evidence not found or not ready")
+async def get_pdf_extraction_source(request: Request, run_id: UUID) -> HTTPResponse:
+    database = cast(Database, request.app.ctx.database)
+    document = await PdfSourceReadService(database, request.app.ctx.settings).read_source(run_id)
+    return json(PdfSourceEvidenceRead.model_validate(document).model_dump(mode="json"))
+
+
+@pdf_blueprint.get(
+    "/pdf-extractions/<run_id:uuid>/source/pages/<physical_page:int>",
+    name="get_pdf_extraction_source_page",
+)
+@openapi.operation("getPdfExtractionSourcePage")
+@openapi.summary("Read a rendered PDF page independently of candidate status")
+@openapi.tag("pdf")
+@openapi.response(
+    200, {"image/png": {"type": "string", "format": "binary"}}, "Rendered source page"
+)
+@openapi.response(404, ERROR_SCHEMA, "PDF source page not found or not ready")
+async def get_pdf_extraction_source_page(
+    request: Request, run_id: UUID, physical_page: int
+) -> HTTPResponse:
+    database = cast(Database, request.app.ctx.database)
+    body, digest = await PdfSourceReadService(database, request.app.ctx.settings).read_page(
+        run_id, physical_page
+    )
+    return raw(
+        body,
+        status=200,
+        content_type="image/png",
+        headers={
+            "Content-Length": str(len(body)),
+            "ETag": f'"{digest}"',
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
+
+
 @pdf_blueprint.get("/pdf-extractions/<run_id:uuid>/review", name="get_pdf_extraction_review")
 @openapi.operation("getPdfExtractionReview")
 @openapi.summary("Read one verified PDF extraction review document")
@@ -527,6 +581,50 @@ async def get_pdf_review_session_document(request: Request, session_id: UUID) ->
         payload = await PdfReviewLedgerService(
             session, request.app.ctx.settings
         ).get_session_document(session_id)
+    return json(payload.model_dump(mode="json"))
+
+
+@pdf_blueprint.post(
+    "/pdf-review-sessions/<session_id:uuid>/reattach-preview",
+    name="preview_pdf_review_reattach",
+)
+@openapi.operation("previewPdfReviewReattach")
+@openapi.summary("Preview a branch reattachment against the current review revision")
+@openapi.tag("pdf")
+@openapi.body(_media(PdfReviewReattachPreviewRequest), required=True)
+@openapi.response(200, _media(PdfReviewReattachPreviewRead), "Reattachment preview")
+@openapi.response(404, ERROR_SCHEMA, "PDF review session not found")
+@openapi.response(409, ERROR_SCHEMA, "Review state or expected version conflict")
+@openapi.response(422, ERROR_SCHEMA, "Proposed reattachment is invalid")
+async def preview_pdf_review_reattach(request: Request, session_id: UUID) -> HTTPResponse:
+    body = parse_body(request, PdfReviewReattachPreviewRequest)
+    database = cast(Database, request.app.ctx.database)
+    async with database.session() as session:
+        payload = await PdfReviewLedgerService(session, request.app.ctx.settings).preview_reattach(
+            session_id, body
+        )
+    return json(payload.model_dump(mode="json"))
+
+
+@pdf_blueprint.post(
+    "/pdf-review-sessions/<session_id:uuid>/recovery-preview",
+    name="preview_pdf_review_recovery",
+)
+@openapi.operation("previewPdfReviewRecovery")
+@openapi.summary("Replay saved source relations after human move corrections")
+@openapi.tag("pdf")
+@openapi.body(_media(PdfReviewRecoveryPreviewRequest), required=True)
+@openapi.response(200, _media(PdfReviewRecoveryPreviewRead), "Dependency recovery preview")
+@openapi.response(404, ERROR_SCHEMA, "PDF review session not found")
+@openapi.response(409, ERROR_SCHEMA, "Review state or expected version conflict")
+@openapi.response(422, ERROR_SCHEMA, "No replayable human source correction")
+async def preview_pdf_review_recovery(request: Request, session_id: UUID) -> HTTPResponse:
+    body = parse_body(request, PdfReviewRecoveryPreviewRequest)
+    database = cast(Database, request.app.ctx.database)
+    async with database.session() as session:
+        payload = await PdfReviewLedgerService(session, request.app.ctx.settings).preview_recovery(
+            session_id, body
+        )
     return json(payload.model_dump(mode="json"))
 
 
@@ -834,6 +932,8 @@ def _evidence_result(view: PdfExtractionView) -> dict[str, Any] | None:
             PDF_EXTRACTION_PIPELINE_VERSION,
             PDF_ANNOTATED_EXTRACTION_PIPELINE_VERSION,
             PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION,
+            PDF_SOURCE_EXTRACTION_PIPELINE_VERSION,
+            PDF_RELATION_EXTRACTION_PIPELINE_VERSION,
         }
         or result.get("result_schema") != PDF_EXTRACTION_RESULT_SCHEMA
     ):
@@ -856,6 +956,8 @@ def _candidate_summary(view: PdfExtractionView) -> PdfCandidateSummary | None:
             PDF_EXTRACTION_PIPELINE_VERSION,
             PDF_ANNOTATED_EXTRACTION_PIPELINE_VERSION,
             PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION,
+            PDF_SOURCE_EXTRACTION_PIPELINE_VERSION,
+            PDF_RELATION_EXTRACTION_PIPELINE_VERSION,
         }
         or not isinstance(result, dict)
         or result.get("result_schema") != PDF_EXTRACTION_RESULT_SCHEMA

@@ -4,6 +4,8 @@ import ReactMarkdown from 'react-markdown';
 import rehypeSanitize from 'rehype-sanitize';
 
 import type { ModuleEditor } from '../logic/api/types';
+import { MoveNotation } from './MoveNotation';
+import { formatMoveNotation } from './moveNotation';
 import {
   buildCourseScoreLayout,
   type CourseMoveRow,
@@ -96,7 +98,10 @@ export function CourseScore({
     setMenu({
       x: Math.max(8, Math.min(event.clientX, window.innerWidth - 232)),
       y: Math.max(8, Math.min(event.clientY, window.innerHeight - 280)),
-      title: occurrence.inbound_san ?? occurrence.inbound_uci ?? '棋步',
+      title: formatMoveNotation(
+        occurrence.inbound_san ?? occurrence.inbound_uci ?? '棋步',
+        occurrence.nag === null ? [] : [occurrence.nag],
+      ).move,
       pages,
       occurrence,
     });
@@ -455,10 +460,14 @@ function CourseMove({
 }) {
   const occurrence = move.occurrence;
   const label = occurrence.inbound_san ?? occurrence.inbound_uci ?? '着法';
+  const displayLabel = formatMoveNotation(
+    label,
+    occurrence.nag === null ? [] : [occurrence.nag],
+  ).move;
   return (
     <button
       type="button"
-      aria-label={`${label} ${occurrence.inbound_uci ?? ''}`.trim()}
+      aria-label={`${displayLabel} ${occurrence.inbound_uci ?? ''}`.trim()}
       aria-current={active ? 'step' : undefined}
       title={occurrence.inbound_uci ?? undefined}
       onClick={() => onSelectOccurrence(occurrence.id)}
@@ -467,12 +476,11 @@ function CourseMove({
         active ? 'bg-emerald-800 text-white hover:bg-emerald-800' : ''
       }`}
     >
-      {label}
-      {occurrence.nag !== null ? (
-        <span className="ml-0.5 font-semibold text-amber-700">
-          {nagLabel(occurrence.nag)}
-        </span>
-      ) : null}
+      <MoveNotation
+        san={label}
+        nags={occurrence.nag === null ? [] : [occurrence.nag]}
+        active={active}
+      />
     </button>
   );
 }
@@ -668,18 +676,5 @@ function ScoreControl({
     >
       {symbol}
     </button>
-  );
-}
-
-function nagLabel(nag: number): string {
-  return (
-    {
-      1: '!',
-      2: '?',
-      3: '!!',
-      4: '??',
-      5: '!?',
-      6: '?!',
-    }[nag] ?? `$${nag}`
   );
 }

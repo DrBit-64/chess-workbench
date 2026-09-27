@@ -16,8 +16,6 @@ from typing import Any, get_args
 from uuid import UUID
 
 import pytest
-from pydantic import ValidationError
-
 from chess_workbench.api.contracts import openapi_schema
 from chess_workbench.schemas.jobs import JobRead as JobsJobRead
 from chess_workbench.schemas.jobs import JobStatusValue as JobsJobStatus
@@ -33,6 +31,7 @@ from chess_workbench.schemas.pdf import (
     PdfExtractionList,
     PdfExtractionRead,
 )
+from pydantic import ValidationError
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -202,8 +201,21 @@ def test_extraction_create_exact_fields_and_default_profile() -> None:
         "first_page",
         "last_page",
         "profile",
+        "pipeline",
     }
     assert create.profile == {}
+    assert create.pipeline == "source_first"
+    assert (
+        PdfExtractionCreate.model_validate(
+            {
+                "pdf_asset_id": PDF_ASSET_ID,
+                "first_page": 1,
+                "last_page": 1,
+                "pipeline": "source_first",
+            }
+        ).pipeline
+        == "source_first"
+    )
     assert create.pdf_asset_id == UUID(PDF_ASSET_ID)
 
 

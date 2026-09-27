@@ -1,0 +1,306 @@
+{
+  "description": "Catalan physical p10–17; independent source transcription for the recovery experiment, not a production rule.",
+  "main": {
+    "spans": [
+      "s10_4",
+      "s10_7",
+      "s10_11",
+      "s10_26",
+      "s10_39",
+      "s11_0",
+      "s11_13",
+      "s11_31",
+      "s11_58",
+      "s11_69",
+      "s12_17",
+      "s12_23",
+      "s12_35",
+      "s12_52",
+      "s13_14",
+      "s13_28",
+      "s13_32",
+      "s13_48",
+      "s13_52",
+      "s13_58",
+      "s14_1",
+      "s14_4",
+      "s14_17",
+      "s14_24",
+      "s14_36",
+      "s14_48",
+      "s15_10",
+      "s15_22",
+      "s15_25",
+      "s15_36",
+      "s15_38",
+      "s15_49",
+      "s16_12",
+      "s16_23",
+      "s16_34",
+      "s16_48",
+      "s17_12",
+      "s17_14",
+      "s17_26",
+      "s17_31",
+      "s17_34"
+    ]
+  },
+  "variations": [
+    {
+      "label": "5.Nc3",
+      "spans": [
+        "s10_24"
+      ],
+      "after": "t10_7_30",
+      "skip_prefix": 0
+    },
+    {
+      "label": "5.Nbd2",
+      "spans": [
+        "s10_25"
+      ],
+      "after": "t10_7_30",
+      "skip_prefix": 0
+    },
+    {
+      "label": "5...Bd6",
+      "spans": [
+        "s10_36",
+        "s10_37",
+        "s10_38"
+      ],
+      "after": "t10_11_2",
+      "skip_prefix": 0
+    },
+    {
+      "label": "7...c6",
+      "spans": [
+        "s10_49",
+        "s10_50"
+      ],
+      "after": "t10_39_12",
+      "skip_prefix": 0
+    },
+    {
+      "label": "7...dxc4",
+      "spans": [
+        "s10_51",
+        "s10_52"
+      ],
+      "after": "t10_39_12",
+      "skip_prefix": 0
+    },
+    {
+      "label": "10.b3",
+      "spans": [
+        "s11_68"
+      ],
+      "after": "t11_31_5",
+      "skip_prefix": 0
+    },
+    {
+      "label": "10...a5",
+      "spans": [
+        "s12_9"
+      ],
+      "after": "t11_58_3",
+      "skip_prefix": 0
+    },
+    {
+      "label": "10...Bb7",
+      "spans": [
+        "s12_10",
+        "s12_11",
+        "s12_12",
+        "s12_13",
+        "s12_14",
+        "s12_15",
+        "s12_16"
+      ],
+      "after": "t11_58_3",
+      "skip_prefix": 0
+    },
+    {
+      "label": "12.Nbd2",
+      "spans": [
+        "s12_34"
+      ],
+      "after": "t12_17_6",
+      "skip_prefix": 0
+    },
+    {
+      "label": "12...Nh5",
+      "spans": [
+        "s12_48"
+      ],
+      "after": "t12_23_3",
+      "skip_prefix": 0
+    },
+    {
+      "label": "12...c5",
+      "spans": [
+        "s12_49",
+        "s12_50",
+        "s12_51"
+      ],
+      "after": "t12_23_3",
+      "skip_prefix": 0
+    },
+    {
+      "label": "13...c5",
+      "spans": [
+        "s13_12",
+        "s13_13"
+      ],
+      "after": "t12_52_3",
+      "skip_prefix": 1
+    },
+    {
+      "label": "13...cxb3",
+      "spans": [
+        "s13_25"
+      ],
+      "after": "t12_52_3",
+      "skip_prefix": 0
+    },
+    {
+      "label": "13...Bb4",
+      "spans": [
+        "s13_26"
+      ],
+      "after": "t12_52_3",
+      "skip_prefix": 0
+    },
+    {
+      "label": "13...b5",
+      "spans": [
+        "s13_27"
+      ],
+      "after": "t12_52_3",
+      "skip_prefix": 0
+    },
+    {
+      "label": "17.Qa4",
+      "spans": [
+        "s14_0"
+      ],
+      "after": "t13_52_8",
+      "skip_prefix": 0
+    },
+    {
+      "label": "18...Qc7",
+      "spans": [
+        "s14_16"
+      ],
+      "after": "t14_4_3",
+      "skip_prefix": 0
+    },
+    {
+      "label": "19...Rb8",
+      "spans": [
+        "s14_34",
+        "s14_35"
+      ],
+      "after": "t14_17_3",
+      "skip_prefix": 0
+    },
+    {
+      "label": "20...Nfd7",
+      "spans": [
+        "s14_46",
+        "s14_47"
+      ],
+      "after": "t14_36_3",
+      "skip_prefix": 0
+    },
+    {
+      "label": "21.Nd5",
+      "spans": [
+        "s15_9"
+      ],
+      "after": "t14_36_7",
+      "skip_prefix": 0
+    },
+    {
+      "label": "21...axb6",
+      "spans": [
+        "s15_21"
+      ],
+      "after": "t14_48_3",
+      "skip_prefix": 0
+    },
+    {
+      "label": "22...Qd6",
+      "spans": [
+        "s15_35"
+      ],
+      "after": "t15_22_3",
+      "skip_prefix": 0
+    },
+    {
+      "label": "26.Nc3",
+      "spans": [
+        "s16_10"
+      ],
+      "after": "t15_38_20",
+      "skip_prefix": 0
+    },
+    {
+      "label": "26.Rxa6",
+      "spans": [
+        "s16_11"
+      ],
+      "after": "t15_38_20",
+      "skip_prefix": 0
+    },
+    {
+      "label": "26...Bb7",
+      "spans": [
+        "s16_22"
+      ],
+      "after": "t15_49_3",
+      "skip_prefix": 0
+    },
+    {
+      "label": "27...Rb1",
+      "spans": [
+        "s16_33"
+      ],
+      "after": "t16_23_3",
+      "skip_prefix": 0
+    },
+    {
+      "label": "28.Bxf1",
+      "spans": [
+        "s16_47"
+      ],
+      "after": "t16_23_7",
+      "skip_prefix": 0
+    },
+    {
+      "label": "28...Qe2",
+      "spans": [
+        "s17_10",
+        "s17_11"
+      ],
+      "after": "t16_34_3",
+      "skip_prefix": 0
+    },
+    {
+      "label": "31.Bxf1",
+      "spans": [
+        "s17_25"
+      ],
+      "after": "t17_14_18",
+      "skip_prefix": 0
+    },
+    {
+      "label": "34...g6",
+      "spans": [
+        "s17_45"
+      ],
+      "after": "t17_34_3",
+      "skip_prefix": 1
+    }
+  ]
+}

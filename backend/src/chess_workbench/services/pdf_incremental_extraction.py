@@ -45,6 +45,7 @@ from chess_workbench.services.content import ServiceError
 from chess_workbench.services.pdf_documents import (
     PDF_INCREMENTAL_EXTRACTION_JOB_KIND,
     PDF_INCREMENTAL_EXTRACTION_PIPELINE_VERSION,
+    PDF_SOURCE_INCREMENTAL_EXTRACTION_PIPELINE_VERSION,
     PdfDocumentService,
 )
 from chess_workbench.services.pdf_extraction import (
@@ -201,7 +202,11 @@ async def _load_incremental_input(
     if (
         job.kind != PDF_INCREMENTAL_EXTRACTION_JOB_KIND
         or job.payload != payload
-        or run.pipeline_version != PDF_INCREMENTAL_EXTRACTION_PIPELINE_VERSION
+        or run.pipeline_version
+        not in {
+            PDF_INCREMENTAL_EXTRACTION_PIPELINE_VERSION,
+            PDF_SOURCE_INCREMENTAL_EXTRACTION_PIPELINE_VERSION,
+        }
         or append.document_id != document_id
         or append.predecessor_revision_id != predecessor_id
         or append.expected_version != expected_version
@@ -524,6 +529,14 @@ async def process_pdf_incremental_extraction_job(
         raise EngineError(
             "ccef_invalid_evidence", "Committed PDF evidence is unavailable", retryable=False
         )
+    if inputs.source.pipeline_version == PDF_SOURCE_INCREMENTAL_EXTRACTION_PIPELINE_VERSION:
+        # The document's source language is stable even if an append profile omits it.
+        evidence = _CommittedEvidence(
+            context=evidence.context.model_copy(
+                update={"language": inputs.base_package.source.language}
+            ),
+            result=evidence.result,
+        )
     continuation = build_ccef_continuation_context(
         inputs.base_package,
         base_normalized_ccef_sha256=inputs.base_sha256,
@@ -532,17 +545,49 @@ async def process_pdf_incremental_extraction_job(
             end_page=inputs.source.last_page,
         ),
     )
-    candidate = await _load_normalized_candidate(database, settings, inputs.source)
-    if candidate is None:
-        candidate = await _generate_candidate(
-            database,
-            settings,
-            inputs.source,
-            evidence,
-            continuation,
-            inputs.previous_page_text,
-            provider,
+    if inputs.source.pipeline_version == PDF_SOURCE_INCREMENTAL_EXTRACTION_PIPELINE_VERSION:
+        from chess_workbench.services.pdf_source_extraction import (
+            process_source_candidate,
+            restore_source_candidate,
         )
+
+        restored = await restore_source_candidate(database, settings, inputs.source, evidence)
+        if restored is None:
+            anchors = [
+                {
+                    "event_id": anchor.id,
+                    "fen_after": anchor.position_fen,
+                    "external": "true",
+                    "path": " ".join(move.san for move in anchor.path_tail),
+                }
+                for sequence in continuation.sequences
+                for anchor in sequence.anchors
+            ][-24:]
+            active_provider = _active_provider(settings, provider)
+            await process_source_candidate(
+                database,
+                settings,
+                inputs.source,
+                evidence,
+                active_provider,
+                external_anchors=anchors,
+                external_base_sha256=inputs.base_sha256,
+            )
+        candidate = await _load_normalized_candidate(database, settings, inputs.source)
+        if candidate is None:
+            raise RuntimeError("registered source candidate is missing")
+    else:
+        candidate = await _load_normalized_candidate(database, settings, inputs.source)
+        if candidate is None:
+            candidate = await _generate_candidate(
+                database,
+                settings,
+                inputs.source,
+                evidence,
+                continuation,
+                inputs.previous_page_text,
+                provider,
+            )
     incremental, segment_hash = candidate
     aggregate = compose_incremental_ccef(
         inputs.base_package,

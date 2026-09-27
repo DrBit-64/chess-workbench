@@ -9,16 +9,17 @@ from typing import Any, cast
 
 import pypdfium2
 import pytest
+from PIL import Image
+from pydantic import ValidationError
+from pypdf import PdfWriter
+from pypdf.generic import DecodedStreamObject, DictionaryObject, NameObject
+
 from chess_workbench.extraction.evidence import (
     PdfEvidenceError,
     PdfPageRenderer,
     RenderProfile,
 )
 from chess_workbench.extraction.pdfium import PdfiumPageRenderer
-from PIL import Image
-from pydantic import ValidationError
-from pypdf import PdfWriter
-from pypdf.generic import DecodedStreamObject, DictionaryObject, NameObject
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
@@ -120,6 +121,38 @@ def test_coalesces_separate_pdf_text_objects_into_one_logical_line() -> None:
     assert [fragment.text for fragment in page.embedded_fragments] == ["1 e4 d5"]
 
 
+def test_preserves_mixed_color_and_weight_within_one_score_line() -> None:
+    writer = PdfWriter()
+    page = writer.add_blank_page(width=360, height=144)
+    resources = DictionaryObject()
+    fonts = DictionaryObject()
+    for name, base in (("F1", "Helvetica"), ("F2", "Helvetica-Bold")):
+        font = DictionaryObject({
+            NameObject("/Type"): NameObject("/Font"),
+            NameObject("/Subtype"): NameObject("/Type1"),
+            NameObject("/BaseFont"): NameObject("/" + base),
+        })
+        fonts[NameObject("/" + name)] = writer._add_object(font)
+    resources[NameObject("/Font")] = fonts
+    page[NameObject("/Resources")] = resources
+    stream = DecodedStreamObject()
+    stream.set_data(
+        b"0 0 0 rg BT /F2 12 Tf 10 100 Td (5 Bg2 O-O 6 O-O) Tj ET\n"
+        b"0 0 0.5 rg BT /F1 12 Tf 170 100 Td (6 Nbd2) Tj ET\n"
+    )
+    page[NameObject("/Contents")] = writer._add_object(stream)
+    output = BytesIO()
+    writer.write(output)
+
+    rendered = PdfiumPageRenderer().render_page(output.getvalue(), 1, RenderProfile(dpi=72))
+    fragment = next(item for item in rendered.embedded_fragments if "Nbd2" in item.text)
+    assert "Bg2" in fragment.text
+    black = next(run for run in fragment.style_runs if run.start <= fragment.text.index("Bg2") < run.end)
+    blue = next(run for run in fragment.style_runs if run.start <= fragment.text.index("Nbd2") < run.end)
+    assert (black.color, black.bold) == ("#000000", True)
+    assert (blue.color, blue.bold) == ("#000080", False)
+
+
 def test_blank_page_has_no_embedded_fragments() -> None:
     page = PdfiumPageRenderer().render_page(_pdf(None), 1, RenderProfile(dpi=72))
     assert page.embedded_fragments == []
@@ -213,3 +246,14 @@ def test_module_imports_are_within_the_frozen_boundary() -> None:
                 roots.add(node.module.split(".", 1)[0])
     assert roots <= {"__future__", "hashlib", "io", "math", "typing", "pypdfium2"}
     assert relative_modules == {"evidence"}
+
+
+def test_embedded_text_color_distinguishes_variation_from_mainline() -> None:
+    content = (
+        b"0 0 0.5 rg BT /F1 10 Tf 10 100 Td (Variation) Tj ET\n"
+        b"0 0 0 rg BT /F1 10 Tf 10 80 Td (Mainline) Tj ET\n"
+    )
+    page = PdfiumPageRenderer().render_page(_pdf(content), 1, RenderProfile(dpi=72))
+    colors = {fragment.text: fragment.font_color for fragment in page.embedded_fragments}
+    assert colors["Variation"] == "#000080"
+    assert colors["Mainline"] == "#000000"

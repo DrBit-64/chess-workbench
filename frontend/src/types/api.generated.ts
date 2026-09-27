@@ -849,6 +849,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/pdf-extractions/{run_id}/source": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read committed source fragments independently of candidate status */
+        get: operations["getPdfExtractionSource"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/pdf-extractions/{run_id}/source/pages/{physical_page}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read a rendered PDF page independently of candidate status */
+        get: operations["getPdfExtractionSourcePage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/pdf-extractions/{target_id}/review/session": {
         parameters: {
             query?: never;
@@ -928,6 +962,40 @@ export interface paths {
         put?: never;
         /** Publish selected approved review score fragments into one draft book */
         post: operations["publishPdfReviewSelection"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/pdf-review-sessions/{session_id}/reattach-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Preview a branch reattachment against the current review revision */
+        post: operations["previewPdfReviewReattach"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/pdf-review-sessions/{session_id}/recovery-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Replay saved source relations after human move corrections */
+        post: operations["previewPdfReviewRecovery"];
         delete?: never;
         options?: never;
         head?: never;
@@ -9964,6 +10032,12 @@ export interface operations {
                      * Format: uuid
                      */
                     pdf_asset_id: string;
+                    /**
+                     * Pipeline
+                     * @default source_first
+                     * @enum {string}
+                     */
+                    pipeline?: "legacy" | "source_first";
                     /** Profile */
                     profile?: {
                         [key: string]: unknown;
@@ -12401,6 +12475,172 @@ export interface operations {
             };
         };
     };
+    getPdfExtractionSource: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Committed PDF source evidence */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Error Code */
+                        error_code: string | null;
+                        /**
+                         * Evidence Status
+                         * @enum {string}
+                         */
+                        evidence_status: "ready" | "unavailable";
+                        /** First Page */
+                        first_page: number;
+                        /** Last Page */
+                        last_page: number;
+                        /** Pages */
+                        pages: {
+                            /** Fragments */
+                            fragments: {
+                                /** Bbox */
+                                bbox: {
+                                    [key: string]: number;
+                                };
+                                /** Fragment Sha256 */
+                                fragment_sha256: string;
+                                /** Order */
+                                order: number;
+                                /** Origin */
+                                origin: string;
+                                /** Roles */
+                                roles?: ("mainline" | "variation" | "example" | "plan" | "annotation" | "mention")[];
+                                /** Style Runs */
+                                style_runs?: {
+                                    /**
+                                     * Bold
+                                     * @default null
+                                     */
+                                    bold: boolean | null;
+                                    /**
+                                     * Color
+                                     * @default null
+                                     */
+                                    color: string | null;
+                                    /** End */
+                                    end: number;
+                                    /**
+                                     * Font Family
+                                     * @default null
+                                     */
+                                    font_family: string | null;
+                                    /**
+                                     * Font Size
+                                     * @default null
+                                     */
+                                    font_size: number | null;
+                                    /** Start */
+                                    start: number;
+                                }[];
+                                /** Text */
+                                text: string;
+                            }[];
+                            /** Physical Page */
+                            physical_page: number;
+                        }[];
+                        /** Reading Hints */
+                        reading_hints?: {
+                            /** Source Refs */
+                            source_refs: string[];
+                            /** Text */
+                            text: string;
+                        }[];
+                        /**
+                         * Run Id
+                         * Format: uuid
+                         */
+                        run_id: string;
+                    };
+                };
+            };
+            /** @description PDF source evidence not found or not ready */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    getPdfExtractionSourcePage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                physical_page: number;
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Rendered source page */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/png": string;
+                };
+            };
+            /** @description PDF source page not found or not ready */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
     createPdfReviewSession: {
         parameters: {
             query?: never;
@@ -12961,7 +13201,91 @@ export interface operations {
                              * @enum {string}
                              */
                             kind: "detach_position_anchor";
+                        } | {
+                            /**
+                             * Anchor Node Id
+                             * @default null
+                             */
+                            anchor_node_id?: string | null;
+                            /**
+                             * As Kind
+                             * @enum {string}
+                             */
+                            as_kind: "prose" | "annotation" | "line";
+                            /** Following */
+                            following?: {
+                                /** Item Id */
+                                item_id: string;
+                                /** Moves */
+                                moves: string[];
+                                /** Nags */
+                                nags?: (number | null)[];
+                            }[];
+                            /**
+                             * Initial Fen
+                             * @default null
+                             */
+                            initial_fen?: string | null;
+                            /** Item Id */
+                            item_id: string;
+                            /**
+                             * Kind
+                             * @enum {string}
+                             */
+                            kind: "resolve_unresolved";
+                            /** Moves */
+                            moves?: string[];
+                            /** Nags */
+                            nags?: (number | null)[];
+                            /**
+                             * Sequence Id
+                             * @default null
+                             */
+                            sequence_id?: string | null;
+                            /**
+                             * Text
+                             * @default null
+                             */
+                            text?: string | null;
+                        } | {
+                            /** Fen */
+                            fen: string;
+                            /**
+                             * Kind
+                             * @enum {string}
+                             */
+                            kind: "set_initial_position";
+                            /** Sequence Id */
+                            sequence_id: string;
+                        } | {
+                            /**
+                             * Kind
+                             * @enum {string}
+                             */
+                            kind: "reattach_variation";
+                            /** Node Id */
+                            node_id: string;
+                            /**
+                             * Parent Node Id
+                             * @default null
+                             */
+                            parent_node_id?: string | null;
+                            /** Sequence Id */
+                            sequence_id: string;
+                            /**
+                             * Target Sequence Id
+                             * @default null
+                             */
+                            target_sequence_id?: string | null;
                         };
+                    } | {
+                        /**
+                         * Kind
+                         * @enum {string}
+                         */
+                        kind: "recover_dependencies";
+                        /** Preview Sha256 */
+                        preview_sha256: string;
                     } | {
                         /** Issue Ids */
                         issue_ids: string[];
@@ -12976,6 +13300,18 @@ export interface operations {
                          * @enum {string}
                          */
                         kind: "approve";
+                    } | {
+                        /**
+                         * Kind
+                         * @enum {string}
+                         */
+                        kind: "undo";
+                    } | {
+                        /**
+                         * Kind
+                         * @enum {string}
+                         */
+                        kind: "redo";
                     } | {
                         /**
                          * Kind
@@ -16824,6 +17160,1155 @@ export interface operations {
             };
             /** @description Source storage unavailable */
             503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    previewPdfReviewReattach: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Expected Version */
+                    expected_version: number;
+                    /** PdfReviewReattachVariation */
+                    operation: {
+                        /**
+                         * Kind
+                         * @enum {string}
+                         */
+                        kind: "reattach_variation";
+                        /** Node Id */
+                        node_id: string;
+                        /**
+                         * Parent Node Id
+                         * @default null
+                         */
+                        parent_node_id?: string | null;
+                        /** Sequence Id */
+                        sequence_id: string;
+                        /**
+                         * Target Sequence Id
+                         * @default null
+                         */
+                        target_sequence_id?: string | null;
+                    };
+                };
+            };
+        };
+        responses: {
+            /** @description Reattachment preview */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Blocking Issue Count */
+                        blocking_issue_count: number;
+                        /** Issue Count */
+                        issue_count: number;
+                    };
+                };
+            };
+            /** @description PDF review session not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description Review state or expected version conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description Proposed reattachment is invalid */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    previewPdfReviewRecovery: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Expected Version */
+                    expected_version: number;
+                };
+            };
+        };
+        responses: {
+            /** @description Dependency recovery preview */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Added Moves */
+                        added_moves: {
+                            /** Move Text */
+                            move_text: string;
+                            /** Node Id */
+                            node_id: string;
+                            /** Page */
+                            page: number;
+                            /** Sequence Id */
+                            sequence_id: string;
+                        }[];
+                        /** ExtractionPackageV1_1 */
+                        candidate: {
+                            /** Diagnostics */
+                            diagnostics?: {
+                                /** Code */
+                                code: string;
+                                /** Evidence */
+                                evidence?: {
+                                    /**
+                                     * Bbox
+                                     * @default null
+                                     */
+                                    bbox: number[] | null;
+                                    /**
+                                     * End Offset
+                                     * @default null
+                                     */
+                                    end_offset: number | null;
+                                    /**
+                                     * Fragment Sha256
+                                     * @default null
+                                     */
+                                    fragment_sha256: string | null;
+                                    /** Page */
+                                    page: number;
+                                    /**
+                                     * Start Offset
+                                     * @default null
+                                     */
+                                    start_offset: number | null;
+                                }[];
+                                /**
+                                 * Item Id
+                                 * @default null
+                                 */
+                                item_id: string | null;
+                                /** Message */
+                                message: string;
+                                /**
+                                 * Node Id
+                                 * @default null
+                                 */
+                                node_id: string | null;
+                                /**
+                                 * Severity
+                                 * @enum {string}
+                                 */
+                                severity: "info" | "warning" | "error";
+                            }[];
+                            /** Extensions */
+                            extensions?: {
+                                [key: string]: unknown;
+                            };
+                            /** Items */
+                            items?: ({
+                                /**
+                                 * Confidence
+                                 * @default null
+                                 */
+                                confidence: number | null;
+                                /** Evidence */
+                                evidence: {
+                                    /**
+                                     * Bbox
+                                     * @default null
+                                     */
+                                    bbox: number[] | null;
+                                    /**
+                                     * End Offset
+                                     * @default null
+                                     */
+                                    end_offset: number | null;
+                                    /**
+                                     * Fragment Sha256
+                                     * @default null
+                                     */
+                                    fragment_sha256: string | null;
+                                    /** Page */
+                                    page: number;
+                                    /**
+                                     * Start Offset
+                                     * @default null
+                                     */
+                                    start_offset: number | null;
+                                }[];
+                                /** Extensions */
+                                extensions?: {
+                                    [key: string]: unknown;
+                                };
+                                /** Id */
+                                id: string;
+                                /**
+                                 * Kind
+                                 * @enum {string}
+                                 */
+                                kind: "heading";
+                                /** Level */
+                                level: number;
+                                /** Text */
+                                text: string;
+                                /** Warnings */
+                                warnings?: {
+                                    /** Code */
+                                    code: string;
+                                    /** Evidence */
+                                    evidence?: {
+                                        /**
+                                         * Bbox
+                                         * @default null
+                                         */
+                                        bbox: number[] | null;
+                                        /**
+                                         * End Offset
+                                         * @default null
+                                         */
+                                        end_offset: number | null;
+                                        /**
+                                         * Fragment Sha256
+                                         * @default null
+                                         */
+                                        fragment_sha256: string | null;
+                                        /** Page */
+                                        page: number;
+                                        /**
+                                         * Start Offset
+                                         * @default null
+                                         */
+                                        start_offset: number | null;
+                                    }[];
+                                    /** Message */
+                                    message: string;
+                                }[];
+                            } | {
+                                /**
+                                 * Anchor
+                                 * @default null
+                                 */
+                                anchor: ({
+                                    /**
+                                     * Kind
+                                     * @enum {string}
+                                     */
+                                    kind: "move_node";
+                                    /** Node Id */
+                                    node_id: string;
+                                    /** Sequence Id */
+                                    sequence_id: string;
+                                } | {
+                                    /** Fen */
+                                    fen: string;
+                                    /**
+                                     * Kind
+                                     * @enum {string}
+                                     */
+                                    kind: "position";
+                                }) | null;
+                                /**
+                                 * Confidence
+                                 * @default null
+                                 */
+                                confidence: number | null;
+                                /** Evidence */
+                                evidence: {
+                                    /**
+                                     * Bbox
+                                     * @default null
+                                     */
+                                    bbox: number[] | null;
+                                    /**
+                                     * End Offset
+                                     * @default null
+                                     */
+                                    end_offset: number | null;
+                                    /**
+                                     * Fragment Sha256
+                                     * @default null
+                                     */
+                                    fragment_sha256: string | null;
+                                    /** Page */
+                                    page: number;
+                                    /**
+                                     * Start Offset
+                                     * @default null
+                                     */
+                                    start_offset: number | null;
+                                }[];
+                                /** Extensions */
+                                extensions?: {
+                                    [key: string]: unknown;
+                                };
+                                /** Id */
+                                id: string;
+                                /**
+                                 * Kind
+                                 * @enum {string}
+                                 */
+                                kind: "prose";
+                                /** Text */
+                                text: string;
+                                /**
+                                 * Text Format
+                                 * @default plain
+                                 * @enum {string}
+                                 */
+                                text_format: "plain" | "markdown";
+                                /** Warnings */
+                                warnings?: {
+                                    /** Code */
+                                    code: string;
+                                    /** Evidence */
+                                    evidence?: {
+                                        /**
+                                         * Bbox
+                                         * @default null
+                                         */
+                                        bbox: number[] | null;
+                                        /**
+                                         * End Offset
+                                         * @default null
+                                         */
+                                        end_offset: number | null;
+                                        /**
+                                         * Fragment Sha256
+                                         * @default null
+                                         */
+                                        fragment_sha256: string | null;
+                                        /** Page */
+                                        page: number;
+                                        /**
+                                         * Start Offset
+                                         * @default null
+                                         */
+                                        start_offset: number | null;
+                                    }[];
+                                    /** Message */
+                                    message: string;
+                                }[];
+                            } | {
+                                /** Annotations */
+                                annotations?: {
+                                    /**
+                                     * Anchor
+                                     * @default null
+                                     */
+                                    anchor: ({
+                                        /**
+                                         * Kind
+                                         * @enum {string}
+                                         */
+                                        kind: "move_node";
+                                        /** Node Id */
+                                        node_id: string;
+                                        /**
+                                         * Relation
+                                         * @enum {string}
+                                         */
+                                        relation: "before" | "after";
+                                    } | {
+                                        /** Fen */
+                                        fen: string;
+                                        /**
+                                         * Kind
+                                         * @enum {string}
+                                         */
+                                        kind: "position";
+                                    }) | null;
+                                    /**
+                                     * Confidence
+                                     * @default null
+                                     */
+                                    confidence: number | null;
+                                    /** Evidence */
+                                    evidence: {
+                                        /**
+                                         * Bbox
+                                         * @default null
+                                         */
+                                        bbox: number[] | null;
+                                        /**
+                                         * End Offset
+                                         * @default null
+                                         */
+                                        end_offset: number | null;
+                                        /**
+                                         * Fragment Sha256
+                                         * @default null
+                                         */
+                                        fragment_sha256: string | null;
+                                        /** Page */
+                                        page: number;
+                                        /**
+                                         * Start Offset
+                                         * @default null
+                                         */
+                                        start_offset: number | null;
+                                    }[];
+                                    /** Extensions */
+                                    extensions?: {
+                                        [key: string]: unknown;
+                                    };
+                                    /** Id */
+                                    id: string;
+                                    /** Text */
+                                    text: string;
+                                    /**
+                                     * Text Format
+                                     * @default plain
+                                     * @enum {string}
+                                     */
+                                    text_format: "plain" | "markdown";
+                                    /** Warnings */
+                                    warnings?: {
+                                        /** Code */
+                                        code: string;
+                                        /** Evidence */
+                                        evidence?: {
+                                            /**
+                                             * Bbox
+                                             * @default null
+                                             */
+                                            bbox: number[] | null;
+                                            /**
+                                             * End Offset
+                                             * @default null
+                                             */
+                                            end_offset: number | null;
+                                            /**
+                                             * Fragment Sha256
+                                             * @default null
+                                             */
+                                            fragment_sha256: string | null;
+                                            /** Page */
+                                            page: number;
+                                            /**
+                                             * Start Offset
+                                             * @default null
+                                             */
+                                            start_offset: number | null;
+                                        }[];
+                                        /** Message */
+                                        message: string;
+                                    }[];
+                                }[];
+                                /**
+                                 * Confidence
+                                 * @default null
+                                 */
+                                confidence: number | null;
+                                /** Evidence */
+                                evidence: {
+                                    /**
+                                     * Bbox
+                                     * @default null
+                                     */
+                                    bbox: number[] | null;
+                                    /**
+                                     * End Offset
+                                     * @default null
+                                     */
+                                    end_offset: number | null;
+                                    /**
+                                     * Fragment Sha256
+                                     * @default null
+                                     */
+                                    fragment_sha256: string | null;
+                                    /** Page */
+                                    page: number;
+                                    /**
+                                     * Start Offset
+                                     * @default null
+                                     */
+                                    start_offset: number | null;
+                                }[];
+                                /** Extensions */
+                                extensions?: {
+                                    [key: string]: unknown;
+                                };
+                                /** Id */
+                                id: string;
+                                /** Initial Position */
+                                initial_position: {
+                                    /**
+                                     * Kind
+                                     * @enum {string}
+                                     */
+                                    kind: "startpos";
+                                } | {
+                                    /** Fen */
+                                    fen: string;
+                                    /**
+                                     * Kind
+                                     * @enum {string}
+                                     */
+                                    kind: "fen";
+                                };
+                                /**
+                                 * Kind
+                                 * @enum {string}
+                                 */
+                                kind: "move_sequence";
+                                /** Nodes */
+                                nodes: {
+                                    /**
+                                     * Confidence
+                                     * @default null
+                                     */
+                                    confidence: number | null;
+                                    /** Evidence */
+                                    evidence: {
+                                        /**
+                                         * Bbox
+                                         * @default null
+                                         */
+                                        bbox: number[] | null;
+                                        /**
+                                         * End Offset
+                                         * @default null
+                                         */
+                                        end_offset: number | null;
+                                        /**
+                                         * Fragment Sha256
+                                         * @default null
+                                         */
+                                        fragment_sha256: string | null;
+                                        /** Page */
+                                        page: number;
+                                        /**
+                                         * Start Offset
+                                         * @default null
+                                         */
+                                        start_offset: number | null;
+                                    }[];
+                                    /** Extensions */
+                                    extensions?: {
+                                        [key: string]: unknown;
+                                    };
+                                    /**
+                                     * Fen After
+                                     * @default null
+                                     */
+                                    fen_after: string | null;
+                                    /**
+                                     * Fen Before
+                                     * @default null
+                                     */
+                                    fen_before: string | null;
+                                    /** Id */
+                                    id: string;
+                                    /**
+                                     * Move Number
+                                     * @default null
+                                     */
+                                    move_number: number | null;
+                                    /** Move Text */
+                                    move_text: string;
+                                    /** Nags */
+                                    nags?: number[];
+                                    /**
+                                     * Parent Id
+                                     * @default null
+                                     */
+                                    parent_id: string | null;
+                                    /**
+                                     * San Candidate
+                                     * @default null
+                                     */
+                                    san_candidate: string | null;
+                                    /** Sibling Order */
+                                    sibling_order: number;
+                                    /**
+                                     * Side To Move
+                                     * @default null
+                                     * @enum {string|null}
+                                     */
+                                    side_to_move: "w" | "b" | null;
+                                    /**
+                                     * Uci Candidate
+                                     * @default null
+                                     */
+                                    uci_candidate: string | null;
+                                    /**
+                                     * Validation Status
+                                     * @default unvalidated
+                                     * @enum {string}
+                                     */
+                                    validation_status: "unvalidated" | "valid" | "invalid" | "ambiguous";
+                                    /** Warnings */
+                                    warnings?: {
+                                        /** Code */
+                                        code: string;
+                                        /** Evidence */
+                                        evidence?: {
+                                            /**
+                                             * Bbox
+                                             * @default null
+                                             */
+                                            bbox: number[] | null;
+                                            /**
+                                             * End Offset
+                                             * @default null
+                                             */
+                                            end_offset: number | null;
+                                            /**
+                                             * Fragment Sha256
+                                             * @default null
+                                             */
+                                            fragment_sha256: string | null;
+                                            /** Page */
+                                            page: number;
+                                            /**
+                                             * Start Offset
+                                             * @default null
+                                             */
+                                            start_offset: number | null;
+                                        }[];
+                                        /** Message */
+                                        message: string;
+                                    }[];
+                                }[];
+                                /** Reading Flow */
+                                reading_flow: ({
+                                    /**
+                                     * Kind
+                                     * @enum {string}
+                                     */
+                                    kind: "move";
+                                    /** Node Id */
+                                    node_id: string;
+                                } | {
+                                    /** Annotation Id */
+                                    annotation_id: string;
+                                    /**
+                                     * Kind
+                                     * @enum {string}
+                                     */
+                                    kind: "annotation";
+                                })[];
+                                /**
+                                 * Title
+                                 * @default null
+                                 */
+                                title: string | null;
+                                /** Warnings */
+                                warnings?: {
+                                    /** Code */
+                                    code: string;
+                                    /** Evidence */
+                                    evidence?: {
+                                        /**
+                                         * Bbox
+                                         * @default null
+                                         */
+                                        bbox: number[] | null;
+                                        /**
+                                         * End Offset
+                                         * @default null
+                                         */
+                                        end_offset: number | null;
+                                        /**
+                                         * Fragment Sha256
+                                         * @default null
+                                         */
+                                        fragment_sha256: string | null;
+                                        /** Page */
+                                        page: number;
+                                        /**
+                                         * Start Offset
+                                         * @default null
+                                         */
+                                        start_offset: number | null;
+                                    }[];
+                                    /** Message */
+                                    message: string;
+                                }[];
+                            } | {
+                                /**
+                                 * Alt Text
+                                 * @default null
+                                 */
+                                alt_text: string | null;
+                                /**
+                                 * Caption
+                                 * @default null
+                                 */
+                                caption: string | null;
+                                /**
+                                 * Confidence
+                                 * @default null
+                                 */
+                                confidence: number | null;
+                                /** Evidence */
+                                evidence: {
+                                    /**
+                                     * Bbox
+                                     * @default null
+                                     */
+                                    bbox: number[] | null;
+                                    /**
+                                     * End Offset
+                                     * @default null
+                                     */
+                                    end_offset: number | null;
+                                    /**
+                                     * Fragment Sha256
+                                     * @default null
+                                     */
+                                    fragment_sha256: string | null;
+                                    /** Page */
+                                    page: number;
+                                    /**
+                                     * Start Offset
+                                     * @default null
+                                     */
+                                    start_offset: number | null;
+                                }[];
+                                /** Extensions */
+                                extensions?: {
+                                    [key: string]: unknown;
+                                };
+                                /**
+                                 * Figure Type
+                                 * @enum {string}
+                                 */
+                                figure_type: "chessboard" | "photo" | "illustration" | "other";
+                                /** Id */
+                                id: string;
+                                /**
+                                 * Kind
+                                 * @enum {string}
+                                 */
+                                kind: "figure";
+                                /**
+                                 * Position Fen Candidate
+                                 * @default null
+                                 */
+                                position_fen_candidate: string | null;
+                                /** Warnings */
+                                warnings?: {
+                                    /** Code */
+                                    code: string;
+                                    /** Evidence */
+                                    evidence?: {
+                                        /**
+                                         * Bbox
+                                         * @default null
+                                         */
+                                        bbox: number[] | null;
+                                        /**
+                                         * End Offset
+                                         * @default null
+                                         */
+                                        end_offset: number | null;
+                                        /**
+                                         * Fragment Sha256
+                                         * @default null
+                                         */
+                                        fragment_sha256: string | null;
+                                        /** Page */
+                                        page: number;
+                                        /**
+                                         * Start Offset
+                                         * @default null
+                                         */
+                                        start_offset: number | null;
+                                    }[];
+                                    /** Message */
+                                    message: string;
+                                }[];
+                            } | {
+                                /**
+                                 * Confidence
+                                 * @default null
+                                 */
+                                confidence: number | null;
+                                /**
+                                 * Details
+                                 * @default null
+                                 */
+                                details: string | null;
+                                /** Evidence */
+                                evidence: {
+                                    /**
+                                     * Bbox
+                                     * @default null
+                                     */
+                                    bbox: number[] | null;
+                                    /**
+                                     * End Offset
+                                     * @default null
+                                     */
+                                    end_offset: number | null;
+                                    /**
+                                     * Fragment Sha256
+                                     * @default null
+                                     */
+                                    fragment_sha256: string | null;
+                                    /** Page */
+                                    page: number;
+                                    /**
+                                     * Start Offset
+                                     * @default null
+                                     */
+                                    start_offset: number | null;
+                                }[];
+                                /** Extensions */
+                                extensions?: {
+                                    [key: string]: unknown;
+                                };
+                                /** Id */
+                                id: string;
+                                /**
+                                 * Kind
+                                 * @enum {string}
+                                 */
+                                kind: "unresolved";
+                                /**
+                                 * Raw Text
+                                 * @default null
+                                 */
+                                raw_text: string | null;
+                                /** Reason Code */
+                                reason_code: string;
+                                /**
+                                 * Unresolved Type
+                                 * @enum {string}
+                                 */
+                                unresolved_type: "text" | "figure" | "mixed";
+                                /** Warnings */
+                                warnings?: {
+                                    /** Code */
+                                    code: string;
+                                    /** Evidence */
+                                    evidence?: {
+                                        /**
+                                         * Bbox
+                                         * @default null
+                                         */
+                                        bbox: number[] | null;
+                                        /**
+                                         * End Offset
+                                         * @default null
+                                         */
+                                        end_offset: number | null;
+                                        /**
+                                         * Fragment Sha256
+                                         * @default null
+                                         */
+                                        fragment_sha256: string | null;
+                                        /** Page */
+                                        page: number;
+                                        /**
+                                         * Start Offset
+                                         * @default null
+                                         */
+                                        start_offset: number | null;
+                                    }[];
+                                    /** Message */
+                                    message: string;
+                                }[];
+                            })[];
+                            /**
+                             * Package Id
+                             * Format: uuid
+                             */
+                            package_id: string;
+                            /** Provenance */
+                            provenance: {
+                                /** Adapter Name */
+                                adapter_name: string;
+                                /** Adapter Version */
+                                adapter_version: string;
+                                /**
+                                 * Created At
+                                 * Format: date-time
+                                 */
+                                created_at: string;
+                                /**
+                                 * Model
+                                 * @default null
+                                 */
+                                model: string | null;
+                                /**
+                                 * Provider
+                                 * @default null
+                                 */
+                                provider: string | null;
+                                /**
+                                 * Request Sha256
+                                 * @default null
+                                 */
+                                request_sha256: string | null;
+                                /**
+                                 * Response Sha256
+                                 * @default null
+                                 */
+                                response_sha256: string | null;
+                            };
+                            /**
+                             * Schema Version
+                             * @enum {string}
+                             */
+                            schema_version: "chess-content-extraction/1.1";
+                            /** SourceDescriptor */
+                            source: {
+                                /**
+                                 * Language
+                                 * @default null
+                                 */
+                                language: string | null;
+                                /** Media Type */
+                                media_type: string;
+                                /**
+                                 * PageRange
+                                 * @default null
+                                 */
+                                page_range: {
+                                    /** End Page */
+                                    end_page: number;
+                                    /** Start Page */
+                                    start_page: number;
+                                } | null;
+                                /** Source Ref */
+                                source_ref: string;
+                            };
+                        };
+                        /** Conflicts */
+                        conflicts: string[];
+                        /** Corrected Entries */
+                        corrected_entries: string[];
+                        /** ReviewInspection */
+                        inspection: {
+                            /** Blocking Issue Count */
+                            blocking_issue_count: number;
+                            /**
+                             * Inspection Version
+                             * @default ccef-review-inspection/1.0
+                             * @enum {string}
+                             */
+                            inspection_version: "ccef-review-inspection/1.0";
+                            /** Issue Count */
+                            issue_count: number;
+                            /**
+                             * Issues
+                             * @default []
+                             */
+                            issues: {
+                                /** Blocking */
+                                blocking: boolean;
+                                /** Code */
+                                code: string;
+                                /**
+                                 * Evidence
+                                 * @default []
+                                 */
+                                evidence: {
+                                    /**
+                                     * Bbox
+                                     * @default null
+                                     */
+                                    bbox: number[] | null;
+                                    /**
+                                     * End Offset
+                                     * @default null
+                                     */
+                                    end_offset: number | null;
+                                    /**
+                                     * Fragment Sha256
+                                     * @default null
+                                     */
+                                    fragment_sha256: string | null;
+                                    /** Page */
+                                    page: number;
+                                    /**
+                                     * Start Offset
+                                     * @default null
+                                     */
+                                    start_offset: number | null;
+                                }[];
+                                /** Issue Id */
+                                issue_id: string;
+                                /** Item Id */
+                                item_id: string | null;
+                                /** Message */
+                                message: string;
+                                /** Node Id */
+                                node_id: string | null;
+                                /**
+                                 * Scope
+                                 * @enum {string}
+                                 */
+                                scope: "item" | "node" | "annotation" | "diagnostic";
+                                /**
+                                 * Severity
+                                 * @enum {string}
+                                 */
+                                severity: "warning" | "error";
+                            }[];
+                            /** Item Count */
+                            item_count: number;
+                            /** Move Node Count */
+                            move_node_count: number;
+                        };
+                        /** Preserved Manual Moves */
+                        preserved_manual_moves: number;
+                        /** Preview Sha256 */
+                        preview_sha256: string;
+                        /** Retired Issue Count */
+                        retired_issue_count: number;
+                    };
+                };
+            };
+            /** @description PDF review session not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description Review state or expected version conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+            /** @description No replayable human source correction */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };

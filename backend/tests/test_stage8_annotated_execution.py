@@ -23,9 +23,6 @@ from pathlib import Path
 from typing import Any, cast
 
 import pytest
-from pypdf import PdfWriter
-from sqlalchemy import select
-
 from chess_workbench.config import Settings
 from chess_workbench.extraction.contracts import ExtractionPackage, ExtractionPackageV1_1
 from chess_workbench.extraction.evidence import (
@@ -37,10 +34,13 @@ from chess_workbench.extraction.evidence import (
     TextFragment,
 )
 from chess_workbench.extraction.provider import (
+    ScriptedStructuredGenerationProvider,
     StructuredGenerationRequest,
     StructuredGenerationResponse,
     TokenUsage,
 )
+from chess_workbench.extraction.recovery import CcefRecoveryError
+from chess_workbench.services import pdf_extraction as extraction_service
 from chess_workbench.services.jobs import JobService
 from chess_workbench.services.pdf import prepare_pdf_asset
 from chess_workbench.services.pdf_extraction import (
@@ -55,6 +55,7 @@ from chess_workbench.services.pdf_persistence import (
     PDF_EXTRACTION_PIPELINE_VERSION,
     PDF_SEMANTIC_EXTRACTION_FINGERPRINT_VERSION,
     PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION,
+    PDF_SOURCE_EXTRACTION_PIPELINE_VERSION,
     PdfPersistenceService,
 )
 from chess_workbench.services.uci import EngineError
@@ -62,6 +63,9 @@ from chess_workbench.services.worker import SqlWorker
 from chess_workbench.store.base import Base
 from chess_workbench.store.database import Database
 from chess_workbench.store.models import ExtractionArtifact, Job, utc_now
+from pydantic import SecretStr
+from pypdf import PdfWriter
+from sqlalchemy import select
 
 CCEF_KINDS = frozenset({"provider_response", "raw_ccef", "normalized_ccef"})
 
@@ -1286,5 +1290,171 @@ async def test_unsupported_pipeline_version_is_rejected_at_enqueue(tmp_path: Pat
                     profile=None,
                     pipeline_version="pdf-extraction:v9",
                 )
+    finally:
+        await database.close()
+
+
+@pytest.mark.asyncio
+async def test_v6_job_compiles_source_events_and_restores_without_provider(tmp_path: Path) -> None:
+    database, settings, extraction = await _setup(
+        tmp_path, "v6-source", pipeline_version=PDF_SOURCE_EXTRACTION_PIPELINE_VERSION
+    )
+    source_events = {
+        "events": [
+            {
+                "id": "m1",
+                "kind": "move",
+                "source": {"page": 1, "order": 0, "quote": "e4"},
+                "sequence": "game",
+                "parent": None,
+            },
+            {
+                "id": "m2",
+                "kind": "move",
+                "source": {"page": 1, "order": 0, "quote": "e5"},
+                "sequence": "game",
+                "parent": "m1",
+            },
+        ]
+    }
+    provider = ScriptedStructuredGenerationProvider(
+        [
+            StructuredGenerationResponse(
+                content=json.dumps(source_events),
+                provider="scripted",
+                model="fixture",
+                finish_reason="stop",
+            )
+        ]
+    )
+    try:
+        result = await process_pdf_extraction_job(
+            database,
+            settings,
+            extraction.job.payload,
+            renderer=_Renderer(),
+            ocr_adapter=_unused_ocr(),
+            provider=provider,
+        )
+        assert result["candidate"]["summary"]["move_node_count"] == 2
+        assert result["candidate"]["summary"]["invalid_move_count"] == 0
+        assert len(provider.calls) == 1
+        rows = await _artifact_rows(database, extraction.run.id)
+        assert {
+            row.kind
+            for row in rows
+            if row.kind in {"semantic_manifest", "provider_response", "raw_ccef", "normalized_ccef"}
+        } == {"semantic_manifest", "provider_response", "raw_ccef", "normalized_ccef"}
+        from chess_workbench.services.pdf_source_read import PdfSourceReadService
+
+        source = await PdfSourceReadService(database, settings).read_source(extraction.run.id)
+        pages = cast(list[dict[str, Any]], source["pages"])
+        assert pages[0]["fragments"][0]["text"].startswith("Synthetic annotated opening")
+        replay = await process_pdf_extraction_job(
+            database,
+            settings,
+            extraction.job.payload,
+            renderer=_FailingRenderer(),
+            provider=ScriptedStructuredGenerationProvider([]),
+        )
+        assert replay == result
+        from chess_workbench.services.pdf_review import PdfReviewReadService
+
+        async with database.session() as session, session.begin():
+            job = await session.get(Job, extraction.job.id)
+            assert job is not None
+            job.status = "succeeded"
+            job.result = result
+        async with database.session() as session:
+            review = await PdfReviewReadService(session, settings).read_document(extraction.run.id)
+            assert review.package.items[0].kind == "move_sequence"
+            assert review.inspection.blocking_issue_count == 0
+        async with database.session() as session, session.begin():
+            job = await session.get(Job, extraction.job.id)
+            assert job is not None
+            job.status = "failed"
+            job.result = None
+        failed_source = await PdfSourceReadService(database, settings).read_source(
+            extraction.run.id
+        )
+        assert failed_source == source
+    finally:
+        await database.close()
+
+
+@pytest.mark.asyncio
+async def test_failed_ocr_run_still_exposes_original_pdf_pages(tmp_path: Path) -> None:
+    from chess_workbench.schemas.pdf import PdfSourceEvidenceRead
+    from chess_workbench.services.pdf_source_read import PdfSourceReadService
+
+    database, settings, extraction = await _setup(
+        tmp_path, "source-without-ocr", pipeline_version=PDF_SOURCE_EXTRACTION_PIPELINE_VERSION
+    )
+    try:
+        async with database.session() as session, session.begin():
+            job = await session.get(Job, extraction.job.id)
+            assert job is not None
+            job.status = "failed"
+            job.last_error_code = "ocr_unavailable"
+        reader = PdfSourceReadService(database, settings)
+        source = PdfSourceEvidenceRead.model_validate(await reader.read_source(extraction.run.id))
+        assert source.evidence_status == "unavailable"
+        assert source.error_code == "ocr_unavailable"
+        assert len(source.pages) == 1
+        assert source.pages[0].fragments == []
+        image, digest = await reader.read_page(extraction.run.id, 1)
+        assert image.startswith(b"\x89PNG\r\n\x1a\n")
+        assert len(digest) == 64
+    finally:
+        await database.close()
+
+
+@pytest.mark.asyncio
+async def test_v4_job_selects_separate_configured_recovery_provider(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database, settings, extraction = await _setup(
+        tmp_path, "recovery-provider", pipeline_version=PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION
+    )
+    settings = settings.model_copy(
+        update={
+            "ccef_provider_reasoning_effort": "high",
+            "ccef_recovery_reasoning_effort": "none",
+            "ccef_recovery_model": "repair-test-model",
+        }
+    )
+    providers: list[_Provider] = []
+    options: list[dict[str, Any]] = []
+
+    def make_provider(**kwargs: Any) -> _Provider:
+        provider = _Provider()
+        providers.append(provider)
+        options.append(kwargs)
+        return provider
+
+    async def inspect_recovery(*args: Any, **kwargs: Any) -> Any:
+        assert len(providers) == 2
+        assert kwargs["repair_provider"] is providers[1]
+        assert kwargs["coverage_provider"] is providers[1]
+        assert options[0]["thinking_enabled"] is True
+        assert options[1]["thinking_enabled"] is False
+        assert options[1]["json_output_enabled"] is True
+        assert options[1]["model"] == "repair-test-model"
+        raise CcefRecoveryError("probe_complete", "Provider routing verified")
+
+    monkeypatch.setattr(extraction_service, "DeepSeekV4FlashProvider", make_provider)
+    monkeypatch.setattr(
+        extraction_service, "load_ccef_provider_api_key", lambda settings: SecretStr("test-key")
+    )
+    monkeypatch.setattr(extraction_service, "recover_ccef_response", inspect_recovery)
+    try:
+        with pytest.raises(EngineError, match="Provider routing verified"):
+            await process_pdf_extraction_job(
+                database,
+                settings,
+                extraction.job.payload,
+                renderer=_Renderer(),
+                ocr_adapter=_unused_ocr(),
+            )
     finally:
         await database.close()

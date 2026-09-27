@@ -33,7 +33,9 @@ from chess_workbench.services.pdf_extraction import (
 from chess_workbench.services.pdf_persistence import (
     PDF_ANNOTATED_EXTRACTION_PIPELINE_VERSION,
     PDF_EXTRACTION_PIPELINE_VERSION,
+    PDF_RELATION_EXTRACTION_PIPELINE_VERSION,
     PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION,
+    PDF_SOURCE_EXTRACTION_PIPELINE_VERSION,
     PdfExtractionView,
     PdfPersistenceService,
 )
@@ -203,6 +205,8 @@ class PdfReviewReadService:
                 PDF_EXTRACTION_PIPELINE_VERSION,
                 PDF_ANNOTATED_EXTRACTION_PIPELINE_VERSION,
                 PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION,
+                PDF_SOURCE_EXTRACTION_PIPELINE_VERSION,
+                PDF_RELATION_EXTRACTION_PIPELINE_VERSION,
             )
             or job.status != "succeeded"
         ):
@@ -515,6 +519,8 @@ def _parse_package(
         if pipeline_version in (
             PDF_ANNOTATED_EXTRACTION_PIPELINE_VERSION,
             PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION,
+            PDF_SOURCE_EXTRACTION_PIPELINE_VERSION,
+            PDF_RELATION_EXTRACTION_PIPELINE_VERSION,
         ):
             return ExtractionPackageV1_1.model_validate_json(raw_bytes)
         return None

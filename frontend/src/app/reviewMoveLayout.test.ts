@@ -4,6 +4,7 @@ import {
   buildReviewMoveRows,
   buildReviewReadingFlow,
   compactReviewBlocks,
+  reviewLinePath,
 } from './reviewMoveLayout';
 import type { AnnotatedMoveSequenceItem, MoveNode } from './reviewMoveLayout';
 
@@ -135,16 +136,11 @@ describe('buildReviewMoveRows', () => {
     expect(rows[1].variationDepth).toBe(1);
     expect(rows[1].variationPath).toEqual(['c5']);
 
-    // Primary descendant of the alternative keeps depth 1 (does not deepen).
+    // The nested alternative follows the black move it replaces.
     expect(rows[2].white).toBe(d4);
     expect(rows[2].black).toBe(d5);
-    expect(rows[2].variationDepth).toBe(1);
     expect(rows[2].variationPath).toEqual(['c5']);
-
-    // Nested alternative adds one more level.
-    expect(rows[3].white).toBeNull();
     expect(rows[3].black).toBe(g6);
-    expect(rows[3].variationDepth).toBe(2);
     expect(rows[3].variationPath).toEqual(['c5', 'g6']);
     expect(rows[3].variationPresentation).toBe('parenthetical');
 
@@ -215,7 +211,7 @@ describe('buildReviewMoveRows', () => {
 
     // Same move number but a different parent never pairs.
     const w4 = white('w4', 1);
-    const b4 = black('b4', 1, { parent_id: 'other' });
+    const b4 = black('b4', 1, { parent_id: null, sibling_order: 1 });
     const rowsC = buildReviewMoveRows([w4, b4]);
     expect(rowsC).toHaveLength(2);
     expect(rowsC[1].black).toBe(b4);
@@ -244,6 +240,95 @@ describe('buildReviewMoveRows', () => {
     expect(input[0]).toBe(w1);
     expect(input[1]).toBe(w2);
     expect(input[2]).toBe(bad);
+  });
+
+  it('shows a late-printed third-move branch beside move three and selects only one line', () => {
+    const mainline: MoveNode[] = [];
+    for (let fullmove = 1; fullmove <= 12; fullmove += 1) {
+      const w = white(`w${fullmove}`, fullmove, {
+        parent_id: fullmove === 1 ? null : `b${fullmove - 1}`,
+      });
+      const b = black(`b${fullmove}`, fullmove, { parent_id: w.id });
+      mainline.push(w, b);
+    }
+    const branch = black('branch3', 3, {
+      parent_id: 'w3',
+      sibling_order: 1,
+      move_text: 'c5',
+    });
+    const rows = buildReviewMoveRows([...mainline, branch]);
+    expect(rows.map((row) => row.key).slice(0, 5)).toEqual([
+      'w1+b1',
+      'w2+b2',
+      'w3+b3',
+      'branch3',
+      'w4+b4',
+    ]);
+    expect(reviewLinePath([...mainline, branch], 'w3', 'w5')).toEqual([
+      'w3',
+      'b3',
+      'w4',
+      'b4',
+      'w5',
+    ]);
+    expect(reviewLinePath([...mainline, branch], 'branch3', 'w5')).toBeNull();
+    expect(mainline.at(-1)?.id).toBe('b12');
+  });
+
+  it('puts a white alternative after White, then pairs replies with missing printed metadata', () => {
+    const fenBefore = (side: 'w' | 'b', number: number) =>
+      `8/1p3k2/p5pp/4Bn2/4KP2/P7/1P1r1P1P/4R3 ${side} - - 2 ${number}`;
+    const b35 = black('b35', 35);
+    const w36 = white('w36', 36, { parent_id: 'b35', move_text: 'Rc1?!' });
+    const b36 = node({
+      id: 'b36',
+      parent_id: 'w36',
+      move_text: 'Rxf2',
+      fen_before: fenBefore('b', 36),
+    });
+    const w37 = white('w37', 37, { parent_id: 'b36', move_text: 'Rc7+' });
+    const b37 = node({
+      id: 'b37',
+      parent_id: 'w37',
+      move_text: 'Ke6',
+      fen_before: fenBefore('b', 37),
+    });
+    const alt36 = white('alt36', 36, {
+      parent_id: 'b35',
+      sibling_order: 1,
+      move_text: 'Kf3',
+    });
+    const altReply = node({
+      id: 'altReply',
+      parent_id: 'alt36',
+      move_text: 'Rd3+',
+      fen_before: fenBefore('b', 36),
+    });
+    const nodes = [b35, w36, b36, w37, b37, alt36, altReply];
+    const rows = buildReviewMoveRows(nodes);
+    expect(rows.map((row) => row.key)).toEqual([
+      'b35',
+      'w36',
+      'alt36+altReply',
+      'b36',
+      'w37+b37',
+    ]);
+    expect(rows[3].moveNumber).toBe(36);
+    expect(rows[3].black).toBe(b36);
+    expect(rows[4].white).toBe(w37);
+    expect(rows[4].black).toBe(b37);
+    expect(flatten(rows)).toHaveLength(nodes.length);
+    // The display does not rewrite immutable candidates or guess from an invalid FEN.
+    expect(b37.side_to_move).toBeNull();
+    expect(b37.move_number).toBeNull();
+    const invalid = {
+      ...b35,
+      side_to_move: null,
+      move_number: null,
+      fen_before: fenBefore('b', 35),
+      validation_status: 'invalid' as const,
+    };
+    expect(buildReviewMoveRows([invalid])[0].fallback).toBe(invalid);
   });
 
   it('keeps later fullmoves of a long primary line unindented', () => {
@@ -321,10 +406,11 @@ describe('buildReviewReadingFlow', () => {
     const blocks = buildReviewReadingFlow(item);
     expect(blocks.map((block) => block.kind)).toEqual([
       'move_row',
+      'annotation',
+      'move_row',
       'move_row',
       'annotation',
       'move_row',
-      'annotation',
       'move_row',
     ]);
     expect(
@@ -335,14 +421,14 @@ describe('buildReviewReadingFlow', () => {
               .filter(Boolean)
               .join('+'),
       ),
-    ).toEqual(['n10', 'n11', 'a1', 'n12+n13', 'a2', 'n30']);
+    ).toEqual(['n10', 'a1', 'n11', 'n12', 'a2', 'n13', 'n30']);
 
     const variation = blocks[3];
     expect(variation.kind).toBe('move_row');
     if (variation.kind === 'move_row') {
       expect(variation.row.variationDepth).toBe(1);
     }
-    const resumedMainline = blocks[5];
+    const resumedMainline = blocks[6];
     expect(resumedMainline.kind).toBe('move_row');
     if (resumedMainline.kind === 'move_row') {
       expect(resumedMainline.row.variationDepth).toBe(0);

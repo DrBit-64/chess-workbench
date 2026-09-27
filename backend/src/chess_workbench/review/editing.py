@@ -20,6 +20,7 @@ from chess_workbench.extraction.contracts import (
     EvidenceRef,
     ExtractionPackage,
     ExtractionPackageV1_1,
+    FenPosition,
     HeadingItem,
     MoveFlowRef,
     MoveNode,
@@ -32,7 +33,9 @@ from chess_workbench.extraction.contracts import (
     ProseItem,
     SequenceAnnotation,
     StartPosition,
+    UnresolvedItem,
 )
+from chess_workbench.extraction.notation import NAG_OVERRIDE_EXTENSION, effective_move_nags
 from chess_workbench.extraction.validation import (
     normalize_chess_moves,
     normalize_chess_moves_v1_1,
@@ -47,6 +50,9 @@ from chess_workbench.schemas.review import (
     PdfReviewExcludeItem,
     PdfReviewMakeMainline,
     PdfReviewPromoteVariation,
+    PdfReviewReattachVariation,
+    PdfReviewResolveUnresolved,
+    PdfReviewSetInitialPosition,
     PdfReviewSetNag,
 )
 
@@ -84,6 +90,12 @@ def apply_review_edit(
         decisions = _exclude_item(result, operation)
     elif isinstance(operation, PdfReviewDetachPositionAnchor):
         decisions = _detach_position_anchor(result, operation)
+    elif isinstance(operation, PdfReviewResolveUnresolved):
+        decisions = _resolve_unresolved(result, operation)
+    elif isinstance(operation, PdfReviewSetInitialPosition):
+        decisions = _set_initial_position(result, operation)
+    elif isinstance(operation, PdfReviewReattachVariation):
+        decisions = _reattach_variation(result, operation)
     else:  # pragma: no cover - discriminated request contract is exhaustive.
         raise TypeError("unsupported review edit operation")
 
@@ -143,7 +155,12 @@ def _board_after(sequence: ReviewSequence, parent_node_id: str | None) -> chess.
     return board
 
 
-def _add_line(package: ReviewPackage, operation: PdfReviewAddLine) -> dict[str, JsonValue]:
+def _add_line(
+    package: ReviewPackage,
+    operation: PdfReviewAddLine,
+    *,
+    source_evidence: list[EvidenceRef] | None = None,
+) -> dict[str, JsonValue]:
     sequence = _sequence(package, operation.sequence_id)
     page_range = package.source.page_range
     if page_range is None or not (
@@ -155,6 +172,7 @@ def _add_line(package: ReviewPackage, operation: PdfReviewAddLine) -> dict[str, 
     parent_id = operation.parent_node_id
     created_ids: list[str] = []
     traversed_ids: list[str] = []
+    path_ids: list[str] = []
     for uci in operation.moves:
         existing = next(
             (
@@ -168,6 +186,7 @@ def _add_line(package: ReviewPackage, operation: PdfReviewAddLine) -> dict[str, 
         )
         if existing is not None:
             traversed_ids.append(existing.id)
+            path_ids.append(existing.id)
             parent_id = existing.id
             assert existing.fen_after is not None
             board = chess.Board(existing.fen_after)
@@ -201,13 +220,14 @@ def _add_line(package: ReviewPackage, operation: PdfReviewAddLine) -> dict[str, 
                 validation_status="valid",
                 fen_before=fen_before,
                 fen_after=fen_after,
-                evidence=[EvidenceRef(page=operation.evidence_page)],
+                evidence=source_evidence or [EvidenceRef(page=operation.evidence_page)],
                 confidence=None,
                 warnings=[],
                 extensions={},
             )
         )
         created_ids.append(node_id)
+        path_ids.append(node_id)
         parent_id = node_id
 
     if not created_ids:
@@ -220,7 +240,9 @@ def _add_line(package: ReviewPackage, operation: PdfReviewAddLine) -> dict[str, 
         "moves": list(operation.moves),
         "created_node_ids": cast(list[JsonValue], created_ids),
         "traversed_node_ids": cast(list[JsonValue], traversed_ids),
+        "path_node_ids": cast(list[JsonValue], path_ids),
         "evidence_page": operation.evidence_page,
+        "terminal_node_id": parent_id,
     }
 
 
@@ -277,9 +299,9 @@ def _delete_subtree(
     removed_sequence = not sequence.nodes
     if removed_sequence:
         if isinstance(package, ExtractionPackageV1_1):
-            package.items = [item for item in package.items if item.id != sequence.id]
+            package.items.remove(cast(MoveSequenceItemV1_1, sequence))
         else:
-            package.items = [item for item in package.items if item.id != sequence.id]
+            package.items.remove(cast(MoveSequenceItem, sequence))
     else:
         _renumber_siblings(sequence)
         _reflow(sequence)
@@ -437,9 +459,10 @@ def _set_nag(package: ReviewPackage, operation: PdfReviewSetNag) -> dict[str, Js
     sequence = _sequence(package, operation.sequence_id)
     target = _node(sequence, operation.node_id)
     nags = [] if operation.nag is None else [operation.nag]
-    if target.nags == nags:
+    if effective_move_nags(target) == nags:
         raise ValueError("review move NAG is unchanged")
     target.nags = nags
+    target.extensions[NAG_OVERRIDE_EXTENSION] = True
     return {
         "operation": "set_nag",
         "sequence_id": operation.sequence_id,
@@ -523,60 +546,431 @@ def _detach_position_anchor(
     raise ValueError("review position-anchor issue was not found")
 
 
-def _pgn_node_order(sequence: ReviewSequence) -> list[MoveNode]:
-    children: dict[str | None, list[MoveNode]] = {}
-    for node in sequence.nodes:
-        children.setdefault(node.parent_id, []).append(node)
-    for siblings in children.values():
-        siblings.sort(key=lambda node: node.sibling_order)
+def _validated_fen(value: str) -> str:
+    try:
+        board = chess.Board(value)
+    except ValueError:
+        raise ValueError("review initial FEN is invalid") from None
+    if not board.is_valid():
+        raise ValueError("review initial FEN is not a legal position")
+    return board.fen(en_passant="fen")
 
+
+def _set_initial_position(
+    package: ReviewPackage, operation: PdfReviewSetInitialPosition
+) -> dict[str, JsonValue]:
+    sequence = _sequence(package, operation.sequence_id)
+    fen = _validated_fen(operation.fen)
+    if isinstance(sequence.initial_position, FenPosition) and sequence.initial_position.fen == fen:
+        raise ValueError("review initial position is unchanged")
+    sequence.initial_position = FenPosition(kind="fen", fen=fen)
+    return {"operation": "set_initial_position", "sequence_id": sequence.id, "fen": fen}
+
+
+def _reattach_variation(
+    package: ReviewPackage, operation: PdfReviewReattachVariation
+) -> dict[str, JsonValue]:
+    sequence = _sequence(package, operation.sequence_id)
+    target = _sequence(package, operation.target_sequence_id or operation.sequence_id)
+    node = _node(sequence, operation.node_id)
+    parent_id = operation.parent_node_id
+    if sequence.id == target.id and node.parent_id == parent_id:
+        raise ValueError("review variation already has this parent")
+    descendants = {node.id}
+    changed = True
+    while changed:
+        changed = False
+        for candidate in sequence.nodes:
+            if candidate.parent_id in descendants and candidate.id not in descendants:
+                descendants.add(candidate.id)
+                changed = True
+    if sequence.id == target.id and parent_id in descendants:
+        raise ValueError("review variation cannot attach to its descendant")
+    board = _board_after(target, parent_id)
+    try:
+        board.parse_san(node.san_candidate or node.move_text)
+    except ValueError:
+        raise ValueError("review variation move is illegal from its new parent") from None
+    old_parent = node.parent_id
+    if sequence.id != target.id:
+        if not isinstance(sequence, MoveSequenceItemV1_1) or not isinstance(
+            target, MoveSequenceItemV1_1
+        ):
+            raise ValueError("cross-sequence move requires a 1.1 review package")
+        moved = [candidate for candidate in sequence.nodes if candidate.id in descendants]
+        remaining = [candidate for candidate in sequence.nodes if candidate.id not in descendants]
+        used = {candidate.id for candidate in target.nodes}
+        used.update(annotation.id for annotation in target.annotations)
+        mapped: dict[str, str] = {}
+        for candidate in moved:
+            new_id = candidate.id
+            serial = 1
+            while new_id in used:
+                new_id = f"transferred-{serial}"
+                serial += 1
+            used.add(new_id)
+            mapped[candidate.id] = new_id
+        moved_annotation_ids: set[str] = set()
+        current_move: str | None = None
+        for flow in sequence.reading_flow:
+            if isinstance(flow, MoveFlowRef):
+                current_move = flow.node_id
+            elif current_move in descendants:
+                moved_annotation_ids.add(flow.annotation_id)
+        moved_annotations = [
+            annotation
+            for annotation in sequence.annotations
+            if annotation.id in moved_annotation_ids
+        ]
+        moved_flow = [
+            flow
+            for flow in sequence.reading_flow
+            if (isinstance(flow, MoveFlowRef) and flow.node_id in descendants)
+            or (isinstance(flow, AnnotationFlowRef) and flow.annotation_id in moved_annotation_ids)
+        ]
+        annotation_ids: dict[str, str] = {}
+        for annotation in moved_annotations:
+            if isinstance(annotation.anchor, MoveNodeAnnotationAnchor):
+                if annotation.anchor.node_id in mapped:
+                    annotation.anchor.node_id = mapped[annotation.anchor.node_id]
+                else:
+                    annotation.anchor = None
+            new_id = annotation.id
+            serial = 1
+            while new_id in used:
+                new_id = f"transferred-note-{serial}"
+                serial += 1
+            used.add(new_id)
+            annotation_ids[annotation.id] = new_id
+            annotation.id = new_id
+        sequence.annotations = [
+            annotation for annotation in sequence.annotations if annotation not in moved_annotations
+        ]
+        sequence.reading_flow = [
+            flow
+            for flow in sequence.reading_flow
+            if not (
+                (isinstance(flow, MoveFlowRef) and flow.node_id in descendants)
+                or (
+                    isinstance(flow, AnnotationFlowRef)
+                    and flow.annotation_id in moved_annotation_ids
+                )
+            )
+        ]
+        for candidate in moved:
+            original_id = candidate.id
+            candidate.id = mapped[original_id]
+            candidate.parent_id = (
+                parent_id if original_id == node.id else mapped[cast(str, candidate.parent_id)]
+            )
+        node.sibling_order = sum(
+            1 for candidate in target.nodes if candidate.parent_id == parent_id
+        )
+        sequence.nodes = remaining
+        target.nodes.extend(moved)
+        target.annotations.extend(moved_annotations)
+        target.reading_flow.extend(
+            MoveFlowRef(kind="move", node_id=mapped[flow.node_id])
+            if isinstance(flow, MoveFlowRef)
+            else AnnotationFlowRef(
+                kind="annotation", annotation_id=annotation_ids[flow.annotation_id]
+            )
+            for flow in moved_flow
+        )
+        target.evidence.extend(node.evidence)
+        for item in package.items:
+            if (
+                isinstance(item, ProseItem)
+                and isinstance(item.anchor, MoveNodeAnchor)
+                and item.anchor.sequence_id == sequence.id
+                and item.anchor.node_id in mapped
+            ):
+                item.anchor.sequence_id = target.id
+                item.anchor.node_id = mapped[item.anchor.node_id]
+        for diagnostic in package.diagnostics:
+            if diagnostic.item_id == sequence.id and diagnostic.node_id in mapped:
+                diagnostic.item_id = target.id
+                diagnostic.node_id = mapped[diagnostic.node_id]
+        if remaining:
+            _renumber_siblings(sequence)
+            _reflow(sequence)
+        else:
+            cast(ExtractionPackageV1_1, package).items.remove(sequence)
+            package.diagnostics = [
+                diagnostic
+                for diagnostic in package.diagnostics
+                if diagnostic.item_id != sequence.id
+            ]
+        _renumber_siblings(target)
+        _reflow(target)
+        return {
+            "operation": "reattach_variation",
+            "sequence_id": sequence.id,
+            "target_sequence_id": target.id,
+            "node_id": node.id,
+            "from_parent_node_id": old_parent,
+            "parent_node_id": parent_id,
+            "moved_node_count": len(moved),
+        }
+    node.parent_id = parent_id
+    node.sibling_order = sum(
+        1
+        for candidate in sequence.nodes
+        if candidate.id != node.id and candidate.parent_id == parent_id
+    )
+    _renumber_siblings(sequence)
+    _reflow(sequence)
+    return {
+        "operation": "reattach_variation",
+        "sequence_id": sequence.id,
+        "node_id": node.id,
+        "from_parent_node_id": old_parent,
+        "parent_node_id": parent_id,
+    }
+
+
+def _set_new_line_nags(
+    sequence: ReviewSequence,
+    decision: dict[str, JsonValue],
+    moves: list[str],
+    nags: list[int | None],
+) -> None:
+    if not nags:
+        return
+    if len(nags) != len(moves):
+        raise ValueError("review line NAG count must match its moves")
+    created_ids = set(cast(list[str], decision["created_node_ids"]))
+    path_ids = cast(list[str], decision["path_node_ids"])
+    for node_id, nag in zip(path_ids, nags, strict=True):
+        if node_id in created_ids and nag is not None:
+            _node(sequence, node_id).nags = [nag]
+
+
+def _resolve_unresolved(
+    package: ReviewPackage, operation: PdfReviewResolveUnresolved
+) -> dict[str, JsonValue]:
+    index = next((i for i, item in enumerate(package.items) if item.id == operation.item_id), None)
+    if index is None or not isinstance(package.items[index], UnresolvedItem):
+        raise ValueError("review unresolved item was not found")
+    item = cast(UnresolvedItem, package.items[index])
+    if operation.following and (operation.as_kind != "line" or operation.sequence_id is None):
+        raise ValueError("following fragments require a line in an existing score")
+    text = operation.text or item.raw_text or item.details
+    recovered: list[str] = []
+    if operation.as_kind == "prose":
+        if not text:
+            raise ValueError("review prose requires text")
+        package.items[index] = ProseItem(
+            kind="prose",
+            id=item.id,
+            text=text,
+            text_format="plain",
+            anchor=None,
+            evidence=item.evidence,
+            confidence=item.confidence,
+            warnings=item.warnings,
+            extensions=item.extensions,
+        )
+    elif operation.as_kind == "annotation":
+        if not isinstance(package, ExtractionPackageV1_1) or not operation.sequence_id or not text:
+            raise ValueError("review annotation requires a 1.1 sequence and text")
+        sequence = _sequence(package, operation.sequence_id)
+        if not isinstance(sequence, MoveSequenceItemV1_1):
+            raise ValueError("review annotation requires a 1.1 sequence")
+        anchor = None
+        if operation.anchor_node_id is not None:
+            _node(sequence, operation.anchor_node_id)
+            anchor = MoveNodeAnnotationAnchor(
+                kind="move_node", node_id=operation.anchor_node_id, relation="after"
+            )
+        annotation_id = _next_local_id(sequence)
+        sequence.annotations.append(
+            SequenceAnnotation(
+                id=annotation_id,
+                text=text,
+                text_format="plain",
+                anchor=anchor,
+                evidence=item.evidence,
+            )
+        )
+        sequence.reading_flow.append(
+            AnnotationFlowRef(kind="annotation", annotation_id=annotation_id)
+        )
+        package.items.pop(index)
+    else:
+        if not isinstance(package, ExtractionPackageV1_1) or not operation.moves:
+            raise ValueError("review line requires a 1.1 package and UCI moves")
+        if operation.nags and len(operation.nags) != len(operation.moves):
+            raise ValueError("review line NAG count must match its moves")
+        if operation.sequence_id is None:
+            if operation.initial_fen is None:
+                raise ValueError("review new line requires an initial FEN")
+            fen = _validated_fen(operation.initial_fen)
+            sequence_id = f"manual-sequence-{len(package.items) + 1}"
+            while any(existing.id == sequence_id for existing in package.items):
+                sequence_id += "-x"
+            board = chess.Board(fen)
+            nodes: list[MoveNode] = []
+            parent_id = None
+            for n, uci in enumerate(operation.moves, 1):
+                move = chess.Move.from_uci(uci)
+                if move not in board.legal_moves:
+                    raise ValueError("review line contains an illegal move")
+                san = board.san(move)
+                nag = operation.nags[n - 1] if operation.nags else None
+                node_id = f"manual-{n}"
+                nodes.append(
+                    MoveNode(
+                        id=node_id,
+                        parent_id=parent_id,
+                        sibling_order=0,
+                        move_text=san,
+                        nags=[] if nag is None else [nag],
+                        evidence=item.evidence,
+                    )
+                )
+                board.push(move)
+                parent_id = node_id
+            package.items[index] = MoveSequenceItemV1_1(
+                kind="move_sequence",
+                id=sequence_id,
+                title=None,
+                initial_position=FenPosition(kind="fen", fen=fen),
+                nodes=nodes,
+                annotations=[],
+                reading_flow=[MoveFlowRef(kind="move", node_id=node.id) for node in nodes],
+                evidence=item.evidence,
+            )
+        else:
+            sequence = _sequence(package, operation.sequence_id)
+            first_result = _add_line(
+                package,
+                PdfReviewAddLine(
+                    kind="add_line",
+                    sequence_id=sequence.id,
+                    parent_node_id=operation.anchor_node_id,
+                    moves=operation.moves,
+                    evidence_page=item.evidence[0].page,
+                ),
+                source_evidence=item.evidence,
+            )
+            _set_new_line_nags(sequence, first_result, operation.moves, operation.nags)
+            package.items.pop(index)
+            parent_id = cast(str, first_result["terminal_node_id"])
+            for following in operation.following:
+                next_index = next(
+                    (
+                        i
+                        for i, candidate in enumerate(package.items)
+                        if candidate.id == following.item_id
+                    ),
+                    None,
+                )
+                if next_index is None or not isinstance(package.items[next_index], UnresolvedItem):
+                    raise ValueError("following unresolved fragment was not found")
+                next_item = cast(UnresolvedItem, package.items[next_index])
+                result = _add_line(
+                    package,
+                    PdfReviewAddLine(
+                        kind="add_line",
+                        sequence_id=sequence.id,
+                        parent_node_id=parent_id,
+                        moves=following.moves,
+                        evidence_page=next_item.evidence[0].page,
+                    ),
+                    source_evidence=next_item.evidence,
+                )
+                _set_new_line_nags(sequence, result, following.moves, following.nags)
+                parent_id = cast(str, result["terminal_node_id"])
+                recovered.append(next_item.id)
+                package.items.pop(next_index)
+            package.diagnostics = [
+                diagnostic
+                for diagnostic in package.diagnostics
+                if diagnostic.item_id not in recovered
+            ]
+    package.diagnostics = [
+        diagnostic for diagnostic in package.diagnostics if diagnostic.item_id != item.id
+    ]
+    return {
+        "operation": "resolve_unresolved",
+        "item_id": item.id,
+        "as_kind": operation.as_kind,
+        "recovered_item_ids": cast(list[JsonValue], recovered),
+    }
+
+
+def _source_node_order(sequence: ReviewSequence) -> list[MoveNode]:
+    by_id = {node.id: node for node in sequence.nodes}
+    source_ids = (
+        [flow.node_id for flow in sequence.reading_flow if isinstance(flow, MoveFlowRef)]
+        if isinstance(sequence, MoveSequenceItemV1_1)
+        else []
+    )
+    source_ids.extend(node.id for node in sequence.nodes if node.id not in source_ids)
+    pending = list(dict.fromkeys(source_ids))
     ordered: list[MoveNode] = []
-
-    def emit_from(parent_id: str | None) -> None:
-        siblings = children.get(parent_id, [])
-        if not siblings:
-            return
-        main = siblings[0]
-        ordered.append(main)
-        for variation in siblings[1:]:
-            emit_variation(variation)
-        emit_from(main.id)
-
-    def emit_variation(node: MoveNode) -> None:
-        ordered.append(node)
-        emit_from(node.id)
-
-    emit_from(None)
-    if len(ordered) != len(sequence.nodes):
-        raise ValueError("review move tree is disconnected")
+    emitted: set[str] = set()
+    while pending:
+        ready = [
+            node_id
+            for node_id in pending
+            if by_id[node_id].parent_id is None or by_id[node_id].parent_id in emitted
+        ]
+        if not ready:
+            raise ValueError("review move tree is disconnected")
+        node_id = ready[0]
+        ordered.append(by_id[node_id])
+        emitted.add(node_id)
+        pending.remove(node_id)
     return ordered
 
 
 def _reflow(sequence: ReviewSequence) -> None:
-    ordered = _pgn_node_order(sequence)
+    # Nodes need topological order; reading_flow separately records the PDF's
+    # reading order and must not be rewritten to match the edited chess tree.
+    ordered = _source_node_order(sequence)
+    sequence.nodes = ordered
     if not isinstance(sequence, MoveSequenceItemV1_1):
-        sequence.nodes = ordered
         return
 
-    prefix: list[AnnotationFlowRef] = []
-    after_move: dict[str, list[AnnotationFlowRef]] = {}
-    current_move: str | None = None
-    for entry in sequence.reading_flow:
-        if isinstance(entry, MoveFlowRef):
-            current_move = entry.node_id
-        elif current_move is None:
-            prefix.append(entry)
-        else:
-            after_move.setdefault(current_move, []).append(entry)
-
-    flow: list[MoveFlowRef | AnnotationFlowRef] = list(prefix)
-    for node in ordered:
-        flow.append(MoveFlowRef(kind="move", node_id=node.id))
-        flow.extend(after_move.get(node.id, []))
+    node_ids = {node.id for node in ordered}
     annotation_by_id: dict[str, SequenceAnnotation] = {
         annotation.id: annotation for annotation in sequence.annotations
     }
-    sequence.nodes = ordered
+    flow: list[MoveFlowRef | AnnotationFlowRef] = []
+    seen_moves: set[str] = set()
+    seen_annotations: set[str] = set()
+    for entry in sequence.reading_flow:
+        if isinstance(entry, MoveFlowRef) and entry.node_id in node_ids:
+            flow.append(entry)
+            seen_moves.add(entry.node_id)
+        elif isinstance(entry, AnnotationFlowRef) and entry.annotation_id in annotation_by_id:
+            flow.append(entry)
+            seen_annotations.add(entry.annotation_id)
+    for node in ordered:
+        if node.id not in seen_moves:
+            flow.append(MoveFlowRef(kind="move", node_id=node.id))
+    for annotation in sequence.annotations:
+        if annotation.id not in seen_annotations:
+            flow.append(AnnotationFlowRef(kind="annotation", annotation_id=annotation.id))
+    if [entry.node_id for entry in flow if isinstance(entry, MoveFlowRef)] != [
+        node.id for node in ordered
+    ]:
+        before: list[AnnotationFlowRef] = []
+        after_move: dict[str, list[AnnotationFlowRef]] = {}
+        current_move: str | None = None
+        for entry in flow:
+            if isinstance(entry, MoveFlowRef):
+                current_move = entry.node_id
+            elif current_move is None:
+                before.append(entry)
+            else:
+                after_move.setdefault(current_move, []).append(entry)
+        flow = list(before)
+        for node in ordered:
+            flow.append(MoveFlowRef(kind="move", node_id=node.id))
+            flow.extend(after_move.get(node.id, []))
     sequence.reading_flow = flow
     sequence.annotations = [
         annotation_by_id[entry.annotation_id]

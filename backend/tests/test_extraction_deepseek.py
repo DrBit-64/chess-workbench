@@ -330,12 +330,17 @@ async def test_successful_response_mapping_ignores_private_fields() -> None:
     assert response.usage.output_tokens == 0
     assert response.usage.total_tokens == 0
     # Provider-private fields never leak into the response.
-    assert response.model_dump() == {
-        "content": '{"moves": "e2e4"}',
-        "provider": "deepseek",
-        "model": "deepseek-v4-flash",
-        "finish_reason": "length",
-        "usage": {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0},
+    assert response.usage.prompt_cache_hit_tokens is None
+    assert response.usage.prompt_cache_miss_tokens is None
+    assert response.usage.reasoning_tokens is None
+    assert response.elapsed_ms is not None and response.elapsed_ms >= 0
+    assert set(response.model_dump()) == {
+        "content",
+        "provider",
+        "model",
+        "finish_reason",
+        "usage",
+        "elapsed_ms",
     }
 
 

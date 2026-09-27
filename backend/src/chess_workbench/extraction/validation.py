@@ -41,7 +41,24 @@ _VALIDATOR_WARNING_CODES = frozenset(_WARNING_MESSAGES)
 
 # Source-token policy: at most one leading decimal move-number prefix in the
 # forms ``N.`` or ``N...`` (spaces after the prefix are exposed by its removal).
-_MOVE_NUMBER_PREFIX = re.compile(r"^\d+\.(?:\.\.)?\s*")
+_MOVE_NUMBER_PREFIX = re.compile(r"^\d+\s*\.(?:\.\.)?\s*")
+_UNDOTTED_MOVE_NUMBER_PREFIX = re.compile(r"^\d+\s*(?=[KQRBNa-hO0])")
+_FIGURINES = str.maketrans(
+    {
+        "♔": "K",
+        "♕": "Q",
+        "♖": "R",
+        "♗": "B",
+        "♘": "N",
+        "♙": "",
+        "♚": "K",
+        "♛": "Q",
+        "♜": "R",
+        "♝": "B",
+        "♞": "N",
+        "♟": "",
+    }
+)
 # Repeatedly removable trailing annotations: !, ?, !!, ??, !?, ?! and numeric
 # NAG tokens $0..$255, allowing whitespace between suffixes. Out-of-range NAGs
 # such as $256 are intentionally not matched and therefore survive to parsing.
@@ -175,7 +192,12 @@ def _normalize_node(node: MoveNode, board: chess.Board | None) -> _Outcome:
 
 def _clean_move_token(move_text: str) -> str | None:
     """Reduce a preserved source token to its conservative parse token."""
-    token = _MOVE_NUMBER_PREFIX.sub("", move_text, count=1)
+    token = move_text.translate(_FIGURINES).replace("…", "...").replace("×", "x")
+    token = token.replace("X", "x")
+    token = _MOVE_NUMBER_PREFIX.sub("", token, count=1)
+    token = _UNDOTTED_MOVE_NUMBER_PREFIX.sub("", token, count=1)
+    if token.startswith("0-0"):
+        token = token.replace("0", "O")
     while True:
         match = _TRAILING_ANNOTATION.search(token)
         if match is None:

@@ -361,6 +361,68 @@ def _border_candidates(image: FloatImage) -> list[_Corners]:
     return [candidate for _, candidate in scored[:12]]
 
 
+def _page_border_candidates(image: FloatImage) -> list[_Corners]:
+    """Locate printed boards whose square grid is drawn as PDF vectors.
+
+    Such a board has no embedded image object. Its long upper and lower frame
+    lines survive ordinary page rendering even when body text dominates the
+    full-page gradient and the board is slightly rectangular on the page.
+    """
+    height, width = image.shape
+    minimum = max(80, round(min(height, width) * 0.15))
+    dark = image < 160
+    lines: list[tuple[int, int, int]] = []
+    for y, row in enumerate(dark):
+        edges = np.diff(np.pad(row.astype(np.int8), (1, 1)))
+        starts = np.flatnonzero(edges == 1)
+        ends = np.flatnonzero(edges == -1)
+        lines.extend(
+            (y, int(x0), int(x1)) for x0, x1 in zip(starts, ends, strict=True) if x1 - x0 >= minimum
+        )
+    lines.sort(key=lambda line: line[2] - line[1], reverse=True)
+    distinct: list[tuple[int, int, int]] = []
+    for line in lines:
+        if any(
+            abs(line[0] - prior[0]) <= 3
+            and abs(line[1] - prior[1]) <= 5
+            and abs(line[2] - prior[2]) <= 5
+            for prior in distinct
+        ):
+            continue
+        distinct.append(line)
+        if len(distinct) >= 50:
+            break
+    candidates: list[_Corners] = []
+    for upper in distinct:
+        for lower in distinct:
+            if upper[0] >= lower[0]:
+                continue
+            board_width = (upper[2] - upper[1] + lower[2] - lower[1]) / 2
+            board_height = lower[0] - upper[0]
+            tolerance = max(5, board_width * 0.02)
+            if (
+                not 0.8 * board_width <= board_height <= 1.2 * board_width
+                or abs(upper[1] - lower[1]) > tolerance
+                or abs(upper[2] - lower[2]) > tolerance
+            ):
+                continue
+            frame = _Corners(
+                round((upper[1] + lower[1]) / 2),
+                upper[0],
+                round((upper[2] + lower[2]) / 2),
+                lower[0],
+            )
+            candidates.extend(
+                (
+                    frame,
+                    _Corners(frame.x0 + 1, frame.y0, frame.x1 - 2, frame.y1),
+                )
+            )
+            if len(candidates) >= 16:
+                return candidates
+    return candidates
+
+
 def _sample_bilinear(image: FloatImage, xs: FloatImage, ys: FloatImage) -> FloatImage:
     x0 = np.floor(xs).astype(np.int64)
     y0 = np.floor(ys).astype(np.int64)
@@ -528,6 +590,7 @@ class OnnxChessDiagramRecognizer:
     def _recognize_image(self, image: EmbeddedPageImage) -> ChessDiagramRecognition | None:
         gray, scale = _gray_image(image.png_bytes)
         candidates = _border_candidates(gray)
+        candidates.extend(_page_border_candidates(gray))
         detected = _find_corners(gray)
         if detected is not None:
             candidates.append(detected)

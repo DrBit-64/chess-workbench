@@ -655,6 +655,33 @@ describe('Stage 4B course editor', () => {
     );
   });
 
+  it('uses the shared SAN and annotation display in the learning score', async () => {
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url === '/api/citable-sources') return json([]);
+      if (url === '/api/courses/course-1') return json(course);
+      if (url === '/api/courses/course-1/modules') return json([module]);
+      if (url === '/api/courses/course-1/editor/module-1') {
+        return json({
+          module,
+          content_blocks: [],
+          occurrences: [root, { ...e4, inbound_san: 'e4?!', nag: 6 }],
+          notes: [],
+        });
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderEditor();
+
+    const move = await screen.findByRole('button', { name: 'e4 e2e4' });
+    expect(within(move).getByText('e4')).toBeTruthy();
+    expect(within(move).getAllByText('?!')).toHaveLength(1);
+    expect(within(move).getByTitle('可疑着法').className).toContain(
+      'text-amber-700',
+    );
+  });
+
   it('keeps the current position when a saved move is absent after refresh', async () => {
     const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);

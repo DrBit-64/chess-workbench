@@ -55,6 +55,7 @@ class PdfExtractionCreate(StrictContract):
     first_page: Annotated[int, Field(ge=1)]
     last_page: Annotated[int, Field(ge=1)]
     profile: dict[str, JsonValue] = Field(default_factory=dict)
+    pipeline: Literal["legacy", "source_first"] = "source_first"
 
     _validate_profile = field_validator("profile")(_finite_profile)
 
@@ -117,6 +118,47 @@ class PdfCandidateSummary(StrictContract):
     invalid_move_count: Annotated[int, Field(ge=0)]
     ambiguous_move_count: Annotated[int, Field(ge=0)]
     has_conflicts: bool
+
+
+class PdfSourceStyleRunRead(StrictContract):
+    start: Annotated[int, Field(ge=0)]
+    end: Annotated[int, Field(gt=0)]
+    font_family: str | None = None
+    font_size: float | None = None
+    bold: bool | None = None
+    color: str | None = None
+
+
+class PdfSourceFragmentRead(StrictContract):
+    order: Annotated[int, Field(ge=0)]
+    text: str
+    origin: str
+    bbox: dict[str, float]
+    fragment_sha256: Sha256
+    style_runs: list[PdfSourceStyleRunRead] = Field(default_factory=list)
+    roles: list[Literal["mainline", "variation", "example", "plan", "annotation", "mention"]] = (
+        Field(default_factory=list)
+    )
+
+
+class PdfSourceReadingHintRead(StrictContract):
+    text: str
+    source_refs: list[str]
+
+
+class PdfSourcePageRead(StrictContract):
+    physical_page: Annotated[int, Field(ge=1)]
+    fragments: list[PdfSourceFragmentRead]
+
+
+class PdfSourceEvidenceRead(StrictContract):
+    run_id: EntityId
+    first_page: Annotated[int, Field(ge=1)]
+    last_page: Annotated[int, Field(ge=1)]
+    evidence_status: Literal["ready", "unavailable"]
+    error_code: str | None
+    reading_hints: list[PdfSourceReadingHintRead] = Field(default_factory=list)
+    pages: list[PdfSourcePageRead]
 
 
 class PdfExtractionRead(StrictContract):

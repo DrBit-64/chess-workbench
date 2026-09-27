@@ -522,8 +522,9 @@ describe('Stage 4A workbench pages', () => {
     vi.stubGlobal('fetch', fetchMock);
     renderPage(<SourcesPage />);
 
-    fireEvent.mouseDown(await screen.findByLabelText('选择 PDF'));
-    fireEvent.click(await screen.findByText('My Opening Book（400 页）'));
+    fireEvent.click(
+      await screen.findByRole('button', { name: '管理提取结果' }),
+    );
     fireEvent.change(screen.getByLabelText('起始物理页'), {
       target: { value: '319' },
     });
@@ -543,11 +544,52 @@ describe('Stage 4A workbench pages', () => {
             pdf_asset_id: 'asset-1',
             first_page: 319,
             last_page: 399,
+            pipeline: 'source_first',
           }),
         }),
       ),
     );
     expect(await screen.findByText('排队中')).toBeTruthy();
+  });
+
+  it('repeats a legacy extraction with the currently selected source-first pipeline', async () => {
+    const failedRun = extractionRun({
+      pipeline_version: 'pdf-extraction:v4',
+      candidate: null,
+      job: { ...baseJob, status: 'failed' },
+    });
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url === '/api/pdf-extractions' && init?.method === 'POST') {
+        return json({ replayed: false, extraction: extractionRun() }, 202);
+      }
+      if (url === '/api/pdf-assets') return json({ items: [pdfAsset] });
+      if (url === '/api/pdf-extraction-documents') return json({ items: [] });
+      if (url.startsWith('/api/pdf-extractions'))
+        return json({ items: [failedRun] });
+      return json([source]);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderPage(<SourcesPage />);
+    fireEvent.click(
+      await screen.findByRole('button', { name: '管理提取结果' }),
+    );
+    fireEvent.click(screen.getByRole('button', { name: '操作' }));
+    fireEvent.click(await screen.findByText('重新提取同一页段（来源优先）'));
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/pdf-extractions',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({
+            pdf_asset_id: 'asset-1',
+            first_page: 319,
+            last_page: 399,
+            pipeline: 'source_first',
+          }),
+        }),
+      ),
+    );
   });
 
   it('archives a failed extraction from the book result menu', async () => {

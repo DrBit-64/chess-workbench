@@ -17,6 +17,7 @@ from chess_workbench.config import Settings
 from chess_workbench.extraction.contracts import ExtractionPackage, ExtractionPackageV1_1
 from chess_workbench.review.editing import apply_review_edit
 from chess_workbench.review.inspection import inspect_review_candidate
+from chess_workbench.review.recovery import RecoveryResult, recover_dependencies
 from chess_workbench.schemas.review import (
     PdfReviewAcknowledgeCommand,
     PdfReviewApproveCommand,
@@ -25,13 +26,22 @@ from chess_workbench.schemas.review import (
     PdfReviewDocumentRead,
     PdfReviewEditCommand,
     PdfReviewEventRead,
+    PdfReviewReattachPreviewRead,
+    PdfReviewReattachPreviewRequest,
+    PdfReviewRecoverDependenciesCommand,
+    PdfReviewRecoveredMove,
+    PdfReviewRecoveryPreviewRead,
+    PdfReviewRecoveryPreviewRequest,
+    PdfReviewRedoCommand,
     PdfReviewRejectCommand,
     PdfReviewReopenCommand,
     PdfReviewRevisionRead,
     PdfReviewSessionRead,
+    PdfReviewUndoCommand,
 )
 from chess_workbench.services.content import ServiceError
 from chess_workbench.services.pdf_review import PdfReviewReadService
+from chess_workbench.services.pdf_review_recovery import load_review_relations
 from chess_workbench.services.source_storage import (
     read_verified_content_addressed_bytes,
     store_content_addressed_bytes,
@@ -188,6 +198,168 @@ class PdfReviewLedgerService:
             raise ServiceError("not_found", 404, _SESSION_MISSING)
         return await self._revision_package(await self._revision(review_session))
 
+    async def preview_reattach(
+        self, session_id: UUID, request: PdfReviewReattachPreviewRequest
+    ) -> PdfReviewReattachPreviewRead:
+        """Inspect one proposed branch move without writing a review revision."""
+        review_session = await self.session.get(PdfReviewSession, session_id)
+        if review_session is None:
+            raise ServiceError("not_found", 404, _SESSION_MISSING)
+        if review_session.status != "open" or review_session.version != request.expected_version:
+            raise _command_conflict("review session changed before the preview")
+        package = await self._revision_package(await self._revision(review_session))
+        try:
+            edited = apply_review_edit(package, request.operation)
+        except (TypeError, ValueError, ValidationError) as exc:
+            raise ServiceError(
+                "validation_error", 422, "review variation cannot attach to this position"
+            ) from exc
+        inspection = inspect_review_candidate(edited.package)
+        return PdfReviewReattachPreviewRead(
+            issue_count=inspection.issue_count,
+            blocking_issue_count=inspection.blocking_issue_count,
+        )
+
+    async def _recovery_human_edits(
+        self, review_session: PdfReviewSession, current: ExtractionPackageV1_1
+    ) -> tuple[set[str], set[str], set[str]]:
+        """Read active edit events; a confirmed replay is not a human edit."""
+        active_versions, _ = await self._edit_history(review_session.id)
+        events = tuple(
+            await self.session.scalars(
+                select(PdfReviewEvent).where(
+                    PdfReviewEvent.session_id == review_session.id,
+                    PdfReviewEvent.resulting_version.in_(active_versions[1:]),
+                )
+            )
+        )
+        touched: set[str] = set()
+        mainline: set[str] = set()
+        additions: set[str] = set()
+        revision_rows: dict[int, PdfReviewRevision] | None = None
+        package_cache: dict[int, ExtractionPackage | ExtractionPackageV1_1] = {}
+        for event in events:
+            decision = event.decisions
+            operation = decision.get("operation")
+            if operation == "reattach_variation":
+                node_id = decision.get("node_id")
+                if isinstance(node_id, str):
+                    touched.add(node_id)
+            elif operation in ("make_mainline", "promote_variation"):
+                identifiers = decision.get("promoted_node_ids")
+                if isinstance(identifiers, list):
+                    mainline.update(value for value in identifiers if isinstance(value, str))
+                elif isinstance(decision.get("node_id"), str):
+                    mainline.add(cast(str, decision["node_id"]))
+            elif (
+                operation in ("resolve_unresolved", "add_line")
+                and decision.get("as_kind", "line") == "line"
+            ):
+                if revision_rows is None:
+                    revision_rows = {
+                        row.revision_number: row
+                        for row in await self.session.scalars(
+                            select(PdfReviewRevision).where(
+                                PdfReviewRevision.session_id == review_session.id
+                            )
+                        )
+                    }
+                before_version = event.parent_version
+                after_version = event.resulting_version
+                for version in (before_version, after_version):
+                    if version not in package_cache:
+                        package_cache[version] = await self._revision_package(
+                            revision_rows[version]
+                        )
+                before = package_cache[before_version]
+                after = package_cache[after_version]
+                previous_ids = {
+                    node.id
+                    for item in before.items
+                    if hasattr(item, "nodes")
+                    for node in item.nodes
+                }
+                additions.update(
+                    node.id
+                    for item in after.items
+                    if hasattr(item, "nodes")
+                    for node in item.nodes
+                    if node.id not in previous_ids
+                )
+        present = {
+            node.id for item in current.items if hasattr(item, "nodes") for node in item.nodes
+        }
+        return touched & present, mainline & present, additions & present
+
+    async def _recovery(
+        self,
+        review_session: PdfReviewSession,
+        current: ExtractionPackage | ExtractionPackageV1_1,
+    ) -> RecoveryResult:
+        if review_session.extraction_run_id is None:
+            raise ServiceError(
+                "validation_error", 422, "dependency replay requires a v8 extraction run"
+            )
+        if not isinstance(current, ExtractionPackageV1_1):
+            raise ServiceError("validation_error", 422, "dependency replay requires CCEF 1.1")
+        original = await self.session.scalar(
+            select(PdfReviewRevision).where(
+                PdfReviewRevision.session_id == review_session.id,
+                PdfReviewRevision.revision_number == 1,
+            )
+        )
+        if original is None:
+            raise _unavailable()
+        baseline = await self._revision_package(original)
+        if not isinstance(baseline, ExtractionPackageV1_1):
+            raise ServiceError("validation_error", 422, "dependency replay requires CCEF 1.1")
+        context, responses, owned = await load_review_relations(
+            self.session, self.settings, review_session.extraction_run_id
+        )
+        touched, mainline, additions = await self._recovery_human_edits(review_session, current)
+        try:
+            return recover_dependencies(
+                context,
+                responses,
+                owned,
+                baseline,
+                current,
+                human_node_ids=touched,
+                mainline_node_ids=mainline,
+                human_added_ids=additions,
+            )
+        except ValueError as error:
+            raise ServiceError("validation_error", 422, str(error)) from error
+
+    async def preview_recovery(
+        self, session_id: UUID, request: PdfReviewRecoveryPreviewRequest
+    ) -> PdfReviewRecoveryPreviewRead:
+        review_session = await self.session.get(PdfReviewSession, session_id)
+        if review_session is None:
+            raise ServiceError("not_found", 404, _SESSION_MISSING)
+        if review_session.status != "open" or review_session.version != request.expected_version:
+            raise _command_conflict("review session changed before dependency replay preview")
+        current = await self._revision_package(await self._revision(review_session))
+        result = await self._recovery(review_session, current)
+        digest = hashlib.sha256(
+            _canonical_package_bytes(result.package.model_dump(mode="json"))
+        ).hexdigest()
+        return PdfReviewRecoveryPreviewRead(
+            preview_sha256=digest,
+            corrected_entries=result.corrected_entries,
+            added_moves=[
+                PdfReviewRecoveredMove(
+                    page=page, move_text=move, sequence_id=sequence, node_id=node
+                )
+                for page, move, sequence, node in result.added_moves
+            ],
+            retired_issue_count=result.retired_issue_count,
+            preserved_manual_moves=result.preserved_manual_moves,
+            conflicts=result.conflicts,
+            candidate=result.package,
+            inspection=inspect_review_candidate(result.package),
+        )
+
     async def apply_command(
         self, session_id: UUID, request: PdfReviewCommandRequest
     ) -> PdfReviewCommandEnvelope:
@@ -251,6 +423,71 @@ class PdfReviewLedgerService:
             stored_size = stored.size_bytes
             stored_sha256 = stored.sha256
             decisions = edited.decisions
+            event_kind = "edited"
+        elif isinstance(command, PdfReviewRecoverDependenciesCommand):
+            if status != "open":
+                raise _command_conflict("only an open review session can restore dependencies")
+            result = await self._recovery(review_session, package)
+            package = result.package
+            package_bytes = _canonical_package_bytes(package.model_dump(mode="json"))
+            if hashlib.sha256(package_bytes).hexdigest() != command.preview_sha256:
+                raise _command_conflict("dependency replay changed; preview it again")
+            inspection = inspect_review_candidate(package)
+            stored = await asyncio.to_thread(
+                store_content_addressed_bytes,
+                self.settings.source_storage_root,
+                namespace="review-revisions",
+                suffix=".json",
+                raw_bytes=package_bytes,
+            )
+            stored_path = stored.relative_path
+            stored_media_type = "application/json"
+            stored_size = stored.size_bytes
+            stored_sha256 = stored.sha256
+            decisions = {
+                "operation": "recover_dependencies",
+                "corrected_entries": cast(list[JsonValue], result.corrected_entries),
+                "added_move_count": len(result.added_moves),
+                "retired_issue_count": result.retired_issue_count,
+                "preserved_manual_moves": result.preserved_manual_moves,
+                "conflicts": cast(list[JsonValue], result.conflicts),
+            }
+            event_kind = "edited"
+        elif isinstance(command, (PdfReviewUndoCommand, PdfReviewRedoCommand)):
+            if status != "open":
+                raise _command_conflict("only an open review session can undo or redo")
+            undo_stack, redo_stack = await self._edit_history(review_session.id)
+            if isinstance(command, PdfReviewUndoCommand):
+                if len(undo_stack) <= 1:
+                    raise _command_conflict("there is no review edit to undo")
+                changed_revision_number = undo_stack[-1]
+                target_revision_number = undo_stack[-2]
+                operation_name = "undo"
+            else:
+                if not redo_stack:
+                    raise _command_conflict("there is no review edit to redo")
+                changed_revision_number = redo_stack[-1]
+                target_revision_number = changed_revision_number
+                operation_name = "redo"
+            target_revision = await self.session.scalar(
+                select(PdfReviewRevision).where(
+                    PdfReviewRevision.session_id == review_session.id,
+                    PdfReviewRevision.revision_number == target_revision_number,
+                )
+            )
+            if target_revision is None:
+                raise _unavailable() from None
+            package = await self._revision_package(target_revision)
+            inspection = inspect_review_candidate(package)
+            stored_path = target_revision.relative_path
+            stored_media_type = target_revision.media_type
+            stored_size = target_revision.byte_size
+            stored_sha256 = target_revision.package_sha256
+            decisions = {
+                "operation": operation_name,
+                "target_revision_number": target_revision_number,
+                "changed_revision_number": changed_revision_number,
+            }
             event_kind = "edited"
         elif isinstance(command, PdfReviewAcknowledgeCommand):
             if status != "open":
@@ -344,6 +581,32 @@ class PdfReviewLedgerService:
             session=await self._read(review_session),
             document=document,
         )
+
+    async def _edit_history(self, session_id: UUID) -> tuple[list[int], list[int]]:
+        """Reconstruct the edit cursor from immutable ledger events."""
+        events = tuple(
+            await self.session.scalars(
+                select(PdfReviewEvent)
+                .where(PdfReviewEvent.session_id == session_id)
+                .order_by(PdfReviewEvent.resulting_version)
+            )
+        )
+        undo_stack = [1]
+        redo_stack: list[int] = []
+        for event in events:
+            if event.kind != "edited":
+                continue
+            operation = event.decisions.get("operation")
+            if operation == "undo":
+                if len(undo_stack) > 1:
+                    redo_stack.append(undo_stack.pop())
+            elif operation == "redo":
+                if redo_stack:
+                    undo_stack.append(redo_stack.pop())
+            else:
+                undo_stack.append(event.resulting_version)
+                redo_stack.clear()
+        return undo_stack, redo_stack
 
     async def _baseline(self, target_id: UUID, package_sha256: str) -> _Baseline:
         run = await self.session.get(ExtractionRun, target_id)

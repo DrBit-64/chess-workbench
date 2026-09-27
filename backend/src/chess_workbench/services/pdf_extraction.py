@@ -86,7 +86,9 @@ from chess_workbench.services.pdf_persistence import (
     PDF_ANNOTATED_EXTRACTION_PIPELINE_VERSION,
     PDF_EVIDENCE_PIPELINE_VERSION,
     PDF_EXTRACTION_PIPELINE_VERSION,
+    PDF_RELATION_EXTRACTION_PIPELINE_VERSION,
     PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION,
+    PDF_SOURCE_EXTRACTION_PIPELINE_VERSION,
 )
 from chess_workbench.services.source_storage import (
     StoredSourceBlob,
@@ -115,7 +117,10 @@ _SUPPORTED_PIPELINES = frozenset(
         PDF_EXTRACTION_PIPELINE_VERSION,
         PDF_ANNOTATED_EXTRACTION_PIPELINE_VERSION,
         PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION,
+        PDF_SOURCE_EXTRACTION_PIPELINE_VERSION,
+        PDF_RELATION_EXTRACTION_PIPELINE_VERSION,
         "pdf-extraction:v5",
+        "pdf-extraction:v7",
     }
 )
 _MAX_RUN_FRAGMENTS = 200_000
@@ -221,7 +226,7 @@ def _parse_payload(
     }
     pipeline_version = payload.get("pipeline_version") if type(payload) is dict else None
     expected_keys = common_keys
-    if pipeline_version == "pdf-extraction:v5":
+    if pipeline_version in {"pdf-extraction:v5", "pdf-extraction:v7"}:
         expected_keys = common_keys | {
             "document_id",
             "expected_document_version",
@@ -271,7 +276,7 @@ async def _load_input(database: Database, payload: dict[str, Any]) -> _Extractio
     run, asset, source_file, job = row
     expected_job_kind = (
         "pdf_incremental_extraction"
-        if pipeline_version == "pdf-extraction:v5"
+        if pipeline_version in {"pdf-extraction:v5", "pdf-extraction:v7"}
         else "pdf_extraction"
     )
     if (
@@ -362,6 +367,8 @@ def _source_fragments(
                 box=box,
                 text=fragment.text,
                 origin=origin,
+                font_color=fragment.font_color if origin == "embedded_text" else None,
+                style_runs=fragment.style_runs if origin == "embedded_text" else [],
                 confidence=fragment.confidence,
                 engine_name=engine_name,
                 engine_version=engine_version,
@@ -403,6 +410,8 @@ def _fragment_document(
                     ],
                     "text": fragment.text,
                     "origin": fragment.origin,
+                    "font_color": fragment.font_color,
+                    "style_runs": [run.model_dump(mode="json") for run in fragment.style_runs],
                     "confidence": fragment.confidence,
                     "engine_name": fragment.engine_name,
                     "engine_version": fragment.engine_version,
@@ -609,7 +618,7 @@ def _evidence_fragment(
     physical_page: int,
     expected_order: int,
 ) -> PromptEvidenceFragment:
-    if not isinstance(value, dict) or set(value) != {
+    fields = {
         "order",
         "physical_page",
         "bbox",
@@ -619,7 +628,12 @@ def _evidence_fragment(
         "engine_name",
         "engine_version",
         "fragment_sha256",
-    }:
+    }
+    if (
+        not isinstance(value, dict)
+        or not fields <= set(value)
+        or set(value) - fields - {"font_color", "style_runs"}
+    ):
         raise _invalid_evidence()
     if value.get("order") != expected_order or value.get("physical_page") != physical_page:
         raise _invalid_evidence()
@@ -633,6 +647,8 @@ def _evidence_fragment(
             box=box,
             text=value["text"],
             origin=value["origin"],
+            font_color=value.get("font_color"),
+            style_runs=value.get("style_runs", []),
             confidence=value["confidence"],
             engine_name=value["engine_name"],
             engine_version=value["engine_version"],
@@ -1039,6 +1055,7 @@ async def _process_ccef_candidate(
     committed: _CommittedEvidence,
     *,
     provider: StructuredGenerationProvider | None,
+    recovery_provider: StructuredGenerationProvider | None,
 ) -> dict[str, Any]:
     builder, assemble = _ccef_pipeline_functions(source.pipeline_version)
     try:
@@ -1056,8 +1073,7 @@ async def _process_ccef_candidate(
     except StructuredGenerationProviderError as error:
         raise EngineError(error.code, str(error), retryable=error.retryable) from None
     if source.pipeline_version == PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION:
-        recovery_provider = active_provider
-        if provider is None:
+        if recovery_provider is None:
             recovery_provider = _active_provider(
                 settings,
                 None,
@@ -1235,10 +1251,58 @@ async def process_pdf_extraction_job(
     """Render one immutable run, write CAS blobs, then atomically register indexes."""
     source = await _load_input(database, payload)
     active_provider: StructuredGenerationProvider | None = provider
-    if payload["pipeline_version"] == "pdf-extraction:v5":
+    if payload["pipeline_version"] in {"pdf-extraction:v5", "pdf-extraction:v7"}:
         committed = await _load_committed_evidence(database, settings, source)
         if committed is not None:
             return committed.result
+    if payload["pipeline_version"] in {
+        PDF_SOURCE_EXTRACTION_PIPELINE_VERSION,
+        PDF_RELATION_EXTRACTION_PIPELINE_VERSION,
+    }:
+        from chess_workbench.services.pdf_source_extraction import (
+            process_source_candidate,
+            restore_source_candidate,
+        )
+
+        committed = await _load_committed_evidence(database, settings, source)
+        if committed is not None:
+            restored = await restore_source_candidate(database, settings, source, committed)
+            if restored is not None:
+                return restored
+            active_provider = _active_provider(
+                settings,
+                provider,
+                thinking_enabled=source.pipeline_version
+                == PDF_RELATION_EXTRACTION_PIPELINE_VERSION,
+                json_output_enabled=source.pipeline_version
+                != PDF_RELATION_EXTRACTION_PIPELINE_VERSION,
+                invalid_response_recorder=_deepseek_invalid_response_recorder(settings, source),
+            )
+            patch_provider = (
+                _active_provider(
+                    settings,
+                    provider,
+                    recovery=True,
+                    invalid_response_recorder=_deepseek_invalid_response_recorder(settings, source),
+                )
+                if source.pipeline_version == PDF_RELATION_EXTRACTION_PIPELINE_VERSION
+                else None
+            )
+            return await process_source_candidate(
+                database,
+                settings,
+                source,
+                committed,
+                active_provider,
+                patch_provider=patch_provider,
+            )
+        active_provider = _active_provider(
+            settings,
+            provider,
+            thinking_enabled=source.pipeline_version == PDF_RELATION_EXTRACTION_PIPELINE_VERSION,
+            json_output_enabled=source.pipeline_version != PDF_RELATION_EXTRACTION_PIPELINE_VERSION,
+            invalid_response_recorder=_deepseek_invalid_response_recorder(settings, source),
+        )
     if payload["pipeline_version"] in {
         PDF_EXTRACTION_PIPELINE_VERSION,
         PDF_ANNOTATED_EXTRACTION_PIPELINE_VERSION,
@@ -1267,6 +1331,7 @@ async def process_pdf_extraction_job(
                 source,
                 committed,
                 provider=active_provider,
+                recovery_provider=provider,
             )
         active_provider = _active_provider(
             settings,
@@ -1541,14 +1606,41 @@ async def process_pdf_extraction_job(
     if payload["pipeline_version"] in {
         PDF_EVIDENCE_PIPELINE_VERSION,
         "pdf-extraction:v5",
+        "pdf-extraction:v7",
     }:
         return committed.result
+    if payload["pipeline_version"] in {
+        PDF_SOURCE_EXTRACTION_PIPELINE_VERSION,
+        PDF_RELATION_EXTRACTION_PIPELINE_VERSION,
+    }:
+        from chess_workbench.services.pdf_source_extraction import process_source_candidate
+
+        assert active_provider is not None
+        patch_provider = (
+            _active_provider(
+                settings,
+                provider,
+                recovery=True,
+                invalid_response_recorder=_deepseek_invalid_response_recorder(settings, source),
+            )
+            if source.pipeline_version == PDF_RELATION_EXTRACTION_PIPELINE_VERSION
+            else None
+        )
+        return await process_source_candidate(
+            database,
+            settings,
+            source,
+            committed,
+            active_provider,
+            patch_provider=patch_provider,
+        )
     return await _process_ccef_candidate(
         database,
         settings,
         source,
         committed,
         provider=active_provider,
+        recovery_provider=provider,
     )
 
 

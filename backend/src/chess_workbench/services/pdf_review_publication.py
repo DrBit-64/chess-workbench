@@ -22,6 +22,7 @@ from chess_workbench.extraction.contracts import (
     MoveSequenceItemV1_1,
     SequenceAnnotation,
 )
+from chess_workbench.extraction.notation import effective_move_nags
 from chess_workbench.schemas.domain import (
     CourseKnowledgeNoteBlockCreate,
     CourseModuleCreate,
@@ -357,11 +358,12 @@ class PdfReviewPublicationService:
             )
             node_span_ids = await self._spans(node.evidence, asset, span_cache)
             used_span_ids.update(node_span_ids)
+            effective_nags = effective_move_nags(node)
             occurrence = await self.content.create_move_occurrence(
                 OccurrenceMoveCreate(
                     parent_occurrence_id=parent_occurrence_id,
                     uci=cast(str, node.uci_candidate),
-                    nag=node.nags[0] if node.nags else None,
+                    nag=effective_nags[0] if effective_nags else None,
                     sort_order=sibling_order[node.id],
                     context={
                         "review_publication_id": str(publication_id),

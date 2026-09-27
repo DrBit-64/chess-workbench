@@ -58,6 +58,11 @@ vi.mock('react-chessboard', () => ({
         aria-label="模拟落子 c7c6"
         onClick={() => props.onPieceDrop?.('c7', 'c6')}
       />
+      <button
+        type="button"
+        aria-label="模拟落子 c7c5"
+        onClick={() => props.onPieceDrop?.('c7', 'c5')}
+      />
     </div>
   ),
 }));
@@ -849,7 +854,7 @@ describe('Stage 8D review page (8D-3A)', () => {
     const sequence = (await screen.findByText('王翼进攻')).closest('section')!;
 
     // Visual order of the move cells across the projected rows.
-    const labels = ['e4', 'e5', 'c5', 'Nf3', 'd4'];
+    const labels = ['e4', 'd4', 'e5', 'c5', 'Nf3'];
     const elements = labels.map((label) => within(sequence).getByText(label));
     for (let index = 1; index < elements.length; index += 1) {
       const before = elements[index - 1];
@@ -861,13 +866,13 @@ describe('Stage 8D review page (8D-3A)', () => {
       ).toBe(true);
     }
 
-    // e4/e5 are one paired mainline row at variation depth 0.
+    // The root white alternative separates e4 from e5; both remain mainline.
     const pairRow = within(sequence)
       .getByText('e5')
       .closest('[data-variation-depth]') as HTMLElement;
     expect(pairRow.getAttribute('data-variation-depth')).toBe('0');
-    expect(within(pairRow).getByText('e4')).toBeTruthy();
-    expect(within(pairRow).getByText('1')).toBeTruthy();
+    expect(within(pairRow).queryByText('e4')).toBeNull();
+    expect(within(pairRow).getByText('1...')).toBeTruthy();
 
     // A line branching directly from the main score keeps an explicit rail.
     const c5Row = within(sequence)
@@ -894,8 +899,8 @@ describe('Stage 8D review page (8D-3A)', () => {
     expect(within(sequence).queryByText('合法')).toBeNull();
     expect(within(sequence).queryByText('非法')).toBeNull();
     expect(within(sequence).queryByText('歧义')).toBeNull();
-    expect(within(sequence).getByText('!')).toBeTruthy();
-    expect(within(sequence).getByText('!?')).toBeTruthy();
+    expect(within(sequence).getAllByText('!').length).toBeGreaterThan(0);
+    expect(within(sequence).getByText('?')).toBeTruthy();
     expect(
       within(sequence).queryByRole('button', { name: '第 5 页' }),
     ).toBeNull();
@@ -1036,6 +1041,183 @@ describe('Stage 8D review page (8D-3A)', () => {
       },
     });
     expect(await screen.findByText('审核中 · 版本 2')).toBeTruthy();
+  });
+
+  it('previews recovered moves without writing, confirms one revision, and can undo it', async () => {
+    const original = baseDocument();
+    const recoveredNode: MoveNode = {
+      id: 'recovered-nc3',
+      parent_id: 'n2',
+      sibling_order: 1,
+      move_text: 'Nc3',
+      san_candidate: 'Nc3',
+      uci_candidate: 'b1c3',
+      fen_before: FEN_AFTER_E5,
+      fen_after:
+        'rnbqkbnr/pppp1ppp/8/4p3/4P3/2N5/PPPP1PPP/R1BQKBNR b KQkq - 1 2',
+      side_to_move: 'w',
+      move_number: 2,
+      nags: [],
+      validation_status: 'valid',
+      evidence: evidence(6),
+      confidence: 0.8,
+    };
+    const candidate = {
+      ...original.package,
+      items: (original.package.items ?? []).map((item) =>
+        item.kind === 'move_sequence' && item.id === 'seq1'
+          ? { ...item, nodes: [...item.nodes, recoveredNode] }
+          : item,
+      ),
+    };
+    const commands: unknown[] = [];
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const target = String(input);
+      if (target.endsWith('/review/session')) {
+        return json({ replayed: false, session: reviewSession() }, 201);
+      }
+      if (target.endsWith('/recovery-preview')) {
+        expect(JSON.parse(String(init?.body))).toEqual({ expected_version: 1 });
+        return json({
+          preview_sha256: 'f'.repeat(64),
+          corrected_entries: ['Nf3 → e5'],
+          added_moves: [
+            {
+              page: 6,
+              move_text: 'Nc3',
+              sequence_id: 'seq1',
+              node_id: 'recovered-nc3',
+            },
+          ],
+          retired_issue_count: 1,
+          preserved_manual_moves: 2,
+          conflicts: [],
+          candidate,
+          inspection: {
+            ...original.inspection,
+            move_node_count: original.inspection.move_node_count + 1,
+          },
+        });
+      }
+      if (target.endsWith('/commands')) {
+        commands.push(JSON.parse(String(init?.body)));
+        return json({
+          session: reviewSession(commands.length + 1),
+          document:
+            commands.length === 1
+              ? { ...original, package: candidate }
+              : original,
+        });
+      }
+      return json(original);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderPage();
+    fireEvent.click(
+      await screen.findByRole('button', { name: '开始编辑审核' }),
+    );
+    await screen.findByText('审核中 · 版本 1');
+    fireEvent.click(
+      screen.getByRole('button', { name: '根据人工修正恢复后续' }),
+    );
+    expect(await screen.findByText(/依赖恢复预览 · 新增 1 招/)).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Nc3' })).toBeTruthy();
+    expect(commands).toHaveLength(0);
+    fireEvent.click(screen.getByRole('button', { name: '对照原审核结果' }));
+    expect(screen.queryByRole('button', { name: 'Nc3' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: '查看恢复候选' }));
+    fireEvent.click(screen.getByRole('button', { name: '确认恢复' }));
+    await waitFor(() => expect(commands).toHaveLength(1));
+    expect(commands[0]).toEqual({
+      expected_version: 1,
+      command: { kind: 'recover_dependencies', preview_sha256: 'f'.repeat(64) },
+    });
+    expect(await screen.findByText('审核中 · 版本 2')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: '撤销' }));
+    await waitFor(() => expect(commands).toHaveLength(2));
+    expect(commands[1]).toEqual({
+      expected_version: 2,
+      command: { kind: 'undo' },
+    });
+  });
+
+  it('drags a whole branch to a visible move and offers undo and redo', async () => {
+    const commands: unknown[] = [];
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const target = String(input);
+      if (target.endsWith('/review/session')) {
+        return json({ replayed: false, session: reviewSession() }, 201);
+      }
+      if (target.endsWith('/reattach-preview')) {
+        return json({ issue_count: 2, blocking_issue_count: 1 });
+      }
+      if (target.endsWith('/commands')) {
+        commands.push(JSON.parse(String(init?.body)));
+        const nextVersion = commands.length + 1;
+        const session = reviewSession(nextVersion);
+        if (nextVersion >= 3)
+          session.events[2].decisions = { operation: 'undo' };
+        if (nextVersion >= 4)
+          session.events[3].decisions = { operation: 'redo' };
+        return json({ session, document: baseDocument() });
+      }
+      return json(baseDocument());
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderPage();
+    fireEvent.click(
+      await screen.findByRole('button', { name: '开始编辑审核' }),
+    );
+    await screen.findByText('审核中 · 版本 1');
+
+    const transferred = new Map<string, string>();
+    const dataTransfer = {
+      types: [] as string[],
+      effectAllowed: 'move',
+      dropEffect: 'move',
+      setData(type: string, value: string) {
+        transferred.set(type, value);
+        this.types = [...transferred.keys()];
+      },
+      getData(type: string) {
+        return transferred.get(type) ?? '';
+      },
+    };
+    const source = screen.getByText('Nf3').closest('[data-review-node-id]')!;
+    const target = screen.getByRole('button', { name: 'c5' });
+    fireEvent.dragStart(source, { dataTransfer });
+    fireEvent.dragOver(target, { dataTransfer });
+    fireEvent.drop(target, { dataTransfer });
+    expect(await screen.findByText('预览整段变化的挂接')).toBeTruthy();
+    expect(screen.getByText(/来源：.*Nf3/)).toBeTruthy();
+    await screen.findByText(/按新局面计算：剩余 2 个问题/);
+    fireEvent.click(screen.getByRole('button', { name: '保存改挂' }));
+    await waitFor(() => expect(commands).toHaveLength(1));
+    expect(commands[0]).toEqual({
+      expected_version: 1,
+      command: {
+        kind: 'edit',
+        operation: {
+          kind: 'reattach_variation',
+          sequence_id: 'seq1',
+          node_id: 'n4',
+          target_sequence_id: 'seq1',
+          parent_node_id: 'n3',
+        },
+      },
+    });
+    fireEvent.click(await screen.findByRole('button', { name: '撤销' }));
+    await waitFor(() => expect(commands).toHaveLength(2));
+    expect(commands[1]).toEqual({
+      expected_version: 2,
+      command: { kind: 'undo' },
+    });
+    fireEvent.click(await screen.findByRole('button', { name: '恢复' }));
+    await waitFor(() => expect(commands).toHaveLength(3));
+    expect(commands[2]).toEqual({
+      expected_version: 3,
+      command: { kind: 'redo' },
+    });
   });
 
   it('can explicitly exclude a blocking non-score item from the audit revision', async () => {
@@ -1328,6 +1510,242 @@ describe('Stage 8D review page (8D-3A)', () => {
     ).toBe('**变化结论**');
   });
 
+  it('turns a source fragment into a branch by clicking its parent and entering printed notation', async () => {
+    const document = annotatedDocument();
+    document.package.items?.push({
+      id: 'miss1',
+      kind: 'unresolved',
+      unresolved_type: 'mixed',
+      reason_code: 'ambiguous_relation',
+      raw_text: '1...c5?',
+      details: null,
+      evidence: evidence(5),
+      confidence: null,
+    });
+    const fetchMock = vi.fn((...args: [RequestInfo | URL, RequestInit?]) => {
+      const [input] = args;
+      if (String(input).endsWith('/review/session')) {
+        return json({ replayed: false, session: reviewSession() }, 201);
+      }
+      if (String(input).endsWith('/commands')) {
+        return json({ session: reviewSession(2), document });
+      }
+      return json(document);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderPage();
+    fireEvent.click(
+      await screen.findByRole('button', { name: '开始编辑审核' }),
+    );
+    await screen.findByText('审核中 · 版本 1');
+    fireEvent.click(screen.getByRole('button', { name: '转为棋步' }));
+    expect(screen.getByText(/请在棋谱中点选目标棋步/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'e4' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).queryByText(/UCI/)).toBeNull();
+    expect(within(dialog).getByText('预览线路：c5?')).toBeTruthy();
+    expect(within(dialog).getByText('接在 1. e4! 后面')).toBeTruthy();
+    fireEvent.click(within(dialog).getByRole('button', { name: '保存修订' }));
+    await waitFor(() =>
+      expect(
+        fetchMock.mock.calls.some(([input]) =>
+          String(input).endsWith('/commands'),
+        ),
+      ).toBe(true),
+    );
+    const commandCall = fetchMock.mock.calls.find(([input]) =>
+      String(input).endsWith('/commands'),
+    )!;
+    expect(JSON.parse(String(commandCall[1]?.body))).toEqual({
+      expected_version: 1,
+      command: {
+        kind: 'edit',
+        operation: {
+          kind: 'resolve_unresolved',
+          item_id: 'miss1',
+          as_kind: 'line',
+          text: null,
+          sequence_id: 'annotated-seq',
+          anchor_node_id: 'n1',
+          moves: ['c7c5'],
+          nags: [2],
+          initial_fen: null,
+        },
+      },
+    });
+  });
+
+  it('accepts a board move when the source notation cannot be read', async () => {
+    const document = annotatedDocument();
+    document.package.items?.push({
+      id: 'miss1',
+      kind: 'unresolved',
+      unresolved_type: 'mixed',
+      reason_code: 'ambiguous_relation',
+      raw_text: 'unreadable',
+      details: null,
+      evidence: evidence(5),
+      confidence: null,
+    });
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL) =>
+        String(input).endsWith('/review/session')
+          ? json({ replayed: false, session: reviewSession() }, 201)
+          : json(document),
+      ),
+    );
+    renderPage();
+    fireEvent.click(
+      await screen.findByRole('button', { name: '开始编辑审核' }),
+    );
+    await screen.findByText('审核中 · 版本 1');
+    fireEvent.click(screen.getByRole('button', { name: '转为棋步' }));
+    fireEvent.click(screen.getByRole('button', { name: 'e4' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText(/无法从此局面走出/)).toBeTruthy();
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: '模拟落子 c7c5' }),
+    );
+    expect(within(dialog).getByText('预览线路：c5')).toBeTruthy();
+    expect(
+      (
+        within(dialog).getByRole('textbox', {
+          name: /棋步/,
+        }) as HTMLTextAreaElement
+      ).value,
+    ).toBe('c5');
+  });
+
+  it('previews and saves a later unresolved continuation in the same revision', async () => {
+    const document = annotatedDocument();
+    document.package.items?.push(
+      {
+        id: 'miss1',
+        kind: 'unresolved',
+        unresolved_type: 'mixed',
+        reason_code: 'ambiguous_relation',
+        raw_text: '1...c5?',
+        details: null,
+        evidence: evidence(5),
+        confidence: null,
+      },
+      {
+        id: 'miss2',
+        kind: 'unresolved',
+        unresolved_type: 'mixed',
+        reason_code: 'semantic_chunk_failed',
+        raw_text: '2.Nf3',
+        details: null,
+        evidence: evidence(6),
+        confidence: null,
+      },
+    );
+    const fetchMock = vi.fn((...args: [RequestInfo | URL, RequestInit?]) => {
+      const [input] = args;
+      if (String(input).endsWith('/review/session')) {
+        return json({ replayed: false, session: reviewSession() }, 201);
+      }
+      if (String(input).endsWith('/commands')) {
+        return json({ session: reviewSession(2), document });
+      }
+      return json(document);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderPage();
+    fireEvent.click(
+      await screen.findByRole('button', { name: '开始编辑审核' }),
+    );
+    await screen.findByText('审核中 · 版本 1');
+    fireEvent.click(screen.getAllByRole('button', { name: '转为棋步' })[0]);
+    fireEvent.click(screen.getByRole('button', { name: 'e4' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('第 6 页：Nf3')).toBeTruthy();
+    fireEvent.click(
+      within(dialog).getByRole('checkbox', {
+        name: '同时恢复后续 1 段连续棋步',
+      }),
+    );
+    fireEvent.click(within(dialog).getByRole('button', { name: '保存修订' }));
+    await waitFor(() =>
+      expect(
+        fetchMock.mock.calls.some(([input]) =>
+          String(input).endsWith('/commands'),
+        ),
+      ).toBe(true),
+    );
+    const commandCall = fetchMock.mock.calls.find(([input]) =>
+      String(input).endsWith('/commands'),
+    )!;
+    expect(
+      JSON.parse(String(commandCall[1]?.body)).command.operation,
+    ).toMatchObject({
+      kind: 'resolve_unresolved',
+      item_id: 'miss1',
+      moves: ['c7c5'],
+      nags: [2],
+      following: [{ item_id: 'miss2', moves: ['g1f3'] }],
+    });
+  });
+
+  it('offers a parallel branch at the selected move and keeps text when the position is wrong', async () => {
+    const document = annotatedDocument();
+    document.package.items?.push({
+      id: 'miss1',
+      kind: 'unresolved',
+      unresolved_type: 'mixed',
+      reason_code: 'ambiguous_relation',
+      raw_text: '1...c5?',
+      details: null,
+      evidence: evidence(5),
+      confidence: null,
+    });
+    const fetchMock = vi.fn((...args: [RequestInfo | URL, RequestInit?]) =>
+      String(args[0]).endsWith('/review/session')
+        ? json({ replayed: false, session: reviewSession() }, 201)
+        : json(document),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    renderPage();
+    fireEvent.click(
+      await screen.findByRole('button', { name: '开始编辑审核' }),
+    );
+    await screen.findByText('审核中 · 版本 1');
+    fireEvent.click(screen.getByRole('button', { name: '转为棋步' }));
+    fireEvent.click(screen.getByRole('button', { name: 'e5' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(
+      within(dialog).getByText(/来源步号 1\.\.\. 与所选局面不符/),
+    ).toBeTruthy();
+    expect(
+      (
+        within(dialog).getByRole('button', {
+          name: '保存修订',
+        }) as HTMLButtonElement
+      ).disabled,
+    ).toBe(true);
+    fireEvent.click(within(dialog).getByRole('button', { name: '替代这步' }));
+    expect(within(dialog).getByText('预览线路：c5?')).toBeTruthy();
+    fireEvent.click(within(dialog).getByRole('button', { name: '保存修订' }));
+    await waitFor(() =>
+      expect(
+        fetchMock.mock.calls.some(([input]) =>
+          String(input).endsWith('/commands'),
+        ),
+      ).toBe(true),
+    );
+    const commandCall = fetchMock.mock.calls.find(([input]) =>
+      String(input).endsWith('/commands'),
+    )!;
+    expect(
+      JSON.parse(String(commandCall[1]?.body)).command.operation,
+    ).toMatchObject({
+      sequence_id: 'annotated-seq',
+      anchor_node_id: 'n1',
+      moves: ['c7c5'],
+    });
+  });
+
   it('records a board move as a new variation from the selected position', async () => {
     const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const target = String(input);
@@ -1414,8 +1832,39 @@ describe('Stage 8D review page (8D-3A)', () => {
         .getByTestId('board-pdf-review-board')
         .getAttribute('data-position'),
     ).toBe(FEN_AFTER_E4);
-    expect(within(row).getByText('!')).toBeTruthy();
-    expect(within(row).getByText('!?')).toBeTruthy();
+    expect(within(row).getAllByText('!')).toHaveLength(2);
+    expect(within(row).getByText('?')).toBeTruthy();
+  });
+
+  it('shows canonical SAN and one styled annotation in the review score', async () => {
+    const items = pairItems();
+    const sequence = items[0] as MoveSequenceItem;
+    sequence.nodes[0] = {
+      ...sequence.nodes[0],
+      move_text: 'e4!',
+      nags: [],
+      extensions: { 'chess-workbench.nag-override': true },
+    };
+    sequence.nodes[1] = {
+      ...sequence.nodes[1],
+      move_text: 'e5?!',
+      san_candidate: 'e5',
+      nags: [],
+    };
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => json(baseDocument({ items }))),
+    );
+    renderPage();
+
+    const move = await screen.findByRole('button', { name: 'e5' });
+    const cleared = screen.getByRole('button', { name: 'e4' });
+    expect(within(cleared).queryByText('!')).toBeNull();
+    expect(within(move).getByText('e5')).toBeTruthy();
+    expect(within(move).getAllByText('?!')).toHaveLength(1);
+    expect(within(move).getByTitle('可疑着法').className).toContain(
+      'text-amber-700',
+    );
   });
 
   it('renders CCEF 1.1 annotations in reading-flow order and navigates their anchors', async () => {

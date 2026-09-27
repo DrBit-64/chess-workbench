@@ -45,7 +45,6 @@ _SUPPLEMENT_SCHEMA_NAME = "chess_workbench_ccef_coverage_supplement_v1"
 _MAX_GAPS = 16
 _MAX_REPLACEMENTS = 8
 _MAX_ADDED_NODES = 128
-_MAX_OUTPUT_TOKENS = 8_192
 
 _NUMBER = re.compile(r"(?<![0-9A-Za-z])(\d{1,3})(\.\.\.|\.)\s*")
 _SAN = re.compile(
@@ -520,7 +519,7 @@ def build_ccef_coverage_supplement_request(
         ],
         response_schema_name=_SUPPLEMENT_SCHEMA_NAME,
         response_schema=CcefCoverageSupplement.model_json_schema(),
-        max_output_tokens=min(context.max_output_tokens, _MAX_OUTPUT_TOKENS),
+        max_output_tokens=context.max_output_tokens,
     )
 
 

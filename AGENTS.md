@@ -7,7 +7,7 @@ theory, interactive training, game review, and AI-assisted content import. The i
 model is a position graph (not a PGN tree), and the system enforces a strict four-layer
 separation: Source → Knowledge → Repertoire → Exercise.
 
-Current phase: Stage 8P portable AI-extraction contract after accepted Stage 6.
+Current phase: Stage 8D, with the v8 source-first PDF extraction pipeline implemented under ADR 0022; R5/P6 quality acceptance remains open.
 See `PLANS.md` for current tasks and `docs/development-plan.md` for the full roadmap.
 
 ## Repository layout
@@ -72,6 +72,38 @@ chess-workbench/
 4. Update `docs/agent/HANDOFF.md`.
 5. Summarize: files changed, tests run and results, failures, assumptions, remaining risks.
 6. Do **not** commit, rebase, reset, or delete files without explicit permission.
+
+## Personal-project implementation scale
+
+The operator explicitly requires a practical single-user website, not exhaustive defensive
+engineering. These rules govern new work and the interpretation of historical task packets:
+
+- Deliver a visible behavior or inspectable artifact before expanding infrastructure or coverage.
+  Fix observed problems; non-critical gaps may be recorded for later work.
+- Validate at external-input, chess-authority and persistence/publication boundaries. Do not repeat
+  full schema, hash or graph validation between internal functions that already receive validated
+  values, unless a relevant transformation or trust-boundary crossing requires it.
+- Preserve source fidelity, legal persisted moves, immutable history and human approval. Treat
+  extraction ambiguity as a localized review issue where possible, not another whole-run blocker.
+- Prefer straightforward functions, small typed models and the existing sequential worker. Do not
+  introduce generic workflow/repair frameworks, plugin registries, multiple model fallback chains
+  or hypothetical compatibility layers without a concrete current need.
+- Develop by user-visible slices, not one approval/test packet per tiny function or type. A slice
+  may include related files needed to deliver the behavior; it need not prove global completeness.
+- A focused regression is the default for a bug; add integration coverage when an actual persisted
+  invariant changes. Documentation and reversible low-impact presentation changes do not require
+  new tests. Avoid tests that mirror the implementation and combinatorial defensive matrices.
+- Use three verification levels: local checks while editing; owning tests when a slice is complete;
+  broader Stage/coverage/CI gates at closeout or when genuinely affected. Existing coverage floors
+  remain unchanged. Do not run global coverage, cumulative acceptance or unrelated database-dialect
+  suites after every small change, and do not weaken gates to hide failures.
+- Human comparison of a real source PDF and extracted output is valid semantic acceptance evidence.
+  It complements focused automated regressions; it is not restricted to visual styling or wording.
+- Once relevant checks pass, proceed. Broaden or repeat only for new edits, failures or a concrete
+  unresolved concern. Report product outcomes and remaining limitations, not test count as progress.
+
+PDF redesign scope and delivery slices: [ADR 0022](docs/decisions/0022-source-first-pdf-extraction-redesign.md) and [R1–R5 status](docs/agent/pdf-extraction-r1-r5-implementation-2026-09-27.md).
+The active P6 evaluation is 18 windows across six English books; the original 21-window v0 inventory remains historical. This is a bounded closeout exercise, not a per-edit or CI prerequisite.
 
 ## Commands
 

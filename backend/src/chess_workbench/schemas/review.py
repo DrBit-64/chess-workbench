@@ -284,6 +284,39 @@ class PdfReviewExcludeItem(StrictContract):
     item_id: LocalId
 
 
+class PdfReviewFollowingLine(StrictContract):
+    item_id: LocalId
+    moves: list[UciMove] = Field(min_length=1, max_length=256)
+    nags: list[Nag | None] = Field(default_factory=list, max_length=256)
+
+
+class PdfReviewResolveUnresolved(StrictContract):
+    kind: Literal["resolve_unresolved"]
+    item_id: LocalId
+    as_kind: Literal["prose", "annotation", "line"]
+    text: Annotated[str, StringConstraints(min_length=1, max_length=200_000)] | None = None
+    sequence_id: LocalId | None = None
+    anchor_node_id: LocalId | None = None
+    moves: list[UciMove] = Field(default_factory=list, max_length=256)
+    nags: list[Nag | None] = Field(default_factory=list, max_length=256)
+    initial_fen: str | None = None
+    following: list[PdfReviewFollowingLine] = Field(default_factory=list)
+
+
+class PdfReviewSetInitialPosition(StrictContract):
+    kind: Literal["set_initial_position"]
+    sequence_id: LocalId
+    fen: str
+
+
+class PdfReviewReattachVariation(StrictContract):
+    kind: Literal["reattach_variation"]
+    sequence_id: LocalId
+    node_id: LocalId
+    target_sequence_id: LocalId | None = None
+    parent_node_id: LocalId | None = None
+
+
 class PdfReviewDetachPositionAnchor(StrictContract):
     kind: Literal["detach_position_anchor"]
     issue_id: Annotated[
@@ -300,9 +333,17 @@ PdfReviewEditOperation = Annotated[
     | PdfReviewEditText
     | PdfReviewSetNag
     | PdfReviewExcludeItem
-    | PdfReviewDetachPositionAnchor,
+    | PdfReviewDetachPositionAnchor
+    | PdfReviewResolveUnresolved
+    | PdfReviewSetInitialPosition
+    | PdfReviewReattachVariation,
     Field(discriminator="kind"),
 ]
+
+
+class PdfReviewRecoverDependenciesCommand(StrictContract):
+    kind: Literal["recover_dependencies"]
+    preview_sha256: Sha256
 
 
 class PdfReviewEditCommand(StrictContract):
@@ -324,6 +365,14 @@ class PdfReviewAcknowledgeCommand(StrictContract):
         return value
 
 
+class PdfReviewUndoCommand(StrictContract):
+    kind: Literal["undo"]
+
+
+class PdfReviewRedoCommand(StrictContract):
+    kind: Literal["redo"]
+
+
 class PdfReviewApproveCommand(StrictContract):
     kind: Literal["approve"]
 
@@ -343,8 +392,11 @@ class PdfReviewReopenCommand(StrictContract):
 
 PdfReviewCommand = Annotated[
     PdfReviewEditCommand
+    | PdfReviewRecoverDependenciesCommand
     | PdfReviewAcknowledgeCommand
     | PdfReviewApproveCommand
+    | PdfReviewUndoCommand
+    | PdfReviewRedoCommand
     | PdfReviewRejectCommand
     | PdfReviewReopenCommand,
     Field(discriminator="kind"),
@@ -361,11 +413,45 @@ class PdfReviewCommandEnvelope(StrictContract):
     document: PdfReviewDocumentRead
 
 
+class PdfReviewRecoveryPreviewRequest(StrictContract):
+    expected_version: VersionNumber
+
+
+class PdfReviewRecoveredMove(StrictContract):
+    page: Annotated[int, Field(ge=1)]
+    move_text: str
+    sequence_id: LocalId
+    node_id: LocalId
+
+
+class PdfReviewRecoveryPreviewRead(StrictContract):
+    preview_sha256: Sha256
+    corrected_entries: list[str]
+    added_moves: list[PdfReviewRecoveredMove]
+    retired_issue_count: Annotated[int, Field(ge=0)]
+    preserved_manual_moves: Annotated[int, Field(ge=0)]
+    conflicts: list[str]
+    candidate: ExtractionPackageV1_1
+    inspection: ReviewInspection
+
+
+class PdfReviewReattachPreviewRequest(StrictContract):
+    expected_version: VersionNumber
+    operation: PdfReviewReattachVariation
+
+
+class PdfReviewReattachPreviewRead(StrictContract):
+    issue_count: Annotated[int, Field(ge=0)]
+    blocking_issue_count: Annotated[int, Field(ge=0)]
+
+
 __all__ = [
     "ReviewPageContentPath",
     "PdfReviewAcknowledgeCommand",
     "PdfReviewAddLine",
     "PdfReviewApproveCommand",
+    "PdfReviewUndoCommand",
+    "PdfReviewRedoCommand",
     "PdfReviewCommandEnvelope",
     "PdfReviewCommandRequest",
     "PdfReviewDeleteSubtree",
@@ -381,7 +467,16 @@ __all__ = [
     "PdfReviewRejectCommand",
     "PdfReviewReopenCommand",
     "PdfReviewRevisionRead",
+    "PdfReviewRecoverDependenciesCommand",
+    "PdfReviewRecoveredMove",
+    "PdfReviewRecoveryPreviewRequest",
+    "PdfReviewRecoveryPreviewRead",
+    "PdfReviewReattachPreviewRequest",
+    "PdfReviewReattachPreviewRead",
     "PdfReviewSetNag",
+    "PdfReviewResolveUnresolved",
+    "PdfReviewSetInitialPosition",
+    "PdfReviewReattachVariation",
     "PdfReviewSessionEnvelope",
     "PdfReviewSessionRead",
 ]

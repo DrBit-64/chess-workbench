@@ -26,6 +26,7 @@ from pathlib import Path
 from typing import Any, cast
 from uuid import NAMESPACE_URL, UUID, uuid5
 
+import pytest
 from pypdf import PdfWriter
 from sqlalchemy import func, select
 
@@ -49,6 +50,8 @@ from chess_workbench.store.models import (
 
 PDF_EXTRACTION_PIPELINE_VERSION = "pdf-extraction:v2"
 PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION = "pdf-extraction:v4"
+PDF_SOURCE_EXTRACTION_PIPELINE_VERSION = "pdf-extraction:v6"
+PDF_RELATION_EXTRACTION_PIPELINE_VERSION = "pdf-extraction:v8"
 MISSING_UUID = "00000000-0000-0000-0000-000000000000"
 
 ASSET_TABLES = (PdfAsset, Source, SourceVersion, SourceFile)
@@ -158,7 +161,11 @@ def expected_run_id(
     the production private helper.
     """
     fingerprint_version = (
-        "pdfium-text-lines+diagram+ccef-semantic-consolidation:v14"
+        "pdfium-style-runs+source-relations:v1"
+        if pipeline_version == PDF_RELATION_EXTRACTION_PIPELINE_VERSION
+        else "pdfium-text-lines+diagram+source-events:v1"
+        if pipeline_version == PDF_SOURCE_EXTRACTION_PIPELINE_VERSION
+        else "pdfium-text-lines+diagram+ccef-semantic-consolidation:v14"
         if pipeline_version == PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION
         else "pdfium-text-lines+ccef-formal-consolidation:v5"
     )
@@ -369,7 +376,16 @@ async def test_asset_get_and_list_agree_with_persistence_order(tmp_path: Path) -
 # ── extraction enqueue: 202, deterministic run id, exact job ─────────────────
 
 
-async def test_extraction_enqueue_returns_202_with_exact_job(tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    ("pipeline", "version"),
+    [
+        (None, PDF_RELATION_EXTRACTION_PIPELINE_VERSION),
+        ("legacy", PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION),
+    ],
+)
+async def test_extraction_enqueue_returns_202_with_exact_job(
+    tmp_path: Path, pipeline: str | None, version: str
+) -> None:
     app = build_app(tmp_path, "enqueue")
     await create_schema(app)
     client = cast(Any, app.asgi_client)
@@ -383,6 +399,8 @@ async def test_extraction_enqueue_returns_202_with_exact_job(tmp_path: Path) -> 
             "last_page": 2,
             "profile": profile,
         }
+        if pipeline is not None:
+            request_body["pipeline"] = pipeline
         response = (await client.post("/api/pdf-extractions", json=request_body))[1]
         assert response.status == 202
         assert response.headers["idempotency-replayed"] == "false"
@@ -394,7 +412,7 @@ async def test_extraction_enqueue_returns_202_with_exact_job(tmp_path: Path) -> 
             first_page=1,
             last_page=2,
             profile=profile,
-            pipeline_version=PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION,
+            pipeline_version=version,
         )
         extraction = body["extraction"]
         assert extraction["id"] == str(run_id)
@@ -402,7 +420,7 @@ async def test_extraction_enqueue_returns_202_with_exact_job(tmp_path: Path) -> 
         assert extraction["pdf_asset_id"] == asset["id"]
         assert extraction["first_page"] == 1
         assert extraction["last_page"] == 2
-        assert extraction["pipeline_version"] == PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION
+        assert extraction["pipeline_version"] == version
         assert extraction["profile"] == profile
         assert extraction["has_conflicts"] is False
         # The nested generic Job is exact: queued, attempt 0, finite payload.
@@ -421,7 +439,7 @@ async def test_extraction_enqueue_returns_202_with_exact_job(tmp_path: Path) -> 
             "pdf_asset_id": asset["id"],
             "first_page": 1,
             "last_page": 2,
-            "pipeline_version": PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION,
+            "pipeline_version": version,
             "profile": profile,
         }
         assert await count_rows(app, ExtractionRun) == 1
@@ -981,6 +999,7 @@ async def test_http_post_creates_v4_distinct_from_existing_v2_and_replays_stable
                     "first_page": 1,
                     "last_page": 2,
                     "profile": profile,
+                    "pipeline": "legacy",
                 },
             )
         )[1]
@@ -1009,6 +1028,7 @@ async def test_http_post_creates_v4_distinct_from_existing_v2_and_replays_stable
                     "first_page": 1,
                     "last_page": 2,
                     "profile": profile,
+                    "pipeline": "legacy",
                 },
             )
         )[1]

@@ -1,6 +1,7 @@
 import { Alert, Input, Modal, Spin, Tag, message } from 'antd';
 import { Chess, type Square } from 'chess.js';
 import {
+  type DragEvent as ReactDragEvent,
   type MouseEvent as ReactMouseEvent,
   useEffect,
   useMemo,
@@ -21,6 +22,8 @@ import type {
   PdfReviewDocument,
   PdfReviewSession,
   PdfReviewSessionEnvelope,
+  PdfReviewReattachPreview,
+  PdfReviewRecoveryPreview,
   PdfReviewPublication,
   PdfReviewPublishRequest,
 } from '../logic/api/types';
@@ -28,11 +31,16 @@ import {
   FAST_MOVE_ANIMATION_MS,
   lichessSquareStyles,
 } from './boardInteraction';
+import { MoveNotation } from './MoveNotation';
+import { formatMoveNotation, moveNotationText } from './moveNotation';
 import {
   buildReviewMoveRows,
   buildReviewReadingFlow,
   compactReviewBlocks,
+  reviewLinePath,
+  reviewMoveTurn,
 } from './reviewMoveLayout';
+import { parseReviewLine } from './reviewLineInput';
 import type {
   AnnotatedMoveSequenceItem,
   CompactReviewBlock,
@@ -47,6 +55,7 @@ const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 type ReviewItem = NonNullable<PdfReviewDocument['package']['items']>[number];
 type MoveSequenceItem = Extract<ReviewItem, { kind: 'move_sequence' }>;
 type ProseItem = Extract<ReviewItem, { kind: 'prose' }>;
+type UnresolvedReviewItem = Extract<ReviewItem, { kind: 'unresolved' }>;
 type EvidenceRef = ReviewItem['evidence'][number];
 type ReviewCommand = PdfReviewCommandRequest['command'];
 type ReviewEditOperation = Extract<
@@ -73,6 +82,19 @@ interface TextEditorState {
   textFormat: 'plain' | 'markdown' | null;
 }
 
+interface UnresolvedEditorState {
+  item: UnresolvedReviewItem;
+  asKind: 'prose' | 'annotation' | 'line';
+  text: string;
+  sequenceId: string;
+  anchorNodeId: string;
+  notation: string;
+  targetNodeId: string | null;
+  targetMode: 'after' | 'parallel';
+  pickingTarget: boolean;
+  initialFen: string;
+}
+
 interface ContextMenuAction {
   key: string;
   label: string;
@@ -93,6 +115,56 @@ interface MoveSelection {
   sequenceId: string;
   anchorNodeId: string;
   nodeIds: string[];
+}
+
+interface AttachSelection {
+  sequenceId: string;
+  nodeId: string;
+}
+
+interface AttachPreview {
+  source: AttachSelection;
+  targetSequenceId: string;
+  targetNodeId: string | null;
+  mode: 'after' | 'parallel';
+}
+
+const REVIEW_NODE_DRAG_TYPE = 'application/x-chess-review-node';
+
+function reviewNodeHit(target: EventTarget | null): AttachSelection | null {
+  if (!(target instanceof Element)) return null;
+  const element = target.closest<HTMLElement>('[data-review-node-id]');
+  const sequenceId = element?.dataset.reviewSequenceId;
+  const nodeId = element?.dataset.reviewNodeId;
+  return sequenceId && nodeId ? { sequenceId, nodeId } : null;
+}
+
+function reviewStartHit(target: EventTarget | null): string | null {
+  if (!(target instanceof Element)) return null;
+  return (
+    target.closest<HTMLElement>('[data-review-sequence-start]')?.dataset
+      .reviewSequenceStart ?? null
+  );
+}
+
+function editHistory(events: PdfReviewSession['events']): {
+  canUndo: boolean;
+  canRedo: boolean;
+} {
+  const done: number[] = [1];
+  const undone: number[] = [];
+  for (const event of events) {
+    if (event.kind !== 'edited') continue;
+    if (event.decisions.operation === 'undo') {
+      if (done.length > 1) undone.push(done.pop()!);
+    } else if (event.decisions.operation === 'redo') {
+      if (undone.length > 0) done.push(undone.pop()!);
+    } else {
+      done.push(event.resulting_version);
+      undone.length = 0;
+    }
+  }
+  return { canUndo: done.length > 1, canRedo: undone.length > 0 };
 }
 
 interface PublicationDraftSegment {
@@ -154,9 +226,18 @@ export function PdfReviewPage({ runId }: { runId: string }) {
   );
   const [editing, setEditing] = useState(false);
   const [commandBusy, setCommandBusy] = useState(false);
+  const [recoveryPreview, setRecoveryPreview] =
+    useState<PdfReviewRecoveryPreview | null>(null);
+  const [showRecoveryCandidate, setShowRecoveryCandidate] = useState(false);
+  const editingBeforeRecovery = useRef(false);
   const [currentDocument, setCurrentDocument] =
     useState<PdfReviewDocument | null>(null);
   const [textEditor, setTextEditor] = useState<TextEditorState | null>(null);
+  const [unresolvedEditor, setUnresolvedEditor] =
+    useState<UnresolvedEditorState | null>(null);
+  const [unresolvedSelectedSquare, setUnresolvedSelectedSquare] =
+    useState<string>();
+  const [restoreFollowing, setRestoreFollowing] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [publicationBusy, setPublicationBusy] = useState(false);
   const [targetCourseId, setTargetCourseId] = useState('');
@@ -168,12 +249,27 @@ export function PdfReviewPage({ runId }: { runId: string }) {
     null,
   );
   const [dragSelecting, setDragSelecting] = useState(false);
+  const [attachSelection, setAttachSelection] =
+    useState<AttachSelection | null>(null);
+  const [attachPreview, setAttachPreview] = useState<AttachPreview | null>(
+    null,
+  );
+  const [attachInspection, setAttachInspection] = useState<
+    | { status: 'loading' }
+    | { status: 'ready'; result: PdfReviewReattachPreview }
+    | { status: 'error'; message: string }
+    | null
+  >(null);
+
   const [publicationSegments, setPublicationSegments] = useState<
     PublicationDraftSegment[]
   >([]);
   const [publicationResult, setPublicationResult] =
     useState<PdfReviewPublication | null>(null);
   const initializedRunId = useRef<string | null>(null);
+  const applyCommandRef = useRef<(command: ReviewCommand) => Promise<boolean>>(
+    async () => false,
+  );
 
   const { data: targetCourses = [], mutate: mutateTargetCourses } = useSWR<
     Course[]
@@ -190,7 +286,18 @@ export function PdfReviewPage({ runId }: { runId: string }) {
     fetchJson,
   );
 
-  const document = currentDocument ?? data;
+  const savedDocument = currentDocument ?? data;
+  const document = useMemo(
+    () =>
+      recoveryPreview !== null && showRecoveryCandidate && savedDocument
+        ? {
+            ...savedDocument,
+            package: recoveryPreview.candidate,
+            inspection: recoveryPreview.inspection,
+          }
+        : savedDocument,
+    [recoveryPreview, showRecoveryCandidate, savedDocument],
+  );
 
   const pages = document?.pages ?? [];
 
@@ -217,16 +324,77 @@ export function PdfReviewPage({ runId }: { runId: string }) {
 
   useEffect(() => {
     setCurrentDocument(null);
+    setRecoveryPreview(null);
+    setShowRecoveryCandidate(false);
     setReviewSession(null);
     setEditing(false);
     setPendingLine(null);
     setBoardContext(null);
+    setUnresolvedEditor(null);
+    setUnresolvedSelectedSquare(undefined);
     initializedRunId.current = null;
     setPublishing(false);
     setMoveSelection(null);
+    setAttachSelection(null);
+    setAttachPreview(null);
     setPublicationSegments([]);
     setPublicationResult(null);
   }, [runId]);
+
+  useEffect(() => {
+    if (attachPreview === null || reviewSession === null) {
+      setAttachInspection(null);
+      return;
+    }
+    const target = items.find(
+      (item) =>
+        item.kind === 'move_sequence' &&
+        item.id === attachPreview.targetSequenceId,
+    );
+    const targetNode =
+      target?.kind === 'move_sequence'
+        ? target.nodes.find((node) => node.id === attachPreview.targetNodeId)
+        : undefined;
+    const parentNodeId =
+      attachPreview.mode === 'parallel'
+        ? (targetNode?.parent_id ?? null)
+        : attachPreview.targetNodeId;
+    let cancelled = false;
+    setAttachInspection({ status: 'loading' });
+    void requestJson<PdfReviewReattachPreview>(
+      `/api/pdf-review-sessions/${encodeURIComponent(reviewSession.id)}/reattach-preview`,
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          expected_version: reviewSession.version,
+          operation: {
+            kind: 'reattach_variation',
+            sequence_id: attachPreview.source.sequenceId,
+            node_id: attachPreview.source.nodeId,
+            target_sequence_id: attachPreview.targetSequenceId,
+            parent_node_id: parentNodeId,
+          },
+        }),
+      },
+    ).then(
+      (result) => {
+        if (!cancelled) setAttachInspection({ status: 'ready', result });
+      },
+      (error: unknown) => {
+        if (!cancelled)
+          setAttachInspection({
+            status: 'error',
+            message:
+              error instanceof ApiError && error.status === 422
+                ? '这段棋步无法从所选局面合法走出'
+                : '无法预览挂接结果',
+          });
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [attachPreview, reviewSession, items]);
 
   useEffect(() => {
     if (!dragSelecting) return;
@@ -234,6 +402,34 @@ export function PdfReviewPage({ runId }: { runId: string }) {
     window.addEventListener('mouseup', finish);
     return () => window.removeEventListener('mouseup', finish);
   }, [dragSelecting]);
+
+  useEffect(() => {
+    if (!editing || reviewSession?.status !== 'open' || commandBusy) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!(event.ctrlKey || event.metaKey)) return;
+      const target = event.target;
+      if (
+        target instanceof HTMLElement &&
+        (target.isContentEditable ||
+          ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName))
+      )
+        return;
+      const redo =
+        (event.key.toLowerCase() === 'z' && event.shiftKey) ||
+        event.key.toLowerCase() === 'y';
+      const undo = event.key.toLowerCase() === 'z' && !event.shiftKey;
+      const history = editHistory(reviewSession.events);
+      if (redo && history.canRedo) {
+        event.preventDefault();
+        void applyCommandRef.current({ kind: 'redo' });
+      } else if (undo && history.canUndo) {
+        event.preventDefault();
+        void applyCommandRef.current({ kind: 'undo' });
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [editing, reviewSession, commandBusy]);
 
   useEffect(() => {
     if (!targetCourseId && targetCourses[0]) {
@@ -281,6 +477,25 @@ export function PdfReviewPage({ runId }: { runId: string }) {
   }
 
   function selectNode(sequence: MoveSequenceItem, node: MoveNode) {
+    if (unresolvedEditor?.pickingTarget) {
+      if (
+        node.validation_status !== 'valid' ||
+        node.fen_before === null ||
+        node.fen_after === null
+      ) {
+        void message.warning('请选择一条已经确认合法的棋步');
+        return;
+      }
+      setUnresolvedEditor({
+        ...unresolvedEditor,
+        sequenceId: sequence.id,
+        anchorNodeId: node.id,
+        targetNodeId: node.id,
+        pickingTarget: false,
+      });
+      setUnresolvedSelectedSquare(undefined);
+      return;
+    }
     if (node.validation_status === 'valid' && node.fen_after !== null) {
       setBoardFen(node.fen_after);
       setBoardContext({ sequenceId: sequence.id, parentNodeId: node.id });
@@ -290,6 +505,18 @@ export function PdfReviewPage({ runId }: { runId: string }) {
   }
 
   function selectSequenceStart(sequence: MoveSequenceItem) {
+    if (unresolvedEditor?.pickingTarget) {
+      setUnresolvedEditor({
+        ...unresolvedEditor,
+        sequenceId: sequence.id,
+        anchorNodeId: '',
+        targetNodeId: null,
+        targetMode: 'after',
+        pickingTarget: false,
+      });
+      setUnresolvedSelectedSquare(undefined);
+      return;
+    }
     setBoardFen(sequenceStartFen(sequence));
     setBoardContext({ sequenceId: sequence.id, parentNodeId: null });
     setPendingLine(null);
@@ -377,8 +604,8 @@ export function PdfReviewPage({ runId }: { runId: string }) {
     }
   }
 
-  async function applyCommand(command: ReviewCommand) {
-    if (reviewSession === null) return;
+  async function applyCommand(command: ReviewCommand): Promise<boolean> {
+    if (reviewSession === null) return false;
     setCommandBusy(true);
     try {
       const envelope = await requestJson<PdfReviewCommandEnvelope>(
@@ -398,16 +625,63 @@ export function PdfReviewPage({ runId }: { runId: string }) {
       setTextEditor(null);
       if (envelope.session.status !== 'open') setEditing(false);
       void message.success('审核修改已保存');
+      return true;
     } catch (requestError) {
       void message.error(
         requestError instanceof Error
           ? requestError.message
           : '保存审核修改失败',
       );
+      return false;
     } finally {
       setCommandBusy(false);
     }
   }
+
+  async function previewRecovery() {
+    if (reviewSession === null) return;
+    setCommandBusy(true);
+    try {
+      const preview = await requestJson<PdfReviewRecoveryPreview>(
+        `/api/pdf-review-sessions/${encodeURIComponent(reviewSession.id)}/recovery-preview`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ expected_version: reviewSession.version }),
+        },
+      );
+      editingBeforeRecovery.current = editing;
+      setEditing(false);
+      setRecoveryPreview(preview);
+      setShowRecoveryCandidate(true);
+      setBoardContext(null);
+      setPendingLine(null);
+    } catch (requestError) {
+      void message.error(
+        requestError instanceof Error
+          ? requestError.message
+          : '无法根据人工修正恢复后续棋步',
+      );
+    } finally {
+      setCommandBusy(false);
+    }
+  }
+
+  function cancelRecovery() {
+    setRecoveryPreview(null);
+    setShowRecoveryCandidate(false);
+    setEditing(editingBeforeRecovery.current);
+  }
+
+  async function saveRecovery() {
+    if (recoveryPreview === null) return;
+    const saved = await applyCommand({
+      kind: 'recover_dependencies',
+      preview_sha256: recoveryPreview.preview_sha256,
+    });
+    if (saved) cancelRecovery();
+  }
+
+  applyCommandRef.current = applyCommand;
 
   function applyEdit(operation: ReviewEditOperation) {
     return applyCommand({ kind: 'edit', operation });
@@ -428,19 +702,12 @@ export function PdfReviewPage({ runId }: { runId: string }) {
     setMoveSelection((current) => {
       if (current === null || current.sequenceId !== sequence.id)
         return current;
-      const anchorIndex = sequence.nodes.findIndex(
-        (candidate) => candidate.id === current.anchorNodeId,
+      const nodeIds = reviewLinePath(
+        sequence.nodes,
+        current.anchorNodeId,
+        node.id,
       );
-      const focusIndex = sequence.nodes.findIndex(
-        (candidate) => candidate.id === node.id,
-      );
-      if (anchorIndex < 0 || focusIndex < 0) return current;
-      const start = Math.min(anchorIndex, focusIndex);
-      const end = Math.max(anchorIndex, focusIndex);
-      return {
-        ...current,
-        nodeIds: sequence.nodes.slice(start, end + 1).map((item) => item.id),
-      };
+      return nodeIds === null ? current : { ...current, nodeIds };
     });
   }
 
@@ -703,10 +970,306 @@ export function PdfReviewPage({ runId }: { runId: string }) {
     });
   }
 
+  function setInitialPosition(sequence: MoveSequenceItem) {
+    const fen = window.prompt(
+      '输入该棋谱的初始 FEN（棋盘图示局面）',
+      sequence.initial_position.kind === 'fen'
+        ? sequence.initial_position.fen
+        : START_FEN,
+    );
+    if (fen === null || fen.trim() === '') return;
+    void applyEdit({
+      kind: 'set_initial_position',
+      sequence_id: sequence.id,
+      fen: fen.trim(),
+    });
+  }
+
+  function reattachVariation(sequence: MoveSequenceItem, node: MoveNode) {
+    setAttachSelection({ sequenceId: sequence.id, nodeId: node.id });
+    setAttachPreview(null);
+    void message.info('现在点击目标棋步，或把整段变化拖到目标棋步');
+  }
+
+  function chooseAttachTarget(
+    source: AttachSelection,
+    targetSequenceId: string,
+    targetNodeId: string | null,
+  ) {
+    if (
+      source.sequenceId === targetSequenceId &&
+      source.nodeId === targetNodeId
+    ) {
+      return;
+    }
+    setAttachSelection(source);
+    setAttachPreview({ source, targetSequenceId, targetNodeId, mode: 'after' });
+  }
+
+  function onReviewClickCapture(event: ReactMouseEvent<HTMLElement>) {
+    if (!editing || attachSelection === null || publishing) return;
+    const targetNode = reviewNodeHit(event.target);
+    const targetStart = reviewStartHit(event.target);
+    if (targetNode === null && targetStart === null) return;
+    event.preventDefault();
+    event.stopPropagation();
+    chooseAttachTarget(
+      attachSelection,
+      targetNode?.sequenceId ?? targetStart!,
+      targetNode?.nodeId ?? null,
+    );
+  }
+
+  function onReviewDragStartCapture(event: ReactDragEvent<HTMLElement>) {
+    if (!editing || publishing) return;
+    const source = reviewNodeHit(event.target);
+    if (source === null) return;
+    event.dataTransfer.setData(REVIEW_NODE_DRAG_TYPE, JSON.stringify(source));
+    event.dataTransfer.effectAllowed = 'move';
+    // The board's window handlers must not cancel score-node dragging.
+    event.stopPropagation();
+  }
+
+  function onReviewDragOverCapture(event: ReactDragEvent<HTMLElement>) {
+    if (
+      editing &&
+      !publishing &&
+      event.dataTransfer.types.includes(REVIEW_NODE_DRAG_TYPE) &&
+      (reviewNodeHit(event.target) !== null ||
+        reviewStartHit(event.target) !== null)
+    ) {
+      event.preventDefault();
+      event.dataTransfer.dropEffect = 'move';
+      event.stopPropagation();
+    }
+  }
+
+  function onReviewDropCapture(event: ReactDragEvent<HTMLElement>) {
+    if (!editing || publishing) return;
+    const targetNode = reviewNodeHit(event.target);
+    const targetStart = reviewStartHit(event.target);
+    if (targetNode === null && targetStart === null) return;
+    const raw = event.dataTransfer.getData(REVIEW_NODE_DRAG_TYPE);
+    if (!raw) return;
+    event.preventDefault();
+    event.stopPropagation();
+    try {
+      const source = JSON.parse(raw) as AttachSelection;
+      if (
+        typeof source.sequenceId !== 'string' ||
+        typeof source.nodeId !== 'string'
+      )
+        return;
+      chooseAttachTarget(
+        source,
+        targetNode?.sequenceId ?? targetStart!,
+        targetNode?.nodeId ?? null,
+      );
+    } catch {
+      void message.error('无法识别拖动的分支');
+    }
+  }
+
+  function saveAttachPreview() {
+    if (attachPreview === null) return;
+    const target = sequenceById(attachPreview.targetSequenceId);
+    const targetNode = target?.nodes.find(
+      (node) => node.id === attachPreview.targetNodeId,
+    );
+    const parentNodeId =
+      attachPreview.mode === 'parallel'
+        ? (targetNode?.parent_id ?? null)
+        : attachPreview.targetNodeId;
+    void applyEdit({
+      kind: 'reattach_variation',
+      sequence_id: attachPreview.source.sequenceId,
+      node_id: attachPreview.source.nodeId,
+      target_sequence_id: attachPreview.targetSequenceId,
+      parent_node_id: parentNodeId,
+    });
+    setAttachPreview(null);
+    setAttachSelection(null);
+  }
+
+  function resolveUnresolved(
+    item: UnresolvedReviewItem,
+    asKind: UnresolvedEditorState['asKind'] = 'prose',
+  ) {
+    setSelectedPage(item.evidence[0]?.page ?? null);
+    setUnresolvedSelectedSquare(undefined);
+    setRestoreFollowing(false);
+    setAttachSelection(null);
+    setAttachPreview(null);
+    setUnresolvedEditor({
+      item,
+      asKind,
+      text: item.raw_text ?? item.details ?? '',
+      sequenceId: '',
+      anchorNodeId: '',
+      targetNodeId: null,
+      targetMode: 'after',
+      pickingTarget: asKind === 'line',
+      notation: item.raw_text ?? '',
+      initialFen: START_FEN,
+    });
+  }
+
+  const unresolvedSequence = unresolvedEditor?.sequenceId
+    ? sequenceById(unresolvedEditor.sequenceId)
+    : undefined;
+  const unresolvedTarget = unresolvedSequence?.nodes.find(
+    (node) => node.id === unresolvedEditor?.targetNodeId,
+  );
+  const unresolvedStartFen =
+    unresolvedEditor?.asKind === 'line'
+      ? unresolvedSequence
+        ? unresolvedTarget
+          ? unresolvedEditor.targetMode === 'parallel'
+            ? unresolvedTarget.fen_before
+            : unresolvedTarget.fen_after
+          : sequenceStartFen(unresolvedSequence)
+        : unresolvedEditor.initialFen
+      : null;
+  const unresolvedPreview =
+    unresolvedStartFen !== null && unresolvedEditor?.asKind === 'line'
+      ? parseReviewLine(unresolvedEditor.notation, unresolvedStartFen)
+      : null;
+  const followingCandidates: {
+    item: UnresolvedReviewItem;
+    moves: string[];
+    san: string[];
+    nags: (number | null)[];
+  }[] = [];
+  if (
+    unresolvedEditor?.asKind === 'line' &&
+    unresolvedEditor.sequenceId &&
+    unresolvedPreview?.ok &&
+    unresolvedPreview.uci.length > 0
+  ) {
+    const index = items.findIndex(
+      (item) => item.id === unresolvedEditor.item.id,
+    );
+    let fen = unresolvedPreview.fenAfter;
+    for (const candidate of items.slice(index + 1)) {
+      if (
+        candidate.kind !== 'unresolved' ||
+        candidate.reason_code !== 'semantic_chunk_failed' ||
+        !candidate.raw_text
+      )
+        break;
+      const parsed = parseReviewLine(candidate.raw_text, fen);
+      if (!parsed.ok || parsed.uci.length === 0) break;
+      followingCandidates.push({
+        item: candidate,
+        moves: parsed.uci,
+        san: parsed.san,
+        nags: parsed.nags,
+      });
+      fen = parsed.fenAfter;
+    }
+  }
+
+  const unresolvedBoardFen = unresolvedPreview?.ok
+    ? unresolvedPreview.fenAfter
+    : unresolvedPreview?.message === '起点局面无效'
+      ? null
+      : unresolvedStartFen;
+
+  function addUnresolvedBoardMove(source: string, target: string): boolean {
+    if (unresolvedBoardFen === null || unresolvedEditor === null) return false;
+    try {
+      const game = new Chess(unresolvedBoardFen);
+      const move = game.move({ from: source, to: target, promotion: 'q' });
+      setUnresolvedEditor({
+        ...unresolvedEditor,
+        notation: unresolvedPreview?.ok
+          ? `${unresolvedEditor.notation.trim()} ${move.san}`.trim()
+          : move.san,
+      });
+      setUnresolvedSelectedSquare(undefined);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  function clickUnresolvedBoardSquare(square: string) {
+    if (unresolvedBoardFen === null) return;
+    if (!unresolvedSelectedSquare) {
+      const game = new Chess(unresolvedBoardFen);
+      const piece = game.get(square as Square);
+      setUnresolvedSelectedSquare(
+        piece?.color === game.turn() ? square : undefined,
+      );
+      return;
+    }
+    if (!addUnresolvedBoardMove(unresolvedSelectedSquare, square)) {
+      setUnresolvedSelectedSquare(undefined);
+    }
+  }
+
+  async function saveUnresolvedEditor() {
+    if (unresolvedEditor === null) return;
+    const { item, asKind, text, sequenceId, anchorNodeId, initialFen } =
+      unresolvedEditor;
+    if (asKind !== 'line' && !text.trim()) {
+      void message.warning('请保留或填写来源文字');
+      return;
+    }
+    if (asKind === 'annotation' && !sequenceId) {
+      void message.warning('请点选注释所属棋步');
+      return;
+    }
+    if (
+      asKind === 'line' &&
+      (unresolvedPreview?.ok !== true || unresolvedPreview.uci.length === 0)
+    ) {
+      void message.warning('请选择起点并输入能从该局面走出的棋步');
+      return;
+    }
+    const parentNodeId =
+      unresolvedEditor.targetMode === 'parallel' && unresolvedTarget
+        ? unresolvedTarget.parent_id
+        : unresolvedEditor.targetNodeId;
+    const saved = await applyEdit({
+      kind: 'resolve_unresolved',
+      item_id: item.id,
+      as_kind: asKind,
+      text: asKind === 'line' ? null : text.trim(),
+      sequence_id: asKind === 'prose' ? null : sequenceId || null,
+      anchor_node_id:
+        asKind === 'prose'
+          ? null
+          : asKind === 'line'
+            ? parentNodeId
+            : anchorNodeId || null,
+      moves:
+        asKind === 'line' && unresolvedPreview?.ok ? unresolvedPreview.uci : [],
+      ...(asKind === 'line' &&
+      unresolvedPreview?.ok &&
+      unresolvedPreview.nags.some((nag) => nag !== null)
+        ? { nags: unresolvedPreview.nags }
+        : {}),
+      initial_fen: asKind === 'line' && !sequenceId ? initialFen.trim() : null,
+      ...(asKind === 'line' &&
+      restoreFollowing &&
+      followingCandidates.length > 0
+        ? {
+            following: followingCandidates.map(({ item, moves, nags }) => ({
+              item_id: item.id,
+              moves,
+              ...(nags.some((nag) => nag !== null) ? { nags } : {}),
+            })),
+          }
+        : {}),
+    });
+    if (saved) setUnresolvedEditor(null);
+  }
+
   function setNag(sequence: MoveSequenceItem, node: MoveNode) {
     const entered = window.prompt(
       '输入 NAG 数字 0–255；留空表示清除',
-      node.nags?.[0]?.toString() ?? '',
+      reviewNodeDisplay(node).nags[0]?.toString() ?? '',
     );
     if (entered === null) return;
     const nag = entered.trim() === '' ? null : Number(entered);
@@ -798,6 +1361,50 @@ export function PdfReviewPage({ runId }: { runId: string }) {
     );
   }
 
+  const history = editHistory(reviewSession?.events ?? []);
+  const attachSourceSequence = attachPreview
+    ? sequenceById(attachPreview.source.sequenceId)
+    : undefined;
+  const attachSourceNode = attachSourceSequence?.nodes.find(
+    (node) => node.id === attachPreview?.source.nodeId,
+  );
+  const attachTargetSequence = attachPreview
+    ? sequenceById(attachPreview.targetSequenceId)
+    : undefined;
+  const attachTargetNode = attachTargetSequence?.nodes.find(
+    (node) => node.id === attachPreview?.targetNodeId,
+  );
+  const attachParentNodeId =
+    attachPreview?.mode === 'parallel'
+      ? (attachTargetNode?.parent_id ?? null)
+      : (attachPreview?.targetNodeId ?? null);
+  const attachParentNode = attachTargetSequence?.nodes.find(
+    (node) => node.id === attachParentNodeId,
+  );
+  const attachBoardFen = attachTargetSequence
+    ? (attachParentNode?.fen_after ?? sequenceStartFen(attachTargetSequence))
+    : START_FEN;
+  const attachDescendantCount =
+    attachSourceSequence && attachSourceNode
+      ? (() => {
+          const descendants = new Set([attachSourceNode.id]);
+          for (let changed = true; changed;) {
+            changed = false;
+            for (const node of attachSourceSequence.nodes) {
+              if (
+                node.parent_id &&
+                descendants.has(node.parent_id) &&
+                !descendants.has(node.id)
+              ) {
+                descendants.add(node.id);
+                changed = true;
+              }
+            }
+          }
+          return descendants.size;
+        })()
+      : 0;
+
   const unacknowledgedWarnings = document.inspection.issues.filter(
     (issue) => !issue.blocking && !acknowledgedIssueIds.has(issue.issue_id),
   );
@@ -835,6 +1442,7 @@ export function PdfReviewPage({ runId }: { runId: string }) {
               <>
                 <button
                   type="button"
+                  disabled={recoveryPreview !== null}
                   onClick={() => setEditing((value) => !value)}
                   className="rounded border border-stone-300 bg-white px-3 py-1.5 text-sm"
                 >
@@ -842,7 +1450,39 @@ export function PdfReviewPage({ runId }: { runId: string }) {
                 </button>
                 <button
                   type="button"
-                  disabled={commandBusy || unacknowledgedWarnings.length === 0}
+                  disabled={commandBusy || recoveryPreview !== null}
+                  onClick={() => void previewRecovery()}
+                  className="rounded border border-emerald-600 bg-white px-3 py-1.5 text-sm text-emerald-800 disabled:opacity-40"
+                >
+                  根据人工修正恢复后续
+                </button>
+                <button
+                  type="button"
+                  disabled={
+                    commandBusy || recoveryPreview !== null || !history.canUndo
+                  }
+                  onClick={() => void applyCommand({ kind: 'undo' })}
+                  className="rounded border border-stone-300 bg-white px-3 py-1.5 text-sm disabled:opacity-40"
+                >
+                  撤销
+                </button>
+                <button
+                  type="button"
+                  disabled={
+                    commandBusy || recoveryPreview !== null || !history.canRedo
+                  }
+                  onClick={() => void applyCommand({ kind: 'redo' })}
+                  className="rounded border border-stone-300 bg-white px-3 py-1.5 text-sm disabled:opacity-40"
+                >
+                  恢复
+                </button>
+                <button
+                  type="button"
+                  disabled={
+                    commandBusy ||
+                    recoveryPreview !== null ||
+                    unacknowledgedWarnings.length === 0
+                  }
                   onClick={() =>
                     acknowledgeIssues(
                       unacknowledgedWarnings.map((issue) => issue.issue_id),
@@ -856,6 +1496,7 @@ export function PdfReviewPage({ runId }: { runId: string }) {
                   type="button"
                   disabled={
                     commandBusy ||
+                    recoveryPreview !== null ||
                     document.inspection.blocking_issue_count > 0 ||
                     unacknowledgedWarnings.length > 0
                   }
@@ -866,7 +1507,7 @@ export function PdfReviewPage({ runId }: { runId: string }) {
                 </button>
                 <button
                   type="button"
-                  disabled={commandBusy}
+                  disabled={commandBusy || recoveryPreview !== null}
                   onClick={rejectReview}
                   className="rounded border border-red-300 bg-white px-3 py-1.5 text-sm text-red-700"
                 >
@@ -902,6 +1543,119 @@ export function PdfReviewPage({ runId }: { runId: string }) {
           </span>
         ) : null}
       </div>
+      {recoveryPreview !== null ? (
+        <div className="mx-6 space-y-2 rounded border border-emerald-400 bg-emerald-50 p-3 text-sm">
+          <div className="font-semibold">
+            依赖恢复预览 · 新增 {recoveryPreview.added_moves.length} 招，解决{' '}
+            {recoveryPreview.retired_issue_count} 条待审，保留{' '}
+            {recoveryPreview.preserved_manual_moves} 招人工补录
+          </div>
+          <div>
+            依据你的改挂：{recoveryPreview.corrected_entries.join('、')}
+          </div>
+          {recoveryPreview.conflicts.length > 0 ? (
+            <div className="text-amber-800">
+              有 {recoveryPreview.conflicts.length} 处未自动合并：
+              {recoveryPreview.conflicts.slice(0, 3).join('；')}
+              。这些位置仍保留原审核内容。
+            </div>
+          ) : null}
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setShowRecoveryCandidate((value) => !value)}
+              className="rounded border border-stone-300 bg-white px-3 py-1"
+            >
+              {showRecoveryCandidate ? '对照原审核结果' : '查看恢复候选'}
+            </button>
+            <button
+              type="button"
+              disabled={commandBusy}
+              onClick={() => void saveRecovery()}
+              className="rounded bg-emerald-800 px-3 py-1 text-white disabled:opacity-40"
+            >
+              确认恢复
+            </button>
+            <button
+              type="button"
+              disabled={commandBusy}
+              onClick={cancelRecovery}
+              className="rounded border border-stone-300 bg-white px-3 py-1"
+            >
+              取消
+            </button>
+          </div>
+          <details>
+            <summary>查看本次恢复的棋步</summary>
+            <div className="max-h-40 overflow-y-auto">
+              {recoveryPreview.added_moves.map((move) => (
+                <span
+                  key={`${move.sequence_id}:${move.node_id}`}
+                  className="mr-3 inline-block"
+                >
+                  第 {move.page} 页 · {move.move_text}
+                </span>
+              ))}
+            </div>
+          </details>
+        </div>
+      ) : null}
+      {attachSelection !== null && editing ? (
+        <div className="mx-6 flex items-center gap-3 rounded border border-blue-300 bg-blue-50 px-3 py-2 text-sm">
+          <span>
+            已选择整段变化：点击目标棋步，或拖动棋步到目标位置。保存前可选择接在后面或作为并列变化。
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              setAttachSelection(null);
+              setAttachPreview(null);
+            }}
+            className="underline"
+          >
+            取消
+          </button>
+        </div>
+      ) : null}
+      {unresolvedEditor?.pickingTarget && editing ? (
+        <div className="sticky top-0 z-10 mx-6 flex items-center gap-3 rounded border border-blue-300 bg-blue-50 px-3 py-2 text-sm">
+          <span>
+            请在棋谱中点选目标棋步；选谱头的“回到初始局面”可从第一步前接续。
+          </span>
+          <button
+            type="button"
+            onClick={() =>
+              setUnresolvedEditor({ ...unresolvedEditor, pickingTarget: false })
+            }
+            className="underline"
+          >
+            先编辑文字
+          </button>
+          {unresolvedEditor.asKind === 'line' ? (
+            <button
+              type="button"
+              onClick={() =>
+                setUnresolvedEditor({
+                  ...unresolvedEditor,
+                  sequenceId: '',
+                  targetNodeId: null,
+                  pickingTarget: false,
+                })
+              }
+              className="underline"
+            >
+              独立新棋谱
+            </button>
+          ) : null}
+          <button
+            type="button"
+            onClick={() => setUnresolvedEditor(null)}
+            className="underline"
+          >
+            取消
+          </button>
+        </div>
+      ) : null}
       {publishing ? (
         <section
           aria-label="发布计划"
@@ -1146,6 +1900,10 @@ export function PdfReviewPage({ runId }: { runId: string }) {
         <section
           aria-label="候选内容与自动检查"
           tabIndex={0}
+          onClickCapture={onReviewClickCapture}
+          onDragStartCapture={onReviewDragStartCapture}
+          onDragOverCapture={onReviewDragOverCapture}
+          onDropCapture={onReviewDropCapture}
           className="min-w-0 lg:h-full lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain"
         >
           <div className="max-w-prose space-y-4">
@@ -1162,13 +1920,22 @@ export function PdfReviewPage({ runId }: { runId: string }) {
                 onDeleteFromHere={deleteFromHere}
                 onPromoteVariation={promoteVariation}
                 onMakeMainline={makeMainline}
+                onReattachVariation={reattachVariation}
+                onSetInitialPosition={setInitialPosition}
+                onResolveUnresolved={resolveUnresolved}
                 onSetNag={setNag}
                 onEditText={openTextEditor}
                 publishing={publishing}
                 selectedNodeIds={
-                  moveSelection?.sequenceId === item.id
-                    ? new Set(moveSelection.nodeIds)
-                    : new Set()
+                  recoveryPreview !== null && showRecoveryCandidate
+                    ? new Set(
+                        recoveryPreview.added_moves
+                          .filter((move) => move.sequence_id === item.id)
+                          .map((move) => move.node_id),
+                      )
+                    : moveSelection?.sequenceId === item.id
+                      ? new Set(moveSelection.nodeIds)
+                      : new Set()
                 }
                 onBeginMoveSelection={beginMoveSelection}
                 onExtendMoveSelection={extendMoveSelection}
@@ -1186,6 +1953,326 @@ export function PdfReviewPage({ runId }: { runId: string }) {
           />
         </section>
       </div>
+      <Modal
+        title="预览整段变化的挂接"
+        open={attachPreview !== null}
+        confirmLoading={commandBusy}
+        okButtonProps={{ disabled: attachInspection?.status !== 'ready' }}
+        okText="保存改挂"
+        cancelText="取消"
+        onOk={saveAttachPreview}
+        onCancel={() => setAttachPreview(null)}
+      >
+        {attachPreview && attachSourceNode && attachTargetSequence ? (
+          <div className="space-y-3 text-sm">
+            <p>
+              来源：{attachSourceSequence?.title ?? '棋谱'} ·{' '}
+              {moveDisplayName(attachSourceNode)}，含 {attachDescendantCount}{' '}
+              个棋步及其注释。
+            </p>
+            <p>
+              目标：{attachTargetSequence.title ?? '棋谱'} ·{' '}
+              {attachTargetNode
+                ? moveDisplayName(attachTargetNode)
+                : '初始局面'}
+            </p>
+            {attachTargetNode ? (
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  aria-pressed={attachPreview.mode === 'after'}
+                  onClick={() =>
+                    setAttachPreview({ ...attachPreview, mode: 'after' })
+                  }
+                  className="rounded border px-2 py-1 aria-pressed:bg-emerald-100"
+                >
+                  接在此步之后
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={attachPreview.mode === 'parallel'}
+                  onClick={() =>
+                    setAttachPreview({ ...attachPreview, mode: 'parallel' })
+                  }
+                  className="rounded border px-2 py-1 aria-pressed:bg-emerald-100"
+                >
+                  作为此步的并列变化
+                </button>
+              </div>
+            ) : null}
+            <p>起点局面：</p>
+            <div className="mx-auto max-w-56">
+              <Chessboard
+                position={attachBoardFen}
+                arePiecesDraggable={false}
+              />
+            </div>
+            {attachInspection?.status === 'loading' ? (
+              <p>正在检查新挂接…</p>
+            ) : null}
+            {attachInspection?.status === 'error' ? (
+              <Alert type="error" title={attachInspection.message} />
+            ) : null}
+            {attachInspection?.status === 'ready' ? (
+              <p className="text-stone-700">
+                按新局面计算：剩余 {attachInspection.result.issue_count}{' '}
+                个问题， 其中 {attachInspection.result.blocking_issue_count}{' '}
+                个阻断问题。
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+      </Modal>
+      <Modal
+        title={`修订第 ${unresolvedEditor?.item.evidence[0]?.page ?? ''} 页待审片段`}
+        open={unresolvedEditor !== null && !unresolvedEditor.pickingTarget}
+        confirmLoading={commandBusy}
+        okText="保存修订"
+        cancelText="取消"
+        onOk={() => void saveUnresolvedEditor()}
+        onCancel={() => setUnresolvedEditor(null)}
+        okButtonProps={{
+          disabled:
+            unresolvedEditor?.asKind === 'line' &&
+            (unresolvedPreview?.ok !== true ||
+              unresolvedPreview.uci.length === 0),
+        }}
+      >
+        {unresolvedEditor ? (
+          <div className="space-y-3 text-sm">
+            <p className="rounded bg-stone-50 p-2 whitespace-pre-wrap">
+              {unresolvedEditor.item.raw_text ?? unresolvedEditor.item.details}
+            </p>
+            <label className="block">
+              这段内容是什么？
+              <select
+                className="mt-1 block w-full rounded border p-2"
+                value={unresolvedEditor.asKind}
+                onChange={(event) =>
+                  setUnresolvedEditor({
+                    ...unresolvedEditor,
+                    asKind: event.target
+                      .value as UnresolvedEditorState['asKind'],
+                    sequenceId: '',
+                    anchorNodeId: '',
+                    targetNodeId: null,
+                  })
+                }
+              >
+                <option value="prose">说明或计划（不执行棋步）</option>
+                <option value="annotation">挂在棋步上的注释</option>
+                <option value="line">实际棋谱或变化</option>
+              </select>
+            </label>
+            {unresolvedEditor.asKind !== 'line' ? (
+              <label className="block">
+                保留的文字
+                <Input.TextArea
+                  className="mt-1"
+                  rows={4}
+                  value={unresolvedEditor.text}
+                  onChange={(event) =>
+                    setUnresolvedEditor({
+                      ...unresolvedEditor,
+                      text: event.target.value,
+                    })
+                  }
+                />
+              </label>
+            ) : null}
+            {unresolvedEditor.asKind !== 'prose' ? (
+              <div className="space-y-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span>挂接位置：</span>
+                  <span className="font-medium">
+                    {unresolvedTarget
+                      ? `${moveDisplayName(unresolvedTarget)} · 第 ${unresolvedTarget.evidence[0]?.page ?? '?'} 页`
+                      : unresolvedSequence
+                        ? '当前棋谱起点'
+                        : '尚未选择'}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setUnresolvedEditor({
+                        ...unresolvedEditor,
+                        pickingTarget: true,
+                      })
+                    }
+                    className="rounded border border-blue-400 bg-blue-50 px-2 py-1 text-blue-900"
+                  >
+                    在棋谱中点选
+                  </button>
+                </div>
+                {unresolvedEditor.asKind === 'line' && unresolvedTarget ? (
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      aria-pressed={unresolvedEditor.targetMode === 'after'}
+                      onClick={() =>
+                        setUnresolvedEditor({
+                          ...unresolvedEditor,
+                          targetMode: 'after',
+                        })
+                      }
+                      className="rounded border px-2 py-1 aria-pressed:bg-emerald-100"
+                    >
+                      接在这步后面
+                    </button>
+                    <button
+                      type="button"
+                      aria-pressed={unresolvedEditor.targetMode === 'parallel'}
+                      onClick={() =>
+                        setUnresolvedEditor({
+                          ...unresolvedEditor,
+                          targetMode: 'parallel',
+                        })
+                      }
+                      className="rounded border px-2 py-1 aria-pressed:bg-emerald-100"
+                    >
+                      替代这步
+                    </button>
+                  </div>
+                ) : null}
+                {unresolvedEditor.asKind === 'line' ? (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setUnresolvedEditor({
+                        ...unresolvedEditor,
+                        sequenceId: '',
+                        anchorNodeId: '',
+                        targetNodeId: null,
+                        targetMode: 'after',
+                      })
+                    }
+                    className="text-stone-600 underline"
+                  >
+                    作为独立新棋谱
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
+            {unresolvedEditor.asKind === 'line' ? (
+              <>
+                {!unresolvedSequence ? (
+                  <label className="block">
+                    新棋谱的起点
+                    <select
+                      className="mt-1 block w-full rounded border p-2"
+                      value={unresolvedEditor.initialFen}
+                      onChange={(event) =>
+                        setUnresolvedEditor({
+                          ...unresolvedEditor,
+                          initialFen: event.target.value,
+                        })
+                      }
+                    >
+                      <option value={START_FEN}>标准开局初始局面</option>
+                      {items
+                        .filter(
+                          (item) =>
+                            item.kind === 'figure' &&
+                            item.position_fen_candidate !== null,
+                        )
+                        .map((figure) =>
+                          figure.kind === 'figure' ? (
+                            <option
+                              key={figure.id}
+                              value={figure.position_fen_candidate ?? ''}
+                            >
+                              第 {figure.evidence[0]?.page ?? '?'} 页图示局面
+                            </option>
+                          ) : null,
+                        )}
+                    </select>
+                  </label>
+                ) : null}
+                <label className="block">
+                  棋步（常见棋谱记法）
+                  <Input.TextArea
+                    className="mt-1"
+                    rows={2}
+                    value={unresolvedEditor.notation}
+                    onChange={(event) =>
+                      setUnresolvedEditor({
+                        ...unresolvedEditor,
+                        notation: event.target.value,
+                      })
+                    }
+                    placeholder="例如：7...dxc4? 8.Qc2"
+                  />
+                </label>
+                {unresolvedPreview?.ok === false ? (
+                  <Alert type="warning" title={unresolvedPreview.message} />
+                ) : null}
+                {unresolvedPreview?.ok && unresolvedPreview.uci.length > 0 ? (
+                  <div className="rounded border border-emerald-200 bg-emerald-50 p-2">
+                    <p>
+                      预览线路：
+                      {displayReviewLine(
+                        unresolvedPreview.san,
+                        unresolvedPreview.nags,
+                      )}
+                    </p>
+                    <p className="text-stone-600">
+                      {unresolvedTarget
+                        ? unresolvedEditor.targetMode === 'parallel'
+                          ? `替代 ${moveDisplayName(unresolvedTarget)}`
+                          : `接在 ${moveDisplayName(unresolvedTarget)} 后面`
+                        : unresolvedSequence
+                          ? '从棋谱起点接续'
+                          : '新建独立棋谱'}
+                    </p>
+                  </div>
+                ) : null}
+                {followingCandidates.length > 0 ? (
+                  <div className="rounded border border-blue-200 bg-blue-50 p-2">
+                    <label className="flex items-start gap-2">
+                      <input
+                        type="checkbox"
+                        checked={restoreFollowing}
+                        onChange={(event) =>
+                          setRestoreFollowing(event.target.checked)
+                        }
+                      />
+                      <span>
+                        同时恢复后续 {followingCandidates.length} 段连续棋步
+                      </span>
+                    </label>
+                    <div className="mt-2 max-h-32 overflow-y-auto text-stone-700">
+                      {followingCandidates.map(({ item, san, nags }) => (
+                        <p key={item.id}>
+                          第 {item.evidence[0]?.page ?? '?'} 页：
+                          {displayReviewLine(san, nags)}
+                        </p>
+                      ))}
+                    </div>
+                    <p className="mt-1 text-xs text-stone-600">
+                      只包含能按来源顺序从当前局面合法接续的片段；遇到其它内容或支线即停止。
+                    </p>
+                  </div>
+                ) : null}
+                {unresolvedBoardFen !== null ? (
+                  <div className="mx-auto max-w-56">
+                    <Chessboard
+                      position={unresolvedBoardFen}
+                      arePiecesDraggable={true}
+                      onPieceDrop={addUnresolvedBoardMove}
+                      onSquareClick={clickUnresolvedBoardSquare}
+                    />
+                    <p className="mt-1 text-center text-xs text-stone-500">
+                      {unresolvedPreview?.ok
+                        ? '还可在棋盘上走棋'
+                        : '直接落子会替换当前无法识别的棋步文字'}
+                    </p>
+                  </div>
+                ) : null}
+              </>
+            ) : null}
+          </div>
+        ) : null}
+      </Modal>
       <Modal
         title="编辑文字"
         open={textEditor !== null}
@@ -1222,6 +2309,9 @@ function ReviewItemView({
   onDeleteFromHere,
   onPromoteVariation,
   onMakeMainline,
+  onReattachVariation,
+  onSetInitialPosition,
+  onResolveUnresolved,
   onSetNag,
   onEditText,
   publishing,
@@ -1242,6 +2332,12 @@ function ReviewItemView({
   onDeleteFromHere: (sequence: MoveSequenceItem, node: MoveNode) => void;
   onPromoteVariation: (sequence: MoveSequenceItem, node: MoveNode) => void;
   onMakeMainline: (sequence: MoveSequenceItem, node: MoveNode) => void;
+  onReattachVariation: (sequence: MoveSequenceItem, node: MoveNode) => void;
+  onSetInitialPosition: (sequence: MoveSequenceItem) => void;
+  onResolveUnresolved: (
+    item: Extract<ReviewItem, { kind: 'unresolved' }>,
+    asKind?: UnresolvedEditorState['asKind'],
+  ) => void;
   onSetNag: (sequence: MoveSequenceItem, node: MoveNode) => void;
   onEditText: (
     itemId: string,
@@ -1322,6 +2418,8 @@ function ReviewItemView({
           onDeleteFromHere={onDeleteFromHere}
           onPromoteVariation={onPromoteVariation}
           onMakeMainline={onMakeMainline}
+          onReattachVariation={onReattachVariation}
+          onSetInitialPosition={onSetInitialPosition}
           onSetNag={onSetNag}
           onEditText={onEditText}
           publishing={publishing}
@@ -1373,6 +2471,26 @@ function ReviewItemView({
           {item.details !== null ? (
             <p className="whitespace-pre-wrap text-stone-700">{item.details}</p>
           ) : null}
+          {editable ? (
+            <div className="mt-2 flex gap-2">
+              {item.raw_text ? (
+                <button
+                  type="button"
+                  onClick={() => onResolveUnresolved(item, 'line')}
+                  className="rounded border border-red-500 bg-white px-2 py-1 text-sm"
+                >
+                  转为棋步
+                </button>
+              ) : null}
+              <button
+                type="button"
+                onClick={() => onResolveUnresolved(item)}
+                className="rounded border border-stone-300 bg-white px-2 py-1 text-sm"
+              >
+                修订此片段
+              </button>
+            </div>
+          ) : null}
         </div>
       );
     }
@@ -1389,6 +2507,8 @@ function MoveSequenceView({
   onDeleteFromHere,
   onPromoteVariation,
   onMakeMainline,
+  onReattachVariation,
+  onSetInitialPosition,
   onSetNag,
   onEditText,
   publishing,
@@ -1408,6 +2528,9 @@ function MoveSequenceView({
   onDeleteFromHere: (sequence: MoveSequenceItem, node: MoveNode) => void;
   onPromoteVariation: (sequence: MoveSequenceItem, node: MoveNode) => void;
   onMakeMainline: (sequence: MoveSequenceItem, node: MoveNode) => void;
+  onReattachVariation: (sequence: MoveSequenceItem, node: MoveNode) => void;
+  onSetInitialPosition: (sequence: MoveSequenceItem) => void;
+
   onSetNag: (sequence: MoveSequenceItem, node: MoveNode) => void;
   onEditText: (
     itemId: string,
@@ -1478,6 +2601,11 @@ function MoveSequenceView({
           onSelect: () => onMakeMainline(item, node),
         },
         {
+          key: 'reattach',
+          label: '重新挂接分支',
+          onSelect: () => onReattachVariation(item, node),
+        },
+        {
           key: 'nag',
           label: '设置评价',
           onSelect: () => onSetNag(item, node),
@@ -1528,10 +2656,20 @@ function MoveSequenceView({
         <button
           type="button"
           onClick={() => onSelectStart(item)}
+          data-review-sequence-start={item.id}
           className="rounded px-2 py-0.5 text-xs text-stone-600 hover:bg-stone-100"
         >
           回到初始局面
         </button>
+        {editable ? (
+          <button
+            type="button"
+            onClick={() => onSetInitialPosition(item)}
+            className="rounded px-2 py-0.5 text-xs text-amber-800 hover:bg-amber-50"
+          >
+            修正初始 FEN
+          </button>
+        ) : null}
       </header>
       <div>
         {blocks.map((block) => {
@@ -1851,6 +2989,20 @@ function BranchRails({ depth }: { depth: number }) {
   );
 }
 
+function reviewNodeDisplay(node: MoveNode) {
+  const isValid = node.validation_status === 'valid';
+  const source = isValid
+    ? (node.san_candidate ?? node.move_text)
+    : node.move_text;
+  const overridden = node.extensions?.['chess-workbench.nag-override'] === true;
+  const san = overridden && !isValid ? formatMoveNotation(source).move : source;
+  const nags =
+    (node.nags?.length ?? 0) > 0 || overridden
+      ? (node.nags ?? [])
+      : formatMoveNotation(node.move_text).annotations.map(({ code }) => code);
+  return { san, nags };
+}
+
 function MoveCell({
   sequence,
   node,
@@ -1875,20 +3027,16 @@ function MoveCell({
   const isNavigable =
     node.validation_status === 'valid' && node.fen_after !== null;
   const validationClass = moveValidationClass(node.validation_status);
-  const content = (
-    <>
-      <span>{node.move_text}</span>
-      {node.nags !== undefined && node.nags.length > 0 ? (
-        <span className="ml-1 font-semibold text-amber-700">
-          {node.nags.map(nagLabel).join('')}
-        </span>
-      ) : null}
-    </>
-  );
+  const { san, nags } = reviewNodeDisplay(node);
+  const displayName = formatMoveNotation(san, nags).move;
+  const content = <MoveNotation san={san} nags={nags} />;
   return isNavigable ? (
     <button
       type="button"
-      aria-label={node.move_text}
+      aria-label={displayName}
+      draggable={!publishing}
+      data-review-sequence-id={sequence.id}
+      data-review-node-id={node.id}
       data-validation-status={node.validation_status}
       data-publication-selected={selected || undefined}
       onClick={() => {
@@ -1910,6 +3058,9 @@ function MoveCell({
     <span
       aria-disabled="true"
       tabIndex={0}
+      draggable={!publishing}
+      data-review-sequence-id={sequence.id}
+      data-review-node-id={node.id}
       data-validation-status={node.validation_status}
       data-publication-selected={selected || undefined}
       onMouseDown={(event) => {
@@ -2021,14 +3172,14 @@ function variationGutter(row: ReviewMoveRow): string {
 }
 
 function moveDisplayName(node: MoveNode): string {
-  if (node.move_number === null || node.side_to_move === null) {
-    return node.move_text;
+  const { moveNumber, side } = reviewMoveTurn(node);
+  const { san, nags } = reviewNodeDisplay(node);
+  const name = moveNotationText(san, nags);
+  if (moveNumber === null || side === null) {
+    return name;
   }
-  const prefix =
-    node.side_to_move === 'w'
-      ? `${node.move_number}.`
-      : `${node.move_number}...`;
-  return `${prefix} ${node.move_text}`;
+  const prefix = side === 'w' ? `${moveNumber}.` : `${moveNumber}...`;
+  return `${prefix} ${name}`;
 }
 
 function moveValidationClass(status: MoveNode['validation_status']): string {
@@ -2038,17 +3189,16 @@ function moveValidationClass(status: MoveNode['validation_status']): string {
   return 'text-stone-800';
 }
 
-function nagLabel(nag: number): string {
-  return (
-    {
-      1: '!',
-      2: '?',
-      3: '!!',
-      4: '??',
-      5: '!?',
-      6: '?!',
-    }[nag] ?? `$${nag}`
-  );
+function displayReviewLine(san: string[], nags: (number | null)[]): string {
+  return san
+    .map((move, index) => {
+      const nag = nags[index];
+      return moveNotationText(
+        move,
+        nag === null || nag === undefined ? [] : [nag],
+      );
+    })
+    .join(' ');
 }
 
 function isNodeOnMainline(

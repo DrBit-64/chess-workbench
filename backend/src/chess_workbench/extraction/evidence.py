@@ -111,6 +111,17 @@ class PixelBox(_StrictModel):
         return self
 
 
+class TextStyleRun(_StrictModel):
+    """Exact character range sharing one observed PDF font and fill color."""
+
+    start: Annotated[int, Field(ge=0)]
+    end: Annotated[int, Field(gt=0)]
+    font_family: str | None = None
+    font_size: float | None = None
+    bold: bool | None = None
+    color: Annotated[str, StringConstraints(pattern=r"^#[0-9a-f]{6}$")] | None = None
+
+
 class TextFragment(_StrictModel):
     """One ordered text fragment with a pixel box and optional confidence."""
 
@@ -122,6 +133,8 @@ class TextFragment(_StrictModel):
         AfterValidator(_reject_whitespace_only),
     ]
     box: PixelBox
+    font_color: Annotated[str, StringConstraints(pattern=r"^#[0-9a-f]{6}$")] | None = None
+    style_runs: list[TextStyleRun] = Field(default_factory=list)
     confidence: Annotated[
         float | None,
         Field(ge=0, le=1),
@@ -296,6 +309,9 @@ class SourceEvidenceFragment(_StrictModel):
         AfterValidator(_reject_whitespace_only),
     ]
     origin: EvidenceOrigin
+    # Advisory PDF styling; the canonical source hash remains bound to text and box.
+    font_color: Annotated[str, StringConstraints(pattern=r"^#[0-9a-f]{6}$")] | None = None
+    style_runs: list[TextStyleRun] = Field(default_factory=list)
     confidence: Annotated[
         float | None,
         Field(ge=0, le=1),

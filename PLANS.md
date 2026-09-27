@@ -1,5 +1,197 @@
 # Current plan
 
+## 最新交付：真实下一局的一次人工修入口与自动恢复（2026-09-27）
+
+已把稀疏人工入口、保存关系重放及局内版式证据组合到原审核「根据人工修正恢复后续」路径。
+真实 Catalan p18–24 提取原结果仅 25 招；只读前缀编译修正后保存响应重放为 54 招、96 待审。
+在实际模型错挂的 `25...Rd7` 后只用一次正式审核操作补入 `26.Nc4`，程序候选恢复为
+196 招、完整实战主线 111 半回合、剩余 3 待审。独立书页誊录核对后半局 61 半回合和
+19 处变化入口父节点均正确；没有注入人造错误。现有 p10–17 v24 用户会话只读预览
+仍为 42 新增/14 解决/0 冲突，人工修订未改写。详见[真实验收](docs/agent/pdf-review-recovery-real-acceptance-2026-09-27.md)。
+
+本结果仅是这局的恢复验收，不等于 R5/P6 全书集通过；剩余 3 张卡需人核对，
+无稳定对照版式的书继续使用显式来源关系重放。v8 跨任务增量仍未实施。
+
+## 当前反馈：恢复必须消费每轮人工修正（2026-09-27）
+
+具体输入、来源约束、重编译/合并及验收见[恢复算法设计草案](docs/agent/pdf-review-recovery-algorithm-2026-09-27.md)。本轮仍是设计，未修改功能代码。
+
+Catalan p10–17 审核已到 v24，现有恢复只识别修订 1 节点父指针变化；用户新补 `13...Nh5`、主线提升及重挂恢复节点 `14.Be3` 均未成为关系重放输入，多轮闭环尚未通过。本轮仅诊断，产品代码未改。下一切片应统一来源约束（新增、改挂、主线身份）、以当前人工约束重放并保留人工版本，将独立后续错误呈现为入口问题。验收首用真实 v20–v22 编辑历史，不能只用单次首轮错误模拟。见 [诊断与验收建议](docs/agent/pdf-review-recovery-v24-diagnosis-2026-09-27.md)。
+
+## 当前试验结论：人工锚点驱动恢复（2026-09-27）
+
+已读取 Catalan p10–17 的真实人工修订，并仅使用 v2 的一次 `10...Ba6` 改挂重放保存响应。
+后来十次操作补入的 48 招均可自动恢复，完整 UCI 路径、来源及合法性 48/48 匹配；
+但整局来源核对仍只有 132/262 路径正确、121 招缺失，纯程序重放不能宣称修完整局。
+三次有预算上限的 DeepSeek 试验分别发生两次纯推理耗尽和一次错误关系补丁，未采纳任何模型输出。
+观察到余额 ¥18.99 → ¥18.87，已停止新增生成请求。
+
+本轮只交付离线实验脚本、来源验收数据与[试验报告](docs/agent/pdf-review-recovery-experiment-2026-09-27.md)，
+未改网站提取/审核功能、未写真实修订，网站人工结果仍为 v15。
+下一优先项是来源约束 + 保存响应重放 + 保留人工内容的恢复预览；模型应先另行验证小范围来源判定，
+不能直接上线这次整局补丁方案。正文碎片整理与 v8 增量仍未推进。
+
+
+## 当前交付：待审片段可视化转棋步（2026-09-27）
+
+审核页已实现“转为棋步 → 直接点击目标棋步/谱头 → 接在后面或替代 → 修改常用记谱或棋盘落子 → 预览保存”。
+所属棋谱、父节点、起点 FEN 和 UCI 由程序推导；原文记谱不能解析时仍可从所选局面在棋盘落子替换。
+原片段的完整 evidence 与常见 `!/?` 评价符号随新节点进入不可变审核修订，继续使用现有撤销/恢复。
+对同一棋谱、按来源顺序连续且可合法接续的 `semantic_chunk_failed` 片段，审核页可预览、主动勾选后一次性恢复；
+印刷步号与局面不符即停止。界面与后端协议已接通，前后端聚焦测试、类型与契约检查通过，等待操作者网页验收。
+
+此批量操作只覆盖**线性、连续、来源明确的续谱**。Catalan p10–17 中跨支线的 70 个待审片段不能仅凭合法性自动并回；
+保存关系响应中的上游断点修正、依赖重编译和冲突预览仍属后续提取管线工作，不能将本次 UI 交付当作 Catalan 质量验收。
+详情见 [诊断与交互记录](docs/agent/pdf-review-catalan-diagnosis-2026-09-27.md)。
+
+## 最新用户反馈：审核排版修复，Catalan 主线恢复待改进（2026-09-27）
+
+操作者新跑 Endgame p42–45 和 Catalan p10–17 后，要求实现显示修复并分析转换交互/提取问题。
+审核现已将变化放在被替代着法之后，并从合法 `fen_before` 补齐旧结果缺失的显示回合信息：
+第 36 步白方变化出现在主线白步下方，其余无插入的黑白棋步同行。聚焦测试和真实 Endgame
+工件的 Chromium 检查通过。独立提取语义验收仍未通过，暂不推进 v8 增量。
+
+Catalan 这次有完整起局和 p10–17 连续模型输入，失败不能归为窗口缺前文：`10...Ba6` 被吞入
+`10.b3` 支线，后续 `continue` 线路冲突引发级联；蓝色频次被误判成主线样式，四个补问名额
+全部用于样式疑点，且采纳了一条合法但来源错误的重挂。228 prose 中 45 项只有数字/标点。
+后端本轮未改；下一方案应优先修主线恢复/上游断点补问，再整理正文与依赖问题组，提供
+点击目标 + SAN/棋盘录入的待审片段转换。证据、设计及验收见
+[最新诊断](docs/agent/pdf-review-catalan-diagnosis-2026-09-27.md)。不以 55/55 合法宣称通过。
+
+
+## 当前优先顺序：先验收独立提取审核，再开发 v8 增量（2026-09-27）
+
+操作者接受 Catalan p13–17 与 Makogonov p100–103 因棋局跨测试窗口而大段缺谱，
+不要求针对这两个片段继续修复。当前先完成审核棋谱显示：课程与审核共用棋谱父子树排版，
+变化靠近分叉点；审核挂接仍使用现有节点 ID、预览和不可变修订，发布拖选按真实线路选择。
+这项 UI 切片已实现并通过聚焦测试和一次本地 Chromium 页面检查；接下来由操作者在网站
+检验独立提取效果。得到其验收反馈后，再实施真正支持跨任务续局的 v8 增量关系协议，
+不能把“每个追加页段都是完整独立棋局”的简化接线当作目标。
+
+
+## 最新续验状态（2026-09-27 05:10 CST）
+
+R1–R4 已实施并通过浏览器/聚焦检查；网站默认 v8 `source_first`。R5/P6 **未通过**。本轮在操作者十次单窗口提取预算内完成六个扩展开发试验及四个首次 holdout：Chess Bible p300–303 的三个局部来源核点通过；Endgame/Attacking holdout 因前文起点缺失而部分失败；Makogonov holdout 仅 9 招、8 待审，Catalan dev2 仅 12 招，均属大段缺谱。Scandinavian/Catalan 两个 holdout 尚未跑。当前 DeepSeek 余额只读查询 ¥20.07，停止新增调用。下一切片须同时解决连续前文与**可验证前驱状态**：先按完整讲解段生成并复用前文关系，或从已审核候选/确认图示取得边界 FEN，再分离只读阅读页与 owned 输出页。只把前页文字放进 prompt、却不给编译器已建立的父节点，仍会大段失败。之后补齐 holdout 和逐招 gold；新增前页外发与调用预算须另获授权。详见 [实施记录](docs/agent/pdf-extraction-r1-r5-implementation-2026-09-27.md) 与 [P6 报告](docs/agent/pdf-extraction-p6-acceptance-2026-09-25.md)。
+
+## Current priority: PDF extraction redesign (2026-09-24)
+
+The operator requested design before further implementation. The current proposal is
+[ADR 0022](docs/decisions/0022-source-first-pdf-extraction-redesign.md), covering file-level refactoring,
+a source-span interpretation/local CCEF compiler, and proportionate P0–P6 delivery.
+This priority precedes the older active slices below; their historical checklists remain intact.
+
+- [x] Diagnose the parser, historical failures and seven local books; publish the failure taxonomy.
+- [x] Specify refactor boundaries, architecture and incremental delivery; reconcile personal-project
+  requirements in `AGENTS.md` and `docs/development-plan.md`.
+- [x] P0: Establish a minimal baseline for Catalan p6–9 and Scandinavian p319–323; the full 21-window
+  gold set is not a prerequisite for starting a small vertical slice.
+- [x] P1: Produce one readable CCEF candidate from source-span interpretation and local compilation.
+- [x] P2: Preserve localized uncertainty/annotations without the old generic-repair chain.
+- [x] P3: Extend to six representative input windows, including Unicode notation and scanned Chinese.
+- [x] P4: Handle semantic chunks and verified continuation across boundaries.
+- [x] P5: Integrate the existing Jobs, minimal manifest migration, API and review UI; make source
+  evidence readable independently of candidate success and add minimal unresolved-fragment,
+  initial-position and variation-reattachment edits.
+- [ ] P6: Evaluate the active 18-window, six-book set once at closeout and decide quality acceptance
+  (the operator separately requested the website default switch to v6 on 2026-09-25). The original 21-window inventory remains in v0; the operator excluded the three
+  Chinese endgame windows from subsequent testing. First fail-fast round ran three English
+  development windows with DeepSeek; quality failed. A later source-cited 25-item local oracle
+  improved from 13/25 to 25/25 on an explicitly selected saved-response combination for
+  the three tested windows. That combination has 148/148 legal Catalan moves, 102/102 Endgame
+  moves and 121/121 Scandinavian moves. The latest coherent Scandinavian response chain now
+  compiles its long p323 variation with five localized unresolved text fragments and no manual
+  event-ID mapping; the saved p323 request matches the current request exactly. This is still
+  not a P6 pass: nine development windows and six holdouts remain unrun.
+  See
+  [P6 report](docs/agent/pdf-extraction-p6-acceptance-2026-09-25.md) and
+  [local oracle](docs/agent/pdf-extraction-p6-dev-oracle-2026-09-25.md).
+
+ADR 0022 is under implementation, not final acceptance. P0–P3 have bounded prototype evidence;
+P4 now has cross-page scripted and real Scandinavian trials, same-page section splitting, and
+verified v7 document append. P5 has a v6 Job/review/source-view path and minimal review edits;
+P6 quality acceptance remains open. The operator-requested website/API default is now v6/source_first;
+this trial default is not a P6 quality pass. The detailed limits and saved artifacts are in
+`docs/agent/pdf-extraction-progress-2026-09-24.md`. The operator explicitly authorized selected-page
+DeepSeek calls. Development rules remain visible outcomes and focused checks; do not create
+DeepCode packets.
+
+## Current review recovery slice (2026-09-27)
+
+- [x] Persist a source-cited dependency replay behind the existing v8 review ledger; preview without writing and confirm one hash-bound, undoable revision.
+- [x] Preserve human move/prose/NAG edits; surface conflicts instead of silently replacing them.
+- [x] Run a simulated human repair on a separate complete Catalan p6–9 game using saved responses and verify 148 source paths and 138 mainline roles; run a read-only preview on the current p10–17 review session.
+- [ ] Operator website acceptance. Independent Catalan semantic errors and v8 incremental extraction remain separate work.
+
+See [review recovery record](docs/agent/pdf-review-dependency-replay-2026-09-27.md). No new DeepSeek calls were needed.
+
+## Active PDF follow-up: R1–R5 implementation plan (2026-09-25)
+
+- [x] Verify website/API v6 routing, selected-pipeline repeat, configured 128000 coverage budget,
+  and a separate recovery provider; focused backend/frontend and contract checks pass.
+- [x] Audit actual Catalan p6–9 and Magnus Wins With White p137–149 v6 runs. Both jobs succeeded,
+  but have 27/141 and 110/196 invalid nodes respectively, plus valid-but-wrong attachments.
+  Saved-response offline replay reproduces both results; 20 model responses all finished normally.
+- [x] Trace local repair damage: relink passes consume stale parent validation/FEN, then nearest
+  legal position selection moves children out of their printed branch. Also confirmed lost
+  token-level color/bold and last-16-valid-moves continuation drift.
+- [x] Replace manual book-format configuration with automatic layout observation, source-cited
+  reading hints and concrete content corrections; prepare the [execution/acceptance plan](docs/agent/pdf-extraction-r1-r5-plan-2026-09-25.md).
+- [x] Document the R3 [model relationship protocol and deterministic assembly rules](docs/agent/pdf-extraction-relation-protocol-2026-09-26.md)
+  for architecture discussion: the model selects game/line/entry/source anchors; the program derives
+  parent edges and validates them. The draft now includes the concrete input JSON, token styles,
+  prior-line context, window ownership and a matching input/output example. Reading context now
+  explicitly includes broad continuous source prose and lookahead, separately bounded from owned
+  output; the two saved runs confirm actual single-page calls with only 16 prior legal hints.
+  Cost refinement: merge coherent output segments before splitting calls; serialize stable source
+  before changing state/ownership for prefix caching, and measure actual usage rather than assume hits.
+  These are conditional call policies, not four mandatory model rounds; R3 owns their acceptance
+  and R5 reports total calls/usage alongside source correctness. This is a design draft, not a
+  shipped protocol or completed R3.
+- [x] R1: Fix stale-position and harmful nearest-parent relinking; prove the Catalan p7 cxd5 and
+  Magnus p139 Qxc4 relationships using source pages and saved-response replay.
+- [x] R2: Preserve token/span styles and automatically infer local reading hints; deliver a source
+  role/mainline-order preview without requiring book templates or user format setup.
+- [x] R3: Assemble complete mainlines and scoped variations; verify both full source windows,
+  cross-page continuation, plans, repeated mentions and diagram starts; localize dependent issues.
+- [x] R4: Add readable anchor selection, whole-branch drag/click reattachment, cross-sequence repair,
+  and undo/redo through existing immutable review revisions; no user-entered internal IDs.
+- [ ] R5: Run controlled fresh website extractions and source comparison, verify repair interaction,
+  then finish remaining P6 development/holdout evaluation. Mainline/parent correctness, omissions,
+  unresolved branches and human actions are acceptance measures; legal-node count alone is not.
+
+**Current state (2026-09-27): R1–R4 implemented; R5/P6 acceptance open.** The v8
+relation pipeline is the website/API `source_first` default, and real Chromium source/review
+navigation, branch drag/click reattachment, save, undo and redo were exercised. Fresh Catalan
+p6–9 has 148/148 legal moves and passes C1–C8; Scandinavian dev1 has 118/118 and passes
+S1–S9; Endgame dev1 has 102/102, four figures and passes E1–E8; Chess Bible dev1 has
+45/45 and passes B1–B5. Fresh Makogonov dev1 has 202/202 and passes M1/M3–M8, with
+one p7 recommended variation retained as prose. Magnus repeat has 213/213, zero unresolved,
+and correct p143/p145/p149 anchors; one p145 two-move alternative remains prose.
+
+Three more self-contained development windows were run through the website: Scandinavian
+dev2 219/219 legal with one omitted branch tail; Makogonov dev2 143/143 with a p15
+recommended move left as prose; Attacking dev2 90/90 with a p28 short alternative left as
+prose. The Attacking dev1 website rerun `25d195c0-...` has 49/49 legal moves and the
+main diagram-started lines, with two p19 contradictory inner fragments localized for review,
+one omitted p19 alternative, two p18 prior-game fragments lacking an in-window start, and
+one unconfirmed diagram. These local defects are accepted as reviewable evidence, not
+silently counted as correct moves. Generic subtree localization prevents a couple of bad
+parents from producing many illegal descendants; no book/page-specific fix was added.
+
+Nine of the active 18 P6 owned windows now have fresh v8 results; three development windows
+need a preceding page for a defensible starting position, and six holdouts remain untouched.
+The operator authorized those preceding Catalan p13 and Chess Bible p17 pages in addition to
+the earlier listed English P6 pages. Context-expanded website tests for Chess Bible p17–21,
+Endgame p22–27 and Catalan p13–17 are queued, but their wider output range must be scored
+only on the originally owned core and cannot be called an exact manifest run. The operator
+allows up to ten more single-window paid tests and accepts 1–3 localized branch/annotation
+mistakes per extraction. No complete per-move gold exists, so full P6 acceptance remains open.
+Magnus is an additional development sample outside the 18-window set. See
+[implementation record](docs/agent/pdf-extraction-r1-r5-implementation-2026-09-27.md)
+and [P6 report](docs/agent/pdf-extraction-p6-acceptance-2026-09-25.md).
+
+The latest plan supersedes the earlier “wait for discussion / configure each book's format” proposal.
+
 ## Goal
 
 Implement Stage **8D** on top of accepted Stage 8C: correct the real-book annotated score model,

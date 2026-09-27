@@ -11,14 +11,13 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from .diagram import DIAGRAM_EVIDENCE_SCHEMA, ChessDiagramRecognition
 from .evidence import NormalizedBox, SourceEvidenceFragment, source_fragment_sha256
+from .validation import _clean_move_token
 
 _FORMAL_MOVE = re.compile(
-    r"(?<![\w.])(?P<number>[1-9][0-9]{0,2})\."
-    r"(?P<black>\.\.)?\s*"
+    r"(?<![\w.])(?P<number>[1-9][0-9]{0,2})(?P<dots>\.{1,3}|…|\.…)\s*"
     r"(?P<move>(?:O-O-O|O-O|0-0-0|0-0|"
-    r"[KQRBN]?[a-h]?[1-8]?x?[a-h][1-8](?:=[QRBN])?)[+#?!]*)"
+    r"[KQRBN♔♕♖♗♘♙♚♛♜♝♞♟]?[a-h]?[1-8]?x?[a-h][1-8](?:=[QRBN])?)[+#?!]*)"
 )
-_MOVE_ANNOTATION = re.compile(r"[!?]+$")
 _SIDE_TO_MOVE_CAPTION = re.compile(
     r"\b(?P<side>white|black)\s+(?:to\s+(?:move|play)|moves?)\b",
     re.IGNORECASE,
@@ -99,7 +98,7 @@ def _move_candidates(
                 candidates.append(
                     (
                         int(match.group("number")),
-                        "b" if match.group("black") else "w",
+                        "b" if match.group("dots") != "." else "w",
                         match.group("move"),
                     )
                 )
@@ -144,7 +143,9 @@ def _resolve_operational_position(
         if explicit_side is not None and side != explicit_side:
             continue
         legal: list[tuple[str, str]] = []
-        san = _MOVE_ANNOTATION.sub("", source_move.replace("0", "O"))
+        san = _clean_move_token(source_move)
+        if san is None:
+            continue
         for placement in placements:
             try:
                 board = chess.Board(f"{placement} {side} - - 0 {move_number}")

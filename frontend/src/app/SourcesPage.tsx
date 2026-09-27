@@ -106,6 +106,9 @@ export function SourcesPage() {
 
   const [firstPage, setFirstPage] = useState<number>();
   const [lastPage, setLastPage] = useState<number>();
+  const [pipeline, setPipeline] = useState<'legacy' | 'source_first'>(
+    'source_first',
+  );
   const [runError, setRunError] = useState<string>();
   const [creatingRun, setCreatingRun] = useState(false);
   const [busyResultId, setBusyResultId] = useState<string>();
@@ -295,6 +298,7 @@ export function SourcesPage() {
   async function queueExtraction(
     asset: PdfAsset,
     range: { firstPage: number; lastPage: number },
+    selectedPipeline: 'legacy' | 'source_first',
   ) {
     return requestJson<PdfExtractionEnvelope>('/api/pdf-extractions', {
       method: 'POST',
@@ -303,6 +307,7 @@ export function SourcesPage() {
         pdf_asset_id: asset.id,
         first_page: range.firstPage,
         last_page: range.lastPage,
+        pipeline: selectedPipeline,
       }),
     });
   }
@@ -333,7 +338,7 @@ export function SourcesPage() {
     }
     try {
       setCreatingRun(true);
-      await queueExtraction(selectedAsset, { firstPage, lastPage });
+      await queueExtraction(selectedAsset, { firstPage, lastPage }, pipeline);
       setRunError(undefined);
       await mutateRuns();
       void message.success('识别任务已创建；相同页段也会保留为独立结果');
@@ -352,10 +357,14 @@ export function SourcesPage() {
     if (!selectedAsset) return;
     try {
       setBusyResultId(run.id);
-      await queueExtraction(selectedAsset, {
-        firstPage: run.first_page,
-        lastPage: run.last_page,
-      });
+      await queueExtraction(
+        selectedAsset,
+        {
+          firstPage: run.first_page,
+          lastPage: run.last_page,
+        },
+        pipeline,
+      );
       await mutateRuns();
       void message.success(
         `已新建第 ${run.first_page}–${run.last_page} 页的独立识别任务`,
@@ -702,6 +711,22 @@ export function SourcesPage() {
                   创建识别任务
                 </Button>
               </div>
+              <div className="mt-3 flex items-center gap-2 text-sm">
+                <span>提取方式</span>
+                <Select
+                  aria-label="提取方式"
+                  value={pipeline}
+                  onChange={setPipeline}
+                  options={[
+                    {
+                      value: 'source_first',
+                      label: '来源优先（实验性，可局部修订）',
+                    },
+                    { value: 'legacy', label: '旧版提取' },
+                  ]}
+                  className="min-w-64"
+                />
+              </div>
               {runError ? (
                 <Typography.Paragraph type="danger" className="mt-2! mb-0!">
                   {runError}
@@ -869,6 +894,11 @@ export function SourcesPage() {
                         title={`独立提取 · 第 ${run.first_page}–${run.last_page} 页`}
                         extra={
                           <Space wrap>
+                            <Tag>
+                              {['pdf-extraction:v6', 'pdf-extraction:v8'].includes(run.pipeline_version)
+                                ? '来源优先'
+                                : '旧版提取'}
+                            </Tag>
                             <Tag color={statusColors[run.job.status]}>
                               {statusLabels[run.job.status]}
                             </Tag>
@@ -878,7 +908,13 @@ export function SourcesPage() {
                                   run.has_conflicts ? 'warning' : 'default'
                                 }
                               >
-                                {run.has_conflicts ? '有冲突' : '无冲突'}
+                                {['pdf-extraction:v6', 'pdf-extraction:v8'].includes(run.pipeline_version)
+                                  ? run.has_conflicts
+                                    ? '部分结果 · 待修订'
+                                    : '候选已生成'
+                                  : run.has_conflicts
+                                    ? '有冲突'
+                                    : '无冲突'}
                               </Tag>
                             ) : null}
                           </Space>
@@ -923,8 +959,18 @@ export function SourcesPage() {
                                     disabled: run.candidate === null,
                                   },
                                   {
+                                    key: 'source',
+                                    label: (
+                                      <Link
+                                        to={`/sources/pdf-extractions/${encodeURIComponent(run.id)}/source`}
+                                      >
+                                        查看原文与页图
+                                      </Link>
+                                    ),
+                                  },
+                                  {
                                     key: 'repeat',
-                                    label: '重新提取同一页段',
+                                    label: `重新提取同一页段（${pipeline === 'source_first' ? '来源优先' : '旧版'}）`,
                                   },
                                   {
                                     key: 'adopt',

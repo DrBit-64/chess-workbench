@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+
 from chess_workbench.extraction import normalize_chess_moves
 from chess_workbench.extraction.contracts import (
     ExtractionPackage,
@@ -112,6 +113,22 @@ def _assert_authoritative_null(node: Any) -> None:
     assert node.uci_candidate is None
     assert node.fen_before is None
     assert node.fen_after is None
+
+
+def test_observed_undotted_and_figurine_tokens_normalize_without_losing_source() -> None:
+    _, sequence = _normalize(
+        {"kind": "startpos"},
+        [
+            _node("n1", None, 0, "1 e4"),
+            _node("n2", "n1", 0, "1... d5"),
+            _node("n3", "n2", 0, "2 exd5"),
+            _node("n4", "n3", 0, "2...♞f6"),
+            _node("n5", "n4", 0, "3.♘f3!"),
+        ],
+    )
+    assert [node.validation_status for node in sequence.nodes] == ["valid"] * 5
+    assert [node.san_candidate for node in sequence.nodes] == ["e4", "d5", "exd5", "Nf6", "Nf3"]
+    assert sequence.nodes[-1].move_text == "3.♘f3!"
 
 
 # ---------------------------------------------------------------------------
@@ -252,9 +269,11 @@ def test_move_number_prefix_symbolic_suffix_and_nag_tokens_are_cleaned() -> None
             _node("n4", None, 1, "d4$0"),
             _node("n5", None, 2, "c4 $255"),
             _node("n6", None, 3, "1. Nf3 ! ?"),
+            _node("n7", None, 4, "1e4"),
+            _node("n8", None, 5, "1Nf3"),
         ],
     )
-    n1, n2, n3, n4, n5, n6 = sequence.nodes
+    n1, n2, n3, n4, n5, n6, n7, n8 = sequence.nodes
     assert n1.validation_status == "valid"
     assert n1.san_candidate == "e4"
     assert n2.san_candidate == "e5"
@@ -262,6 +281,8 @@ def test_move_number_prefix_symbolic_suffix_and_nag_tokens_are_cleaned() -> None
     assert n4.san_candidate == "d4"
     assert n5.san_candidate == "c4"
     assert n6.san_candidate == "Nf3"
+    assert n7.san_candidate == "e4"
+    assert n8.san_candidate == "Nf3"
 
 
 @pytest.mark.parametrize(
@@ -721,3 +742,9 @@ def test_input_package_is_never_mutated_for_mixed_outcomes() -> None:
     before = copy.deepcopy(package)
     normalize_chess_moves(package)
     assert package.model_dump() == before.model_dump()
+
+
+def test_spaced_black_ellipsis_is_removed_from_san() -> None:
+    from chess_workbench.extraction.validation import _clean_move_token
+
+    assert _clean_move_token("7 ... Qh5!") == "Qh5"

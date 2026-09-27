@@ -102,6 +102,9 @@ class TokenUsage(_StrictModel):
     input_tokens: Annotated[int | None, Field(ge=0)] = None
     output_tokens: Annotated[int | None, Field(ge=0)] = None
     total_tokens: Annotated[int | None, Field(ge=0)] = None
+    prompt_cache_hit_tokens: Annotated[int | None, Field(ge=0)] = None
+    prompt_cache_miss_tokens: Annotated[int | None, Field(ge=0)] = None
+    reasoning_tokens: Annotated[int | None, Field(ge=0)] = None
 
 
 class StructuredGenerationResponse(_StrictModel):
@@ -113,6 +116,7 @@ class StructuredGenerationResponse(_StrictModel):
     # mapped to provider errors instead of leaking vendor-private semantics.
     finish_reason: GenerationFinishReason | None = None
     usage: TokenUsage = Field(default_factory=TokenUsage)
+    elapsed_ms: Annotated[int | None, Field(ge=0)] = None
 
 
 class StructuredGenerationProviderError(RuntimeError):

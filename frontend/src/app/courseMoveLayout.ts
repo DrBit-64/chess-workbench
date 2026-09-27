@@ -1,5 +1,5 @@
 import type { ModuleEditor } from '../logic/api/types';
-import { parentheticalVariationRoots } from './variationPresentation';
+import { buildScoreTreeLayout } from './scoreTreeLayout';
 
 export type CourseOccurrence = ModuleEditor['occurrences'][number];
 
@@ -40,32 +40,13 @@ export function buildCourseScoreLayout(
   occurrences: CourseOccurrence[],
   rootId: string,
 ): CourseScoreLayout {
-  const inputOrder = new Map(
-    occurrences.map((occurrence, index) => [occurrence.id, index]),
-  );
+  const tree = buildScoreTreeLayout(occurrences, rootId, (occurrence) => ({
+    id: occurrence.id,
+    parentId: occurrence.parent_id,
+    order: occurrence.sort_order,
+  }));
   const byId = new Map(
     occurrences.map((occurrence) => [occurrence.id, occurrence]),
-  );
-  const children = new Map<string, CourseOccurrence[]>();
-  for (const occurrence of occurrences) {
-    if (occurrence.parent_id === null) continue;
-    const siblings = children.get(occurrence.parent_id) ?? [];
-    siblings.push(occurrence);
-    children.set(occurrence.parent_id, siblings);
-  }
-  for (const siblings of children.values()) {
-    siblings.sort(
-      (left, right) =>
-        left.sort_order - right.sort_order ||
-        (inputOrder.get(left.id) ?? 0) - (inputOrder.get(right.id) ?? 0),
-    );
-  }
-  const parentheticalRoots = parentheticalVariationRoots(
-    occurrences.map((occurrence) => ({
-      id: occurrence.id,
-      parentId: occurrence.parent_id,
-      order: occurrence.sort_order,
-    })),
   );
 
   const moveView = (occurrence: CourseOccurrence): CourseMoveView => {
@@ -81,49 +62,18 @@ export function buildCourseScoreLayout(
     };
   };
 
-  const primaryLine = (parentId: string): CourseMoveView[] => {
-    const result: CourseMoveView[] = [];
-    const visited = new Set<string>();
-    let parent = parentId;
-    while (!visited.has(parent)) {
-      visited.add(parent);
-      const primary = children.get(parent)?.[0];
-      if (!primary) break;
-      result.push(moveView(primary));
-      parent = primary.id;
-    }
-    return result;
-  };
-
   const variationsByParent = new Map<string, CourseVariation[]>();
-  const indexed = new Set<string>();
-  function indexTree(parentId: string, parentPath: string[]) {
-    if (indexed.has(parentId)) return;
-    indexed.add(parentId);
-    const siblings = children.get(parentId) ?? [];
-    const alternatives = siblings.slice(1).map((root) => {
-      const path = [...parentPath, root.id];
-      return {
-        key: path.join('/'),
-        depth: path.length,
-        path,
-        moves: [moveView(root), ...primaryLine(root.id)],
-        presentation:
-          path.length > 1 && parentheticalRoots.has(root.id)
-            ? ('parenthetical' as const)
-            : ('rail' as const),
-      };
-    });
-    if (alternatives.length > 0) variationsByParent.set(parentId, alternatives);
-
-    siblings.forEach((child, index) => {
-      const childPath = index === 0 ? parentPath : [...parentPath, child.id];
-      indexTree(child.id, childPath);
-    });
+  for (const [parentId, variations] of tree.variationsByParent) {
+    if (parentId === null) continue;
+    variationsByParent.set(
+      parentId,
+      variations.map((variation) => ({
+        ...variation,
+        moves: variation.moves.map(moveView),
+      })),
+    );
   }
-  indexTree(rootId, []);
-
-  const mainline = primaryLine(rootId);
+  const mainline = tree.mainline.map(moveView);
   return {
     mainline,
     mainlineRows: pairCourseMoves(mainline),

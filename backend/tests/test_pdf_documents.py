@@ -389,3 +389,193 @@ async def test_rollback_latest_append_restores_previous_document_head(tmp_path: 
             ) == 1
     finally:
         await database.close()
+
+
+@pytest.mark.asyncio
+async def test_source_first_document_append_queues_v7_without_changing_legacy(
+    tmp_path: Path,
+) -> None:
+    from chess_workbench.services.pdf_documents import (
+        PDF_SOURCE_INCREMENTAL_EXTRACTION_PIPELINE_VERSION,
+    )
+    from chess_workbench.services.pdf_persistence import PDF_SOURCE_EXTRACTION_PIPELINE_VERSION
+
+    database, settings, run_id = await _setup(
+        tmp_path, "source-first-document", pipeline_version=PDF_SOURCE_EXTRACTION_PIPELINE_VERSION
+    )
+    await _complete_review(
+        database,
+        settings,
+        run_id,
+        normalized_payload=_package_payload_v1_1(run_id, FIRST_PAGE, LAST_PAGE),
+    )
+    try:
+        async with database.session() as session, session.begin():
+            asset = await session.scalar(select(PdfAsset))
+            assert asset is not None
+            asset.page_count = 10
+            document = (await PdfDocumentService(session, settings).adopt_run(run_id)).document
+        async with database.session() as session, session.begin():
+            append = await PdfDocumentService(session, settings).register_append(
+                document_id=document.id,
+                expected_version=1,
+                first_page=7,
+                last_page=8,
+                profile={},
+                idempotency_key="source-first-append",
+            )
+        assert append.run.pipeline_version == PDF_SOURCE_INCREMENTAL_EXTRACTION_PIPELINE_VERSION
+        assert (
+            append.job.payload["pipeline_version"]
+            == PDF_SOURCE_INCREMENTAL_EXTRACTION_PIPELINE_VERSION
+        )
+    finally:
+        await database.close()
+
+
+@pytest.mark.asyncio
+async def test_v7_append_uses_source_events_and_commits_verified_continuation(
+    tmp_path: Path,
+) -> None:
+    import json
+
+    from chess_workbench.extraction.evidence import (
+        PixelBox,
+        RenderedPage,
+        RenderProfile,
+        TextFragment,
+    )
+    from chess_workbench.extraction.provider import (
+        ScriptedStructuredGenerationProvider,
+        StructuredGenerationResponse,
+    )
+    from chess_workbench.services.pdf_extraction import process_pdf_extraction_job
+    from chess_workbench.services.pdf_incremental_extraction import (
+        process_pdf_incremental_extraction_job,
+    )
+    from chess_workbench.services.pdf_persistence import PDF_SOURCE_EXTRACTION_PIPELINE_VERSION
+
+    database, settings, run_id = await _setup(
+        tmp_path, "source-first-append-job", pipeline_version=PDF_SOURCE_EXTRACTION_PIPELINE_VERSION
+    )
+    async with database.session() as session:
+        run = await session.get(ExtractionRun, run_id)
+        assert run is not None
+        asset = await session.get(PdfAsset, run.pdf_asset_id)
+        assert asset is not None
+        source_ref = f"source-file:{asset.source_file_id}"
+    initial = _package_payload_v1_1(run_id, FIRST_PAGE, LAST_PAGE)
+    initial["source"]["source_ref"] = source_ref
+    await _complete_review(database, settings, run_id, normalized_payload=initial)
+
+    class TwoPageRenderer:
+        def render_page(
+            self, pdf_bytes: bytes, physical_page: int, profile: RenderProfile
+        ) -> RenderedPage:
+            source = "2.Nf3 Nc6" if physical_page == 7 else "New game 1.d4 d5"
+            return RenderedPage(
+                physical_page=physical_page,
+                width=120,
+                height=80,
+                dpi=profile.dpi,
+                png_bytes=b"\x89PNG\r\n\x1a\nfixture",
+                embedded_fragments=[
+                    TextFragment(
+                        order=0,
+                        text=source,
+                        box=PixelBox(x0=10, y0=10, x1=110, y1=30),
+                        confidence=None,
+                    )
+                ],
+                renderer_name="fixture",
+                renderer_version="1",
+            )
+
+    try:
+        async with database.session() as session, session.begin():
+            asset = await session.get(PdfAsset, run.pdf_asset_id)
+            assert asset is not None
+            asset.page_count = 10
+            document = (await PdfDocumentService(session, settings).adopt_run(run_id)).document
+        async with database.session() as session, session.begin():
+            append = await PdfDocumentService(session, settings).register_append(
+                document_id=document.id,
+                expected_version=1,
+                first_page=7,
+                last_page=8,
+                profile={"render": {"dpi": 72, "embedded_text_min_chars": 1}},
+                idempotency_key="v7-fixture",
+            )
+            append.job.status = "running"
+        await process_pdf_extraction_job(
+            database,
+            settings,
+            append.job.payload,
+            renderer=TwoPageRenderer(),
+        )
+        responses = [
+            {
+                "events": [
+                    {
+                        "id": "m1",
+                        "kind": "move",
+                        "sequence": "continued",
+                        "parent": None,
+                        "continuation_anchor": "anchor-3",
+                        "source": {"page": 7, "order": 0, "quote": "Nf3"},
+                    },
+                    {
+                        "id": "m2",
+                        "kind": "move",
+                        "sequence": "continued",
+                        "parent": "m1",
+                        "source": {"page": 7, "order": 0, "quote": "Nc6"},
+                    },
+                ]
+            },
+            {
+                "events": [
+                    {
+                        "id": "m1",
+                        "kind": "move",
+                        "sequence": "new",
+                        "parent": None,
+                        "source": {"page": 8, "order": 0, "quote": "d4"},
+                    },
+                    {
+                        "id": "m2",
+                        "kind": "move",
+                        "sequence": "new",
+                        "parent": "m1",
+                        "source": {"page": 8, "order": 0, "quote": "d5"},
+                    },
+                ]
+            },
+        ]
+        provider = ScriptedStructuredGenerationProvider(
+            [
+                StructuredGenerationResponse(
+                    content=json.dumps(value),
+                    provider="scripted",
+                    model="fixture",
+                    finish_reason="stop",
+                )
+                for value in responses
+            ]
+        )
+        result = await process_pdf_incremental_extraction_job(
+            database, settings, append.job.payload, provider=provider
+        )
+        assert result["run_id"] == str(append.run.id)
+        assert len(provider.calls) == 2
+        async with database.session() as session:
+            updated = await session.get(PdfExtractionDocument, document.id)
+            assert updated is not None and updated.version == 2
+            rows = list(
+                await session.scalars(
+                    select(ExtractionArtifact).where(ExtractionArtifact.run_id == append.run.id)
+                )
+            )
+        assert any(row.kind == "semantic_manifest" for row in rows)
+    finally:
+        await database.close()

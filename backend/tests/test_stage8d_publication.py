@@ -58,7 +58,7 @@ def _package() -> ExtractionPackageV1_1:
                             "id": "n1",
                             "parent_id": None,
                             "sibling_order": 0,
-                            "move_text": "e4",
+                            "move_text": "e4!",
                             "evidence": [{"page": 10}],
                         },
                         {
@@ -72,7 +72,8 @@ def _package() -> ExtractionPackageV1_1:
                             "id": "n3",
                             "parent_id": "n1",
                             "sibling_order": 1,
-                            "move_text": "c5",
+                            "move_text": "c5?",
+                            "extensions": {"chess-workbench.nag-override": True},
                             "evidence": [{"page": 11}],
                         },
                     ],
@@ -269,6 +270,13 @@ async def test_approved_review_publishes_multiple_fragments_into_nested_modules(
                     select(CourseOccurrence).where(CourseOccurrence.course_id == course.id)
                 )
             )
+            by_node = {
+                row.context.get("ccef_node_id"): row
+                for row in occurrences
+                if isinstance(row.context, dict)
+            }
+            assert by_node["n1"].nag == 1
+            assert by_node["n3"].nag is None
             assert any(
                 isinstance(row.context.get("source_span_ids"), list)
                 and row.context["source_span_ids"]

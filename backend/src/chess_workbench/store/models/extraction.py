@@ -293,7 +293,7 @@ class ExtractionArtifact(UUIDPrimaryKeyMixin, UTCCreatedAtMixin, Base):
     __table_args__ = (
         CheckConstraint(
             "kind IN ('rendered_page','render_manifest','ocr_fragment','ocr_manifest',"
-            "'provider_response','raw_ccef','normalized_ccef')",
+            "'provider_response','raw_ccef','normalized_ccef','semantic_manifest')",
             name="kind",
         ),
         CheckConstraint("page_number IS NULL OR page_number >= 1", name="page_number_positive"),

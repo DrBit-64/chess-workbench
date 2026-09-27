@@ -19,6 +19,11 @@ const SourcesPage = lazy(() =>
 const AnalysisPage = lazy(() =>
   import('./AnalysisPage').then((module) => ({ default: module.AnalysisPage })),
 );
+const PdfSourcePage = lazy(() =>
+  import('./PdfSourcePage').then((module) => ({
+    default: module.PdfSourcePage,
+  })),
+);
 const PdfReviewPage = lazy(() =>
   import('./PdfReviewPage').then((module) => ({
     default: module.PdfReviewPage,
@@ -92,6 +97,10 @@ export function App() {
             <Route path="/learn" element={<CourseCatalog />} />
             <Route path="/learn/:courseId" element={<CourseEditor />} />
             <Route path="/sources" element={<SourcesPage />} />
+            <Route
+              path="/sources/pdf-extractions/:runId/source"
+              element={<PdfSourcePage />}
+            />
             <Route
               path="/sources/pdf-extractions/:runId/review"
               element={<PdfReviewPageAdapter />}

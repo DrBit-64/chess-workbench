@@ -58,6 +58,9 @@ export type PdfExtractionDocumentAppendEnvelope =
 export type PdfExtractionDocumentRollbackResult =
   paths['/api/pdf-extraction-documents/{document_id}/rollback-latest']['post']['responses'][200]['content']['application/json'];
 
+export type PdfSourceEvidence =
+  paths['/api/pdf-extractions/{run_id}/source']['get']['responses'][200]['content']['application/json'];
+
 export type PdfReviewDocument =
   paths['/api/pdf-extractions/{run_id}/review']['get']['responses'][200]['content']['application/json'];
 
@@ -65,6 +68,12 @@ export type PdfReviewSessionEnvelope =
   paths['/api/pdf-extractions/{target_id}/review/session']['post']['responses'][201]['content']['application/json'];
 
 export type PdfReviewSession = PdfReviewSessionEnvelope['session'];
+
+export type PdfReviewRecoveryPreview =
+  paths['/api/pdf-review-sessions/{session_id}/recovery-preview']['post']['responses'][200]['content']['application/json'];
+
+export type PdfReviewReattachPreview =
+  paths['/api/pdf-review-sessions/{session_id}/reattach-preview']['post']['responses'][200]['content']['application/json'];
 
 export type PdfReviewCommandRequest =
   paths['/api/pdf-review-sessions/{session_id}/commands']['post']['requestBody']['content']['application/json'];
