@@ -5,6 +5,8 @@ import {
   buildReviewReadingFlow,
   compactReviewBlocks,
   reviewLinePath,
+  reviewSelectionPath,
+  reviewVisualSelectionRange,
 } from './reviewMoveLayout';
 import type { AnnotatedMoveSequenceItem, MoveNode } from './reviewMoveLayout';
 
@@ -272,7 +274,66 @@ describe('buildReviewMoveRows', () => {
       'w5',
     ]);
     expect(reviewLinePath([...mainline, branch], 'branch3', 'w5')).toBeNull();
+    expect(reviewSelectionPath([...mainline, branch], 'b5', 'branch3')).toEqual(
+      ['b5', 'w5', 'b4', 'w4', 'b3', 'w3', 'branch3'],
+    );
+    const alternateRoot = white('alternate-root', 1, {
+      sibling_order: 1,
+      fen_before: 'same-start',
+    });
+    const alternateReply = black('alternate-reply', 1, {
+      parent_id: alternateRoot.id,
+    });
+    const firstRoot = { ...mainline[0], fen_before: 'same-start' };
+    expect(
+      reviewSelectionPath(
+        [firstRoot, alternateRoot, alternateReply],
+        firstRoot.id,
+        alternateReply.id,
+      ),
+    ).toEqual([firstRoot.id, alternateRoot.id, alternateReply.id]);
+    expect(
+      reviewSelectionPath(
+        [firstRoot, { ...alternateRoot, fen_before: 'another-start' }],
+        firstRoot.id,
+        alternateRoot.id,
+      ),
+    ).toBeNull();
     expect(mainline.at(-1)?.id).toBe('b12');
+  });
+
+  it('selects the visible interval and complete branches attached to its mainline moves', () => {
+    const root = white('root', 1, {
+      move_text: 'd4',
+      fen_before: 'start',
+    });
+    const reply = black('reply', 1, {
+      parent_id: root.id,
+      move_text: 'd5',
+    });
+    const rootVariation = white('root-variation', 1, {
+      sibling_order: 1,
+      move_text: 'c4',
+      fen_before: 'start',
+    });
+    const variationReply = black('variation-reply', 1, {
+      parent_id: rootVariation.id,
+      move_text: 'e6',
+    });
+    const replyVariation = black('reply-variation', 1, {
+      parent_id: root.id,
+      sibling_order: 1,
+      move_text: 'Nf6',
+    });
+    const nodes = [root, reply, rootVariation, variationReply, replyVariation];
+    expect(reviewVisualSelectionRange(nodes, root.id, root.id)).toEqual([
+      root.id,
+      rootVariation.id,
+      variationReply.id,
+    ]);
+    expect(reviewVisualSelectionRange(nodes, root.id, reply.id)).toEqual(
+      nodes.map((move) => move.id),
+    );
   });
 
   it('puts a white alternative after White, then pairs replies with missing printed metadata', () => {

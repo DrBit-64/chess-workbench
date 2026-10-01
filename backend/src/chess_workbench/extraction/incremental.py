@@ -385,25 +385,34 @@ def compose_incremental_ccef(
     item_targets: dict[str, str] = {}
     node_targets: dict[tuple[str, str], str] = {}
     independent_items: list[dict[str, Any]] = []
+    independent_ids: dict[str, str] = {}
     binding_index = 0
+
+    def retain_independent(item: dict[str, Any]) -> None:
+        source_id = str(item["id"])
+        target_id = source_id
+        if target_id in existing_item_ids:
+            serial = len(independent_ids) + 1
+            target_id = f"p{context.next_page_range.start_page}i{serial}"
+            while target_id in existing_item_ids:
+                serial += 1
+                target_id = f"p{context.next_page_range.start_page}i{serial}"
+        item["id"] = target_id
+        independent_ids[source_id] = target_id
+        existing_item_ids.add(target_id)
+        independent_items.append(item)
 
     for item in incoming_items:
         assert isinstance(item, dict)
         if item.get("kind") != "move_sequence":
-            if item["id"] in existing_item_ids:
-                raise ValueError("incremental item id collides with the base package")
-            independent_items.append(item)
-            existing_item_ids.add(item["id"])
+            retain_independent(item)
             continue
         extensions = item.get("extensions")
         binding = (
             extensions.get("chess-workbench.continuation") if isinstance(extensions, dict) else None
         )
         if binding is None:
-            if item["id"] in existing_item_ids:
-                raise ValueError("incremental item id collides with the base package")
-            independent_items.append(item)
-            existing_item_ids.add(item["id"])
+            retain_independent(item)
             continue
         if not isinstance(binding, dict) or set(binding) != {
             "base_normalized_ccef_sha256",
@@ -516,6 +525,8 @@ def compose_incremental_ccef(
             if source_sequence_id in item_targets:
                 anchor["sequence_id"] = item_targets[source_sequence_id]
                 anchor["node_id"] = node_targets[(source_sequence_id, str(anchor["node_id"]))]
+            elif source_sequence_id in independent_ids:
+                anchor["sequence_id"] = independent_ids[source_sequence_id]
         document_items.append(item)
 
     diagnostics = document["diagnostics"]
@@ -529,6 +540,8 @@ def compose_incremental_ccef(
             source_node_id = transformed.get("node_id")
             if isinstance(source_node_id, str):
                 transformed["node_id"] = node_targets[(source_item_id, source_node_id)]
+        elif isinstance(source_item_id, str) and source_item_id in independent_ids:
+            transformed["item_id"] = independent_ids[source_item_id]
         diagnostics.append(transformed)
 
     source = document["source"]

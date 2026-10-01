@@ -162,9 +162,10 @@ export function SourcesPage() {
   const groupedRunIds = useMemo(
     () =>
       new Set(
-        documents.flatMap((document) =>
-          document.segments.map((segment) => segment.run_id),
-        ),
+        documents.flatMap((document) => [
+          ...document.segments.map((segment) => segment.run_id),
+          ...document.append_attempts.map((attempt) => attempt.run_id),
+        ]),
       ),
     [documents],
   );
@@ -895,7 +896,10 @@ export function SourcesPage() {
                         extra={
                           <Space wrap>
                             <Tag>
-                              {['pdf-extraction:v6', 'pdf-extraction:v8'].includes(run.pipeline_version)
+                              {[
+                                'pdf-extraction:v6',
+                                'pdf-extraction:v8',
+                              ].includes(run.pipeline_version)
                                 ? '来源优先'
                                 : '旧版提取'}
                             </Tag>
@@ -908,7 +912,10 @@ export function SourcesPage() {
                                   run.has_conflicts ? 'warning' : 'default'
                                 }
                               >
-                                {['pdf-extraction:v6', 'pdf-extraction:v8'].includes(run.pipeline_version)
+                                {[
+                                  'pdf-extraction:v6',
+                                  'pdf-extraction:v8',
+                                ].includes(run.pipeline_version)
                                   ? run.has_conflicts
                                     ? '部分结果 · 待修订'
                                     : '候选已生成'

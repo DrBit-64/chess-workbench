@@ -37,7 +37,8 @@ import {
   buildReviewMoveRows,
   buildReviewReadingFlow,
   compactReviewBlocks,
-  reviewLinePath,
+  reviewSelectionPath,
+  reviewVisualSelectionRange,
   reviewMoveTurn,
 } from './reviewMoveLayout';
 import { parseReviewLine } from './reviewLineInput';
@@ -114,6 +115,7 @@ interface ReviewContextMenuState {
 interface MoveSelection {
   sequenceId: string;
   anchorNodeId: string;
+  baseNodeIds: string[];
   nodeIds: string[];
 }
 
@@ -249,6 +251,7 @@ export function PdfReviewPage({ runId }: { runId: string }) {
     null,
   );
   const [dragSelecting, setDragSelecting] = useState(false);
+  const dragFocusNodeId = useRef<string | null>(null);
   const [attachSelection, setAttachSelection] =
     useState<AttachSelection | null>(null);
   const [attachPreview, setAttachPreview] = useState<AttachPreview | null>(
@@ -689,26 +692,97 @@ export function PdfReviewPage({ runId }: { runId: string }) {
 
   function beginMoveSelection(sequence: MoveSequenceItem, node: MoveNode) {
     if (!publishing) return;
+    dragFocusNodeId.current = `${sequence.id}:${node.id}`;
     setDragSelecting(true);
-    setMoveSelection({
-      sequenceId: sequence.id,
-      anchorNodeId: node.id,
-      nodeIds: [node.id],
+    setMoveSelection((current) => {
+      const rangeIds = reviewVisualSelectionRange(
+        sequence.nodes,
+        node.id,
+        node.id,
+      );
+      const fresh = {
+        sequenceId: sequence.id,
+        anchorNodeId: node.id,
+        baseNodeIds: [] as string[],
+        nodeIds: rangeIds,
+      };
+      if (current === null || current.sequenceId !== sequence.id) return fresh;
+      const path = reviewSelectionPath(
+        sequence.nodes,
+        current.nodeIds[0],
+        node.id,
+      );
+      if (path === null) return fresh;
+      const baseNodeIds = [...new Set([...current.nodeIds, ...path])];
+      const selectedIds = new Set([...baseNodeIds, ...rangeIds]);
+      return {
+        ...fresh,
+        baseNodeIds,
+        nodeIds: sequence.nodes
+          .filter((move) => selectedIds.has(move.id))
+          .map((move) => move.id),
+      };
     });
   }
 
   function extendMoveSelection(sequence: MoveSequenceItem, node: MoveNode) {
     if (!publishing || !dragSelecting) return;
+    const focusKey = `${sequence.id}:${node.id}`;
+    if (dragFocusNodeId.current === focusKey) return;
+    dragFocusNodeId.current = focusKey;
     setMoveSelection((current) => {
       if (current === null || current.sequenceId !== sequence.id)
         return current;
-      const nodeIds = reviewLinePath(
+      if (
+        reviewSelectionPath(sequence.nodes, current.anchorNodeId, node.id) ===
+        null
+      ) {
+        return current;
+      }
+      const rangeIds = reviewVisualSelectionRange(
         sequence.nodes,
         current.anchorNodeId,
         node.id,
       );
-      return nodeIds === null ? current : { ...current, nodeIds };
+      const selectedIds = new Set([...current.baseNodeIds, ...rangeIds]);
+      return {
+        ...current,
+        nodeIds: sequence.nodes
+          .filter((move) => selectedIds.has(move.id))
+          .map((move) => move.id),
+      };
     });
+  }
+
+  function extendMoveSelectionThroughVisibleRange(
+    event: ReactMouseEvent<HTMLElement>,
+  ) {
+    if (!publishing || !dragSelecting || moveSelection === null) return;
+    const sequence = sequenceById(moveSelection.sequenceId);
+    if (sequence === undefined) return;
+    const cells = [
+      ...event.currentTarget.querySelectorAll<HTMLElement>(
+        '[data-review-node-id][data-review-sequence-id]',
+      ),
+    ].filter((cell) => cell.dataset.reviewSequenceId === sequence.id);
+    const anchor = cells.find(
+      (cell) => cell.dataset.reviewNodeId === moveSelection.anchorNodeId,
+    );
+    if (anchor === undefined) return;
+    const anchorBounds = anchor.getBoundingClientRect();
+    const anchorY = (anchorBounds.top + anchorBounds.bottom) / 2;
+    const lowY = Math.min(anchorY, event.clientY);
+    const highY = Math.max(anchorY, event.clientY);
+    const covered = cells.filter((cell) => {
+      const bounds = cell.getBoundingClientRect();
+      const centerY = (bounds.top + bounds.bottom) / 2;
+      return centerY >= lowY && centerY <= highY;
+    });
+    const focus = event.clientY >= anchorY ? covered.at(-1) : covered[0];
+    const node = sequence.nodes.find(
+      (candidate) => candidate.id === focus?.dataset.reviewNodeId,
+    );
+    if (node !== undefined) extendMoveSelection(sequence, node);
   }
 
   async function createTargetBook() {
@@ -1759,10 +1833,20 @@ export function PdfReviewPage({ runId }: { runId: string }) {
             </button>
           </div>
           <p className="mt-2 text-sm text-stone-600">
-            在右侧棋谱按住鼠标拖过棋步；可重复选择并分别放入不同章节或小节。
+            在右侧棋谱从上往下拖选范围；范围内的棋步及主线所附属的支线会一起选中。
+            同一棋局可多次拖选叠加；加入当前选择后，可再选择片段放入其他章节或小节。
             {moveSelection !== null
               ? ` 当前已选 ${moveSelection.nodeIds.length} 个半回合。`
               : ''}
+            {moveSelection !== null ? (
+              <button
+                type="button"
+                onClick={() => setMoveSelection(null)}
+                className="ml-2 text-emerald-800 underline"
+              >
+                清空当前选择
+              </button>
+            ) : null}
           </p>
           {publicationSegments.length > 0 ? (
             <ol className="mt-2 grid gap-1 pl-5 text-sm">
@@ -1904,6 +1988,7 @@ export function PdfReviewPage({ runId }: { runId: string }) {
           onDragStartCapture={onReviewDragStartCapture}
           onDragOverCapture={onReviewDragOverCapture}
           onDropCapture={onReviewDropCapture}
+          onMouseMoveCapture={extendMoveSelectionThroughVisibleRange}
           className="min-w-0 lg:h-full lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain"
         >
           <div className="max-w-prose space-y-4">

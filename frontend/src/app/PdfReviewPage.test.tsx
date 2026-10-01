@@ -1379,6 +1379,28 @@ describe('Stage 8D review page (8D-3A)', () => {
 
   it('drag-selects moves and publishes one fragment into a new nested chapter', async () => {
     const courseId = '55555555-5555-4555-8555-555555555555';
+    const publicationItems = baseItems().map((item): ReviewItem =>
+      item.kind === 'move_sequence'
+        ? {
+            ...item,
+            nodes: item.nodes.map((node) =>
+              node.id === 'n5'
+                ? {
+                    ...node,
+                    move_text: 'e4',
+                    san_candidate: 'e4',
+                    uci_candidate: 'e2e4',
+                    fen_before: START_FEN,
+                    fen_after: FEN_AFTER_E4,
+                    side_to_move: 'w',
+                    move_number: 1,
+                    validation_status: 'valid',
+                  }
+                : node,
+            ),
+          }
+        : item,
+    );
     const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const target = String(input);
       if (target.endsWith('/review/session')) {
@@ -1420,20 +1442,74 @@ describe('Stage 8D review page (8D-3A)', () => {
           201,
         );
       }
-      return json(baseDocument());
+      return json(baseDocument({ items: publicationItems }));
     });
     vi.stubGlobal('fetch', fetchMock);
-    renderPage();
+    const { container } = renderPage();
 
     fireEvent.click(
       await screen.findByRole('button', { name: '开始编辑审核' }),
     );
     fireEvent.click(await screen.findByRole('button', { name: '编排发布' }));
     await screen.findByRole('option', { name: 'Smerdon Scandinavian' });
-    fireEvent.mouseDown(screen.getByRole('button', { name: 'e4' }));
-    fireEvent.mouseEnter(screen.getByRole('button', { name: 'e5' }));
+    const mainlineRoot = container.querySelector('[data-review-node-id="n1"]')!;
+    const alternateRoot = container.querySelector(
+      '[data-review-node-id="n5"]',
+    )!;
+    const e5 = screen.getByRole('button', { name: 'e5' });
+    const c5 = screen.getByRole('button', { name: 'c5' });
+    const score = container.querySelector(
+      'section[aria-label="候选内容与自动检查"]',
+    )!;
+    function placeAt(element: Element, top: number) {
+      vi.spyOn(element, 'getBoundingClientRect').mockReturnValue({
+        top,
+        bottom: top + 20,
+        left: 0,
+        right: 100,
+        width: 100,
+        height: 20,
+        x: 0,
+        y: top,
+        toJSON: () => ({}),
+      });
+    }
+    placeAt(mainlineRoot, 0);
+    placeAt(alternateRoot, 40);
+    placeAt(e5, 100);
+    placeAt(c5, 140);
+    fireEvent.mouseDown(mainlineRoot, { clientY: 10 });
+    fireEvent.mouseMove(score, { clientY: 110 });
     fireEvent.mouseUp(window);
-    expect(screen.getByText(/当前已选 2 个半回合/)).toBeTruthy();
+    // Moving through blank space beside the moves still selects the full row range.
+    expect(screen.getByText(/当前已选 4 个半回合/)).toBeTruthy();
+    expect(alternateRoot.getAttribute('data-publication-selected')).toBe(
+      'true',
+    );
+    expect(
+      screen
+        .getByRole('button', { name: 'c5' })
+        .getAttribute('data-publication-selected'),
+    ).toBe('true');
+    fireEvent.click(screen.getByRole('button', { name: '清空当前选择' }));
+    fireEvent.mouseDown(screen.getByRole('button', { name: 'e5' }));
+    fireEvent.mouseUp(window);
+    fireEvent.mouseDown(alternateRoot);
+    fireEvent.mouseUp(window);
+    expect(screen.getByText(/当前已选 4 个半回合/)).toBeTruthy();
+    expect(alternateRoot.getAttribute('data-publication-selected')).toBe(
+      'true',
+    );
+    expect(
+      screen
+        .getByRole('button', { name: 'e5' })
+        .getAttribute('data-publication-selected'),
+    ).toBe('true');
+    expect(
+      screen
+        .getByRole('button', { name: 'c5' })
+        .getAttribute('data-publication-selected'),
+    ).toBe('true');
     fireEvent.change(screen.getByLabelText('新章节标题'), {
       target: { value: 'Chapter Eight' },
     });
@@ -1463,7 +1539,7 @@ describe('Stage 8D review page (8D-3A)', () => {
       segments: [
         {
           sequence_id: 'seq1',
-          node_ids: ['n1', 'n2'],
+          node_ids: ['n1', 'n2', 'n3', 'n5'],
           target: {
             chapter: { kind: 'new', title: 'Chapter Eight' },
             subsection: { kind: 'new', title: 'Game 1' },

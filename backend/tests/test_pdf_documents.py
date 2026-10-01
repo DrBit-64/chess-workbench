@@ -579,3 +579,76 @@ async def test_v7_append_uses_source_events_and_commits_verified_continuation(
         assert any(row.kind == "semantic_manifest" for row in rows)
     finally:
         await database.close()
+
+
+@pytest.mark.asyncio
+async def test_v8_append_uses_approved_review_as_v9_predecessor(tmp_path: Path) -> None:
+    from chess_workbench.schemas.review import (
+        PdfReviewApproveCommand,
+        PdfReviewCommandRequest,
+        PdfReviewEditCommand,
+        PdfReviewSetNag,
+    )
+    from chess_workbench.services.pdf_documents import (
+        PDF_RELATION_INCREMENTAL_EXTRACTION_PIPELINE_VERSION,
+    )
+    from chess_workbench.services.pdf_persistence import PDF_RELATION_EXTRACTION_PIPELINE_VERSION
+    from chess_workbench.services.pdf_review_ledger import PdfReviewLedgerService
+
+    database, settings, run_id = await _setup(
+        tmp_path,
+        "relation-incremental-approved",
+        pipeline_version=PDF_RELATION_EXTRACTION_PIPELINE_VERSION,
+    )
+    await _complete_review(
+        database,
+        settings,
+        run_id,
+        normalized_payload=_package_payload_v1_1(run_id, FIRST_PAGE, LAST_PAGE),
+    )
+    try:
+        async with database.session() as session, session.begin():
+            review = PdfReviewLedgerService(session, settings)
+            opened = await review.open_session(run_id)
+            edited = await review.apply_command(
+                opened.session.id,
+                PdfReviewCommandRequest(
+                    expected_version=1,
+                    command=PdfReviewEditCommand(
+                        kind="edit",
+                        operation=PdfReviewSetNag(
+                            kind="set_nag", sequence_id="seq1", node_id="n1", nag=3
+                        ),
+                    ),
+                ),
+            )
+            approved = await review.apply_command(
+                opened.session.id,
+                PdfReviewCommandRequest(
+                    expected_version=edited.session.version,
+                    command=PdfReviewApproveCommand(kind="approve"),
+                ),
+            )
+            assert approved.session.status == "approved"
+            approved_hash = approved.session.revisions[-1].package_sha256
+        async with database.session() as session, session.begin():
+            asset = await session.scalar(select(PdfAsset))
+            assert asset is not None
+            asset.page_count = 10
+            document = (await PdfDocumentService(session, settings).adopt_run(run_id)).document
+            assert document.normalized_ccef_sha256 == approved_hash
+        async with database.session() as session, session.begin():
+            append = await PdfDocumentService(session, settings).register_append(
+                document_id=document.id,
+                expected_version=1,
+                first_page=7,
+                last_page=8,
+                profile={},
+                idempotency_key="v9-approved",
+            )
+            assert (
+                append.run.pipeline_version == PDF_RELATION_INCREMENTAL_EXTRACTION_PIPELINE_VERSION
+            )
+            assert append.append.predecessor_normalized_ccef_sha256 == approved_hash
+    finally:
+        await database.close()

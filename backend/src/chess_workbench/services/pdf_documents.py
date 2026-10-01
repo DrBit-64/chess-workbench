@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from chess_workbench.config import Settings
 from chess_workbench.extraction.contracts import ExtractionPackageV1_1
+from chess_workbench.extraction.validation import normalize_chess_moves_v1_1
 from chess_workbench.services.content import ServiceError
 from chess_workbench.services.jobs import JobService
 from chess_workbench.services.pdf_persistence import (
@@ -25,6 +26,7 @@ from chess_workbench.services.pdf_persistence import (
     PDF_SOURCE_EXTRACTION_PIPELINE_VERSION,
 )
 from chess_workbench.services.pdf_review import PdfReviewReadService
+from chess_workbench.services.pdf_review_ledger import PdfReviewLedgerService
 from chess_workbench.services.source_storage import store_content_addressed_bytes
 from chess_workbench.store.models import (
     ExtractionArtifact,
@@ -45,7 +47,9 @@ from chess_workbench.store.models import (
 PDF_INCREMENTAL_EXTRACTION_JOB_KIND = "pdf_incremental_extraction"
 PDF_INCREMENTAL_EXTRACTION_PIPELINE_VERSION = "pdf-extraction:v5"
 PDF_SOURCE_INCREMENTAL_EXTRACTION_PIPELINE_VERSION = "pdf-extraction:v7"
+PDF_RELATION_INCREMENTAL_EXTRACTION_PIPELINE_VERSION = "pdf-extraction:v9"
 PDF_SOURCE_INCREMENTAL_EXTRACTION_FINGERPRINT_VERSION = "source-incremental-extraction:v1"
+PDF_RELATION_INCREMENTAL_EXTRACTION_FINGERPRINT_VERSION = "source-relation-incremental:v1"
 PDF_INCREMENTAL_EXTRACTION_FINGERPRINT_VERSION = "ccef-incremental-extraction:v1"
 PDF_DOCUMENT_ADOPTION_ALGORITHM_VERSION = "ccef-document-adopt:v1"
 PDF_DOCUMENT_COMPOSITION_ALGORITHM_VERSION = "ccef-document-compose:v1"
@@ -152,6 +156,43 @@ class PdfDocumentService:
         if artifact.content_sha256 != review.normalized_ccef_sha256:
             raise _incompatible_run()
 
+        baseline_path = artifact.relative_path
+        baseline_media_type = artifact.media_type
+        baseline_size = artifact.byte_size
+        baseline_sha256 = artifact.content_sha256
+        approved_session = await self.session.scalar(
+            select(PdfReviewSession).where(
+                PdfReviewSession.extraction_run_id == run_id,
+                PdfReviewSession.baseline_artifact_id == artifact.id,
+                PdfReviewSession.status == "approved",
+            )
+        )
+        if approved_session is not None:
+            approved_revision = await self.session.scalar(
+                select(PdfReviewRevision).where(
+                    PdfReviewRevision.session_id == approved_session.id,
+                    PdfReviewRevision.revision_number == approved_session.version,
+                )
+            )
+            if approved_revision is None:
+                raise _incompatible_run()
+            approved_package = await PdfReviewLedgerService(
+                self.session, self.settings
+            ).get_current_package(approved_session.id)
+            if not isinstance(approved_package, ExtractionPackageV1_1):
+                raise _incompatible_run()
+            if (
+                approved_package.package_id != run_id
+                or approved_package.source != review.package.source
+                or normalize_chess_moves_v1_1(approved_package).model_dump(mode="json")
+                != approved_package.model_dump(mode="json")
+            ):
+                raise _incompatible_run()
+            baseline_path = approved_revision.relative_path
+            baseline_media_type = approved_revision.media_type
+            baseline_size = approved_revision.byte_size
+            baseline_sha256 = approved_revision.package_sha256
+
         document_id = uuid5(NAMESPACE_URL, f"chess-workbench:pdf-extraction-document:{run.id}")
         segment_id = uuid5(
             NAMESPACE_URL, f"chess-workbench:pdf-extraction-document-segment:{document_id}:1"
@@ -164,7 +205,7 @@ class PdfDocumentService:
             pdf_asset_id=run.pdf_asset_id,
             first_page=run.first_page,
             last_page=run.last_page,
-            normalized_ccef_sha256=artifact.content_sha256,
+            normalized_ccef_sha256=baseline_sha256,
         )
         segment = PdfExtractionDocumentSegment(
             id=segment_id,
@@ -173,7 +214,7 @@ class PdfDocumentService:
             ordinal=1,
             first_page=run.first_page,
             last_page=run.last_page,
-            normalized_ccef_sha256=artifact.content_sha256,
+            normalized_ccef_sha256=baseline_sha256,
         )
         revision = PdfExtractionDocumentRevision(
             id=revision_id,
@@ -185,10 +226,10 @@ class PdfDocumentService:
             first_page=run.first_page,
             last_page=run.last_page,
             algorithm_version=PDF_DOCUMENT_ADOPTION_ALGORITHM_VERSION,
-            relative_path=artifact.relative_path,
-            media_type=artifact.media_type,
-            byte_size=artifact.byte_size,
-            normalized_ccef_sha256=artifact.content_sha256,
+            relative_path=baseline_path,
+            media_type=baseline_media_type,
+            byte_size=baseline_size,
+            normalized_ccef_sha256=baseline_sha256,
         )
         try:
             async with self.session.begin_nested():
@@ -285,7 +326,11 @@ class PdfDocumentService:
             )
         )
         pipeline_version = (
-            PDF_SOURCE_INCREMENTAL_EXTRACTION_PIPELINE_VERSION
+            (
+                PDF_RELATION_INCREMENTAL_EXTRACTION_PIPELINE_VERSION
+                if initial_pipeline == PDF_RELATION_EXTRACTION_PIPELINE_VERSION
+                else PDF_SOURCE_INCREMENTAL_EXTRACTION_PIPELINE_VERSION
+            )
             if initial_pipeline
             in {PDF_SOURCE_EXTRACTION_PIPELINE_VERSION, PDF_RELATION_EXTRACTION_PIPELINE_VERSION}
             else PDF_INCREMENTAL_EXTRACTION_PIPELINE_VERSION
@@ -921,7 +966,9 @@ def _append_fingerprint(
         "document_id": str(document.id),
         "expected_document_version": revision.revision_number,
         "extraction_fingerprint_version": (
-            PDF_SOURCE_INCREMENTAL_EXTRACTION_FINGERPRINT_VERSION
+            PDF_RELATION_INCREMENTAL_EXTRACTION_FINGERPRINT_VERSION
+            if pipeline_version == PDF_RELATION_INCREMENTAL_EXTRACTION_PIPELINE_VERSION
+            else PDF_SOURCE_INCREMENTAL_EXTRACTION_FINGERPRINT_VERSION
             if pipeline_version == PDF_SOURCE_INCREMENTAL_EXTRACTION_PIPELINE_VERSION
             else PDF_INCREMENTAL_EXTRACTION_FINGERPRINT_VERSION
         ),

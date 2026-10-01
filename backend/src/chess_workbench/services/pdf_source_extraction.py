@@ -16,11 +16,15 @@ from chess_workbench.extraction.chunks import (
     generate_semantic_page_chunks,
 )
 from chess_workbench.extraction.contracts import ExtractionPackageV1_1
+from chess_workbench.extraction.prompting import CcefPromptContext
 from chess_workbench.extraction.provider import (
     StructuredGenerationProvider,
     StructuredGenerationProviderError,
 )
 from chess_workbench.extraction.score import score_candidate
+from chess_workbench.services.pdf_documents import (
+    PDF_RELATION_INCREMENTAL_EXTRACTION_PIPELINE_VERSION,
+)
 from chess_workbench.services.pdf_extraction import (
     PDF_EXTRACTION_RESULT_SCHEMA,
     _artifact_slots,
@@ -143,6 +147,8 @@ async def process_source_candidate(
     patch_provider: StructuredGenerationProvider | None = None,
     external_anchors: list[dict[str, str]] | None = None,
     external_base_sha256: str | None = None,
+    predecessor_context: CcefPromptContext | None = None,
+    continuation_anchors: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Run one page-owned semantic pipeline and commit its reviewable CCEF."""
 
@@ -165,12 +171,18 @@ async def process_source_candidate(
         )
 
     try:
-        if source.pipeline_version == PDF_RELATION_EXTRACTION_PIPELINE_VERSION:
+        if source.pipeline_version in {
+            PDF_RELATION_EXTRACTION_PIPELINE_VERSION,
+            PDF_RELATION_INCREMENTAL_EXTRACTION_PIPELINE_VERSION,
+        }:
             generated = await generate_relation_chunks(
                 committed.context,
                 provider,
                 patch_provider=patch_provider,
                 on_response=retain_response,
+                predecessor_context=predecessor_context,
+                continuation_anchors=continuation_anchors,
+                base_sha256=external_base_sha256,
             )
         else:
             generated = await generate_semantic_page_chunks(
@@ -211,7 +223,11 @@ async def process_source_candidate(
         "pipeline_version": source.pipeline_version,
         "semantic_protocol": (
             "chess-source-relations/1"
-            if source.pipeline_version == PDF_RELATION_EXTRACTION_PIPELINE_VERSION
+            if source.pipeline_version
+            in {
+                PDF_RELATION_EXTRACTION_PIPELINE_VERSION,
+                PDF_RELATION_INCREMENTAL_EXTRACTION_PIPELINE_VERSION,
+            }
             else "chess-semantic-events/1"
         ),
         "ccef_sha256": ccef_sha256,

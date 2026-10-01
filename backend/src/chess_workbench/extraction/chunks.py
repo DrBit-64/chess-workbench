@@ -677,6 +677,9 @@ async def generate_relation_chunks(
     provider: StructuredGenerationProvider,
     *,
     patch_provider: StructuredGenerationProvider | None = None,
+    predecessor_context: CcefPromptContext | None = None,
+    continuation_anchors: list[dict[str, Any]] | None = None,
+    base_sha256: str | None = None,
     on_response: Callable[
         [int, StructuredGenerationRequest, StructuredGenerationResponse], Awaitable[None]
     ]
@@ -703,11 +706,23 @@ async def generate_relation_chunks(
 
     tokens = source_tokens(context)
     token_index = {token.id: token for token in tokens}
-    state = RelationState()
+    trusted_anchors = {
+        anchor["id"]: (base_sha256, anchor["position_fen"])
+        for anchor in (continuation_anchors or [])
+        if base_sha256 is not None
+    }
+    state = RelationState(external_anchors=trusted_anchors)
     chunks: list[SemanticChunkResult] = []
     parsed_windows: list[tuple[Any, set[str]]] = []
     for owned in _relation_owned_windows(context):
-        request = build_relation_request(context, tokens, state, owned)
+        request = build_relation_request(
+            context,
+            tokens,
+            state,
+            owned,
+            predecessor_context=predecessor_context,
+            continuation_anchors=continuation_anchors,
+        )
         response = await provider.generate(request)
         if on_response is not None:
             await on_response(len(chunks) + 1, request, response)
@@ -804,7 +819,7 @@ async def generate_relation_chunks(
                         revised = apply_relation_patches(parsed_responses, accepted_patch)
                     except (ValueError, ValidationError):
                         continue
-                    trial = RelationState()
+                    trial = RelationState(external_anchors=trusted_anchors)
                     for parsed, (_, owned_set) in zip(revised, parsed_windows, strict=True):
                         apply_relations(context, parsed, tokens, owned_set, trial)
                     trial_package = compile_relations(context, trial)

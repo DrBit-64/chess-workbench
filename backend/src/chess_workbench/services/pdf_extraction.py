@@ -121,6 +121,7 @@ _SUPPORTED_PIPELINES = frozenset(
         PDF_RELATION_EXTRACTION_PIPELINE_VERSION,
         "pdf-extraction:v5",
         "pdf-extraction:v7",
+        "pdf-extraction:v9",
     }
 )
 _MAX_RUN_FRAGMENTS = 200_000
@@ -226,7 +227,7 @@ def _parse_payload(
     }
     pipeline_version = payload.get("pipeline_version") if type(payload) is dict else None
     expected_keys = common_keys
-    if pipeline_version in {"pdf-extraction:v5", "pdf-extraction:v7"}:
+    if pipeline_version in {"pdf-extraction:v5", "pdf-extraction:v7", "pdf-extraction:v9"}:
         expected_keys = common_keys | {
             "document_id",
             "expected_document_version",
@@ -276,7 +277,7 @@ async def _load_input(database: Database, payload: dict[str, Any]) -> _Extractio
     run, asset, source_file, job = row
     expected_job_kind = (
         "pdf_incremental_extraction"
-        if pipeline_version in {"pdf-extraction:v5", "pdf-extraction:v7"}
+        if pipeline_version in {"pdf-extraction:v5", "pdf-extraction:v7", "pdf-extraction:v9"}
         else "pdf_extraction"
     )
     if (
@@ -1251,7 +1252,11 @@ async def process_pdf_extraction_job(
     """Render one immutable run, write CAS blobs, then atomically register indexes."""
     source = await _load_input(database, payload)
     active_provider: StructuredGenerationProvider | None = provider
-    if payload["pipeline_version"] in {"pdf-extraction:v5", "pdf-extraction:v7"}:
+    if payload["pipeline_version"] in {
+        "pdf-extraction:v5",
+        "pdf-extraction:v7",
+        "pdf-extraction:v9",
+    }:
         committed = await _load_committed_evidence(database, settings, source)
         if committed is not None:
             return committed.result
@@ -1607,6 +1612,7 @@ async def process_pdf_extraction_job(
         PDF_EVIDENCE_PIPELINE_VERSION,
         "pdf-extraction:v5",
         "pdf-extraction:v7",
+        "pdf-extraction:v9",
     }:
         return committed.result
     if payload["pipeline_version"] in {

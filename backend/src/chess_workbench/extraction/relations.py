@@ -90,7 +90,7 @@ MoveRef = str | QuoteRef
 
 class NewGame(_Strict):
     id: str
-    kind: Literal["game", "example", "diagram_line"]
+    kind: Literal["game", "example", "diagram_line", "continuation"]
     source_refs: list[str]
     seed_ref: str | None
 
@@ -210,6 +210,8 @@ class RelationState:
     token_line: dict[str, tuple[str, str]] = field(default_factory=dict)
     events: list[dict[str, Any]] = field(default_factory=list)
     problems: list[dict[str, Any]] = field(default_factory=list)
+    external_anchors: dict[str, tuple[str, str]] = field(default_factory=dict)
+    external_bindings: dict[str, tuple[str, str]] = field(default_factory=dict)
 
 
 def _source_slice(token: SourceToken) -> dict[str, int]:
@@ -430,6 +432,9 @@ def build_relation_request(
     tokens: list[SourceToken],
     state: RelationState,
     owned_span_refs: list[str],
+    *,
+    predecessor_context: CcefPromptContext | None = None,
+    continuation_anchors: list[dict[str, Any]] | None = None,
 ) -> StructuredGenerationRequest:
     spans = _source_spans(context)
     all_spans = [span["id"] for span in spans]
@@ -446,7 +451,7 @@ def build_relation_request(
         for seed in find_diagram_seeds(context)
     )
     # Stable source prefix precedes evolving structure and owned window.
-    document = {
+    document: dict[str, Any] = {
         "schema_version": _CONTEXT_VERSION,
         "source_spans": spans,
         "move_tokens": [token.as_input() for token in tokens],
@@ -483,18 +488,45 @@ def build_relation_request(
             "context_span_refs": [ref for ref in all_spans if ref not in set(owned_span_refs)],
         },
     }
+    if predecessor_context is not None:
+        document["predecessor_source_spans"] = _source_spans(predecessor_context)
+        document["predecessor_move_tokens"] = [
+            token.as_input() for token in source_tokens(predecessor_context)
+        ]
+        document["prior_structure"]["continuation_anchors"] = continuation_anchors or []
     payload = json.dumps(document, ensure_ascii=False, separators=(",", ":"))
     if len(payload) > context.max_prompt_chars:
         raise ValueError("relation evidence exceeds prompt character budget")
+    extraction_scope = (
+        "Extract new moves and notes only from window.owned_span_refs; predecessor_source_spans "
+        "are read-only context and must never be emitted again. Use exact owned move token IDs, "
+        "never invent text, "
+        if predecessor_context is not None
+        else (
+            "Extract new moves and notes only from window.owned_span_refs; other spans are "
+            "read-only context and may be relationship anchors. Use exact move token IDs, "
+            "never invent text, "
+        )
+    )
+    game_origin = (
+        "To continue a predecessor game, declare a game with kind=continuation and seed_ref "
+        "equal to one exact prior_structure.continuation_anchors id. Its first segment uses "
+        "entry=root and contains only newly owned moves. A different prior anchor needs a "
+        "separate continuation group. The local compiler will graft that group into the named "
+        "prior game; never repeat or recreate its already extracted moves. "
+        "Create a new independent game root only when its own printed score starts at move one "
+        "or a "
+        if predecessor_context is not None
+        else "Create a new game root only when its own printed score begins at move one or a "
+    )
     system = (
         "Read the complete continuous chess-book source in order, including prose, variations, "
         "questions and later resumption. Return chess-source-relations/1 JSON only. "
-        "Extract new moves and notes only from window.owned_span_refs; other spans are read-only "
-        "context and may be relationship anchors. Use exact move token IDs, never invent text, "
-        "moves or FEN. A segment is one uninterrupted line: split at every variation and return. "
+        + extraction_scope
+        + "moves or FEN. A segment is one uninterrupted line: split at every variation and return. "
         "Give each genuinely independent game its own identity and explicit seed_ref. "
-        "Create a new game root only when its own printed score begins at move one or a "
-        "confirmed diagram supplies the position. A cited past-game line starting at a later "
+        + game_origin
+        + "confirmed diagram supplies the position. A cited past-game line starting at a later "
         "move is a variation from the current game's matching position, not a new startpos "
         "game. A move-order illustration sharing printed opening tokens with the current "
         "score branches at its first distinct source token; never claim one token in two "
@@ -729,7 +761,15 @@ def apply_relations(
             if game.seed_ref is not None
             else None
         )
-        if game.id not in state.games and seed_ref in seed_ids:
+        if (
+            game.id not in state.games
+            and game.kind == "continuation"
+            and seed_ref in state.external_anchors
+        ):
+            state.games[game.id] = game
+            base_hash, _ = state.external_anchors[seed_ref]
+            state.external_bindings[game.id] = (base_hash, seed_ref)
+        elif game.id not in state.games and game.kind != "continuation" and seed_ref in seed_ids:
             state.games[game.id] = game.model_copy(update={"seed_ref": seed_ref})
         elif game.id not in state.games:
             first_segment = next(
@@ -1148,7 +1188,9 @@ def compile_relations(context: CcefPromptContext, state: RelationState) -> Extra
                 events.append(prose_event)
     seeds: dict[str, str | None] = {}
     for game in state.games.values():
-        if game.seed_ref != "start":
+        if game.kind == "continuation" and game.seed_ref is not None:
+            seeds[game.id] = state.external_anchors[game.seed_ref][1]
+        elif game.seed_ref != "start":
             seed = next(
                 (
                     value
@@ -1163,6 +1205,7 @@ def compile_relations(context: CcefPromptContext, state: RelationState) -> Extra
         context,
         events,
         sequence_initial_fens=seeds,
+        sequence_bindings=state.external_bindings,
         explicit_relationships=True,
     )
 

@@ -76,6 +76,13 @@ def _package() -> ExtractionPackageV1_1:
                             "extensions": {"chess-workbench.nag-override": True},
                             "evidence": [{"page": 11}],
                         },
+                        {
+                            "id": "n4",
+                            "parent_id": None,
+                            "sibling_order": 1,
+                            "move_text": "e4",
+                            "evidence": [{"page": 11}],
+                        },
                     ],
                     "annotations": [
                         {
@@ -90,6 +97,7 @@ def _package() -> ExtractionPackageV1_1:
                         {"kind": "move", "node_id": "n2"},
                         {"kind": "move", "node_id": "n3"},
                         {"kind": "annotation", "annotation_id": "a1"},
+                        {"kind": "move", "node_id": "n4"},
                     ],
                 }
             ],
@@ -222,7 +230,7 @@ async def test_approved_review_publishes_multiple_fragments_into_nested_modules(
                     "segments": [
                         {
                             "sequence_id": "game1",
-                            "node_ids": ["n1", "n2"],
+                            "node_ids": ["n1", "n2", "n3", "n4"],
                             "target": {"chapter": {"kind": "new", "title": "Chapter 1"}},
                         },
                         {
@@ -241,6 +249,7 @@ async def test_approved_review_publishes_multiple_fragments_into_nested_modules(
             )
             assert outcome.replayed is False
             assert len(outcome.publication.segments) == 2
+            assert outcome.publication.segments[0].occurrence_count == 5
             assert outcome.publication.segments[1].note_count == 1
 
         async with database.session() as session, session.begin():
@@ -270,6 +279,19 @@ async def test_approved_review_publishes_multiple_fragments_into_nested_modules(
                     select(CourseOccurrence).where(CourseOccurrence.course_id == course.id)
                 )
             )
+            chapter_one_nodes = {
+                row.context.get("ccef_node_id"): row
+                for row in occurrences
+                if row.module_id == by_title["Chapter 1"].id
+                and isinstance(row.context, dict)
+            }
+            assert chapter_one_nodes["n2"].parent_id == chapter_one_nodes["n1"].id
+            assert chapter_one_nodes["n3"].parent_id == chapter_one_nodes["n1"].id
+            assert chapter_one_nodes["n2"].sort_order == 0
+            assert chapter_one_nodes["n3"].sort_order == 1
+            assert chapter_one_nodes["n4"].parent_id == chapter_one_nodes["n1"].parent_id
+            assert chapter_one_nodes["n1"].sort_order == 0
+            assert chapter_one_nodes["n4"].sort_order == 1
             by_node = {
                 row.context.get("ccef_node_id"): row
                 for row in occurrences

@@ -30,6 +30,7 @@ from chess_workbench.extraction.incremental import (
 from chess_workbench.extraction.pdfium import PdfiumPageRenderer
 from chess_workbench.extraction.prompting import (
     CcefPromptContext,
+    PromptEvidencePage,
     build_ccef_v1_1_semantic_generation_request,
 )
 from chess_workbench.extraction.provider import (
@@ -45,6 +46,7 @@ from chess_workbench.services.content import ServiceError
 from chess_workbench.services.pdf_documents import (
     PDF_INCREMENTAL_EXTRACTION_JOB_KIND,
     PDF_INCREMENTAL_EXTRACTION_PIPELINE_VERSION,
+    PDF_RELATION_INCREMENTAL_EXTRACTION_PIPELINE_VERSION,
     PDF_SOURCE_INCREMENTAL_EXTRACTION_PIPELINE_VERSION,
     PdfDocumentService,
 )
@@ -55,6 +57,7 @@ from chess_workbench.services.pdf_extraction import (
     _capture_failed_generation,
     _CommittedEvidence,
     _deepseek_invalid_response_recorder,
+    _evidence_fragment,
     _ExtractionInput,
     _load_committed_evidence,
     _load_input,
@@ -206,6 +209,7 @@ async def _load_incremental_input(
         not in {
             PDF_INCREMENTAL_EXTRACTION_PIPELINE_VERSION,
             PDF_SOURCE_INCREMENTAL_EXTRACTION_PIPELINE_VERSION,
+            PDF_RELATION_INCREMENTAL_EXTRACTION_PIPELINE_VERSION,
         }
         or append.document_id != document_id
         or append.predecessor_revision_id != predecessor_id
@@ -279,6 +283,157 @@ async def _load_incremental_input(
         base_sha256=predecessor.normalized_ccef_sha256,
         previous_page_text=previous_page_text,
     )
+
+
+def _last_game_start(package: ExtractionPackageV1_1) -> int:
+    """Read the complete most recent score when it fits the input budget."""
+    page_range = package.source.page_range
+    assert page_range is not None
+    page_ranges = [
+        [ref.page for node in item.nodes for ref in node.evidence]
+        for item in package.items
+        if isinstance(item, MoveSequenceItemV1_1)
+    ]
+    nonempty = [pages for pages in page_ranges if pages]
+    if not nonempty:
+        return page_range.end_page
+    last = max(nonempty, key=lambda pages: max(pages))
+    return max(page_range.start_page, min(last))
+
+
+async def _load_predecessor_context(
+    database: Database,
+    settings: Settings,
+    inputs: _IncrementalInput,
+    owned_context: CcefPromptContext,
+) -> CcefPromptContext:
+    """Load prior source pages as read-only model context from committed evidence."""
+    first_page = _last_game_start(inputs.base_package)
+    last_page = inputs.source.first_page - 1
+    async with database.session() as session:
+        artifacts = tuple(
+            await session.scalars(
+                select(ExtractionArtifact)
+                .join(
+                    PdfExtractionDocumentSegment,
+                    PdfExtractionDocumentSegment.extraction_run_id == ExtractionArtifact.run_id,
+                )
+                .where(
+                    PdfExtractionDocumentSegment.document_id == inputs.document_id,
+                    ExtractionArtifact.kind == "ocr_fragment",
+                    ExtractionArtifact.page_number >= first_page,
+                    ExtractionArtifact.page_number <= last_page,
+                )
+            )
+        )
+    by_page = {artifact.page_number: artifact for artifact in artifacts}
+    if len(by_page) != last_page - first_page + 1:
+        raise EngineError(
+            "incremental_context_invalid",
+            "Predecessor source pages are unavailable",
+            retryable=False,
+        )
+    pages: list[PromptEvidencePage] = []
+    try:
+        for page_number in range(first_page, last_page + 1):
+            raw = await _read_artifact_bytes(settings, by_page[page_number])
+            fragments = json.loads(raw)["fragments"]
+            pages.append(
+                PromptEvidencePage(
+                    physical_page=page_number,
+                    fragments=[
+                        _evidence_fragment(value, physical_page=page_number, expected_order=index)
+                        for index, value in enumerate(fragments)
+                    ],
+                )
+            )
+    except (KeyError, TypeError, ValueError, ServiceError):
+        raise EngineError(
+            "incremental_context_invalid",
+            "Predecessor source pages are invalid",
+            retryable=False,
+        ) from None
+    # Keep the newest continuous suffix if an unusually long game exceeds the
+    # reader budget; the exact legal anchor catalog still names the earlier line.
+    while len(pages) > 1 and sum(
+        len(entry.fragment.text) for page in pages for entry in page.fragments
+    ) > min(90_000, owned_context.max_prompt_chars // 2):
+        pages.pop(0)
+    return CcefPromptContext.model_validate(
+        owned_context.model_copy(
+            update={
+                "first_page": pages[0].physical_page,
+                "last_page": pages[-1].physical_page,
+                "pages": pages,
+            }
+        ).model_dump(mode="python")
+    )
+
+
+def _continuation_catalog(
+    package: ExtractionPackageV1_1,
+    continuation: CcefContinuationContext,
+) -> list[dict[str, Any]]:
+    """Expose the last score and its predecessor, with exact hash-bound anchors."""
+    sequences = {item.id: item for item in package.items if isinstance(item, MoveSequenceItemV1_1)}
+    latest_page = max(
+        (
+            ref.page
+            for sequence in continuation.sequences
+            for node in sequences[sequence.sequence_id].nodes
+            for ref in node.evidence
+        ),
+        default=0,
+    )
+    selected = [
+        sequence
+        for sequence in continuation.sequences
+        if any(
+            ref.page == latest_page
+            for node in sequences[sequence.sequence_id].nodes
+            for ref in node.evidence
+        )
+    ]
+    catalog: list[dict[str, Any]] = []
+    for sequence in selected:
+        item = sequences[sequence.sequence_id]
+        nodes = {node.id: node for node in item.nodes}
+        for anchor in sequence.anchors:
+            node = nodes.get(anchor.after_node_id) if anchor.after_node_id else None
+            evidence = node.evidence[-1] if node and node.evidence else None
+            mainline = node is not None
+            current = node
+            while current is not None:
+                if current.sibling_order != 0:
+                    mainline = False
+                    break
+                current = nodes.get(current.parent_id) if current.parent_id else None
+            catalog.append(
+                {
+                    "id": anchor.id,
+                    "sequence_id": sequence.sequence_id,
+                    "sequence_title": sequence.title,
+                    "after_node_id": anchor.after_node_id,
+                    "source_occurrence": (
+                        {
+                            "page": evidence.page,
+                            "fragment_ref": evidence.fragment_sha256,
+                            "start_offset": evidence.start_offset,
+                            "end_offset": evidence.end_offset,
+                        }
+                        if evidence
+                        else None
+                    ),
+                    "position_fen": anchor.position_fen,
+                    "path_tail": [
+                        {"node_id": move.node_id, "san": move.san} for move in anchor.path_tail
+                    ],
+                    "move_number": node.move_number if node else None,
+                    "side": node.side_to_move if node else None,
+                    "mainline": mainline,
+                }
+            )
+    return catalog
 
 
 def _incremental_request(
@@ -377,18 +532,24 @@ async def _load_normalized_candidate(
             await session.scalars(
                 select(ExtractionArtifact).where(
                     ExtractionArtifact.run_id == source.run_id,
-                    ExtractionArtifact.kind.in_(_CCEF_ARTIFACT_KINDS),
+                    ExtractionArtifact.kind.in_(_CCEF_ARTIFACT_KINDS | {"semantic_manifest"}),
                 )
             )
         )
     if not artifacts:
         return None
     slots = {(artifact.kind, artifact.page_number): artifact for artifact in artifacts}
-    if len(slots) != 3 or set(slots) != {
+    expected = {
         ("provider_response", None),
         ("raw_ccef", None),
         ("normalized_ccef", None),
+    }
+    if source.pipeline_version in {
+        PDF_SOURCE_INCREMENTAL_EXTRACTION_PIPELINE_VERSION,
+        PDF_RELATION_INCREMENTAL_EXTRACTION_PIPELINE_VERSION,
     }:
+        expected.add(("semantic_manifest", None))
+    if len(slots) != len(expected) or set(slots) != expected:
         raise EngineError(
             "artifact_conflict", "Incremental extraction artifacts are incomplete", retryable=False
         )
@@ -529,7 +690,10 @@ async def process_pdf_incremental_extraction_job(
         raise EngineError(
             "ccef_invalid_evidence", "Committed PDF evidence is unavailable", retryable=False
         )
-    if inputs.source.pipeline_version == PDF_SOURCE_INCREMENTAL_EXTRACTION_PIPELINE_VERSION:
+    if inputs.source.pipeline_version in {
+        PDF_SOURCE_INCREMENTAL_EXTRACTION_PIPELINE_VERSION,
+        PDF_RELATION_INCREMENTAL_EXTRACTION_PIPELINE_VERSION,
+    }:
         # The document's source language is stable even if an append profile omits it.
         evidence = _CommittedEvidence(
             context=evidence.context.model_copy(
@@ -545,7 +709,10 @@ async def process_pdf_incremental_extraction_job(
             end_page=inputs.source.last_page,
         ),
     )
-    if inputs.source.pipeline_version == PDF_SOURCE_INCREMENTAL_EXTRACTION_PIPELINE_VERSION:
+    if inputs.source.pipeline_version in {
+        PDF_SOURCE_INCREMENTAL_EXTRACTION_PIPELINE_VERSION,
+        PDF_RELATION_INCREMENTAL_EXTRACTION_PIPELINE_VERSION,
+    }:
         from chess_workbench.services.pdf_source_extraction import (
             process_source_candidate,
             restore_source_candidate,
@@ -563,7 +730,29 @@ async def process_pdf_incremental_extraction_job(
                 for sequence in continuation.sequences
                 for anchor in sequence.anchors
             ][-24:]
-            active_provider = _active_provider(settings, provider)
+            relation_increment = (
+                inputs.source.pipeline_version
+                == PDF_RELATION_INCREMENTAL_EXTRACTION_PIPELINE_VERSION
+            )
+            predecessor_context = (
+                await _load_predecessor_context(database, settings, inputs, evidence.context)
+                if relation_increment
+                else None
+            )
+            catalog = (
+                _continuation_catalog(inputs.base_package, continuation)
+                if predecessor_context is not None
+                else None
+            )
+            active_provider = _active_provider(
+                settings,
+                provider,
+                thinking_enabled=relation_increment,
+                json_output_enabled=not relation_increment,
+                invalid_response_recorder=_deepseek_invalid_response_recorder(
+                    settings, inputs.source
+                ),
+            )
             await process_source_candidate(
                 database,
                 settings,
@@ -572,6 +761,8 @@ async def process_pdf_incremental_extraction_job(
                 active_provider,
                 external_anchors=anchors,
                 external_base_sha256=inputs.base_sha256,
+                predecessor_context=predecessor_context,
+                continuation_anchors=catalog,
             )
         candidate = await _load_normalized_candidate(database, settings, inputs.source)
         if candidate is None:

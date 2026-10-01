@@ -223,6 +223,93 @@ export function reviewLinePath(
   return null;
 }
 
+/** Connect two moves through a shared ancestor or the same starting position. */
+export function reviewSelectionPath(
+  nodes: MoveNode[],
+  anchorId: string,
+  focusId: string,
+): string[] | null {
+  const byId = new Map(nodes.map((node) => [node.id, node]));
+  function ancestors(nodeId: string): string[] {
+    const path: string[] = [];
+    let current: string | null = nodeId;
+    while (current !== null && byId.has(current)) {
+      path.push(current);
+      current = byId.get(current)!.parent_id;
+    }
+    return path;
+  }
+  const anchorPath = ancestors(anchorId);
+  const focusPath = ancestors(focusId);
+  if (anchorPath.length === 0 || focusPath.length === 0) return null;
+  const focusIndex = new Map(focusPath.map((id, index) => [id, index]));
+  const sharedIndex = anchorPath.findIndex((id) => focusIndex.has(id));
+  if (sharedIndex >= 0) {
+    const sharedId = anchorPath[sharedIndex];
+    return [
+      ...anchorPath.slice(0, sharedIndex + 1),
+      ...focusPath.slice(0, focusIndex.get(sharedId)!).reverse(),
+    ];
+  }
+  const anchorRoot = byId.get(anchorPath.at(-1)!);
+  const focusRoot = byId.get(focusPath.at(-1)!);
+  if (
+    anchorRoot?.parent_id !== null ||
+    focusRoot?.parent_id !== null ||
+    anchorRoot.fen_before === null ||
+    anchorRoot.fen_before !== focusRoot.fen_before
+  ) {
+    return null;
+  }
+  // Sibling first moves share the course root even without a source parent node.
+  return [...anchorPath, ...focusPath.reverse()];
+}
+
+/** Select a visible score interval and the variations attached to its moves. */
+export function reviewVisualSelectionRange(
+  nodes: MoveNode[],
+  anchorId: string,
+  focusId: string,
+): string[] {
+  const visualIds = visibleScoreMoves(nodes).map((node) => node.id);
+  const anchorIndex = visualIds.indexOf(anchorId);
+  const focusIndex = visualIds.indexOf(focusId);
+  if (anchorIndex < 0 || focusIndex < 0) return [];
+
+  const byId = new Map(nodes.map((node) => [node.id, node]));
+  const children = new Map<string | null, MoveNode[]>();
+  for (const node of nodes) {
+    const siblings = children.get(node.parent_id) ?? [];
+    siblings.push(node);
+    children.set(node.parent_id, siblings);
+  }
+  const selected = new Set<string>();
+  for (const id of visualIds.slice(
+    Math.min(anchorIndex, focusIndex),
+    Math.max(anchorIndex, focusIndex) + 1,
+  )) {
+    for (const connectedId of reviewSelectionPath(nodes, anchorId, id) ?? []) {
+      selected.add(connectedId);
+    }
+  }
+
+  const attachedTo = [...selected];
+  for (const id of attachedTo) {
+    const node = byId.get(id);
+    if (node === undefined || node.sibling_order !== 0) continue;
+    for (const sibling of children.get(node.parent_id) ?? []) {
+      if (sibling.sibling_order === 0) continue;
+      const pending = [sibling];
+      while (pending.length > 0) {
+        const variation = pending.pop()!;
+        selected.add(variation.id);
+        pending.push(...(children.get(variation.id) ?? []));
+      }
+    }
+  }
+  return nodes.filter((node) => selected.has(node.id)).map((node) => node.id);
+}
+
 /** Group adjacent rows of one real variation into a dense inline line. */
 export function compactReviewBlocks(
   blocks: ReviewReadingBlock[],
