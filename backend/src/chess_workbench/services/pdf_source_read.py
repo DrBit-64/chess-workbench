@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 from hashlib import sha256
+from typing import Any, cast
 from uuid import UUID
 
 from sqlalchemy import select
@@ -17,10 +18,13 @@ from chess_workbench.extraction.relations import (
     RelationState,
     apply_relation_patches,
     apply_relations,
+    canonicalize_continuation_games,
     parse_relation_response,
     reading_hints,
+    reconcile_continuation_seed,
     source_tokens,
 )
+from chess_workbench.review.source_mentions import source_move_mentions
 from chess_workbench.services.content import ServiceError
 from chess_workbench.services.pdf_extraction import (
     _CommittedEvidence,
@@ -33,7 +37,11 @@ from chess_workbench.services.pdf_extraction import (
 from chess_workbench.services.pdf_persistence import PdfExtractionView, PdfPersistenceService
 from chess_workbench.services.source_storage import read_verified_content_addressed_bytes
 from chess_workbench.store.database import Database
-from chess_workbench.store.models import ExtractionArtifact
+from chess_workbench.store.models import (
+    ExtractionArtifact,
+    PdfExtractionDocument,
+    PdfExtractionDocumentSegment,
+)
 
 _PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 
@@ -57,6 +65,38 @@ class PdfSourceReadService:
         return view, source, committed
 
     async def read_source(self, run_id: UUID) -> dict[str, object]:
+        async with self.database.session() as session:
+            document = await session.get(PdfExtractionDocument, run_id)
+            segments = (
+                list(
+                    await session.scalars(
+                        select(PdfExtractionDocumentSegment)
+                        .where(PdfExtractionDocumentSegment.document_id == run_id)
+                        .order_by(PdfExtractionDocumentSegment.ordinal)
+                    )
+                )
+                if document is not None
+                else []
+            )
+        if document is not None:
+            parts = [await self.read_source(segment.extraction_run_id) for segment in segments]
+            return {
+                "run_id": str(run_id),
+                "first_page": document.first_page,
+                "last_page": document.last_page,
+                "evidence_status": "ready"
+                if all(part["evidence_status"] == "ready" for part in parts)
+                else "unavailable",
+                "error_code": next(
+                    (part["error_code"] for part in parts if part["error_code"]), None
+                ),
+                "reading_hints": [
+                    hint
+                    for part in parts
+                    for hint in cast(list[Any], part.get("reading_hints", []))
+                ],
+                "pages": [page for part in parts for page in cast(list[Any], part["pages"])],
+            }
         view, source, committed = await self._state(run_id)
         if committed is None:
             return {
@@ -71,6 +111,7 @@ class PdfSourceReadService:
                 ],
             }
         role_map, hints = await self._relation_preview(run_id, committed)
+        mentions = source_move_mentions(committed.context)
         return {
             "run_id": str(run_id),
             "first_page": source.first_page,
@@ -92,6 +133,7 @@ class PdfSourceReadService:
                                 run.model_dump(mode="json") for run in entry.fragment.style_runs
                             ],
                             "roles": sorted(role_map.get((page.physical_page, entry.order), set())),
+                            "move_mentions": mentions.get((page.physical_page, entry.order), []),
                         }
                         for entry in page.fragments
                     ],
@@ -118,6 +160,9 @@ class PdfSourceReadService:
         try:
             manifest = json.loads(await _read_artifact_bytes(self.settings, artifact))
             parsed_windows = []
+            continuation_anchors: list[dict[str, Any]] = []
+            predecessor_tokens: list[dict[str, Any]] = []
+            predecessor_spans: list[dict[str, Any]] = []
             patch_chunk = None
             for chunk in manifest["chunks"]:
                 schema = chunk["request"]["response_schema_name"]
@@ -127,19 +172,47 @@ class PdfSourceReadService:
                 if schema != "chess_source_relations_v1":
                     continue
                 request_body = json.loads(chunk["request"]["messages"][1]["content"])
+                continuation_anchors = (
+                    request_body.get("prior_structure", {}).get("continuation_anchors", [])
+                    or continuation_anchors
+                )
+                predecessor_tokens = (
+                    request_body.get("predecessor_move_tokens", []) or predecessor_tokens
+                )
+                predecessor_spans = (
+                    request_body.get("predecessor_source_spans", []) or predecessor_spans
+                )
                 parsed_windows.append(
                     (
                         parse_relation_response(chunk["response"]["content"]),
                         set(request_body["window"]["owned_span_refs"]),
                     )
                 )
-            responses = [response for response, _ in parsed_windows]
+            responses = canonicalize_continuation_games(
+                [
+                    reconcile_continuation_seed(
+                        response,
+                        tokens,
+                        continuation_anchors,
+                        predecessor_tokens=predecessor_tokens,
+                        predecessor_spans=predecessor_spans,
+                    )
+                    for response, _ in parsed_windows
+                ]
+            )
             if patch_chunk is not None and patch_chunk.get("applied"):
                 patch = RelationPatchResponse.model_validate_json(
                     patch_chunk.get("applied_patch") or patch_chunk["response"]["content"]
                 )
-                responses = apply_relation_patches(responses, patch)
-            state = RelationState()
+                responses = apply_relation_patches(
+                    responses, patch, [owned for _, owned in parsed_windows]
+                )
+            state = RelationState(
+                external_anchors={
+                    anchor["id"]: ("0" * 64, anchor["position_fen"])
+                    for anchor in continuation_anchors
+                }
+            )
             for response, (_, owned) in zip(responses, parsed_windows, strict=True):
                 apply_relations(context, response, tokens, owned, state)
         except (KeyError, TypeError, ValueError):
@@ -171,6 +244,16 @@ class PdfSourceReadService:
         return role_map, hints
 
     async def read_page(self, run_id: UUID, physical_page: int) -> tuple[bytes, str]:
+        async with self.database.session() as session:
+            segment = await session.scalar(
+                select(PdfExtractionDocumentSegment).where(
+                    PdfExtractionDocumentSegment.document_id == run_id,
+                    PdfExtractionDocumentSegment.first_page <= physical_page,
+                    PdfExtractionDocumentSegment.last_page >= physical_page,
+                )
+            )
+        if segment is not None:
+            return await self.read_page(segment.extraction_run_id, physical_page)
         view, source, _ = await self._state(run_id)
         if not source.first_page <= physical_page <= source.last_page:
             raise ServiceError("not_found", 404, "PDF source page was not found")

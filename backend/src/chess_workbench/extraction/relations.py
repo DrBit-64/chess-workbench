@@ -15,7 +15,13 @@ from typing import Annotated, Any, Literal
 import chess
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
-from .contracts import ExtractionPackageV1_1, MoveSequenceItemV1_1
+from .contracts import (
+    ExtractionPackageV1_1,
+    MoveSequenceItemV1_1,
+    ProseItem,
+    SequenceAnnotation,
+    UnresolvedItem,
+)
 from .draft import _ADJACENT_MOVE, _MOVE, find_diagram_seeds, is_board_glyph_line
 from .prompting import CcefPromptContext
 from .provider import StructuredGenerationRequest, StructuredMessage
@@ -172,6 +178,127 @@ class RelationPatchResponse(_Strict):
     promotions: list[RelationPromotion] = Field(default_factory=list)
     additions: list[LineSegment] = Field(default_factory=list)
     demotions: list[RelationDemotion] = Field(default_factory=list)
+
+
+def canonicalize_continuation_games(
+    responses: list[RelationResponse],
+) -> list[RelationResponse]:
+    """One external entry identifies one continued game across output windows.
+
+    The model may name that game again in a later owned window. Keep its
+    separate source segments, but bind them to the first game identity. An
+    entry from a different external anchor remains a separate compile group.
+    """
+    revised = [response.model_copy(deep=True) for response in responses]
+    by_anchor: dict[str, str] = {}
+    for response in revised:
+        aliases: dict[str, str] = {}
+        games: list[NewGame] = []
+        for game in response.games:
+            if game.kind == "continuation" and game.seed_ref is not None:
+                existing = by_anchor.get(game.seed_ref)
+                if existing is not None and existing != game.id:
+                    aliases[game.id] = existing
+                    continue
+                by_anchor[game.seed_ref] = game.id
+            games.append(game)
+        response.games = games
+        for segment in response.segments:
+            segment.game_ref = aliases.get(segment.game_ref, segment.game_ref)
+        for unresolved in response.unresolved:
+            for candidate in unresolved.candidates:
+                candidate.game_ref = aliases.get(candidate.game_ref, candidate.game_ref)
+    return revised
+
+
+def reconcile_continuation_seed(
+    response: RelationResponse,
+    tokens: list[SourceToken],
+    anchors: list[dict[str, Any]],
+    *,
+    predecessor_tokens: list[dict[str, Any]] | None = None,
+    predecessor_spans: list[dict[str, Any]] | None = None,
+) -> RelationResponse:
+    """Bind a cited predecessor move to its exact external seed when possible.
+
+    A model can express the first appended move as ``continue after`` a
+    read-only predecessor token, although the local compiler needs ``root``
+    at that boundary. Convert only when that token's source occurrence equals
+    one trusted anchor and the first owned move is legal there. An impossible
+    root seed can also use a unique legal mainline boundary. Ambiguity stays
+    for review; no arbitrary playable-position search is used.
+    """
+    revised = response.model_copy(deep=True)
+    token_by_id = {token.id: token for token in tokens}
+    anchor_by_id = {anchor["id"]: anchor for anchor in anchors}
+    prior_by_id = {token["id"]: token for token in predecessor_tokens or []}
+    prior_spans = {span["id"]: span for span in predecessor_spans or []}
+    for game in revised.games:
+        if game.kind != "continuation" or game.seed_ref not in anchor_by_id:
+            continue
+        first_segment = next(
+            (segment for segment in revised.segments if segment.game_ref == game.id), None
+        )
+        if (
+            first_segment is None
+            or not first_segment.move_refs
+            or not isinstance(first_segment.move_refs[0], str)
+        ):
+            continue
+        token = token_by_id.get(first_segment.move_refs[0])
+        if token is None or token.move_number is None or token.side is None:
+            continue
+        source_token: SourceToken = token
+        notation = re.sub(r"[!?]+$", "", source_token.raw.replace("X", "x"))
+
+        def fits(
+            anchor: dict[str, Any], source: SourceToken = source_token, san: str = notation
+        ) -> bool:
+            try:
+                board = chess.Board(anchor["position_fen"])
+                if board.fullmove_number != source.move_number:
+                    return False
+                if ("w" if board.turn else "b") != source.side:
+                    return False
+                board.parse_san(san)
+                return True
+            except (KeyError, TypeError, ValueError):
+                return False
+
+        if isinstance(first_segment.entry, Continue):
+            cited = prior_by_id.get(first_segment.entry.after_move_ref)
+            span = prior_spans.get(cited["span_ref"]) if cited is not None else None
+            if span is not None and cited is not None:
+                occurrence = (span["page"], span["fragment_ref"], cited["start"], cited["end"])
+
+                def cited_occurrence(anchor: dict[str, Any]) -> tuple[Any, ...] | None:
+                    source = anchor.get("source_occurrence")
+                    if source is None:
+                        return None
+                    return (
+                        source["page"],
+                        source["fragment_ref"],
+                        source["start_offset"],
+                        source["end_offset"],
+                    )
+
+                matches = [
+                    anchor
+                    for anchor in anchors
+                    if cited_occurrence(anchor) == occurrence and fits(anchor)
+                ]
+                if len(matches) == 1:
+                    game.seed_ref = matches[0]["id"]
+                    first_segment.entry = Root(kind="root")
+            continue
+        if not isinstance(first_segment.entry, Root):
+            continue
+        if fits(anchor_by_id[game.seed_ref]):
+            continue
+        candidates = [anchor for anchor in anchors if anchor.get("mainline") and fits(anchor)]
+        if len(candidates) == 1:
+            game.seed_ref = candidates[0]["id"]
+    return revised
 
 
 @dataclass(frozen=True)
@@ -510,8 +637,10 @@ def build_relation_request(
     )
     game_origin = (
         "To continue a predecessor game, declare a game with kind=continuation and seed_ref "
-        "equal to one exact prior_structure.continuation_anchors id. Its first segment uses "
-        "entry=root and contains only newly owned moves. A different prior anchor needs a "
+        "equal to one exact prior_structure.continuation_anchors id. Declare it once: later "
+        "owned windows reuse its existing game id and continue after a cited prior_structure "
+        "move on the current line. Only the first segment from an external anchor uses entry=root "
+        "and contains only newly owned moves. A different prior anchor needs a "
         "separate continuation group. The local compiler will graft that group into the named "
         "prior game; never repeat or recreate its already extracted moves. "
         "Create a new independent game root only when its own printed score starts at move one "
@@ -1124,6 +1253,7 @@ def apply_relations(
                 "kind": "annotation" if note.kind == "annotation" and note.anchor else "prose",
                 "source_refs": note.source_refs,
                 "anchor": note.anchor.move_ref if note.anchor else None,
+                "relation": note.anchor.relation if note.anchor else None,
                 "sequence": state.token_line[note.anchor.move_ref][0]
                 if note.anchor and note.anchor.move_ref in state.token_line
                 else None,
@@ -1157,6 +1287,15 @@ def compile_relations(context: CcefPromptContext, state: RelationState) -> Extra
                 cursor = max(cursor, end)
             if cursor < len(entry.fragment.text):
                 gaps.append((cursor, len(entry.fragment.text)))
+            # A sentence that quotes a score is still one sentence. Keep its
+            # full wording in commentary while the cited SAN occurrences also
+            # become authoritative moves in the sequence. Pure score lines
+            # continue to contribute moves without duplicate text.
+            if positions and any(
+                re.search(r"\b[A-Za-z]{4,}\b", entry.fragment.text[start:end])
+                for start, end in gaps
+            ):
+                gaps = [(0, len(entry.fragment.text))]
             note = next(
                 (
                     event
@@ -1183,6 +1322,7 @@ def compile_relations(context: CcefPromptContext, state: RelationState) -> Extra
                     prose_event.update(
                         kind="annotation",
                         anchor=note["anchor"],
+                        relation=note.get("relation"),
                         sequence=note["sequence"],
                     )
                 events.append(prose_event)
@@ -1201,13 +1341,84 @@ def compile_relations(context: CcefPromptContext, state: RelationState) -> Extra
             )
             if seed is not None:
                 seeds[game.id] = seed.fen
-    return compile_semantic_events(
+    package = compile_semantic_events(
         context,
         events,
         sequence_initial_fens=seeds,
         sequence_bindings=state.external_bindings,
         explicit_relationships=True,
     )
+    return coalesce_source_commentary(context, package)
+
+
+_SCORE_SCRAP = re.compile(r"[\d\s.()\[\]…,:;!?–\-]+")
+
+
+def coalesce_source_commentary(
+    context: CcefPromptContext, package: ExtractionPackageV1_1
+) -> ExtractionPackageV1_1:
+    """Join neighboring source lines into readable paragraphs and discard score crumbs."""
+    locations = {
+        entry.fragment.fragment_sha256: (page.physical_page, entry.order)
+        for page in context.pages
+        for entry in page.fragments
+    }
+
+    def adjacent(left: Any, right: Any) -> bool:
+        old = left.evidence[-1]
+        new = right.evidence[0]
+        a = locations.get(old.fragment_sha256)
+        b = locations.get(new.fragment_sha256)
+        if a is None or b is None or a[0] != b[0] or b[1] != a[1] + 1:
+            return False
+        if old.bbox is None or new.bbox is None:
+            return False
+        return (
+            -0.003 <= new.bbox[1] - old.bbox[3] <= 0.03 and abs(new.bbox[0] - old.bbox[0]) <= 0.07
+        )
+
+    items: list[Any] = []
+    for item in package.items:
+        if isinstance(item, ProseItem) and _SCORE_SCRAP.fullmatch(item.text.strip()):
+            continue
+        if (
+            isinstance(item, ProseItem)
+            and items
+            and isinstance(items[-1], ProseItem)
+            and item.anchor == items[-1].anchor
+            and adjacent(items[-1], item)
+        ):
+            previous = items[-1]
+            previous.text = f"{previous.text.rstrip()} {item.text.lstrip()}"
+            previous.evidence.extend(item.evidence)
+            continue
+        items.append(item)
+    package.items = items
+    for item in package.items:
+        if not isinstance(item, MoveSequenceItemV1_1):
+            continue
+        kept: list[SequenceAnnotation] = []
+        aliases: dict[str, str] = {}
+        for annotation in item.annotations:
+            if _SCORE_SCRAP.fullmatch(annotation.text.strip()):
+                aliases[annotation.id] = ""
+                continue
+            if kept and annotation.anchor == kept[-1].anchor and adjacent(kept[-1], annotation):
+                prior_annotation = kept[-1]
+                prior_annotation.text = (
+                    f"{prior_annotation.text.rstrip()} {annotation.text.lstrip()}"
+                )
+                prior_annotation.evidence.extend(annotation.evidence)
+                aliases[annotation.id] = prior_annotation.id
+            else:
+                kept.append(annotation)
+        item.annotations = kept
+        item.reading_flow = [
+            flow
+            for flow in item.reading_flow
+            if flow.kind != "annotation" or flow.annotation_id not in aliases
+        ]
+    return package
 
 
 def localize_invalid_relation_subtrees(
@@ -1243,6 +1454,10 @@ def localize_invalid_relation_subtrees(
             break
         dropped.update(dependent)
     tokens = {token.id: token for token in source_tokens(context)}
+    dependents = {
+        root: [ref for ref in dropped if ref != root and _descends_from(ref, root, state.parent)]
+        for root in roots
+    }
     existing = {
         tuple(problem["source"][key] for key in ("page", "order", "start", "end"))
         for problem in state.problems
@@ -1272,7 +1487,50 @@ def localize_invalid_relation_subtrees(
     for ref in dropped:
         state.parent.pop(ref, None)
         state.token_line.pop(ref, None)
-    return compile_relations(context, state)
+    result = compile_relations(context, state)
+    for issue in result.items:
+        if not isinstance(issue, UnresolvedItem) or issue.reason_code != "ambiguous_relation":
+            continue
+        for root in roots:
+            token = tokens.get(root)
+            if token is None:
+                continue
+            if any(
+                ref.page == token.page
+                and ref.start_offset == token.start
+                and ref.end_offset == token.end
+                for ref in issue.evidence
+            ):
+                descendants = sorted(
+                    dependents[root],
+                    key=lambda ref: (
+                        (tokens[ref].page, tokens[ref].order, tokens[ref].start)
+                        if ref in tokens
+                        else (0, 0, 0)
+                    ),
+                )
+                issue.extensions["chess-workbench.blocked-score"] = {
+                    "root_ref": root,
+                    "dependent_count": len(descendants),
+                    "dependent_refs": descendants,
+                }
+                if descendants:
+                    issue.details = (issue.details or "") + (
+                        f" {len(descendants)} subsequent source moves depend on this entry."
+                    )
+                break
+    return result
+
+
+def _descends_from(ref: str, ancestor: str, parents: dict[str, str | None]) -> bool:
+    seen: set[str] = set()
+    current = parents.get(ref)
+    while current is not None and current not in seen:
+        if current == ancestor:
+            return True
+        seen.add(current)
+        current = parents.get(current)
+    return False
 
 
 def validation_relation_issues(
@@ -1619,11 +1877,18 @@ def formal_score_note_issues(
         if isinstance(ref, str)
     }
     played_chains = [
-        [
-            _clean_move_token(token_by_id[ref].raw)
-            for ref in segment.move_refs
-            if isinstance(ref, str) and ref in token_by_id
-        ]
+        (
+            {
+                token_by_id[ref].span_ref
+                for ref in segment.move_refs
+                if isinstance(ref, str) and ref in token_by_id
+            },
+            [
+                _clean_move_token(token_by_id[ref].raw)
+                for ref in segment.move_refs
+                if isinstance(ref, str) and ref in token_by_id
+            ],
+        )
         for response in responses
         for segment in response.segments
     ]
@@ -1665,7 +1930,8 @@ def formal_score_note_issues(
                 continue
             if not any(
                 existing[index : index + len(names)] == names
-                for existing in played_chains
+                for source_spans, existing in played_chains
+                if ref in source_spans
                 for index in range(len(existing) - len(names) + 1)
             ):
                 return True
@@ -1850,15 +2116,28 @@ def build_relation_patch_request(
 
 
 def apply_relation_patches(
-    responses: list[RelationResponse], patch: RelationPatchResponse
+    responses: list[RelationResponse],
+    patch: RelationPatchResponse,
+    owned_spans: list[set[str]] | None = None,
 ) -> list[RelationResponse]:
     """Correct cited relationships or split a mixed segment without inventing moves."""
     updated = [response.model_copy(deep=True) for response in responses]
+    if owned_spans is not None and len(owned_spans) != len(updated):
+        raise ValueError("relation patch ownership does not match its windows")
+
+    def source_owner(refs: list[str]) -> RelationResponse | None:
+        if owned_spans is None:
+            return None
+        matches = [
+            updated[index] for index, owned in enumerate(owned_spans) if set(refs).issubset(owned)
+        ]
+        return matches[0] if len(matches) == 1 else None
+
     existing_games = {game.id for response in updated for game in response.games}
     for game in patch.games:
         if game.id in existing_games or not game.source_refs:
             raise ValueError("relation patch adds a duplicate or uncited game")
-        owner = next(
+        owner = source_owner(game.source_refs) or next(
             (
                 response
                 for response in updated
@@ -2000,7 +2279,7 @@ def apply_relation_patches(
             for ref in refs
         ):
             raise ValueError("relation addition does not cite unused source moves")
-        owner = next(
+        owner = source_owner(addition.evidence_refs) or next(
             (
                 response
                 for response in updated

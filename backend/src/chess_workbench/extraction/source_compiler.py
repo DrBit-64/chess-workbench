@@ -81,6 +81,7 @@ class SemanticEvent(BaseModel):
     sequence: str | None = None
     parent: str | None = None
     anchor: str | None = None
+    relation: Literal["before", "after"] | None = None
     level: int | None = None
     issue_code: (
         Literal[
@@ -1509,7 +1510,7 @@ def compile_semantic_events(
                         if target is None or target[0] != sequence_key:
                             raise ValueError("annotation anchor is unknown in this sequence")
                         anchor = MoveNodeAnnotationAnchor(
-                            kind="move_node", node_id=target[1], relation="after"
+                            kind="move_node", node_id=target[1], relation=event.relation or "after"
                         )
                     annotation_id = f"annotation{index + 1}"
                     sequence.annotations.append(

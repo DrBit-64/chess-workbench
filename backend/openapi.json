@@ -22652,6 +22652,40 @@
                                   "title": "Fragment Sha256",
                                   "type": "string"
                                 },
+                                "move_mentions": {
+                                  "items": {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "end": {
+                                        "exclusiveMinimum": 0,
+                                        "title": "End",
+                                        "type": "integer"
+                                      },
+                                      "kind": {
+                                        "enum": [
+                                          "candidate",
+                                          "square"
+                                        ],
+                                        "title": "Kind",
+                                        "type": "string"
+                                      },
+                                      "start": {
+                                        "minimum": 0,
+                                        "title": "Start",
+                                        "type": "integer"
+                                      }
+                                    },
+                                    "required": [
+                                      "start",
+                                      "end",
+                                      "kind"
+                                    ],
+                                    "title": "PdfSourceMoveMentionRead",
+                                    "type": "object"
+                                  },
+                                  "title": "Move Mentions",
+                                  "type": "array"
+                                },
                                 "order": {
                                   "minimum": 0,
                                   "title": "Order",

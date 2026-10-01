@@ -41,7 +41,10 @@ from chess_workbench.schemas.review import (
 )
 from chess_workbench.services.content import ServiceError
 from chess_workbench.services.pdf_review import PdfReviewReadService
-from chess_workbench.services.pdf_review_recovery import load_review_relations
+from chess_workbench.services.pdf_review_recovery import (
+    load_document_review_relations,
+    load_review_relations,
+)
 from chess_workbench.services.source_storage import (
     read_verified_content_addressed_bytes,
     store_content_addressed_bytes,
@@ -296,10 +299,6 @@ class PdfReviewLedgerService:
         review_session: PdfReviewSession,
         current: ExtractionPackage | ExtractionPackageV1_1,
     ) -> RecoveryResult:
-        if review_session.extraction_run_id is None:
-            raise ServiceError(
-                "validation_error", 422, "dependency replay requires a v8 extraction run"
-            )
         if not isinstance(current, ExtractionPackageV1_1):
             raise ServiceError("validation_error", 422, "dependency replay requires CCEF 1.1")
         original = await self.session.scalar(
@@ -313,9 +312,22 @@ class PdfReviewLedgerService:
         baseline = await self._revision_package(original)
         if not isinstance(baseline, ExtractionPackageV1_1):
             raise ServiceError("validation_error", 422, "dependency replay requires CCEF 1.1")
-        context, responses, owned = await load_review_relations(
-            self.session, self.settings, review_session.extraction_run_id
-        )
+        document_replay = None
+        if review_session.document_id is not None:
+            if review_session.baseline_document_revision_id is None:
+                raise _unavailable()
+            document_replay = await load_document_review_relations(
+                self.session, self.settings, review_session.baseline_document_revision_id
+            )
+            context, responses, owned = (
+                document_replay.context, document_replay.responses, document_replay.owned_spans
+            )
+        elif review_session.extraction_run_id is not None:
+            context, responses, owned = await load_review_relations(
+                self.session, self.settings, review_session.extraction_run_id
+            )
+        else:
+            raise _unavailable()
         touched, mainline, additions = await self._recovery_human_edits(review_session, current)
         try:
             return recover_dependencies(
@@ -327,6 +339,14 @@ class PdfReviewLedgerService:
                 human_node_ids=touched,
                 mainline_node_ids=mainline,
                 human_added_ids=additions,
+                document_base=document_replay.predecessor if document_replay else None,
+                document_continuation=(
+                    document_replay.continuation if document_replay else None
+                ),
+                document_id=review_session.document_id,
+                external_anchors=(
+                    document_replay.external_anchors if document_replay else None
+                ),
             )
         except ValueError as error:
             raise ServiceError("validation_error", 422, str(error)) from error

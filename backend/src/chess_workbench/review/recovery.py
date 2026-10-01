@@ -10,6 +10,7 @@ import copy
 import re
 from collections import Counter
 from dataclasses import dataclass
+from uuid import UUID
 
 import chess
 
@@ -21,6 +22,7 @@ from chess_workbench.extraction.contracts import (
     MoveSequenceItemV1_1,
     UnresolvedItem,
 )
+from chess_workbench.extraction.incremental import CcefContinuationContext, compose_incremental_ccef
 from chess_workbench.extraction.notation import source_punctuation_nag
 from chess_workbench.extraction.prompting import CcefPromptContext
 from chess_workbench.extraction.relations import (
@@ -177,8 +179,9 @@ def _relation_state(
     responses: list[RelationResponse],
     owned_spans: list[set[str]],
     tokens: list[SourceToken],
+    external_anchors: dict[str, tuple[str, str]] | None = None,
 ) -> RelationState:
-    state = RelationState()
+    state = RelationState(external_anchors=external_anchors or {})
     for response, owned in zip(responses, owned_spans, strict=True):
         apply_relations(context, response, tokens, owned, state)
     return state
@@ -322,6 +325,7 @@ def _human_patches(
     human_node_ids: set[str],
     mainline_node_ids: set[str],
     human_added_ids: set[str],
+    external_anchors: dict[str, tuple[str, str]] | None = None,
 ) -> tuple[list[RelationResponse], list[str], list[str]]:
     source_keys = _source_keys(context)
     by_evidence = {key: ref for ref, key in source_keys.items()}
@@ -357,7 +361,7 @@ def _human_patches(
         if source_ref is None or parent_ref is None:
             skipped.append(f"{node.move_text}: source occurrence is not unique")
             continue
-        state = _relation_state(context, working, owned_spans, token_list)
+        state = _relation_state(context, working, owned_spans, token_list, external_anchors)
         location = state.token_line.get(parent_ref)
         if location is None:
             skipped.append(f"{node.move_text}: parent source is not assembled")
@@ -444,7 +448,7 @@ def _human_patches(
                 else:
                     skipped.append(f"{node.move_text}: existing mainline blocks new entry")
                     continue
-                state = _relation_state(context, working, owned_spans, token_list)
+                state = _relation_state(context, working, owned_spans, token_list, external_anchors)
                 if state.lines[location][2] != parent_ref:
                     skipped.append(f"{node.move_text}: mainline still blocks new entry")
                     continue
@@ -962,6 +966,10 @@ def recover_dependencies(
     human_node_ids: set[str] | None = None,
     mainline_node_ids: set[str] | None = None,
     human_added_ids: set[str] | None = None,
+    document_base: ExtractionPackageV1_1 | None = None,
+    document_continuation: CcefContinuationContext | None = None,
+    document_id: UUID | None = None,
+    external_anchors: dict[str, tuple[str, str]] | None = None,
 ) -> RecoveryResult:
     """Generate a preview without modifying the ledger or current package."""
     if len(responses) != len(owned_spans):
@@ -984,14 +992,21 @@ def recover_dependencies(
         human_node_ids or set(),
         mainline_node_ids or set(),
         line_added_ids,
+        external_anchors,
     )
     if not corrected:
         raise ValueError(
             "no new source-backed human relation could be replayed: " + "; ".join(skipped[:3])
         )
-    replay = _relation_state(context, changed, owned_spans, tokens)
+    replay = _relation_state(context, changed, owned_spans, tokens, external_anchors)
     candidate = compile_relations(context, replay)
     candidate = localize_invalid_relation_subtrees(context, replay, candidate)
+    if document_base is not None:
+        if document_continuation is None or document_id is None:
+            raise ValueError("document recovery requires its continuation context")
+        candidate = compose_incremental_ccef(
+            document_base, candidate, context=document_continuation, document_id=document_id
+        )
     merged = copy.deepcopy(current)
     originals = _sequences(current)
     merged_sequences = _sequences(merged)
@@ -1010,10 +1025,31 @@ def recover_dependencies(
     represented_sources: set[tuple[int, str | None, int | None, int | None]] = set()
     for proposal in _sequences(candidate).values():
         target = merged_sequences.get(proposal.id)
+        proposal_roots = [node for node in proposal.nodes if node.parent_id is None]
         if target is None or target.initial_position != proposal.initial_position:
+            # Independent appended examples can receive a different local
+            # item number when commentary is regrouped. Match their first
+            # cited source occurrence, never their generated item label.
+            candidate_sequences = [
+                sequence
+                for sequence in originals.values()
+                if sequence.initial_position == proposal.initial_position
+                and any(
+                    _same_source(old, new) and old.uci_candidate == new.uci_candidate
+                    for old in sequence.nodes
+                    if old.parent_id is None
+                    for new in proposal_roots
+                )
+            ]
+            target = (
+                merged_sequences.get(candidate_sequences[0].id)
+                if len(candidate_sequences) == 1
+                else None
+            )
+        if target is None:
             conflicts.append(f"{proposal.id}: sequence start changed; replay skipped")
             continue
-        original = originals[proposal.id]
+        original = originals[target.id]
         paths = _paths(original)
         proposed_paths = _paths(proposal)
         matched: dict[str, str] = {}
@@ -1090,12 +1126,12 @@ def recover_dependencies(
                 fresh.sibling_order = len(siblings)
                 if node.sibling_order == 0 and not any(
                     item.id
-                    in {old.id for old in _sequences(baseline).get(proposal.id, original).nodes}
+                    in {old.id for old in _sequences(baseline).get(target.id, original).nodes}
                     and item.sibling_order
                     != next(
                         (
                             old.sibling_order
-                            for old in _sequences(baseline)[proposal.id].nodes
+                            for old in _sequences(baseline)[target.id].nodes
                             if old.id == item.id
                         ),
                         item.sibling_order,
@@ -1120,7 +1156,7 @@ def recover_dependencies(
             pending = remaining
         _renumber_siblings(target)
         _reflow(target)
-    if coherent_added_line:
+    if coherent_added_line and document_base is None:
         _recover_styled_continuation(
             context,
             responses,

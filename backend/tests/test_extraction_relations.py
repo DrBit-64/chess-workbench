@@ -1762,3 +1762,365 @@ def test_later_window_reuses_read_only_score_prefix_as_anchor() -> None:
     sequence = next(item for item in package.items if isinstance(item, MoveSequenceItemV1_1))
     assert len(sequence.nodes) == 4
     assert all(node.validation_status == "valid" for node in sequence.nodes)
+
+
+def test_redeclared_continuation_uses_one_game_across_windows() -> None:
+    from chess_workbench.extraction.relations import canonicalize_continuation_games
+
+    base = {
+        "schema_version": "chess-source-relations/1",
+        "notes": [],
+        "unresolved": [],
+    }
+    first = parse_relation_response(
+        json.dumps(
+            {
+                **base,
+                "games": [
+                    {
+                        "id": "first",
+                        "kind": "continuation",
+                        "source_refs": ["s1_0"],
+                        "seed_ref": "anchor-1",
+                    }
+                ],
+                "segments": [
+                    {
+                        "id": "a",
+                        "game_ref": "first",
+                        "line_ref": "main",
+                        "entry": {"kind": "root"},
+                        "move_refs": ["t1_0_0"],
+                        "evidence_refs": ["s1_0"],
+                    }
+                ],
+            }
+        )
+    )
+    second = parse_relation_response(
+        json.dumps(
+            {
+                **base,
+                "games": [
+                    {
+                        "id": "second",
+                        "kind": "continuation",
+                        "source_refs": ["s2_0"],
+                        "seed_ref": "anchor-1",
+                    }
+                ],
+                "segments": [
+                    {
+                        "id": "b",
+                        "game_ref": "second",
+                        "line_ref": "main",
+                        "entry": {"kind": "continue", "after_move_ref": "t1_0_0"},
+                        "move_refs": ["t2_0_0"],
+                        "evidence_refs": ["s2_0"],
+                    }
+                ],
+            }
+        )
+    )
+    revised = canonicalize_continuation_games([first, second])
+    assert revised[1].games == []
+    assert revised[1].segments[0].game_ref == "first"
+    assert second.games[0].id == "second"
+
+
+def test_neighboring_source_lines_form_one_prose_paragraph() -> None:
+    from chess_workbench.extraction.contracts import ProseItem
+
+    context = _context("Every black move is with tempo. White is")
+    box = NormalizedBox(x0=0.13, y0=0.205, x1=0.8, y1=0.225)
+    text = "never given a moment's rest to develop."
+    second = SourceEvidenceFragment(
+        physical_page=1,
+        box=box,
+        text=text,
+        origin="embedded_text",
+        engine_name="test",
+        engine_version="1",
+        fragment_sha256=source_fragment_sha256(1, box, text, "embedded_text", "test", "1"),
+    )
+    context.pages[0].fragments.append(PromptEvidenceFragment(order=1, fragment=second))
+    package = compile_relations(context, RelationState())
+    prose = [item for item in package.items if isinstance(item, ProseItem)]
+    assert len(prose) == 1
+    assert (
+        prose[0].text
+        == "Every black move is with tempo. White is never given a moment's rest to develop."
+    )
+    assert len(prose[0].evidence) == 2
+
+
+def test_illegal_entry_retains_a_counted_dependent_score_group() -> None:
+    from chess_workbench.extraction.contracts import UnresolvedItem
+
+    context = _context("1 e4 e5 2 Qh6 Nc6")
+    tokens = source_tokens(context)
+    refs = [token.id for token in tokens]
+    response = parse_relation_response(
+        json.dumps(
+            {
+                "schema_version": "chess-source-relations/1",
+                "games": [
+                    {"id": "game", "kind": "game", "source_refs": ["s1_0"], "seed_ref": "start"}
+                ],
+                "segments": [
+                    {
+                        "id": "main",
+                        "game_ref": "game",
+                        "line_ref": "main",
+                        "entry": {"kind": "root"},
+                        "move_refs": refs,
+                        "evidence_refs": ["s1_0"],
+                    }
+                ],
+                "notes": [],
+                "unresolved": [],
+            }
+        )
+    )
+    state = RelationState()
+    apply_relations(context, response, tokens, {"s1_0"}, state)
+    result = localize_invalid_relation_subtrees(context, state, compile_relations(context, state))
+    issues = [item for item in result.items if isinstance(item, UnresolvedItem)]
+    assert len(issues) == 1
+    blocked = issues[0].extensions["chess-workbench.blocked-score"]
+    assert blocked["dependent_count"] == 1
+    assert blocked["dependent_refs"] == [refs[-1]]
+
+
+def test_commentary_quoting_a_move_keeps_the_full_sentence() -> None:
+    from chess_workbench.extraction.contracts import ProseItem
+
+    context = _context("1 e4 is a strong opening move.")
+    move = next(token for token in source_tokens(context) if token.raw == "e4")
+    response = parse_relation_response(
+        json.dumps(
+            {
+                "schema_version": "chess-source-relations/1",
+                "games": [
+                    {"id": "game", "kind": "game", "source_refs": ["s1_0"], "seed_ref": "start"}
+                ],
+                "segments": [
+                    {
+                        "id": "main",
+                        "game_ref": "game",
+                        "line_ref": "main",
+                        "entry": {"kind": "root"},
+                        "move_refs": [move.id],
+                        "evidence_refs": ["s1_0"],
+                    }
+                ],
+                "notes": [],
+                "unresolved": [],
+            }
+        )
+    )
+    state = RelationState()
+    apply_relations(context, response, source_tokens(context), {"s1_0"}, state)
+    package = compile_relations(context, state)
+    assert any(
+        isinstance(item, ProseItem) and item.text == "1 e4 is a strong opening move."
+        for item in package.items
+    )
+    assert any(
+        isinstance(item, MoveSequenceItemV1_1) and len(item.nodes) == 1 for item in package.items
+    )
+
+
+def test_same_san_on_a_later_source_line_is_still_a_score_occurrence() -> None:
+    context = _context("1 e4 e5")
+    box = NormalizedBox(x0=0.1, y0=0.205, x1=0.9, y1=0.225)
+    text = "1 e4 e5"
+    fragment = SourceEvidenceFragment(
+        physical_page=1,
+        box=box,
+        text=text,
+        origin="embedded_text",
+        engine_name="test",
+        engine_version="1",
+        fragment_sha256=source_fragment_sha256(1, box, text, "embedded_text", "test", "1"),
+    )
+    context.pages[0].fragments.append(PromptEvidenceFragment(order=1, fragment=fragment))
+    tokens = source_tokens(context)
+    response = parse_relation_response(
+        json.dumps(
+            {
+                "schema_version": "chess-source-relations/1",
+                "games": [
+                    {"id": "game", "kind": "game", "source_refs": ["s1_0"], "seed_ref": "start"}
+                ],
+                "segments": [
+                    {
+                        "id": "main",
+                        "game_ref": "game",
+                        "line_ref": "main",
+                        "entry": {"kind": "root"},
+                        "move_refs": [t.id for t in tokens if t.span_ref == "s1_0"],
+                        "evidence_refs": ["s1_0"],
+                    }
+                ],
+                "notes": [],
+                "unresolved": [],
+            }
+        )
+    )
+    issues = formal_score_note_issues(context, tokens, [response])
+    assert len(issues) == 1
+    assert issues[0]["source_ref"] == "s1_1"
+    assert issues[0]["issue_kind"] == "unclaimed_score_span"
+
+
+def test_impossible_continuation_seed_uses_unique_source_legal_mainline_anchor() -> None:
+    import chess
+
+    from chess_workbench.extraction.relations import reconcile_continuation_seed
+
+    context = _context("1 e4")
+    token = source_tokens(context)[0]
+    response = parse_relation_response(
+        json.dumps(
+            {
+                "schema_version": "chess-source-relations/1",
+                "games": [
+                    {
+                        "id": "continued",
+                        "kind": "continuation",
+                        "source_refs": ["s1_0"],
+                        "seed_ref": "anchor-wrong",
+                    }
+                ],
+                "segments": [
+                    {
+                        "id": "main",
+                        "game_ref": "continued",
+                        "line_ref": "main",
+                        "entry": {"kind": "root"},
+                        "move_refs": [token.id],
+                        "evidence_refs": ["s1_0"],
+                    }
+                ],
+                "notes": [],
+                "unresolved": [],
+            }
+        )
+    )
+    after_e4 = chess.Board()
+    after_e4.push_san("e4")
+    anchors = [
+        {"id": "anchor-wrong", "position_fen": after_e4.fen(), "mainline": False},
+        {"id": "anchor-correct", "position_fen": chess.STARTING_FEN, "mainline": True},
+    ]
+    corrected = reconcile_continuation_seed(response, source_tokens(context), anchors)
+    assert corrected.games[0].seed_ref == "anchor-correct"
+    assert response.games[0].seed_ref == "anchor-wrong"
+
+
+def test_exact_predecessor_source_citation_becomes_continuation_root() -> None:
+    import chess
+
+    from chess_workbench.extraction.relations import reconcile_continuation_seed
+
+    context = _context("1 e4")
+    token = source_tokens(context)[0]
+    response = parse_relation_response(
+        json.dumps(
+            {
+                "schema_version": "chess-source-relations/1",
+                "games": [
+                    {
+                        "id": "continued",
+                        "kind": "continuation",
+                        "source_refs": ["s1_0"],
+                        "seed_ref": "anchor-start",
+                    }
+                ],
+                "segments": [
+                    {
+                        "id": "main",
+                        "game_ref": "continued",
+                        "line_ref": "main",
+                        "entry": {"kind": "continue", "after_move_ref": "t0_0_0"},
+                        "move_refs": [token.id],
+                        "evidence_refs": ["s1_0"],
+                    }
+                ],
+                "notes": [],
+                "unresolved": [],
+            }
+        )
+    )
+    anchors = [
+        {
+            "id": "anchor-start",
+            "position_fen": chess.STARTING_FEN,
+            "source_occurrence": {
+                "page": 0,
+                "fragment_ref": "prior-hash",
+                "start_offset": 0,
+                "end_offset": 4,
+            },
+        }
+    ]
+    corrected = reconcile_continuation_seed(
+        response,
+        [token],
+        anchors,
+        predecessor_tokens=[{"id": "t0_0_0", "span_ref": "s0_0", "start": 0, "end": 4}],
+        predecessor_spans=[{"id": "s0_0", "page": 0, "fragment_ref": "prior-hash"}],
+    )
+    assert corrected.segments[0].entry.kind == "root"
+    assert response.segments[0].entry.kind == "continue"
+    state = RelationState(external_anchors={"anchor-start": ("0" * 64, chess.STARTING_FEN)})
+    apply_relations(context, corrected, [token], {"s1_0"}, state)
+    package = compile_relations(context, state)
+    sequence = next(item for item in package.items if isinstance(item, MoveSequenceItemV1_1))
+    assert len(sequence.nodes) == 1
+    assert sequence.nodes[0].validation_status == "valid"
+
+
+def test_patch_can_add_an_entirely_unclaimed_owned_source_line() -> None:
+    response = parse_relation_response(
+        json.dumps(
+            {
+                "schema_version": "chess-source-relations/1",
+                "games": [
+                    {"id": "game", "kind": "game", "source_refs": ["s1_0"], "seed_ref": "start"}
+                ],
+                "segments": [
+                    {
+                        "id": "first",
+                        "game_ref": "game",
+                        "line_ref": "main",
+                        "entry": {"kind": "root"},
+                        "move_refs": ["t1_0_2"],
+                        "evidence_refs": ["s1_0"],
+                    }
+                ],
+                "notes": [],
+                "unresolved": [],
+            }
+        )
+    )
+    patch = RelationPatchResponse.model_validate(
+        {
+            "schema_version": "chess-source-relation-patch/1",
+            "patches": [],
+            "additions": [
+                {
+                    "id": "second",
+                    "game_ref": "game",
+                    "line_ref": "main",
+                    "entry": {"kind": "continue", "after_move_ref": "t1_0_2"},
+                    "move_refs": ["t1_1_0"],
+                    "evidence_refs": ["s1_1"],
+                }
+            ],
+        }
+    )
+    revised = apply_relation_patches([response], patch, [{"s1_0", "s1_1"}])
+    assert [segment.id for segment in revised[0].segments] == ["first", "second"]
+    assert len(response.segments) == 1

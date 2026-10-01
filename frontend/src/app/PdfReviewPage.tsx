@@ -9,8 +9,6 @@ import {
   useState,
 } from 'react';
 import { Chessboard } from 'react-chessboard';
-import ReactMarkdown from 'react-markdown';
-import rehypeSanitize from 'rehype-sanitize';
 import useSWR from 'swr';
 
 import { ApiError, fetchJson, requestJson } from '../logic/api/client';
@@ -20,6 +18,7 @@ import type {
   PdfReviewCommandEnvelope,
   PdfReviewCommandRequest,
   PdfReviewDocument,
+  PdfSourceEvidence,
   PdfReviewSession,
   PdfReviewSessionEnvelope,
   PdfReviewReattachPreview,
@@ -32,6 +31,15 @@ import {
   lichessSquareStyles,
 } from './boardInteraction';
 import { MoveNotation } from './MoveNotation';
+import {
+  buildReviewSourceIndex,
+  paragraphCoverage,
+  needsSourceReview,
+  combineCoverage,
+  type SourceMoveTarget,
+} from './reviewSourceCoverage';
+import { ReviewSourceText, CoverageSummary } from './ReviewSourceText';
+import { ReviewSourceContext, useReviewSource } from './reviewSourceContext';
 import { formatMoveNotation, moveNotationText } from './moveNotation';
 import {
   buildReviewMoveRows,
@@ -58,6 +66,67 @@ type MoveSequenceItem = Extract<ReviewItem, { kind: 'move_sequence' }>;
 type ProseItem = Extract<ReviewItem, { kind: 'prose' }>;
 type UnresolvedReviewItem = Extract<ReviewItem, { kind: 'unresolved' }>;
 type EvidenceRef = ReviewItem['evidence'][number];
+
+type AnnotationBlock = Extract<CompactReviewBlock, { kind: 'annotation' }>;
+type DisplayReviewBlock =
+  | CompactReviewBlock
+  | {
+      kind: 'annotation_group';
+      key: string;
+      blocks: AnnotationBlock[];
+    };
+
+function groupReviewAnnotations(
+  blocks: CompactReviewBlock[],
+): DisplayReviewBlock[] {
+  const displayed: DisplayReviewBlock[] = [];
+  let pending: AnnotationBlock[] = [];
+  function flush() {
+    if (pending.length >= 3) {
+      displayed.push({
+        kind: 'annotation_group',
+        key: `comments:${pending[0].key}`,
+        blocks: pending,
+      });
+    } else {
+      displayed.push(...pending);
+    }
+    pending = [];
+  }
+  for (const block of blocks) {
+    if (block.kind !== 'annotation') {
+      flush();
+      displayed.push(block);
+      continue;
+    }
+    if (
+      pending.length > 0 &&
+      pending[0].annotation.evidence[0]?.page !==
+        block.annotation.evidence[0]?.page
+    )
+      flush();
+    pending.push(block);
+  }
+  flush();
+  return displayed;
+}
+
+function groupReviewItems(items: ReviewItem[]): ReviewItem[][] {
+  const groups: ReviewItem[][] = [];
+  for (const item of items) {
+    const previous = groups.at(-1);
+    if (
+      item.kind === 'prose' &&
+      previous?.at(-1)?.kind === 'prose' &&
+      previous.at(-1)?.evidence[0]?.page === item.evidence[0]?.page
+    ) {
+      previous.push(item);
+    } else {
+      groups.push([item]);
+    }
+  }
+  return groups;
+}
 type ReviewCommand = PdfReviewCommandRequest['command'];
 type ReviewEditOperation = Extract<
   ReviewCommand,
@@ -84,7 +153,7 @@ interface TextEditorState {
 }
 
 interface UnresolvedEditorState {
-  item: UnresolvedReviewItem;
+  item: UnresolvedReviewItem | ProseItem;
   asKind: 'prose' | 'annotation' | 'line';
   text: string;
   sequenceId: string;
@@ -219,6 +288,9 @@ export function PdfReviewPage({ runId }: { runId: string }) {
   );
 
   const [selectedPage, setSelectedPage] = useState<number | null>(null);
+  const [onlyPendingCommentary, setOnlyPendingCommentary] = useState(false);
+  const [focusedSourceMove, setFocusedSourceMove] =
+    useState<SourceMoveTarget | null>(null);
   const [boardFen, setBoardFen] = useState<string>(START_FEN);
   const [selectedSquare, setSelectedSquare] = useState<string>();
   const [boardContext, setBoardContext] = useState<BoardContext | null>(null);
@@ -305,6 +377,45 @@ export function PdfReviewPage({ runId }: { runId: string }) {
   const pages = document?.pages ?? [];
 
   const items = useMemo(() => document?.package.items ?? [], [document]);
+  const { data: sourceEvidence, error: sourceError } =
+    useSWR<PdfSourceEvidence>(
+      document
+        ? `/api/pdf-extractions/${encodeURIComponent(runId)}/source`
+        : null,
+      fetchJson,
+      { shouldRetryOnError: false },
+    );
+  const sourceIndex = useMemo(
+    () =>
+      sourceEvidence?.evidence_status === 'ready'
+        ? buildReviewSourceIndex(items, sourceEvidence)
+        : null,
+    [items, sourceEvidence],
+  );
+  const proseCoverage = useMemo(
+    () =>
+      new Map(
+        items
+          .filter((item) => item.kind === 'prose')
+          .map((item) => [
+            item.id,
+            paragraphCoverage(item.text, item.evidence, sourceIndex),
+          ]),
+      ),
+    [items, sourceIndex],
+  );
+  const pendingParagraphs = useMemo(() => {
+    let count = [...proseCoverage.values()].filter(needsSourceReview).length;
+    for (const item of items)
+      if (item.kind === 'move_sequence' && isAnnotatedMoveSequence(item)) {
+        count += (item.annotations ?? []).filter((note) =>
+          needsSourceReview(
+            paragraphCoverage(note.text, note.evidence, sourceIndex),
+          ),
+        ).length;
+      }
+    return count;
+  }, [items, proseCoverage, sourceIndex]);
 
   const initialBoardFen = useMemo(() => {
     const firstSequence = items.find((item) => item.kind === 'move_sequence');
@@ -327,6 +438,8 @@ export function PdfReviewPage({ runId }: { runId: string }) {
 
   useEffect(() => {
     setCurrentDocument(null);
+    setOnlyPendingCommentary(false);
+    setFocusedSourceMove(null);
     setRecoveryPreview(null);
     setShowRecoveryCandidate(false);
     setReviewSession(null);
@@ -505,6 +618,35 @@ export function PdfReviewPage({ runId }: { runId: string }) {
       setPendingLine(null);
       setSelectedSquare(undefined);
     }
+  }
+
+  function navigateSourceMove(target: SourceMoveTarget) {
+    const sequence = sequenceById(target.sequenceId);
+    const node = sequence?.nodes.find((value) => value.id === target.nodeId);
+    if (!sequence || !node) return;
+    selectNode(sequence, node);
+    setFocusedSourceMove(target);
+    if (node.evidence[0]) setSelectedPage(node.evidence[0].page);
+    window.requestAnimationFrame(() => {
+      const element = [
+        ...globalThis.document.querySelectorAll<HTMLElement>(
+          '[data-review-node-id]',
+        ),
+      ].find(
+        (value) =>
+          value.dataset.reviewSequenceId === target.sequenceId &&
+          value.dataset.reviewNodeId === target.nodeId,
+      );
+      for (
+        let parent = element?.parentElement;
+        parent;
+        parent = parent.parentElement
+      ) {
+        if (parent instanceof HTMLDetailsElement) parent.open = true;
+      }
+      element?.scrollIntoView?.({ block: 'center', behavior: 'smooth' });
+      element?.focus({ preventScroll: true });
+    });
   }
 
   function selectSequenceStart(sequence: MoveSequenceItem) {
@@ -1166,7 +1308,7 @@ export function PdfReviewPage({ runId }: { runId: string }) {
   }
 
   function resolveUnresolved(
-    item: UnresolvedReviewItem,
+    item: UnresolvedReviewItem | ProseItem,
     asKind: UnresolvedEditorState['asKind'] = 'prose',
   ) {
     setSelectedPage(item.evidence[0]?.page ?? null);
@@ -1174,16 +1316,18 @@ export function PdfReviewPage({ runId }: { runId: string }) {
     setRestoreFollowing(false);
     setAttachSelection(null);
     setAttachPreview(null);
+    const sourceText =
+      item.kind === 'prose' ? item.text : (item.raw_text ?? item.details ?? '');
     setUnresolvedEditor({
       item,
       asKind,
-      text: item.raw_text ?? item.details ?? '',
+      text: item.kind === 'prose' && asKind === 'line' ? '' : sourceText,
       sequenceId: '',
       anchorNodeId: '',
       targetNodeId: null,
       targetMode: 'after',
       pickingTarget: asKind === 'line',
-      notation: item.raw_text ?? '',
+      notation: item.kind === 'prose' ? item.text : (item.raw_text ?? ''),
       initialFen: START_FEN,
     });
   }
@@ -1309,7 +1453,12 @@ export function PdfReviewPage({ runId }: { runId: string }) {
       kind: 'resolve_unresolved',
       item_id: item.id,
       as_kind: asKind,
-      text: asKind === 'line' ? null : text.trim(),
+      text:
+        asKind === 'line'
+          ? item.kind === 'prose' && text.trim()
+            ? text.trim()
+            : null
+          : text.trim(),
       sequence_id: asKind === 'prose' ? null : sequenceId || null,
       anchor_node_id:
         asKind === 'prose'
@@ -1981,62 +2130,141 @@ export function PdfReviewPage({ runId }: { runId: string }) {
           </div>
         </section>
 
-        <section
-          aria-label="候选内容与自动检查"
-          tabIndex={0}
-          onClickCapture={onReviewClickCapture}
-          onDragStartCapture={onReviewDragStartCapture}
-          onDragOverCapture={onReviewDragOverCapture}
-          onDropCapture={onReviewDropCapture}
-          onMouseMoveCapture={extendMoveSelectionThroughVisibleRange}
-          className="min-w-0 lg:h-full lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain"
+        <ReviewSourceContext.Provider
+          value={{
+            index: sourceIndex,
+            onlyPending: onlyPendingCommentary,
+            focused: focusedSourceMove,
+            navigate: navigateSourceMove,
+          }}
         >
-          <div className="max-w-prose space-y-4">
-            {items.map((item) => (
-              <ReviewItemView
-                key={item.id}
-                item={item}
-                editable={editing && !commandBusy}
-                onSelectPage={selectPage}
-                onSelectNode={selectNode}
-                onSelectAnchor={selectProseAnchor}
-                onSelectAnnotation={selectSequenceAnnotation}
-                onSelectSequenceStart={selectSequenceStart}
-                onDeleteFromHere={deleteFromHere}
-                onPromoteVariation={promoteVariation}
-                onMakeMainline={makeMainline}
-                onReattachVariation={reattachVariation}
-                onSetInitialPosition={setInitialPosition}
-                onResolveUnresolved={resolveUnresolved}
-                onSetNag={setNag}
-                onEditText={openTextEditor}
-                publishing={publishing}
-                selectedNodeIds={
-                  recoveryPreview !== null && showRecoveryCandidate
-                    ? new Set(
-                        recoveryPreview.added_moves
-                          .filter((move) => move.sequence_id === item.id)
-                          .map((move) => move.node_id),
-                      )
-                    : moveSelection?.sequenceId === item.id
-                      ? new Set(moveSelection.nodeIds)
-                      : new Set()
+          <section
+            aria-label="候选内容与自动检查"
+            tabIndex={0}
+            onClickCapture={onReviewClickCapture}
+            onDragStartCapture={onReviewDragStartCapture}
+            onDragOverCapture={onReviewDragOverCapture}
+            onDropCapture={onReviewDropCapture}
+            onMouseMoveCapture={extendMoveSelectionThroughVisibleRange}
+            className="min-w-0 lg:h-full lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain"
+          >
+            <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-stone-200 pb-2 text-xs text-stone-600">
+              <span>
+                正文着法：
+                <span className="underline decoration-emerald-600 decoration-2 underline-offset-2">
+                  已入谱，可点击定位
+                </span>{' '}
+                · <span className="bg-amber-100">待核对</span> ·{' '}
+                <span className="underline decoration-dotted">计划／引用</span>
+              </span>
+              {sourceIndex ? (
+                <label className="inline-flex items-center gap-1">
+                  <input
+                    type="checkbox"
+                    checked={onlyPendingCommentary}
+                    onChange={(event) =>
+                      setOnlyPendingCommentary(event.target.checked)
+                    }
+                  />
+                  只看待核对段落（{pendingParagraphs}）
+                </label>
+              ) : (
+                <span>
+                  {sourceError ||
+                  sourceEvidence?.evidence_status === 'unavailable'
+                    ? '来源对应暂不可用'
+                    : '正在读取正文对应关系…'}
+                </span>
+              )}
+            </div>
+            <div className="max-w-prose space-y-2">
+              {groupReviewItems(
+                items.filter(
+                  (item) =>
+                    item.kind !== 'prose' ||
+                    !onlyPendingCommentary ||
+                    !sourceIndex ||
+                    needsSourceReview(proseCoverage.get(item.id) ?? null),
+                ),
+              ).map((group) => {
+                const page = group[0].evidence[0]?.page;
+                const coverage = combineCoverage(
+                  group.map((item) => proseCoverage.get(item.id) ?? null),
+                );
+                const content = group.map((item) => (
+                  <ReviewItemView
+                    key={item.id}
+                    item={item}
+                    editable={editing && !commandBusy}
+                    onSelectPage={selectPage}
+                    onSelectNode={selectNode}
+                    onSelectAnchor={selectProseAnchor}
+                    onSelectAnnotation={selectSequenceAnnotation}
+                    onSelectSequenceStart={selectSequenceStart}
+                    onDeleteFromHere={deleteFromHere}
+                    onPromoteVariation={promoteVariation}
+                    onMakeMainline={makeMainline}
+                    onReattachVariation={reattachVariation}
+                    onSetInitialPosition={setInitialPosition}
+                    onResolveUnresolved={resolveUnresolved}
+                    onSetNag={setNag}
+                    onEditText={openTextEditor}
+                    publishing={publishing}
+                    selectedNodeIds={
+                      recoveryPreview !== null && showRecoveryCandidate
+                        ? new Set(
+                            recoveryPreview.added_moves
+                              .filter((move) => move.sequence_id === item.id)
+                              .map((move) => move.node_id),
+                          )
+                        : moveSelection?.sequenceId === item.id
+                          ? new Set(moveSelection.nodeIds)
+                          : new Set()
+                    }
+                    onBeginMoveSelection={beginMoveSelection}
+                    onExtendMoveSelection={extendMoveSelection}
+                  />
+                ));
+                if (group.length < 3 || group[0].kind !== 'prose') {
+                  return (
+                    <div key={group[0].id} className="space-y-2">
+                      {content}
+                    </div>
+                  );
                 }
-                onBeginMoveSelection={beginMoveSelection}
-                onExtendMoveSelection={extendMoveSelection}
-              />
-            ))}
-          </div>
-          <IssuesView
-            document={document}
-            acknowledgedIssueIds={acknowledgedIssueIds}
-            editable={editing && !commandBusy}
-            onAcknowledge={(issueId) => acknowledgeIssues([issueId])}
-            onExcludeItem={excludeItem}
-            onDetachPositionAnchor={detachPositionAnchor}
-            onSelectPage={selectPage}
-          />
-        </section>
+                return (
+                  <details
+                    key={group[0].id}
+                    open={needsSourceReview(coverage) || undefined}
+                    className="rounded border border-stone-200 bg-stone-50 px-2 py-1"
+                  >
+                    <summary className="cursor-pointer text-sm text-stone-600">
+                      第 {page ?? '?'} 页讲解 · {group.length} 段
+                      <span className="ml-2">
+                        <CoverageSummary coverage={coverage} />
+                      </span>
+                      <span className="ml-2 text-stone-500">
+                        {group[0].kind === 'prose'
+                          ? group[0].text.slice(0, 70)
+                          : ''}
+                      </span>
+                    </summary>
+                    <div className="mt-2 space-y-2">{content}</div>
+                  </details>
+                );
+              })}
+            </div>
+            <IssuesView
+              document={document}
+              acknowledgedIssueIds={acknowledgedIssueIds}
+              editable={editing && !commandBusy}
+              onAcknowledge={(issueId) => acknowledgeIssues([issueId])}
+              onExcludeItem={excludeItem}
+              onDetachPositionAnchor={detachPositionAnchor}
+              onSelectPage={selectPage}
+            />
+          </section>
+        </ReviewSourceContext.Provider>
       </div>
       <Modal
         title="预览整段变化的挂接"
@@ -2126,7 +2354,10 @@ export function PdfReviewPage({ runId }: { runId: string }) {
         {unresolvedEditor ? (
           <div className="space-y-3 text-sm">
             <p className="rounded bg-stone-50 p-2 whitespace-pre-wrap">
-              {unresolvedEditor.item.raw_text ?? unresolvedEditor.item.details}
+              {unresolvedEditor.item.kind === 'prose'
+                ? unresolvedEditor.item.text
+                : (unresolvedEditor.item.raw_text ??
+                  unresolvedEditor.item.details)}
             </p>
             <label className="block">
               这段内容是什么？
@@ -2149,9 +2380,12 @@ export function PdfReviewPage({ runId }: { runId: string }) {
                 <option value="line">实际棋谱或变化</option>
               </select>
             </label>
-            {unresolvedEditor.asKind !== 'line' ? (
+            {unresolvedEditor.asKind !== 'line' ||
+            unresolvedEditor.item.kind === 'prose' ? (
               <label className="block">
-                保留的文字
+                {unresolvedEditor.asKind === 'line'
+                  ? '仍需保留的说明（可选）'
+                  : '保留的文字'}
                 <Input.TextArea
                   className="mt-1"
                   rows={4}
@@ -2420,7 +2654,7 @@ function ReviewItemView({
   onReattachVariation: (sequence: MoveSequenceItem, node: MoveNode) => void;
   onSetInitialPosition: (sequence: MoveSequenceItem) => void;
   onResolveUnresolved: (
-    item: Extract<ReviewItem, { kind: 'unresolved' }>,
+    item: UnresolvedReviewItem | ProseItem,
     asKind?: UnresolvedEditorState['asKind'],
   ) => void;
   onSetNag: (sequence: MoveSequenceItem, node: MoveNode) => void;
@@ -2435,6 +2669,7 @@ function ReviewItemView({
   onBeginMoveSelection: (sequence: MoveSequenceItem, node: MoveNode) => void;
   onExtendMoveSelection: (sequence: MoveSequenceItem, node: MoveNode) => void;
 }) {
+  const { index: sourceIndex } = useReviewSource();
   switch (item.kind) {
     case 'heading': {
       const tag = HEADING_TAGS[Math.min(5, Math.max(0, item.level - 1))];
@@ -2452,15 +2687,17 @@ function ReviewItemView({
       );
     }
     case 'prose': {
+      const coverage = paragraphCoverage(item.text, item.evidence, sourceIndex);
       return (
-        <article>
-          {item.text_format === 'markdown' ? (
-            <ReactMarkdown rehypePlugins={[rehypeSanitize]}>
-              {item.text}
-            </ReactMarkdown>
-          ) : (
-            <p className="whitespace-pre-wrap text-stone-800">{item.text}</p>
-          )}
+        <article data-source-item-id={item.id}>
+          <div className="text-stone-800">
+            <ReviewSourceText
+              text={item.text}
+              textFormat={item.text_format}
+              coverage={coverage}
+            />
+          </div>
+          <CoverageSummary coverage={coverage} />
           <span className="mt-1 flex flex-wrap items-center gap-2">
             {item.anchor !== null ? (
               <button
@@ -2476,16 +2713,25 @@ function ReviewItemView({
               onSelectPage={onSelectPage}
             />
             {editable ? (
-              <EditTextButton
-                onClick={() =>
-                  onEditText(
-                    item.id,
-                    null,
-                    item.text,
-                    item.text_format ?? 'plain',
-                  )
-                }
-              />
+              <>
+                <button
+                  type="button"
+                  onClick={() => onResolveUnresolved(item, 'line')}
+                  className="rounded border border-emerald-500 bg-white px-2 py-0.5 text-xs"
+                >
+                  转为棋步
+                </button>
+                <EditTextButton
+                  onClick={() =>
+                    onEditText(
+                      item.id,
+                      null,
+                      item.text,
+                      item.text_format ?? 'plain',
+                    )
+                  }
+                />
+              </>
             ) : null}
           </span>
         </article>
@@ -2641,6 +2887,26 @@ function MoveSequenceView({
     }
     return compactReviewBlocks(readingBlocks);
   }, [item]);
+  const { index: sourceIndex, onlyPending } = useReviewSource();
+  const displayBlocks = useMemo(
+    () =>
+      groupReviewAnnotations(
+        blocks.filter(
+          (block) =>
+            block.kind !== 'annotation' ||
+            !onlyPending ||
+            !sourceIndex ||
+            needsSourceReview(
+              paragraphCoverage(
+                block.annotation.text,
+                block.annotation.evidence,
+                sourceIndex,
+              ),
+            ),
+        ),
+      ),
+    [blocks, onlyPending, sourceIndex],
+  );
   const [contextMenu, setContextMenu] = useState<ReviewContextMenuState | null>(
     null,
   );
@@ -2757,7 +3023,53 @@ function MoveSequenceView({
         ) : null}
       </header>
       <div>
-        {blocks.map((block) => {
+        {displayBlocks.map((block) => {
+          if (block.kind === 'annotation_group') {
+            const coverage = combineCoverage(
+              block.blocks.map((part) =>
+                paragraphCoverage(
+                  part.annotation.text,
+                  part.annotation.evidence,
+                  sourceIndex,
+                ),
+              ),
+            );
+            return (
+              <details
+                key={block.key}
+                open={needsSourceReview(coverage) || undefined}
+                className="border-b border-stone-100 px-2 py-1"
+              >
+                <summary className="cursor-pointer text-sm text-stone-600">
+                  讲解 · {block.blocks.length} 段
+                  <span className="ml-2">
+                    <CoverageSummary coverage={coverage} />
+                  </span>
+                  <span className="ml-2 text-stone-500">
+                    {block.blocks[0].annotation.text.slice(0, 65)}
+                  </span>
+                </summary>
+                <div className="mt-1">
+                  {block.blocks.map((part) => (
+                    <SequenceAnnotationView
+                      key={part.key}
+                      annotation={part.annotation}
+                      variationDepth={part.variationDepth}
+                      variationPresentation={part.variationPresentation}
+                      onSelectAnchor={() => {
+                        if (isAnnotatedMoveSequence(item)) {
+                          onSelectAnnotation(item, part.annotation);
+                        }
+                      }}
+                      onContextMenu={(event) =>
+                        openAnnotationContextMenu(event, part.annotation)
+                      }
+                    />
+                  ))}
+                </div>
+              </details>
+            );
+          }
           if (block.kind === 'mainline_row') {
             return (
               <MainlineMoveRow
@@ -2828,14 +3140,34 @@ function SequenceAnnotationView({
   onSelectAnchor: () => void;
   onContextMenu: (event: ReactMouseEvent) => void;
 }) {
+  const { index: sourceIndex } = useReviewSource();
+  const coverage = paragraphCoverage(
+    annotation.text,
+    annotation.evidence,
+    sourceIndex,
+  );
   const visualDepth = Math.min(5, variationDepth);
-  const content =
-    annotation.text_format === 'markdown' ? (
-      <ReactMarkdown rehypePlugins={[rehypeSanitize]}>
-        {annotation.text}
-      </ReactMarkdown>
+  if (/^[\d\s.()[\]…,:;!?–-]+$/.test(annotation.text.trim())) return null;
+  const content = (
+    <ReviewSourceText
+      text={annotation.text}
+      textFormat={annotation.text_format}
+      coverage={coverage}
+    />
+  );
+  const compactContent =
+    annotation.text.length > 110 ? (
+      <details
+        className="min-w-0"
+        open={needsSourceReview(coverage) || undefined}
+      >
+        <summary className="cursor-pointer truncate text-stone-500">
+          {annotation.text.slice(0, 95)}…
+        </summary>
+        <div className="mt-1">{content}</div>
+      </details>
     ) : (
-      <span className="whitespace-pre-wrap">{annotation.text}</span>
+      content
     );
   return (
     <div
@@ -2868,14 +3200,24 @@ function SequenceAnnotationView({
             tabIndex={0}
             onClick={onSelectAnchor}
             onKeyDown={(event) => {
-              if (event.key === 'Enter' || event.key === ' ') onSelectAnchor();
+              if (
+                event.target === event.currentTarget &&
+                (event.key === 'Enter' || event.key === ' ')
+              ) {
+                event.preventDefault();
+                onSelectAnchor();
+              }
             }}
             className="block min-w-0 flex-1 text-left italic hover:text-stone-950"
           >
-            {content}
+            <CoverageSummary coverage={coverage} />
+            {compactContent}
           </div>
         ) : (
-          <div className="min-w-0 flex-1 italic">{content}</div>
+          <div className="min-w-0 flex-1 italic">
+            <CoverageSummary coverage={coverage} />
+            {compactContent}
+          </div>
         )}
         {variationPresentation === 'parenthetical' ? (
           <span aria-hidden="true">)</span>
@@ -3109,6 +3451,9 @@ function MoveCell({
   onExtendMoveSelection: (sequence: MoveSequenceItem, node: MoveNode) => void;
   fullWidth?: boolean;
 }) {
+  const { focused } = useReviewSource();
+  const sourceLinked =
+    focused?.sequenceId === sequence.id && focused.nodeId === node.id;
   const isNavigable =
     node.validation_status === 'valid' && node.fen_after !== null;
   const validationClass = moveValidationClass(node.validation_status);
@@ -3123,6 +3468,7 @@ function MoveCell({
       data-review-sequence-id={sequence.id}
       data-review-node-id={node.id}
       data-validation-status={node.validation_status}
+      data-source-linked={sourceLinked || undefined}
       data-publication-selected={selected || undefined}
       onClick={() => {
         if (!publishing) onSelectNode(sequence, node);
@@ -3135,7 +3481,7 @@ function MoveCell({
       }}
       onMouseEnter={() => onExtendMoveSelection(sequence, node)}
       onContextMenu={(event) => onContextMenu(event, node)}
-      className={`${fullWidth ? 'flex h-full w-full' : 'inline-flex'} min-w-0 select-none items-center rounded-sm px-1.5 py-0.5 text-left text-sm leading-5 hover:bg-emerald-100 ${selected ? 'bg-emerald-200 ring-1 ring-inset ring-emerald-700' : validationClass}`}
+      className={`${fullWidth ? 'flex h-full w-full' : 'inline-flex'} min-w-0 select-none items-center rounded-sm px-1.5 py-0.5 text-left text-sm leading-5 hover:bg-emerald-100 ${selected ? 'bg-emerald-200 ring-1 ring-inset ring-emerald-700' : validationClass} ${sourceLinked ? 'bg-sky-100 ring-2 ring-sky-600' : ''}`}
     >
       {content}
     </button>

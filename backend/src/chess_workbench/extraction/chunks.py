@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
@@ -694,10 +695,12 @@ async def generate_relation_chunks(
         apply_relations,
         build_relation_patch_request,
         build_relation_request,
+        canonicalize_continuation_games,
         compile_relations,
         formal_score_note_issues,
         localize_invalid_relation_subtrees,
         parse_relation_response,
+        reconcile_continuation_seed,
         recover_completed_relation_prefix,
         source_tokens,
         style_continuity_issues,
@@ -733,6 +736,18 @@ async def generate_relation_chunks(
                 parsed = parse_relation_response(response.content)
             except ValueError:
                 parsed = None
+        if parsed is not None and continuation_anchors:
+            source_request = json.loads(request.messages[1].content)
+            parsed = reconcile_continuation_seed(
+                parsed,
+                tokens,
+                continuation_anchors,
+                predecessor_tokens=source_request.get("predecessor_move_tokens"),
+                predecessor_spans=source_request.get("predecessor_source_spans"),
+            )
+            parsed = canonicalize_continuation_games(
+                [*[response for response, _ in parsed_windows], parsed]
+            )[-1]
         if parsed is None:
             state.problems.extend(
                 _problem_for_refs(context, owned, token_index, [], len(state.problems))
@@ -816,13 +831,23 @@ async def generate_relation_chunks(
                     )
                 for accepted_patch in patch_options:
                     try:
-                        revised = apply_relation_patches(parsed_responses, accepted_patch)
+                        revised = apply_relation_patches(
+                            parsed_responses,
+                            accepted_patch,
+                            [owned for _, owned in parsed_windows],
+                        )
                     except (ValueError, ValidationError):
                         continue
                     trial = RelationState(external_anchors=trusted_anchors)
                     for parsed, (_, owned_set) in zip(revised, parsed_windows, strict=True):
                         apply_relations(context, parsed, tokens, owned_set, trial)
                     trial_package = compile_relations(context, trial)
+                    # Compare reviewable candidates. One local illegal plan may
+                    # become an issue while a repaired entry restores an entire
+                    # otherwise blocked, source-cited score group.
+                    trial_package = localize_invalid_relation_subtrees(
+                        context, trial, trial_package
+                    )
                     old_invalid = sum(
                         node.validation_status != "valid"
                         for item in package.items

@@ -10,7 +10,7 @@ import { SWRConfig, mutate } from 'swr';
 import { describe, expect, it, vi } from 'vitest';
 
 import { PdfReviewPage } from './PdfReviewPage';
-import type { PdfReviewDocument } from '../logic/api/types';
+import type { PdfReviewDocument, PdfSourceEvidence } from '../logic/api/types';
 import type { AnnotatedMoveSequenceItem } from './reviewMoveLayout';
 
 const RUN_ID = '11111111-1111-4111-8111-111111111111';
@@ -987,8 +987,12 @@ describe('Stage 8D review page (8D-3A)', () => {
         input: reviewUrl(RUN_ID),
         method: undefined,
       },
+      {
+        input: `/api/pdf-extractions/${RUN_ID}/source`,
+        method: undefined,
+      },
     ]);
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
   });
 
   it('opens a review session and sends the Lichess-style promote command', async () => {
@@ -1994,6 +1998,187 @@ describe('Stage 8D review page (8D-3A)', () => {
     expect(
       screen.getByRole('menuitem', { name: '来源：第 6 页' }),
     ).toBeTruthy();
+  });
+
+  it('links recorded prose moves, flags a separate occurrence and filters only commentary', async () => {
+    const document = baseDocument();
+    const sequence = document.package.items!.find(
+      (item) => item.kind === 'move_sequence',
+    )! as MoveSequenceItem;
+    const rows = [
+      {
+        id: 'known',
+        text: '1 e4 is active.',
+        hash: 'a'.repeat(64),
+        raw: 'e4',
+        roles: [],
+      },
+      {
+        id: 'missing',
+        text: 'Again 1 e4 is considered.',
+        hash: 'b'.repeat(64),
+        raw: 'e4',
+        roles: [],
+      },
+      {
+        id: 'plan',
+        text: 'The plan is h7-h6.',
+        hash: 'c'.repeat(64),
+        raw: 'h7-h6',
+        roles: ['plan'] as const,
+      },
+    ];
+    const precise = (
+      row: (typeof rows)[number],
+      start: number,
+      end: number,
+    ): EvidenceRef[] => [
+      {
+        page: 5,
+        bbox: null,
+        fragment_sha256: row.hash,
+        start_offset: start,
+        end_offset: end,
+      },
+    ];
+    sequence.nodes = [baseNodes()[0]];
+    sequence.nodes[0].evidence = precise(rows[0], 2, 4);
+    document.package.items = [
+      sequence,
+      ...rows.map((row): ReviewItem => ({
+        kind: 'prose',
+        id: row.id,
+        text: row.text,
+        text_format: 'plain',
+        anchor: null,
+        confidence: null,
+        evidence: precise(row, 0, row.text.length),
+      })),
+    ];
+    const source: PdfSourceEvidence = {
+      run_id: RUN_ID,
+      first_page: 5,
+      last_page: 6,
+      evidence_status: 'ready',
+      error_code: null,
+      pages: [
+        {
+          physical_page: 5,
+          fragments: rows.map((row) => ({
+            order: rows.indexOf(row),
+            text: row.text,
+            origin: 'embedded_text',
+            bbox: {},
+            fragment_sha256: row.hash,
+            roles: [...row.roles],
+            move_mentions: [
+              {
+                start: row.text.indexOf(row.raw),
+                end: row.text.indexOf(row.raw) + row.raw.length,
+                kind: 'candidate',
+              },
+            ],
+          })),
+        },
+      ],
+    };
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL) =>
+        json(String(input).endsWith('/source') ? source : document),
+      ),
+    );
+    renderPage();
+    const link = await screen.findByRole('button', {
+      name: 'e4，已入谱，定位棋步',
+    });
+    expect(screen.getAllByText('已入谱 1 招').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('计划 1（未入谱）').length).toBeGreaterThan(0);
+    expect(
+      screen.getByLabelText('e4，待核对：当前棋谱没有唯一对应节点'),
+    ).toBeTruthy();
+    fireEvent.click(link);
+    await waitFor(() =>
+      expect(
+        screen
+          .getByRole('button', { name: 'e4' })
+          .getAttribute('data-source-linked'),
+      ).toBe('true'),
+    );
+    expect(
+      screen
+        .getByTestId('board-pdf-review-board')
+        .getAttribute('data-position'),
+    ).toBe(FEN_AFTER_E4);
+    fireEvent.click(
+      screen.getByRole('checkbox', { name: '只看待核对段落（1）' }),
+    );
+    expect(
+      window.document.querySelector('[data-source-item-id=known]'),
+    ).toBeNull();
+    expect(
+      window.document.querySelector('[data-source-item-id=plan]'),
+    ).toBeNull();
+    expect(
+      screen.getByLabelText('e4，待核对：当前棋谱没有唯一对应节点'),
+    ).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'e4' })).toBeTruthy();
+  });
+
+  it('groups source commentary and lets a prose score become a move', async () => {
+    const document = annotatedDocument();
+    for (const [index, text] of [
+      '1...c5?',
+      'A first explanation.',
+      'A second explanation.',
+    ].entries()) {
+      document.package.items?.push({
+        id: `source-${index}`,
+        kind: 'prose',
+        text_format: 'plain',
+        text,
+        anchor: null,
+        evidence: evidence(5),
+        confidence: null,
+      });
+    }
+    const fetchMock = vi.fn((...args: [RequestInfo | URL, RequestInit?]) => {
+      const [input] = args;
+      if (String(input).endsWith('/review/session')) {
+        return json({ replayed: false, session: reviewSession() }, 201);
+      }
+      if (String(input).endsWith('/commands')) {
+        return json({ session: reviewSession(2), document });
+      }
+      return json(document);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderPage();
+    fireEvent.click(
+      await screen.findByRole('button', { name: '开始编辑审核' }),
+    );
+    await screen.findByText('审核中 · 版本 1');
+    fireEvent.click(screen.getByText(/第 5 页讲解 · 3 段/));
+    fireEvent.click(screen.getAllByRole('button', { name: '转为棋步' })[0]);
+    fireEvent.click(screen.getByRole('button', { name: 'e4' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('预览线路：c5?')).toBeTruthy();
+    fireEvent.click(within(dialog).getByRole('button', { name: '保存修订' }));
+    await waitFor(() =>
+      expect(
+        fetchMock.mock.calls.some(([url]) => String(url).endsWith('/commands')),
+      ).toBe(true),
+    );
+    const call = fetchMock.mock.calls.find(([url]) =>
+      String(url).endsWith('/commands'),
+    )!;
+    expect(JSON.parse(String(call[1]?.body)).command.operation).toMatchObject({
+      kind: 'resolve_unresolved',
+      item_id: 'source-0',
+      as_kind: 'line',
+      anchor_node_id: 'n1',
+      moves: ['c7c5'],
+    });
   });
 
   it('scopes wide screens to independent scroll panes with accessible labels', async () => {

@@ -985,6 +985,7 @@ def _active_provider(
     thinking_enabled: bool = False,
     json_output_enabled: bool = True,
     recovery: bool = False,
+    reasoning_effort_override: Literal["low", "high", "max"] | None = None,
     invalid_response_recorder: DeepSeekInvalidResponseRecorder | None = None,
 ) -> StructuredGenerationProvider:
     if provider is not None:
@@ -1019,7 +1020,7 @@ def _active_provider(
         timeout_seconds=settings.ccef_provider_timeout_seconds,
         max_output_tokens_limit=settings.ccef_max_output_tokens,
         thinking_enabled=thinking_enabled,
-        reasoning_effort=effort,
+        reasoning_effort=reasoning_effort_override or effort,
         json_output_enabled=json_output_enabled,
         invalid_response_recorder=invalid_response_recorder,
     )

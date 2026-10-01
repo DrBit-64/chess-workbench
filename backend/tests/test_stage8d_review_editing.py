@@ -908,3 +908,35 @@ async def test_recovery_preview_confirms_exact_candidate_and_undoes(
         session_id, PdfReviewCommandRequest(expected_version=2, command={"kind": "undo"})
     )
     assert undone.document.package == baseline
+
+
+def test_source_prose_can_become_a_move_while_retaining_other_words() -> None:
+    from chess_workbench.extraction.contracts import EvidenceRef, ProseItem
+
+    package = _package()
+    package.items.append(
+        ProseItem(
+            kind="prose",
+            id="source-score",
+            text="3...Nc6 is a developing move.",
+            evidence=[EvidenceRef(page=2)],
+        )
+    )
+    result = apply_review_edit(
+        package,
+        PdfReviewResolveUnresolved(
+            kind="resolve_unresolved",
+            item_id="source-score",
+            as_kind="line",
+            text="is a developing move.",
+            sequence_id="seq1",
+            anchor_node_id="n3",
+            moves=["b8c6"],
+        ),
+    )
+    sequence = next(item for item in result.package.items if item.kind == "move_sequence")
+    assert any(node.uci_candidate == "b8c6" and node.parent_id == "n3" for node in sequence.nodes)
+    assert any(
+        item.kind == "prose" and item.text == "is a developing move."
+        for item in result.package.items
+    )

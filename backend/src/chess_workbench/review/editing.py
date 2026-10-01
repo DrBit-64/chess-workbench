@@ -750,12 +750,14 @@ def _resolve_unresolved(
     package: ReviewPackage, operation: PdfReviewResolveUnresolved
 ) -> dict[str, JsonValue]:
     index = next((i for i, item in enumerate(package.items) if item.id == operation.item_id), None)
-    if index is None or not isinstance(package.items[index], UnresolvedItem):
-        raise ValueError("review unresolved item was not found")
-    item = cast(UnresolvedItem, package.items[index])
+    if index is None or not isinstance(package.items[index], (UnresolvedItem, ProseItem)):
+        raise ValueError("review source text item was not found")
+    item = cast(UnresolvedItem | ProseItem, package.items[index])
     if operation.following and (operation.as_kind != "line" or operation.sequence_id is None):
         raise ValueError("following fragments require a line in an existing score")
-    text = operation.text or item.raw_text or item.details
+    text = operation.text or (
+        item.text if isinstance(item, ProseItem) else item.raw_text or item.details
+    )
     recovered: list[str] = []
     if operation.as_kind == "prose":
         if not text:
@@ -889,6 +891,13 @@ def _resolve_unresolved(
                 for diagnostic in package.diagnostics
                 if diagnostic.item_id not in recovered
             ]
+    if isinstance(item, ProseItem) and operation.as_kind == "line" and operation.text:
+        remainder_id = f"{item.id}-remainder"
+        while any(existing.id == remainder_id for existing in package.items):
+            remainder_id += "-x"
+        package.items.insert(
+            index, item.model_copy(update={"id": remainder_id, "text": operation.text.strip()})
+        )
     package.diagnostics = [
         diagnostic for diagnostic in package.diagnostics if diagnostic.item_id != item.id
     ]

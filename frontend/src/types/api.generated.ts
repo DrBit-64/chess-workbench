@@ -12514,6 +12514,18 @@ export interface operations {
                                 };
                                 /** Fragment Sha256 */
                                 fragment_sha256: string;
+                                /** Move Mentions */
+                                move_mentions?: {
+                                    /** End */
+                                    end: number;
+                                    /**
+                                     * Kind
+                                     * @enum {string}
+                                     */
+                                    kind: "candidate" | "square";
+                                    /** Start */
+                                    start: number;
+                                }[];
                                 /** Order */
                                 order: number;
                                 /** Origin */

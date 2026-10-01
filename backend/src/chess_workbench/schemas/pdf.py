@@ -129,6 +129,12 @@ class PdfSourceStyleRunRead(StrictContract):
     color: str | None = None
 
 
+class PdfSourceMoveMentionRead(StrictContract):
+    start: Annotated[int, Field(ge=0)]
+    end: Annotated[int, Field(gt=0)]
+    kind: Literal["candidate", "square"]
+
+
 class PdfSourceFragmentRead(StrictContract):
     order: Annotated[int, Field(ge=0)]
     text: str
@@ -136,6 +142,7 @@ class PdfSourceFragmentRead(StrictContract):
     bbox: dict[str, float]
     fragment_sha256: Sha256
     style_runs: list[PdfSourceStyleRunRead] = Field(default_factory=list)
+    move_mentions: list[PdfSourceMoveMentionRead] = Field(default_factory=list)
     roles: list[Literal["mainline", "variation", "example", "plan", "annotation", "mention"]] = (
         Field(default_factory=list)
     )

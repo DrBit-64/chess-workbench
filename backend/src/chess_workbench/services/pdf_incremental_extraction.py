@@ -753,12 +753,27 @@ async def process_pdf_incremental_extraction_job(
                     settings, inputs.source
                 ),
             )
+            patch_provider = (
+                _active_provider(
+                    settings,
+                    provider,
+                    thinking_enabled=True,
+                    json_output_enabled=False,
+                    reasoning_effort_override="low",
+                    invalid_response_recorder=_deepseek_invalid_response_recorder(
+                        settings, inputs.source
+                    ),
+                )
+                if relation_increment
+                else None
+            )
             await process_source_candidate(
                 database,
                 settings,
                 inputs.source,
                 evidence,
                 active_provider,
+                patch_provider=patch_provider,
                 external_anchors=anchors,
                 external_base_sha256=inputs.base_sha256,
                 predecessor_context=predecessor_context,
