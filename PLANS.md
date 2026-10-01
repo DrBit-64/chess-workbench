@@ -1,5 +1,21 @@
 # Current plan
 
+## 当前决定：PDF 进入日常维护，重排后续产品方向（2026-10-01）
+
+操作者明确确认当前提取流程已满足需求。单章/增量提取、审核修复、课程发布和正文着法标记
+按个人日常使用收口；以后以真实使用问题定向修复。六书 R5/P6 全量质量评估继续暂缓，
+8D-7 的多来源合并/正式阶段收尾也不自动视为完成。
+
+完整原定后续范围与新建议见 [开发计划顶部](docs/development-plan.md#2026-10-01pdf-使用验收后的路线图重排)：
+Stage 4E 全局图；5A–5D 个人开局库/训练/FSRS；6E 引擎与表库判题接线；7A–7D Lichess
+实战闭环；8D-7 多来源冲突合并和资料生成练习；9A–9C 视频导入；10A–10D 部署/备份；
+11A–11B 多人协作，以及资料管理/课程整理的未接通入口。
+
+**下一步先由操作者重排需求，尚未选定新的代码任务。** 建议把基础本地备份独立提前，
+功能上优先完成“现有课程→选择要掌握的线路→练习→复习”的小闭环；是否优先实战复盘、
+视频或多来源整理，依据变化后的实际需要决定。已有课程编辑器和引擎基础不列为待重写。
+下方提取迭代记录为历史，凡“等待使用确认/下一步继续扩大 PDF 测试”的文字由本决定覆盖。
+
 ## 当前交付：正文着法的来源对应标记（2026-10-01）
 
 操作者已确认增量提取看上去正常；本轮解决大段讲解中无法分辨着法是否已入谱的问题。
@@ -288,8 +304,9 @@ ADR 0016 is authoritative. Stage 5/6E and Stage 7 remain deferred.
   pristine open/version-1 review shell with no user decision or publication: restore the predecessor
   aggregate, archive the removed run, preserve all raw/CAS evidence, and allow a fresh replacement
   append for the same adjacent page range. Any substantive review history remains protected.
-- [ ] Add review-based modification with its authoritative backend boundary; editing actions that
-  are not implemented remain disabled.
+- [x] Add review-based modification with its authoritative backend boundary (delivered in 8D-5
+  and subsequent source-first review fixes). The Sources menu shortcut remains disabled; that
+  shortcut and whole-document archival are separate optional UI follow-ups.
 - [x] Let a reviewer resolve unmatched or ambiguous prose/annotation position anchors by explicitly
   preserving the text in reading order while detaching only the unusable FEN association. Record
   the choice as a normal immutable review revision before approval.

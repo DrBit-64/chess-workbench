@@ -7,7 +7,7 @@ theory, interactive training, game review, and AI-assisted content import. The i
 model is a position graph (not a PGN tree), and the system enforces a strict four-layer
 separation: Source → Knowledge → Repertoire → Exercise.
 
-Current phase: Stage 8D, with the v8 source-first PDF extraction pipeline implemented under ADR 0022; R5/P6 quality acceptance remains open.
+Current phase: the operator accepted the v8/v9 PDF extraction and review workflow for personal use on 2026-10-01. PDF work is now maintenance driven by concrete user failures; R5/P6 broad evaluation and remaining Stage 8D-7 scope are deferred pending roadmap reprioritization.
 See `PLANS.md` for current tasks and `docs/development-plan.md` for the full roadmap.
 
 ## Repository layout
@@ -103,7 +103,7 @@ engineering. These rules govern new work and the interpretation of historical ta
   unresolved concern. Report product outcomes and remaining limitations, not test count as progress.
 
 PDF redesign scope and delivery slices: [ADR 0022](docs/decisions/0022-source-first-pdf-extraction-redesign.md) and [R1–R5 status](docs/agent/pdf-extraction-r1-r5-implementation-2026-09-27.md).
-The active P6 evaluation is 18 windows across six English books; the original 21-window v0 inventory remains historical. This is a bounded closeout exercise, not a per-edit or CI prerequisite.
+The deferred P6 evaluation inventory is 18 windows across six English books; the original 21-window v0 inventory remains historical. Do not resume it automatically or make it a prerequisite for new product work after the operator’s personal-use acceptance.
 
 ## Commands
 

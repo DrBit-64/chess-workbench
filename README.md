@@ -1,6 +1,6 @@
 # ChessWorkbench
 
-ChessWorkbench 是一个单用户、本地优先的国际象棋知识整理、交互训练、实战复盘与 AI 辅助导入平台。当前仓库已完成 Stage 4 编辑器 MVP，并实现 Stage 6A–6D 本地引擎工作台；范围、状态和机器验收标准以[开发计划](docs/development-plan.md)为准。
+ChessWorkbench 是一个单用户、本地优先的国际象棋知识整理、交互训练、实战复盘与 AI 辅助导入平台。当前具备课程编辑/学习、本地引擎分析和 PDF 独立/增量提取、人工审核及课程发布；PDF 流程已于 2026-10-01 获操作者个人使用确认。个人开局库、训练和 Lichess 实战闭环仍待开发，下一阶段正在重新排优先级；完整范围和状态以[开发计划](docs/development-plan.md)为准。
 
 ## 已完成的工程底座
 
