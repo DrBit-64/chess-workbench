@@ -55,7 +55,7 @@ class PdfExtractionCreate(StrictContract):
     first_page: Annotated[int, Field(ge=1)]
     last_page: Annotated[int, Field(ge=1)]
     profile: dict[str, JsonValue] = Field(default_factory=dict)
-    pipeline: Literal["legacy", "source_first"] = "source_first"
+    pipeline: Literal["source_first"] = "source_first"
 
     _validate_profile = field_validator("profile")(_finite_profile)
 

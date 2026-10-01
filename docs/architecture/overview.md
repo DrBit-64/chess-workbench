@@ -1,5 +1,7 @@
 # 架构概览
 
+当前 PDF 提取与历史兼容边界见 [PDF 提取现状](pdf-extraction-current.md)。本文中关于未来阶段的文字保留为历史规划。
+
 ## 当前决策
 
 ChessWorkbench 从一个本地优先的模块化单体开始：React SPA 通过 HTTP 读取和写入 Sanic API，正式数据只保存在 SQL 数据库中。第一阶段使用 SQLite；领域稳定后增加 MySQL/MariaDB 兼容测试。
@@ -13,8 +15,7 @@ React SPA
             └─ repositories / SQLAlchemy → SQLite（后续 MySQL）
 ```
 
-Stage 6 已加入 SQL 后台任务、Stockfish、Syzygy 和 WebSocket 失效通知；OCR 与 AI 会在
-后续阶段进入系统，但不会改变以下边界：
+SQL 后台任务、Stockfish、Syzygy、PDF/OCR/AI 提取和审核已进入当前系统。以下边界继续适用：
 
 1. 后端 SQL 数据是正式事实源；
 2. 前端 `chess.js` 只能做交互预检，持久化棋步由 `python-chess` 验证；

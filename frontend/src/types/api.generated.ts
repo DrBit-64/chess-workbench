@@ -10037,7 +10037,7 @@ export interface operations {
                      * @default source_first
                      * @enum {string}
                      */
-                    pipeline?: "legacy" | "source_first";
+                    pipeline?: "source_first";
                     /** Profile */
                     profile?: {
                         [key: string]: unknown;

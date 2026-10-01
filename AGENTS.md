@@ -16,7 +16,7 @@ See `PLANS.md` for current tasks and `docs/development-plan.md` for the full roa
 chess-workbench/
 ├── AGENTS.md              ← this file
 ├── PLANS.md               ← current task plan
-├── Makefile               ← single entry-point for all verification
+├── Makefile               ← local development and verification commands
 ├── README.md
 ├── frontend/
 │   └── src/
@@ -57,17 +57,16 @@ chess-workbench/
 ### After editing
 
 1. During an iterative single-task change, run only the smallest formatter, type checker and test
-   selection that directly exercises the changed behavior. Do not run full suites, cumulative
-   acceptance, smoke or unrelated checks merely for reassurance. Run the broader Stage/full gates
-   only when the user requests them, the change genuinely crosses those boundaries, or the user is
-   closing a Stage for acceptance.
+   selection that directly exercises the changed behavior. Do not run full suites, smoke or
+   unrelated checks merely for reassurance. Run broader local checks only when they address a
+   concrete risk or the user requests them.
 2. This is primarily a personal, local-first site. During feature discovery, prove the concrete
    user-visible or artifact-level outcome before expanding defensive coverage. Test volume must be
    proportional to the implementation and actual risk: prefer one focused regression for a bug or
    critical persisted-data invariant, and do not build exhaustive combinatorial or cross-dialect
    proof suites merely to anticipate hypothetical future failures. It is acceptable to fix
-   non-critical product bugs as they are encountered. Coverage and broad acceptance gates remain
-   end-of-Stage/CI checks, not an iterative development ritual.
+   non-critical product bugs as they are encountered. Broader coverage checks are
+   optional full checks, not an iterative development ritual.
 3. Review `git diff --stat` for unintended changes.
 4. Update `docs/agent/HANDOFF.md`.
 5. Summarize: files changed, tests run and results, failures, assumptions, remaining risks.
@@ -94,8 +93,8 @@ engineering. These rules govern new work and the interpretation of historical ta
   invariant changes. Documentation and reversible low-impact presentation changes do not require
   new tests. Avoid tests that mirror the implementation and combinatorial defensive matrices.
 - Use three verification levels: local checks while editing; owning tests when a slice is complete;
-  broader Stage/coverage/CI gates at closeout or when genuinely affected. Existing coverage floors
-  remain unchanged. Do not run global coverage, cumulative acceptance or unrelated database-dialect
+  broader local coverage checks at closeout or when genuinely affected. Existing coverage floors
+  remain unchanged. Do not run global coverage or unrelated database-dialect
   suites after every small change, and do not weaken gates to hide failures.
 - Human comparison of a real source PDF and extracted output is valid semantic acceptance evidence.
   It complements focused automated regressions; it is not restricted to visual styling or wording.
@@ -103,7 +102,7 @@ engineering. These rules govern new work and the interpretation of historical ta
   unresolved concern. Report product outcomes and remaining limitations, not test count as progress.
 
 PDF redesign scope and delivery slices: [ADR 0022](docs/decisions/0022-source-first-pdf-extraction-redesign.md) and [R1–R5 status](docs/agent/pdf-extraction-r1-r5-implementation-2026-09-27.md).
-The deferred P6 evaluation inventory is 18 windows across six English books; the original 21-window v0 inventory remains historical. Do not resume it automatically or make it a prerequisite for new product work after the operator’s personal-use acceptance.
+The deferred P6 evaluation inventory is historical. Do not resume it automatically.
 
 ## Commands
 
@@ -127,17 +126,6 @@ All commands run from the repository root.
 | Check contract drift | `make check-contracts` |
 | Full verify (all checks) | `make verify` |
 | Smoke test (start services) | `make smoke` |
-| Stage 2A acceptance | `make acceptance-stage-2a` |
-| Stage 2B acceptance | `make acceptance-stage-2b` |
-| Stage 2C acceptance | `make acceptance-stage-2c` |
-| Stage 2D acceptance | `make acceptance-stage-2d` |
-| Full Stage 2 acceptance | `make acceptance-stage-2` |
-| Stage 3A acceptance | `make acceptance-stage-3a` |
-| Stage 3B acceptance | `make acceptance-stage-3b` |
-| Stage 3C acceptance | `make acceptance-stage-3c` |
-| Stage 3D acceptance | `make acceptance-stage-3d` |
-| Full Stage 3 acceptance | `make acceptance-stage-3` |
-| CI entry point | `make acceptance` |
 
 ## Engineering rules
 
@@ -166,69 +154,9 @@ All commands run from the repository root.
 18. UTC for all persisted timestamps. UUIDs for all entity IDs.
 19. Expected-version optimistic concurrency with `stale_version` error code.
 20. Minimum coverage: 80% line / 75% branch; key domain modules at least 90%.
-21. No real Lichess/OpenAI calls in PR tests; use fixtures only.
+21. Automated tests use fixtures; do not make real paid or external API calls.
 22. Tests must be deterministic; random/property tests must print and fix their seed.
 
-## Agent division
+## Agent work
 
-Current operator override: all subsequent repository work is performed by Codex because the
-DeepSeek API price has increased. Do not invoke DeepCode, `$delegate-deepcode`, or prepare manual
-DeepCode packets unless the operator explicitly reverses this rule.
-
-- **Deep Code (DeepSeek-V4-Flash)**: executes small, bounded work after the behavior and acceptance
-  oracle are already defined — local code search/explanation, documentation, formatting, type
-  fixes, focused unit tests, configuration edits, clear single-module bugs and already-designed
-  small features. Default to thinking enabled with `high` effort; non-thinking is only for purely
-  mechanical work, and `max` is not the routine default.
-- **Codex (OpenAI)**: architecture design, cross-module changes, complex debugging,
-  formal verification, security review, final diff review, task planning and scoping,
-  ambiguous requirements.
-
-V4-Flash task packets must name the relevant files, invariants that must remain unchanged, exact
-acceptance commands and the permitted edit boundary. Prefer one independently verifiable behavior
-per packet. Tests and generated contracts may accompany their owning module, but a task that needs
-changes across more than two unrelated implementation modules belongs to Codex or must first be
-split by Codex.
-
-### Deep Code escalation rules
-
-Deep Code must stop implementation, leave the worktree recoverable and report evidence instead of
-guessing when any of the following is true:
-
-- the task requires changing public architecture, an unspecified API/interface, database schema,
-  protocol, authentication, authorization or a concurrency/state-machine invariant;
-- more than two unrelated implementation modules need modification;
-- existing tests contradict the requested behavior or the requested oracle appears incorrect;
-- the root cause remains unclear after inspecting the named code and reproducing the failure;
-- implementation requires an assumption not stated in the task, a new dependency or a material
-  expansion of scope;
-- the same attempted fix fails twice, or the focused gate exposes a new failure outside the task
-  boundary.
-
-On escalation, report the reproduction, inspected files, best current hypothesis, attempted changes
-and exact blocking decision. Do not weaken tests, coverage floors, type checks, lint rules or
-warnings-as-errors to obtain a pass.
-
-Low-risk Flash work with a complete deterministic gate may continue without an individual Codex
-review when the current task packet explicitly permits it. Batch related medium-risk changes for
-one Codex review. High-risk work goes directly to Codex. These review tiers do not grant permission
-to commit: no agent commits unless the user explicitly authorizes it.
-
-Work is coordinated through Git, `PLANS.md`, `docs/agent/HANDOFF.md`, and ADRs —
-not by sharing raw chat history.
-
-### Codex-led automatic delegation
-
-The user talks only to Codex. When a V4-Flash packet satisfies the rules above, Codex may invoke
-the project skill `$delegate-deepcode`; the skill starts DeepCode in a private PTY, waits for its
-completion notification and returns control to the same Codex turn. The user does not manually
-relay prompts or completion reports.
-
-Codex must inspect the actual diff and independently run the focused oracle before accepting a
-delegated result. A DeepCode completion message is evidence, never approval. Ambiguous failures,
-architecture or interface decisions, cross-module fixes and a repeated failed correction remain
-Codex work. Neither agent may auto-commit.
-
-Runtime transport under `.agent-sync/` is disposable and gitignored. Durable task state remains in
-`PLANS.md`, `docs/agent/HANDOFF.md` and Git. A delegated DeepCode process (identified by
-`DEEP_AGENT_RUN_ID`) must never invoke `$delegate-deepcode` recursively.
+All subsequent repository work is performed by Codex unless the operator explicitly changes this decision. Historical DeepCode delegation instructions are archived. Coordinate through Git, the short current plan, the short handoff and ADRs. No agent commits without explicit authorization.

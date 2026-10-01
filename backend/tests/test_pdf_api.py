@@ -27,9 +27,6 @@ from typing import Any, cast
 from uuid import NAMESPACE_URL, UUID, uuid5
 
 import pytest
-from pypdf import PdfWriter
-from sqlalchemy import func, select
-
 from chess_workbench.api.app import ChessWorkbenchApp, create_app
 from chess_workbench.config import Settings
 from chess_workbench.services.pdf_persistence import PdfPersistenceService
@@ -47,6 +44,8 @@ from chess_workbench.store.models import (
     SourceFile,
     SourceVersion,
 )
+from pypdf import PdfWriter
+from sqlalchemy import func, select
 
 PDF_EXTRACTION_PIPELINE_VERSION = "pdf-extraction:v2"
 PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION = "pdf-extraction:v4"
@@ -380,7 +379,7 @@ async def test_asset_get_and_list_agree_with_persistence_order(tmp_path: Path) -
     ("pipeline", "version"),
     [
         (None, PDF_RELATION_EXTRACTION_PIPELINE_VERSION),
-        ("legacy", PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION),
+        ("source_first", PDF_RELATION_EXTRACTION_PIPELINE_VERSION),
     ],
 )
 async def test_extraction_enqueue_returns_202_with_exact_job(
@@ -973,68 +972,35 @@ async def _commit_completed_run(
             )
 
 
-async def test_http_post_creates_v4_distinct_from_existing_v2_and_replays_stable(
-    tmp_path: Path,
-) -> None:
-    app = build_app(tmp_path, "v4-cutover")
+async def test_http_post_rejects_legacy_generation_and_preserves_old_run(tmp_path: Path) -> None:
+    app = build_app(tmp_path, "retired-legacy")
     await create_schema(app)
     client = cast(Any, app.asgi_client)
     try:
         asset = (await upload_pdf(client, make_pdf(3))).json["asset"]
-        profile = {"engine": "ocr-v1"}
-        v2_run = await _enqueue_direct(
+        old_run = await _enqueue_direct(
             app,
             asset["id"],
             first_page=1,
             last_page=2,
-            profile=profile,
+            profile=None,
             idempotency_key=None,
             pipeline_version=PDF_EXTRACTION_PIPELINE_VERSION,
         )
-        created = (
+        rejected = (
             await client.post(
                 "/api/pdf-extractions",
                 json={
                     "pdf_asset_id": asset["id"],
                     "first_page": 1,
                     "last_page": 2,
-                    "profile": profile,
                     "pipeline": "legacy",
                 },
             )
         )[1]
-        assert created.status == 202
-        assert created.headers["idempotency-replayed"] == "false"
-        v3_run = UUID(created.json["extraction"]["id"])
-        assert v3_run != v2_run
-        assert (
-            created.json["extraction"]["pipeline_version"]
-            == PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION
-        )
-        # The POST binds the exact deterministic v7 fingerprint identity.
-        assert v3_run == expected_run_id(
-            asset["content_sha256"],
-            first_page=1,
-            last_page=2,
-            profile=profile,
-            pipeline_version=PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION,
-        )
-        # Replay of the v4 identity stays stable and never returns the v2 run.
-        replay = (
-            await client.post(
-                "/api/pdf-extractions",
-                json={
-                    "pdf_asset_id": asset["id"],
-                    "first_page": 1,
-                    "last_page": 2,
-                    "profile": profile,
-                    "pipeline": "legacy",
-                },
-            )
-        )[1]
-        assert replay.status == 200
-        assert UUID(replay.json["extraction"]["id"]) == v3_run
-        assert await count_rows(app, ExtractionRun) == 2
+        assert rejected.status == 422
+        assert (await client.get(f"/api/pdf-extractions/{old_run}"))[1].status == 200
+        assert await count_rows(app, ExtractionRun) == 1
     finally:
         await app.ctx.database.close()
 

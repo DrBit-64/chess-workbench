@@ -1446,7 +1446,9 @@ async def test_v4_job_selects_separate_configured_recovery_provider(
     monkeypatch.setattr(
         extraction_service, "load_ccef_provider_api_key", lambda settings: SecretStr("test-key")
     )
-    monkeypatch.setattr(extraction_service, "recover_ccef_response", inspect_recovery)
+    from chess_workbench.services import pdf_legacy_extraction
+
+    monkeypatch.setattr(pdf_legacy_extraction, "recover_ccef_response", inspect_recovery)
     try:
         with pytest.raises(EngineError, match="Provider routing verified"):
             await process_pdf_extraction_job(

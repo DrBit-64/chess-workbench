@@ -1,7 +1,7 @@
 # ADR 0022：面向个人使用的 PDF 提取重构与分步开发设计
 
 - 日期：2026-09-24
-- 状态：Implementing；P0–P5 与 R1–R4 已实施，v8 已接网站/API 默认 `source_first`；R5/P6 来源质量验收未完成。
+- 状态：v8/v9 独立及增量流程已于 2026-10-01 获个人使用验收；R5/P6 广泛质量验收暂缓。当前运行边界见 [PDF 架构现状](../architecture/pdf-extraction-current.md)。
 - 最新证据与调整：[两次网页实跑及后续方案](../agent/pdf-v6-latest-runs-and-next-design-2026-09-25.md)。
 - 下一轮执行顺序与验收：[R1–R5 计划](../agent/pdf-extraction-r1-r5-plan-2026-09-25.md)；当前执行证据见 [实施记录](../agent/pdf-extraction-r1-r5-implementation-2026-09-27.md)。
 - 实施进度：[阶段记录](../agent/pdf-extraction-progress-2026-09-24.md)。

@@ -9,7 +9,7 @@ from chess_workbench.extraction.incremental import (
     ContinuationAnchor,
     ContinuationSequence,
 )
-from chess_workbench.services.pdf_incremental_extraction import _bind_continuations
+from chess_workbench.services.pdf_legacy_incremental import _bind_continuations
 
 
 def test_independent_diagram_started_score_does_not_require_continuation_binding() -> None:
@@ -123,9 +123,7 @@ def test_v8_relation_append_continues_old_game_and_starts_new_game_mid_page() ->
             origin="embedded_text",
             engine_name="test",
             engine_version="1",
-            fragment_sha256=source_fragment_sha256(
-                number, box, text, "embedded_text", "test", "1"
-            ),
+            fragment_sha256=source_fragment_sha256(number, box, text, "embedded_text", "test", "1"),
         )
         return CcefPromptContext(
             package_id=UUID(f"00000000-0000-0000-0000-{number:012d}"),
@@ -173,16 +171,18 @@ def test_v8_relation_append_continues_old_game_and_starts_new_game_mid_page() ->
     base = compile_relations(predecessor, state)
     base_hash = hashlib.sha256(
         json.dumps(
-            base.model_dump(mode="json"),
-            ensure_ascii=False, sort_keys=True, separators=(",", ":")
-        ).encode() + b"\n"
+            base.model_dump(mode="json"), ensure_ascii=False, sort_keys=True, separators=(",", ":")
+        ).encode()
+        + b"\n"
     ).hexdigest()
     continuation = build_ccef_continuation_context(
-        base, base_normalized_ccef_sha256=base_hash,
+        base,
+        base_normalized_ccef_sha256=base_hash,
         next_page_range=PageRange(start_page=2, end_page=2),
     )
     anchor = next(
-        anchor for anchor in continuation.sequences[0].anchors
+        anchor
+        for anchor in continuation.sequences[0].anchors
         if anchor.path_tail and anchor.path_tail[-1].san == "Nf3"
     )
     current = page_context(2, "2...Nc6 3 Bb5 a6 1 d4 d5")
@@ -191,35 +191,62 @@ def test_v8_relation_append_continues_old_game_and_starts_new_game_mid_page() ->
     response = {
         "schema_version": "chess-source-relations/1",
         "games": [
-            {"id": "old_tail", "kind": "continuation", "source_refs": ["s2_0"],
-             "seed_ref": anchor.id},
+            {
+                "id": "old_tail",
+                "kind": "continuation",
+                "source_refs": ["s2_0"],
+                "seed_ref": anchor.id,
+            },
             {"id": "new", "kind": "game", "source_refs": ["s2_0"], "seed_ref": "start"},
         ],
         "segments": [
-            {"id": "tail", "game_ref": "old_tail", "line_ref": "main",
-             "entry": {"kind": "root"}, "move_refs": refs[:3],
-             "evidence_refs": ["s2_0"]},
-            {"id": "next", "game_ref": "new", "line_ref": "main",
-             "entry": {"kind": "root"}, "move_refs": refs[3:],
-             "evidence_refs": ["s2_0"]},
+            {
+                "id": "tail",
+                "game_ref": "old_tail",
+                "line_ref": "main",
+                "entry": {"kind": "root"},
+                "move_refs": refs[:3],
+                "evidence_refs": ["s2_0"],
+            },
+            {
+                "id": "next",
+                "game_ref": "new",
+                "line_ref": "main",
+                "entry": {"kind": "root"},
+                "move_refs": refs[3:],
+                "evidence_refs": ["s2_0"],
+            },
         ],
-        "notes": [], "unresolved": [],
+        "notes": [],
+        "unresolved": [],
     }
-    provider = ScriptedStructuredGenerationProvider([
-        StructuredGenerationResponse(
-            content=json.dumps(response), provider="scripted", model="test", finish_reason="stop"
-        )
-    ])
+    provider = ScriptedStructuredGenerationProvider(
+        [
+            StructuredGenerationResponse(
+                content=json.dumps(response),
+                provider="scripted",
+                model="test",
+                finish_reason="stop",
+            )
+        ]
+    )
     catalog = _continuation_catalog(base, continuation)
-    generated = asyncio.run(generate_relation_chunks(
-        current, provider, predecessor_context=predecessor,
-        continuation_anchors=catalog, base_sha256=base_hash,
-    ))
+    generated = asyncio.run(
+        generate_relation_chunks(
+            current,
+            provider,
+            predecessor_context=predecessor,
+            continuation_anchors=catalog,
+            base_sha256=base_hash,
+        )
+    )
     prompt = json.loads(provider.calls[0].messages[-1].content)
     assert prompt["predecessor_source_spans"][0]["text"] == "1 e4 e5 2 Nf3"
     assert anchor.id in {entry["id"] for entry in prompt["prior_structure"]["continuation_anchors"]}
     aggregate = compose_incremental_ccef(
-        base, generated.package, context=continuation,
+        base,
+        generated.package,
+        context=continuation,
         document_id=UUID("00000000-0000-0000-0000-000000000010"),
     )
     games = [item for item in aggregate.items if item.kind == "move_sequence"]

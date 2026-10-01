@@ -198,11 +198,7 @@ async def create_pdf_extraction(request: Request) -> HTTPResponse:
             last_page=body.last_page,
             idempotency_key=request.headers.get("idempotency-key"),
             profile=body.profile,
-            pipeline_version=(
-                PDF_RELATION_EXTRACTION_PIPELINE_VERSION
-                if body.pipeline == "source_first"
-                else PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION
-            ),
+            pipeline_version=PDF_RELATION_EXTRACTION_PIPELINE_VERSION,
         )
         view = await service.get_extraction(outcome.run.id)
         if view is None:

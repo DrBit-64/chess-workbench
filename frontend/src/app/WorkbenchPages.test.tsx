@@ -552,7 +552,7 @@ describe('Stage 4A workbench pages', () => {
     expect(await screen.findByText('排队中')).toBeTruthy();
   });
 
-  it('repeats a legacy extraction with the currently selected source-first pipeline', async () => {
+  it('repeats a historical extraction using the current source-first pipeline', async () => {
     const failedRun = extractionRun({
       pipeline_version: 'pdf-extraction:v4',
       candidate: null,
@@ -575,7 +575,7 @@ describe('Stage 4A workbench pages', () => {
       await screen.findByRole('button', { name: '管理提取结果' }),
     );
     fireEvent.click(screen.getByRole('button', { name: '操作' }));
-    fireEvent.click(await screen.findByText('重新提取同一页段（来源优先）'));
+    fireEvent.click(await screen.findByText('重新提取同一页段'));
     await waitFor(() =>
       expect(fetchMock).toHaveBeenCalledWith(
         '/api/pdf-extractions',

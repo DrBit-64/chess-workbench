@@ -17170,7 +17170,6 @@
                   "pipeline": {
                     "default": "source_first",
                     "enum": [
-                      "legacy",
                       "source_first"
                     ],
                     "title": "Pipeline",

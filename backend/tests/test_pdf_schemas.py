@@ -217,6 +217,10 @@ def test_extraction_create_exact_fields_and_default_profile() -> None:
         == "source_first"
     )
     assert create.pdf_asset_id == UUID(PDF_ASSET_ID)
+    with pytest.raises(ValidationError):
+        PdfExtractionCreate.model_validate(
+            {"pdf_asset_id": PDF_ASSET_ID, "first_page": 1, "last_page": 1, "pipeline": "legacy"}
+        )
 
 
 def test_extraction_create_page_and_profile_validators() -> None:
