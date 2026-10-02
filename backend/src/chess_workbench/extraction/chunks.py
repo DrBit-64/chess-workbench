@@ -673,6 +673,68 @@ def _relation_owned_windows(context: CcefPromptContext) -> list[list[str]]:
     return groups
 
 
+def _theory_owned_windows(context: CcefPromptContext, outline: Any) -> list[list[str]]:
+    """Keep complete numbered branches together when output limits permit."""
+    from .draft import is_board_glyph_line
+    from .relations import source_tokens
+
+    token_counts: dict[str, int] = {}
+    for token in source_tokens(context):
+        token_counts[token.span_ref] = token_counts.get(token.span_ref, 0) + 1
+    body_refs = {
+        section.source_ref for section in outline.sections if section.source_ref is not None
+    }
+    preview_refs = {ref for section in outline.sections for ref in section.preview_refs}
+    units: list[list[tuple[str, int, int]]] = []
+    current_unit: list[tuple[str, int, int]] = []
+    for page in context.pages:
+        for entry in page.fragments:
+            if entry.fragment.origin != "diagram" and is_board_glyph_line(entry.fragment.text):
+                continue
+            ref = f"s{page.physical_page}_{entry.order}"
+            if ref in preview_refs:
+                continue
+            if ref in body_refs and current_unit:
+                units.append(current_unit)
+                current_unit = []
+            current_unit.append((ref, page.physical_page, len(entry.fragment.text)))
+    if current_unit:
+        units.append(current_unit)
+
+    groups: list[list[str]] = []
+    current: list[str] = []
+    chars = 0
+    tokens = 0
+    first_page = 0
+    for unit in units:
+        unit_chars = sum(size for _, _, size in unit)
+        unit_tokens = sum(token_counts.get(ref, 0) for ref, _, _ in unit)
+        unit_last = unit[-1][1]
+        if current and (
+            chars + unit_chars > 35_000 or tokens + unit_tokens > 100 or unit_last - first_page >= 4
+        ):
+            groups.append(current)
+            current, chars, tokens, first_page = [], 0, 0, 0
+        # A single long section still needs bounded output. Prefer a page
+        # boundary; only an unusually dense page requires a fragment split.
+        for ref, physical_page, size in unit:
+            if current and (
+                chars + size > 35_000
+                or tokens + token_counts.get(ref, 0) > 100
+                or physical_page - first_page >= 4
+            ):
+                groups.append(current)
+                current, chars, tokens, first_page = [], 0, 0, 0
+            if not current:
+                first_page = physical_page
+            current.append(ref)
+            chars += size
+            tokens += token_counts.get(ref, 0)
+    if current:
+        groups.append(current)
+    return groups
+
+
 async def generate_relation_chunks(
     context: CcefPromptContext,
     provider: StructuredGenerationProvider,
@@ -688,9 +750,11 @@ async def generate_relation_chunks(
 ) -> ChunkedGenerationResult:
     """Read the entire selected range; emit explicit relations in bounded groups."""
     from .relations import (
+        QuoteRef,
         RelationPatchResponse,
         RelationState,
         _problem_for_refs,
+        _resolve_quote,
         apply_relation_patches,
         apply_relations,
         build_relation_patch_request,
@@ -706,7 +770,20 @@ async def generate_relation_chunks(
         style_continuity_issues,
         validation_relation_issues,
     )
+    from .theory_outline import build_theory_outline
 
+    if predecessor_context is not None and predecessor_context.last_page + 1 == context.first_page:
+        outline_context = CcefPromptContext.model_validate(
+            context.model_copy(
+                update={
+                    "first_page": predecessor_context.first_page,
+                    "pages": [*predecessor_context.pages, *context.pages],
+                }
+            ).model_dump(mode="python")
+        )
+    else:
+        outline_context = context
+    theory_outline = build_theory_outline(outline_context)
     tokens = source_tokens(context)
     token_index = {token.id: token for token in tokens}
     trusted_anchors = {
@@ -717,7 +794,12 @@ async def generate_relation_chunks(
     state = RelationState(external_anchors=trusted_anchors)
     chunks: list[SemanticChunkResult] = []
     parsed_windows: list[tuple[Any, set[str]]] = []
-    for owned in _relation_owned_windows(context):
+    owned_windows = (
+        _theory_owned_windows(context, theory_outline)
+        if theory_outline is not None
+        else _relation_owned_windows(context)
+    )
+    for owned in owned_windows:
         request = build_relation_request(
             context,
             tokens,
@@ -725,6 +807,7 @@ async def generate_relation_chunks(
             owned,
             predecessor_context=predecessor_context,
             continuation_anchors=continuation_anchors,
+            theory_outline=theory_outline,
         )
         response = await provider.generate(request)
         if on_response is not None:
@@ -769,7 +852,16 @@ async def generate_relation_chunks(
     parsed_responses = [parsed for parsed, _ in parsed_windows]
     style_issues = style_continuity_issues(context, package, state, parsed_responses, tokens)
     issues = style_issues + validation_relation_issues(package, state, parsed_responses, tokens)
-    issues.extend(formal_score_note_issues(context, tokens, parsed_responses))
+    preview_refs = (
+        {ref for section in theory_outline.sections for ref in section.preview_refs}
+        if theory_outline is not None
+        else set()
+    )
+    issues.extend(
+        formal_score_note_issues(
+            context, tokens, parsed_responses, ignored_source_refs=preview_refs
+        )
+    )
     if issues and len(parsed_windows) == len(chunks):
         # One bounded clarification is triggered only by an observed invalid
         # relation root; ordinary successful segments cost no extra call.
@@ -829,7 +921,51 @@ async def generate_relation_chunks(
                         )
                         for change in patch.patches
                     )
+                fragment_hashes = {
+                    (page.physical_page, entry.order): entry.fragment.fragment_sha256
+                    for page in context.pages
+                    for entry in page.fragments
+                }
+                valid_citations = {
+                    (ref.fragment_sha256, ref.start_offset, ref.end_offset)
+                    for item in package.items
+                    if isinstance(item, MoveSequenceItemV1_1)
+                    for node in item.nodes
+                    if node.validation_status == "valid"
+                    for ref in node.evidence
+                }
+                playable_segments = {
+                    segment.id
+                    for response in parsed_responses
+                    for segment in response.segments
+                    if any(
+                        (
+                            fragment_hashes.get((token.page, token.order)),
+                            token.start,
+                            token.end,
+                        )
+                        in valid_citations
+                        for move_ref in segment.move_refs
+                        if (
+                            token := (
+                                token_index.get(move_ref)
+                                if isinstance(move_ref, str)
+                                else _resolve_quote(move_ref, context)
+                                if isinstance(move_ref, QuoteRef)
+                                else None
+                            )
+                        )
+                        is not None
+                    )
+                }
                 for accepted_patch in patch_options:
+                    # A clarification cannot make a legal, source-cited score
+                    # disappear merely because prose classification reduces issues.
+                    if any(
+                        demotion.segment_id in playable_segments
+                        for demotion in accepted_patch.demotions
+                    ):
+                        continue
                     try:
                         revised = apply_relation_patches(
                             parsed_responses,

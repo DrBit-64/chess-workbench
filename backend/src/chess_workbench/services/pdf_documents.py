@@ -335,6 +335,24 @@ class PdfDocumentService:
             in {PDF_SOURCE_EXTRACTION_PIPELINE_VERSION, PDF_RELATION_EXTRACTION_PIPELINE_VERSION}
             else PDF_INCREMENTAL_EXTRACTION_PIPELINE_VERSION
         )
+        review_session = await self.session.scalar(
+            select(PdfReviewSession).where(
+                PdfReviewSession.baseline_document_revision_id == revision.id,
+                PdfReviewSession.status.in_(("open", "approved")),
+            )
+        )
+        reviewed_revision = (
+            await self.session.scalar(
+                select(PdfReviewRevision).where(
+                    PdfReviewRevision.session_id == review_session.id,
+                    PdfReviewRevision.revision_number == review_session.version,
+                )
+            )
+            if review_session is not None and review_session.version > 1
+            else None
+        )
+        if review_session is not None and review_session.version > 1 and reviewed_revision is None:
+            raise ServiceError("ambiguous_context", 409, "Saved PDF review is unavailable")
         logical_fingerprint = _append_fingerprint(
             document=document,
             pipeline_version=pipeline_version,
@@ -343,6 +361,7 @@ class PdfDocumentService:
             first_page=first_page,
             last_page=last_page,
             profile_json=profile_json,
+            reviewed_sha256=reviewed_revision.package_sha256 if reviewed_revision else None,
         )
         effective_key_hash = explicit_key_hash or logical_fingerprint
         replay = await self._append_by_effective_key(effective_key_hash)
@@ -398,6 +417,11 @@ class PdfDocumentService:
             "predecessor_revision_id": str(revision.id),
             "predecessor_normalized_ccef_sha256": revision.normalized_ccef_sha256,
         }
+        if reviewed_revision is not None:
+            assert review_session is not None
+            payload["review_revision_id"] = str(reviewed_revision.id)
+            payload["review_package_sha256"] = reviewed_revision.package_sha256
+            payload["review_session_version"] = review_session.version
         try:
             job = await self.jobs.enqueue(
                 kind=PDF_INCREMENTAL_EXTRACTION_JOB_KIND,
@@ -469,6 +493,7 @@ class PdfDocumentService:
         run_id: UUID,
         segment_normalized_ccef_sha256: str,
         aggregate: ExtractionPackageV1_1,
+        review_revision_id: UUID | None = None,
     ) -> PdfDocumentAppendCommit:
         """Advance one document head from an already verified append package.
 
@@ -571,6 +596,26 @@ class PdfDocumentService:
             or source_range.end_page != run.last_page
         ):
             raise ServiceError("validation_error", 422, "composed PDF document range is invalid")
+
+        saved_review = await self.session.scalar(
+            select(PdfReviewSession).where(
+                PdfReviewSession.baseline_document_revision_id == predecessor.id,
+                PdfReviewSession.status.in_(("open", "approved")),
+            )
+        )
+        if saved_review is not None and saved_review.version > 1:
+            latest_review = await self.session.scalar(
+                select(PdfReviewRevision.id).where(
+                    PdfReviewRevision.session_id == saved_review.id,
+                    PdfReviewRevision.revision_number == saved_review.version,
+                )
+            )
+            if latest_review != review_revision_id:
+                raise ServiceError(
+                    "stale_version", 409, "PDF review changed after the append started"
+                )
+        elif review_revision_id is not None:
+            raise ServiceError("stale_version", 409, "PDF review changed after the append started")
 
         aggregate_bytes = _canonical_ccef_bytes(aggregate)
         aggregate_blob = await asyncio.to_thread(
@@ -960,6 +1005,7 @@ def _append_fingerprint(
     last_page: int,
     profile_json: str,
     pipeline_version: str = PDF_INCREMENTAL_EXTRACTION_PIPELINE_VERSION,
+    reviewed_sha256: str | None = None,
 ) -> str:
     identity = {
         "asset_content_sha256": asset.content_sha256,
@@ -979,6 +1025,8 @@ def _append_fingerprint(
         "predecessor_revision_id": str(revision.id),
         "profile": json.loads(profile_json),
     }
+    if reviewed_sha256 is not None:
+        identity["review_package_sha256"] = reviewed_sha256
     canonical = json.dumps(
         identity,
         ensure_ascii=False,

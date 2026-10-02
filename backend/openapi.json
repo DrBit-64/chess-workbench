@@ -23734,6 +23734,37 @@
                                   "title": "Bbox",
                                   "type": "object"
                                 },
+                                "declared_move_spans": {
+                                  "items": {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "end": {
+                                        "exclusiveMinimum": 0,
+                                        "title": "End",
+                                        "type": "integer"
+                                      },
+                                      "start": {
+                                        "minimum": 0,
+                                        "title": "Start",
+                                        "type": "integer"
+                                      },
+                                      "token_id": {
+                                        "default": null,
+                                        "nullable": true,
+                                        "title": "Token Id",
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "start",
+                                      "end"
+                                    ],
+                                    "title": "PdfDeclaredMoveSpanRead",
+                                    "type": "object"
+                                  },
+                                  "title": "Declared Move Spans",
+                                  "type": "array"
+                                },
                                 "fragment_sha256": {
                                   "pattern": "^[0-9a-f]{64}$",
                                   "title": "Fragment Sha256",
@@ -23910,6 +23941,55 @@
                       "format": "uuid",
                       "title": "Run Id",
                       "type": "string"
+                    },
+                    "theory_sections": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "body_source_ref": {
+                            "nullable": true,
+                            "title": "Body Source Ref",
+                            "type": "string"
+                          },
+                          "label": {
+                            "title": "Label",
+                            "type": "string"
+                          },
+                          "opening_text": {
+                            "title": "Opening Text",
+                            "type": "string"
+                          },
+                          "page": {
+                            "minimum": 1,
+                            "title": "Page",
+                            "type": "integer"
+                          },
+                          "parent_label": {
+                            "nullable": true,
+                            "title": "Parent Label",
+                            "type": "string"
+                          },
+                          "preview_source_refs": {
+                            "items": {
+                              "type": "string"
+                            },
+                            "title": "Preview Source Refs",
+                            "type": "array"
+                          }
+                        },
+                        "required": [
+                          "label",
+                          "parent_label",
+                          "body_source_ref",
+                          "preview_source_refs",
+                          "page",
+                          "opening_text"
+                        ],
+                        "title": "PdfTheorySectionRead",
+                        "type": "object"
+                      },
+                      "title": "Theory Sections",
+                      "type": "array"
                     }
                   },
                   "required": [
@@ -25299,6 +25379,34 @@
                               {
                                 "additionalProperties": false,
                                 "properties": {
+                                  "item_ids": {
+                                    "items": {
+                                      "pattern": "^[A-Za-z][A-Za-z0-9._:-]{0,127}$",
+                                      "type": "string"
+                                    },
+                                    "maxItems": 4096,
+                                    "minItems": 1,
+                                    "title": "Item Ids",
+                                    "type": "array"
+                                  },
+                                  "kind": {
+                                    "enum": [
+                                      "exclude_items"
+                                    ],
+                                    "title": "Kind",
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "item_ids"
+                                ],
+                                "title": "PdfReviewExcludeItems",
+                                "type": "object"
+                              },
+                              {
+                                "additionalProperties": false,
+                                "properties": {
                                   "issue_id": {
                                     "pattern": "^[A-Za-z][A-Za-z0-9._:-]{0,511}$",
                                     "title": "Issue Id",
@@ -25510,6 +25618,45 @@
                                   "node_id"
                                 ],
                                 "title": "PdfReviewReattachVariation",
+                                "type": "object"
+                              },
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "kind": {
+                                    "enum": [
+                                      "rehome_source_group"
+                                    ],
+                                    "title": "Kind",
+                                    "type": "string"
+                                  },
+                                  "source_fragment_sha256s": {
+                                    "items": {
+                                      "pattern": "^[0-9a-f]{64}$",
+                                      "type": "string"
+                                    },
+                                    "minItems": 1,
+                                    "title": "Source Fragment Sha256S",
+                                    "type": "array"
+                                  },
+                                  "source_sequence_id": {
+                                    "pattern": "^[A-Za-z][A-Za-z0-9._:-]{0,127}$",
+                                    "title": "Source Sequence Id",
+                                    "type": "string"
+                                  },
+                                  "target_sequence_id": {
+                                    "pattern": "^[A-Za-z][A-Za-z0-9._:-]{0,127}$",
+                                    "title": "Target Sequence Id",
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "source_sequence_id",
+                                  "target_sequence_id",
+                                  "source_fragment_sha256s"
+                                ],
+                                "title": "PdfReviewRehomeSourceGroup",
                                 "type": "object"
                               }
                             ],
@@ -34439,47 +34586,91 @@
                     "type": "integer"
                   },
                   "operation": {
-                    "additionalProperties": false,
-                    "properties": {
-                      "kind": {
-                        "enum": [
-                          "reattach_variation"
+                    "anyOf": [
+                      {
+                        "additionalProperties": false,
+                        "properties": {
+                          "kind": {
+                            "enum": [
+                              "reattach_variation"
+                            ],
+                            "title": "Kind",
+                            "type": "string"
+                          },
+                          "node_id": {
+                            "pattern": "^[A-Za-z][A-Za-z0-9._:-]{0,127}$",
+                            "title": "Node Id",
+                            "type": "string"
+                          },
+                          "parent_node_id": {
+                            "default": null,
+                            "nullable": true,
+                            "pattern": "^[A-Za-z][A-Za-z0-9._:-]{0,127}$",
+                            "title": "Parent Node Id",
+                            "type": "string"
+                          },
+                          "sequence_id": {
+                            "pattern": "^[A-Za-z][A-Za-z0-9._:-]{0,127}$",
+                            "title": "Sequence Id",
+                            "type": "string"
+                          },
+                          "target_sequence_id": {
+                            "default": null,
+                            "nullable": true,
+                            "pattern": "^[A-Za-z][A-Za-z0-9._:-]{0,127}$",
+                            "title": "Target Sequence Id",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "sequence_id",
+                          "node_id"
                         ],
-                        "title": "Kind",
-                        "type": "string"
+                        "title": "PdfReviewReattachVariation",
+                        "type": "object"
                       },
-                      "node_id": {
-                        "pattern": "^[A-Za-z][A-Za-z0-9._:-]{0,127}$",
-                        "title": "Node Id",
-                        "type": "string"
-                      },
-                      "parent_node_id": {
-                        "default": null,
-                        "nullable": true,
-                        "pattern": "^[A-Za-z][A-Za-z0-9._:-]{0,127}$",
-                        "title": "Parent Node Id",
-                        "type": "string"
-                      },
-                      "sequence_id": {
-                        "pattern": "^[A-Za-z][A-Za-z0-9._:-]{0,127}$",
-                        "title": "Sequence Id",
-                        "type": "string"
-                      },
-                      "target_sequence_id": {
-                        "default": null,
-                        "nullable": true,
-                        "pattern": "^[A-Za-z][A-Za-z0-9._:-]{0,127}$",
-                        "title": "Target Sequence Id",
-                        "type": "string"
+                      {
+                        "additionalProperties": false,
+                        "properties": {
+                          "kind": {
+                            "enum": [
+                              "rehome_source_group"
+                            ],
+                            "title": "Kind",
+                            "type": "string"
+                          },
+                          "source_fragment_sha256s": {
+                            "items": {
+                              "pattern": "^[0-9a-f]{64}$",
+                              "type": "string"
+                            },
+                            "minItems": 1,
+                            "title": "Source Fragment Sha256S",
+                            "type": "array"
+                          },
+                          "source_sequence_id": {
+                            "pattern": "^[A-Za-z][A-Za-z0-9._:-]{0,127}$",
+                            "title": "Source Sequence Id",
+                            "type": "string"
+                          },
+                          "target_sequence_id": {
+                            "pattern": "^[A-Za-z][A-Za-z0-9._:-]{0,127}$",
+                            "title": "Target Sequence Id",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "source_sequence_id",
+                          "target_sequence_id",
+                          "source_fragment_sha256s"
+                        ],
+                        "title": "PdfReviewRehomeSourceGroup",
+                        "type": "object"
                       }
-                    },
-                    "required": [
-                      "kind",
-                      "sequence_id",
-                      "node_id"
                     ],
-                    "title": "PdfReviewReattachVariation",
-                    "type": "object"
+                    "title": "Operation"
                   }
                 },
                 "required": [
@@ -34508,6 +34699,18 @@
                     "issue_count": {
                       "minimum": 0,
                       "title": "Issue Count",
+                      "type": "integer"
+                    },
+                    "moved_node_count": {
+                      "default": 0,
+                      "minimum": 0,
+                      "title": "Moved Node Count",
+                      "type": "integer"
+                    },
+                    "moved_root_count": {
+                      "default": 0,
+                      "minimum": 0,
+                      "title": "Moved Root Count",
                       "type": "integer"
                     }
                   },

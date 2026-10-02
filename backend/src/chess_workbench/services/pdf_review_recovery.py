@@ -33,9 +33,11 @@ from chess_workbench.services.source_storage import read_verified_content_addres
 from chess_workbench.store.models import (
     ExtractionArtifact,
     ExtractionRun,
+    Job,
     PdfAsset,
     PdfExtractionDocumentRevision,
     PdfExtractionDocumentSegment,
+    PdfReviewRevision,
 )
 
 
@@ -166,17 +168,32 @@ async def load_document_review_relations(
     predecessor = await session.get(PdfExtractionDocumentRevision, revision.predecessor_revision_id)
     if segment is None or predecessor is None:
         raise ServiceError("validation_error", 422, "document predecessor is unavailable")
+    run = await session.get(ExtractionRun, segment.extraction_run_id)
+    job = await session.get(Job, run.job_id) if run is not None else None
+    review_revision_id = job.payload.get("review_revision_id") if job is not None else None
+    review_revision = (
+        await session.get(PdfReviewRevision, UUID(review_revision_id))
+        if isinstance(review_revision_id, str)
+        else None
+    )
+    if review_revision_id is not None and review_revision is None:
+        raise ServiceError("validation_error", 422, "saved review predecessor is unavailable")
+    base_path = review_revision.relative_path if review_revision else predecessor.relative_path
+    base_sha = (
+        review_revision.package_sha256 if review_revision else predecessor.normalized_ccef_sha256
+    )
+    base_size = review_revision.byte_size if review_revision else predecessor.byte_size
     raw = read_verified_content_addressed_bytes(
         settings.source_storage_root,
-        relative_path=predecessor.relative_path,
-        expected_sha256=predecessor.normalized_ccef_sha256,
-        expected_size=predecessor.byte_size,
+        relative_path=base_path,
+        expected_sha256=base_sha,
+        expected_size=base_size,
         max_bytes=64 * 1024 * 1024,
     )
     base = ExtractionPackageV1_1.model_validate_json(raw)
     continuation = build_ccef_continuation_context(
         base,
-        base_normalized_ccef_sha256=predecessor.normalized_ccef_sha256,
+        base_normalized_ccef_sha256=base_sha,
         next_page_range=PageRange(start_page=segment.first_page, end_page=segment.last_page),
     )
     context, responses, owned = await load_review_relations(

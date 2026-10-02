@@ -23,6 +23,11 @@ export function CoverageSummary({
       aria-label="正文棋步识别统计"
     >
       <span className="text-emerald-800">已入谱 {coverage.recorded} 招</span>
+      {coverage.blocked > 0 && (
+        <span className="font-medium text-red-700">
+          模型已声明但受阻 {coverage.blocked} 招
+        </span>
+      )}
       <span
         className={
           coverage.pending ? 'font-medium text-amber-800' : 'text-stone-500'
@@ -82,9 +87,12 @@ export function ReviewSourceText({
       );
     } else {
       const pending = mention.status === 'pending';
-      const label = pending
-        ? '待核对：当前棋谱没有唯一对应节点'
-        : `模型判为${mention.status === 'plan' ? '计划' : '引用'}，未入谱；可用段落下方“转为棋步”改判`;
+      const blocked = mention.status === 'blocked';
+      const label = blocked
+        ? '模型已声明为棋步，但没有进入合法棋谱；请检查本节入口与后续变化'
+        : pending
+          ? '待核对：当前棋谱没有唯一对应节点'
+          : `模型判为${mention.status === 'plan' ? '计划' : '引用'}，未入谱；可用段落下方“转为棋步”改判`;
       parts.push(
         <span
           key={number}
@@ -92,9 +100,11 @@ export function ReviewSourceText({
           title={label}
           aria-label={`${raw}，${label}`}
           className={
-            pending
-              ? 'rounded-sm bg-amber-100 underline decoration-amber-600 underline-offset-4'
-              : 'underline decoration-stone-400 decoration-dotted underline-offset-4'
+            blocked
+              ? 'rounded-sm bg-red-100 underline decoration-red-600 underline-offset-4'
+              : pending
+                ? 'rounded-sm bg-amber-100 underline decoration-amber-600 underline-offset-4'
+                : 'underline decoration-stone-400 decoration-dotted underline-offset-4'
           }
         >
           {raw}

@@ -65,6 +65,8 @@ from chess_workbench.store.models import (
     PdfExtractionDocumentAppend,
     PdfExtractionDocumentRevision,
     PdfExtractionDocumentSegment,
+    PdfReviewRevision,
+    PdfReviewSession,
     SourceFile,
 )
 
@@ -78,6 +80,7 @@ class _IncrementalInput:
     document_id: UUID
     base_package: ExtractionPackageV1_1
     base_sha256: str
+    review_revision_id: UUID | None
     previous_page_text: tuple[str, ...]
 
 
@@ -146,6 +149,17 @@ async def _load_incremental_input(
         if row is None:
             raise _invalid_payload()
         append, run, job, document, predecessor, asset, source_file = row
+        review_revision = None
+        review_session = None
+        if isinstance(payload.get("review_revision_id"), str):
+            try:
+                review_revision = await session.get(
+                    PdfReviewRevision, UUID(payload["review_revision_id"])
+                )
+            except ValueError:
+                raise _invalid_payload() from None
+            if review_revision is not None:
+                review_session = await session.get(PdfReviewSession, review_revision.session_id)
         terminal_segment = await session.get(
             PdfExtractionDocumentSegment, predecessor.terminal_segment_id
         )
@@ -184,23 +198,44 @@ async def _load_incremental_input(
         or run.last_page != append.last_page
         or terminal_segment is None
         or len(previous_artifacts) > 1
+        or (
+            (review_revision is None) != (payload.get("review_revision_id") is None)
+        )
+        or (
+            review_revision is not None
+            and (
+                review_session is None
+                or review_session.baseline_document_revision_id != predecessor.id
+                or review_revision.package_sha256 != payload.get("review_package_sha256")
+                or review_revision.revision_number != payload.get("review_session_version")
+                or review_session.status not in {"open", "approved"}
+            )
+        )
     ):
         raise _invalid_payload()
 
+    baseline_path = review_revision.relative_path if review_revision else predecessor.relative_path
+    baseline_hash = (
+        review_revision.package_sha256 if review_revision else predecessor.normalized_ccef_sha256
+    )
+    baseline_size = review_revision.byte_size if review_revision else predecessor.byte_size
     try:
         base_bytes = await asyncio.to_thread(
             read_verified_content_addressed_bytes,
             settings.source_storage_root,
-            relative_path=predecessor.relative_path,
-            expected_sha256=predecessor.normalized_ccef_sha256,
-            expected_size=predecessor.byte_size,
+            relative_path=baseline_path,
+            expected_sha256=baseline_hash,
+            expected_size=baseline_size,
             max_bytes=_MAX_CCEF_BYTES,
         )
         base_package = ExtractionPackageV1_1.model_validate_json(base_bytes)
         canonical_base = _json_bytes(base_package.model_dump(mode="json"))
         if (
             canonical_base != base_bytes
-            or hashlib.sha256(canonical_base).hexdigest() != predecessor_hash
+            or hashlib.sha256(canonical_base).hexdigest() != baseline_hash
+            or (review_revision is not None and base_package.package_id != document_id)
+            or base_package.source.page_range is None
+            or base_package.source.page_range.end_page != predecessor.last_page
         ):
             raise ValueError
         if previous_artifacts:
@@ -241,25 +276,55 @@ async def _load_incremental_input(
         source=source,
         document_id=document_id,
         base_package=base_package,
-        base_sha256=predecessor.normalized_ccef_sha256,
+        base_sha256=baseline_hash,
+        review_revision_id=review_revision.id if review_revision else None,
         previous_page_text=previous_page_text,
     )
 
 
+def _active_source_sequence(
+    package: ExtractionPackageV1_1,
+    predecessor_context: CcefPromptContext | None = None,
+) -> MoveSequenceItemV1_1 | None:
+    """Pick the score appearing last in source reading order, even on a shared page."""
+    source_order = {
+        (page.physical_page, entry.fragment.fragment_sha256): entry.order
+        for page in predecessor_context.pages
+        for entry in page.fragments
+    } if predecessor_context is not None else {}
+    ranked: list[tuple[tuple[int, float, float, int], MoveSequenceItemV1_1]] = []
+    for item in package.items:
+        if not isinstance(item, MoveSequenceItemV1_1):
+            continue
+        evidence = [ref for node in item.nodes for ref in node.evidence]
+        if not evidence:
+            continue
+        latest = max(
+            (
+                (
+                    ref.page,
+                    float(source_order.get(
+                        (ref.page, ref.fragment_sha256 or ""),
+                        ref.bbox[1] if ref.bbox is not None else 0.0,
+                    )),
+                    ref.bbox[0] if ref.bbox is not None else 0.0,
+                    ref.start_offset or 0,
+                )
+                for ref in evidence
+            ),
+        )
+        ranked.append((latest, item))
+    return max(ranked, key=lambda value: value[0])[1] if ranked else None
+
+
 def _last_game_start(package: ExtractionPackageV1_1) -> int:
-    """Read the complete most recent score when it fits the input budget."""
-    page_range = package.source.page_range
-    assert page_range is not None
-    page_ranges = [
-        [ref.page for node in item.nodes for ref in node.evidence]
-        for item in package.items
-        if isinstance(item, MoveSequenceItemV1_1)
-    ]
-    nonempty = [pages for pages in page_ranges if pages]
-    if not nonempty:
+    """Read the current source score from its first cited page."""
+    active = _active_source_sequence(package)
+    if active is None:
+        page_range = package.source.page_range
+        assert page_range is not None
         return page_range.end_page
-    last = max(nonempty, key=lambda pages: max(pages))
-    return max(page_range.start_page, min(last))
+    return min(ref.page for node in active.nodes for ref in node.evidence)
 
 
 async def _load_predecessor_context(
@@ -334,26 +399,15 @@ async def _load_predecessor_context(
 def _continuation_catalog(
     package: ExtractionPackageV1_1,
     continuation: CcefContinuationContext,
+    predecessor_context: CcefPromptContext,
 ) -> list[dict[str, Any]]:
-    """Expose the last score and its predecessor, with exact hash-bound anchors."""
+    """Offer only anchors belonging to the last source score."""
     sequences = {item.id: item for item in package.items if isinstance(item, MoveSequenceItemV1_1)}
-    latest_page = max(
-        (
-            ref.page
-            for sequence in continuation.sequences
-            for node in sequences[sequence.sequence_id].nodes
-            for ref in node.evidence
-        ),
-        default=0,
-    )
+    active = _active_source_sequence(package, predecessor_context)
     selected = [
         sequence
         for sequence in continuation.sequences
-        if any(
-            ref.page == latest_page
-            for node in sequences[sequence.sequence_id].nodes
-            for ref in node.evidence
-        )
+        if active is not None and sequence.sequence_id == active.id
     ]
     catalog: list[dict[str, Any]] = []
     for sequence in selected:
@@ -507,7 +561,7 @@ async def process_pdf_incremental_extraction_job(
                 else None
             )
             catalog = (
-                _continuation_catalog(inputs.base_package, continuation)
+                _continuation_catalog(inputs.base_package, continuation, predecessor_context)
                 if predecessor_context is not None
                 else None
             )
@@ -578,6 +632,7 @@ async def process_pdf_incremental_extraction_job(
                     run_id=inputs.source.run_id,
                     segment_normalized_ccef_sha256=segment_hash,
                     aggregate=aggregate,
+                    review_revision_id=inputs.review_revision_id,
                 )
             break
         except OperationalError as error:

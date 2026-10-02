@@ -213,6 +213,13 @@ def _parse_payload(
             "predecessor_revision_id",
             "predecessor_normalized_ccef_sha256",
         }
+    review_keys = {"review_revision_id", "review_package_sha256", "review_session_version"}
+    if (
+        pipeline_version == "pdf-extraction:v9"
+        and type(payload) is dict
+        and review_keys <= set(payload)
+    ):
+        expected_keys = expected_keys | review_keys
     if type(payload) is not dict or set(payload) != expected_keys:
         raise EngineError("invalid_job_payload", "PDF extraction Job payload is invalid")
     if type(payload["schema_version"]) is not int or payload["schema_version"] != 1:

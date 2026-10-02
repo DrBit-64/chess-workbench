@@ -1,0 +1,249 @@
+{
+  "schema": "chess-workbench/independent-pdf-holdout-gold/1",
+  "prepared_before_model_runs": true,
+  "notes": "Transcribed from local book PDF by reading headers, body score and type style; each 73-ply mainline was checked with python-chess. This is a focused semantic reference, not a claim that every printed variation or note is annotated.",
+  "samples": [
+    {
+      "id": "catalan_game_10",
+      "book": "The Catalan – Move By Move",
+      "physical_pages": [
+        52,
+        55
+      ],
+      "game": "Kantor–Rydstrom, Budapest 2016",
+      "mainline_san": [
+        "d4",
+        "Nf6",
+        "c4",
+        "e6",
+        "g3",
+        "d5",
+        "Nf3",
+        "dxc4",
+        "Bg2",
+        "b5",
+        "Ne5",
+        "Nd5",
+        "a4",
+        "c6",
+        "O-O",
+        "Bb7",
+        "b3",
+        "cxb3",
+        "axb5",
+        "cxb5",
+        "Qxb3",
+        "a6",
+        "e4",
+        "Nf6",
+        "d5",
+        "exd5",
+        "exd5",
+        "Bd6",
+        "Nc6",
+        "Qc7",
+        "Re1+",
+        "Kf8",
+        "Ba3",
+        "Nbd7",
+        "Rc1",
+        "Ne8",
+        "Na5",
+        "Nc5",
+        "Qc3",
+        "Rc8",
+        "Bh3",
+        "Rd8",
+        "Nxb7",
+        "Qxb7",
+        "Bxc5",
+        "Qxd5",
+        "Bxd6+",
+        "Qxd6",
+        "Qa3",
+        "h5",
+        "Qxa6",
+        "h4",
+        "Qxd6+",
+        "Nxd6",
+        "Bf1",
+        "Rh5",
+        "Rd1",
+        "Ke7",
+        "Nc3",
+        "Rc5",
+        "Ra7+",
+        "Ke6",
+        "Ne4",
+        "Rc6",
+        "Rxd6+",
+        "Rcxd6",
+        "Nxd6",
+        "Rxd6",
+        "Bxb5",
+        "h3",
+        "Bc4+",
+        "Kf6",
+        "Rxf7+"
+      ],
+      "critical_alternatives": [
+        {
+          "after_ply": 9,
+          "alternative": "a6",
+          "instead_of": "b5"
+        },
+        {
+          "after_ply": 10,
+          "alternative": "a4",
+          "instead_of": "Ne5"
+        },
+        {
+          "after_ply": 11,
+          "alternative": "c6",
+          "instead_of": "Nd5"
+        },
+        {
+          "after_ply": 16,
+          "alternative": "e4",
+          "instead_of": "b3"
+        },
+        {
+          "after_ply": 17,
+          "alternative": "Nd7",
+          "instead_of": "cxb3"
+        },
+        {
+          "after_ply": 25,
+          "alternative": "Bd6",
+          "instead_of": "exd5"
+        }
+      ]
+    },
+    {
+      "id": "makogonov_game_9",
+      "book": "The Makogonov Variation",
+      "physical_pages": [
+        65,
+        70
+      ],
+      "game": "Olsen–Hillarp-Persson, Smuk Skak 2022",
+      "mainline_san": [
+        "d4",
+        "Nf6",
+        "c4",
+        "g6",
+        "Nc3",
+        "Bg7",
+        "e4",
+        "d6",
+        "h3",
+        "e5",
+        "d5",
+        "a5",
+        "Be3",
+        "Na6",
+        "g4",
+        "Nc5",
+        "f3",
+        "Nfd7",
+        "h4",
+        "h5",
+        "g5",
+        "O-O",
+        "Nh3",
+        "c6",
+        "Nf2",
+        "a4",
+        "Qd2",
+        "Qa5",
+        "Rb1",
+        "Ra6",
+        "Be2",
+        "Rb6",
+        "O-O",
+        "f6",
+        "Bd1",
+        "Qb4",
+        "a3",
+        "Qxc4",
+        "Be2",
+        "Qb3",
+        "Rfc1",
+        "fxg5",
+        "Bd1",
+        "g4",
+        "Bxb3",
+        "Nxb3",
+        "Qd1",
+        "Rxf3",
+        "Bxb6",
+        "Nxb6",
+        "dxc6",
+        "bxc6",
+        "Ne2",
+        "Ba6",
+        "Rc3",
+        "d5",
+        "Rxf3",
+        "gxf3",
+        "Nc3",
+        "Nd4",
+        "Qd2",
+        "Kf7",
+        "Nh3",
+        "Nc4",
+        "Ng5+",
+        "Ke7",
+        "Qf2",
+        "Bh6",
+        "exd5",
+        "Bxg5",
+        "hxg5",
+        "cxd5",
+        "Rd1"
+      ],
+      "critical_alternatives": [
+        {
+          "after_ply": 14,
+          "alternative": "Nf3",
+          "instead_of": "g4"
+        },
+        {
+          "after_ply": 15,
+          "alternative": "Nd7",
+          "instead_of": "Nc5"
+        },
+        {
+          "after_ply": 16,
+          "alternative": "Qc2",
+          "instead_of": "f3"
+        },
+        {
+          "after_ply": 19,
+          "alternative": "f5",
+          "instead_of": "h5"
+        },
+        {
+          "after_ply": 35,
+          "alternative": "fxg5",
+          "instead_of": "Qb4"
+        },
+        {
+          "after_ply": 35,
+          "alternative": "Qa6",
+          "instead_of": "Qb4"
+        },
+        {
+          "after_ply": 35,
+          "alternative": "Ra6",
+          "instead_of": "Qb4"
+        },
+        {
+          "after_ply": 38,
+          "alternative": "b4",
+          "instead_of": "Be2"
+        }
+      ]
+    }
+  ]
+}

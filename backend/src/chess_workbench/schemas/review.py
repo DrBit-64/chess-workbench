@@ -284,6 +284,11 @@ class PdfReviewExcludeItem(StrictContract):
     item_id: LocalId
 
 
+class PdfReviewExcludeItems(StrictContract):
+    kind: Literal["exclude_items"]
+    item_ids: list[LocalId] = Field(min_length=1, max_length=4096)
+
+
 class PdfReviewFollowingLine(StrictContract):
     item_id: LocalId
     moves: list[UciMove] = Field(min_length=1, max_length=256)
@@ -317,6 +322,13 @@ class PdfReviewReattachVariation(StrictContract):
     parent_node_id: LocalId | None = None
 
 
+class PdfReviewRehomeSourceGroup(StrictContract):
+    kind: Literal["rehome_source_group"]
+    source_sequence_id: LocalId
+    target_sequence_id: LocalId
+    source_fragment_sha256s: list[Sha256] = Field(min_length=1)
+
+
 class PdfReviewDetachPositionAnchor(StrictContract):
     kind: Literal["detach_position_anchor"]
     issue_id: Annotated[
@@ -333,10 +345,12 @@ PdfReviewEditOperation = Annotated[
     | PdfReviewEditText
     | PdfReviewSetNag
     | PdfReviewExcludeItem
+    | PdfReviewExcludeItems
     | PdfReviewDetachPositionAnchor
     | PdfReviewResolveUnresolved
     | PdfReviewSetInitialPosition
-    | PdfReviewReattachVariation,
+    | PdfReviewReattachVariation
+    | PdfReviewRehomeSourceGroup,
     Field(discriminator="kind"),
 ]
 
@@ -437,12 +451,14 @@ class PdfReviewRecoveryPreviewRead(StrictContract):
 
 class PdfReviewReattachPreviewRequest(StrictContract):
     expected_version: VersionNumber
-    operation: PdfReviewReattachVariation
+    operation: PdfReviewReattachVariation | PdfReviewRehomeSourceGroup
 
 
 class PdfReviewReattachPreviewRead(StrictContract):
     issue_count: Annotated[int, Field(ge=0)]
     blocking_issue_count: Annotated[int, Field(ge=0)]
+    moved_node_count: Annotated[int, Field(ge=0)] = 0
+    moved_root_count: Annotated[int, Field(ge=0)] = 0
 
 
 __all__ = [
@@ -477,6 +493,7 @@ __all__ = [
     "PdfReviewResolveUnresolved",
     "PdfReviewSetInitialPosition",
     "PdfReviewReattachVariation",
+    "PdfReviewRehomeSourceGroup",
     "PdfReviewSessionEnvelope",
     "PdfReviewSessionRead",
 ]

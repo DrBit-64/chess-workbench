@@ -78,6 +78,7 @@ class SemanticEvent(BaseModel):
     id: str = Field(min_length=1, max_length=128)
     kind: Literal["heading", "prose", "move", "annotation", "unresolved"]
     source: SourceSlice
+    leading_source: SourceSlice | None = None
     sequence: str | None = None
     parent: str | None = None
     anchor: str | None = None
@@ -1304,6 +1305,22 @@ def compile_semantic_events(
                 end_offset=event.source.end,
                 fragment_sha256=fragment.fragment_sha256,
             )
+            move_evidence = [ref]
+            if event.leading_source is not None and event.kind == "move":
+                leading = event.leading_source
+                prefix_fragment = fragments[(leading.page, leading.order)]
+                if not (0 <= leading.start < leading.end <= len(prefix_fragment.text)):
+                    raise ValueError("leading source slice is outside the cited fragment")
+                prefix = prefix_fragment.text[leading.start:leading.end]
+                value = prefix + value
+                move_evidence.insert(0, EvidenceRef(
+                    page=leading.page,
+                    bbox=[prefix_fragment.box.x0, prefix_fragment.box.y0,
+                          prefix_fragment.box.x1, prefix_fragment.box.y1],
+                    start_offset=leading.start,
+                    end_offset=leading.end,
+                    fragment_sha256=prefix_fragment.fragment_sha256,
+                ))
             if event.kind == "heading":
                 heading_epoch += 1
                 items.append(
@@ -1491,7 +1508,7 @@ def compile_semantic_events(
                             ),
                             move_number=printed_number,
                             side_to_move=printed_side,
-                            evidence=[ref],
+                            evidence=move_evidence,
                         )
                     )
                     sequence.orders[parent_id] += 1

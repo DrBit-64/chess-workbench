@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import dataclass, field
-from typing import Annotated, Any, Literal
+from typing import TYPE_CHECKING, Annotated, Any, Literal
 
 import chess
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
@@ -27,6 +27,9 @@ from .prompting import CcefPromptContext
 from .provider import StructuredGenerationRequest, StructuredMessage
 from .source_compiler import compile_semantic_events
 from .validation import _clean_move_token
+
+if TYPE_CHECKING:
+    from .theory_outline import TheoryOutline
 
 _CONTEXT_VERSION = "chess-source-context/1"
 _RESPONSE_VERSION = "chess-source-relations/1"
@@ -198,9 +201,17 @@ def canonicalize_continuation_games(
             if game.kind == "continuation" and game.seed_ref is not None:
                 existing = by_anchor.get(game.seed_ref)
                 if existing is not None and existing != game.id:
-                    aliases[game.id] = existing
-                    continue
-                by_anchor[game.seed_ref] = game.id
+                    has_own_root = any(
+                        segment.game_ref == game.id and isinstance(segment.entry, Root)
+                        for segment in response.segments
+                    )
+                    if not has_own_root:
+                        aliases[game.id] = existing
+                        continue
+                    # Two independent variations can leave the same predecessor
+                    # position. An anchor is a position, not a game identity.
+                else:
+                    by_anchor[game.seed_ref] = game.id
             games.append(game)
         response.games = games
         for segment in response.segments:
@@ -249,7 +260,7 @@ def reconcile_continuation_seed(
         if token is None or token.move_number is None or token.side is None:
             continue
         source_token: SourceToken = token
-        notation = re.sub(r"[!?]+$", "", source_token.raw.replace("X", "x"))
+        notation = _clean_move_token(source_token.raw) or source_token.raw
 
         def fits(
             anchor: dict[str, Any], source: SourceToken = source_token, san: str = notation
@@ -312,6 +323,7 @@ class SourceToken:
     raw: str
     move_number: int | None
     side: Literal["w", "b"] | None
+    leading_source: tuple[int, int, int, int] | None = None
 
     def as_input(self) -> dict[str, Any]:
         return {
@@ -322,6 +334,15 @@ class SourceToken:
             "raw": self.raw,
             "move_number": self.move_number,
             "side": self.side,
+            **(
+                {"leading_source": {
+                    "page": self.leading_source[0],
+                    "order": self.leading_source[1],
+                    "start": self.leading_source[2],
+                    "end": self.leading_source[3],
+                }}
+                if self.leading_source is not None else {}
+            ),
         }
 
 
@@ -374,6 +395,25 @@ def source_tokens(context: CcefPromptContext) -> list[SourceToken]:
             joined = _joined_score_moves(text)
             for match in joined or _MOVE.finditer(text):
                 start, end = match.span()
+                leading_source = None
+                raw = match.group()
+                if (
+                    entry.order > 0 and start == 0 and raw in {"0-0", "O-O"}
+                ):
+                    previous = page.fragments[entry.order - 1]
+                    prefix = previous.fragment.text.rstrip()
+                    previous_box = previous.fragment.box
+                    current_box = entry.fragment.box
+                    if (
+                        previous.fragment.origin != "diagram"
+                        and prefix.endswith(("0-", "O-"))
+                        and abs(previous_box.x0 - current_box.x0) < 0.08
+                        and 0 <= current_box.y0 - previous_box.y1 < 0.04
+                    ):
+                        leading_source = (
+                            page.physical_page, previous.order, len(prefix) - 2, len(prefix)
+                        )
+                        raw = prefix[-2:] + raw
                 if re.fullmatch(r"[a-h][18]", match.group(), re.IGNORECASE):
                     # A pawn reaching the back rank must name its promotion;
                     # bare h8/a1 in prose is a square, not a SAN move.
@@ -402,9 +442,10 @@ def source_tokens(context: CcefPromptContext) -> list[SourceToken]:
                         order=entry.order,
                         start=start,
                         end=end,
-                        raw=match.group(),
+                        raw=raw,
                         move_number=number,
                         side=side,
+                        leading_source=leading_source,
                     )
                 )
                 last_end = end
@@ -562,6 +603,7 @@ def build_relation_request(
     *,
     predecessor_context: CcefPromptContext | None = None,
     continuation_anchors: list[dict[str, Any]] | None = None,
+    theory_outline: TheoryOutline | None = None,
 ) -> StructuredGenerationRequest:
     spans = _source_spans(context)
     all_spans = [span["id"] for span in spans]
@@ -615,12 +657,55 @@ def build_relation_request(
             "context_span_refs": [ref for ref in all_spans if ref not in set(owned_span_refs)],
         },
     }
+    if theory_outline is not None:
+        document["theory_sections"] = theory_outline.as_input()
+        scoped_entries: list[dict[str, object]] = []
+        for section in theory_outline.sections:
+            if section.source_ref is None:
+                continue
+            first = next(
+                (
+                    token
+                    for token in tokens
+                    if token.span_ref == section.source_ref and token.id in state.parent
+                ),
+                None,
+            )
+            if first is None:
+                continue
+            line_ref = state.token_line[first.id]
+            scoped_entries.append(
+                {
+                    "section_label": section.label,
+                    "game_ref": line_ref[0],
+                    "line_ref": line_ref[1],
+                    "first_move_ref": first.id,
+                    "parent_move_ref": state.parent[first.id],
+                    "line_tip_move_ref": state.lines[line_ref][2],
+                }
+            )
+        document["prior_structure"]["theory_section_entries"] = scoped_entries
     if predecessor_context is not None:
         document["predecessor_source_spans"] = _source_spans(predecessor_context)
         document["predecessor_move_tokens"] = [
             token.as_input() for token in source_tokens(predecessor_context)
         ]
         document["prior_structure"]["continuation_anchors"] = continuation_anchors or []
+        owners = {anchor["sequence_id"] for anchor in continuation_anchors or []}
+        if len(owners) == 1:
+            owner = next(iter(owners))
+            document["active_source_unit"] = {
+                "sequence_id": owner,
+                "title": next(
+                    (anchor["sequence_title"] for anchor in continuation_anchors or []
+                     if anchor["sequence_id"] == owner and anchor.get("sequence_title")),
+                    None,
+                ),
+                "source_occurrences": [
+                    anchor["source_occurrence"] for anchor in continuation_anchors or []
+                    if anchor["sequence_id"] == owner and anchor.get("source_occurrence")
+                ][-8:],
+            }
     payload = json.dumps(document, ensure_ascii=False, separators=(",", ":"))
     if len(payload) > context.max_prompt_chars:
         raise ValueError("relation evidence exceeds prompt character budget")
@@ -652,7 +737,27 @@ def build_relation_request(
         "Read the complete continuous chess-book source in order, including prose, variations, "
         "questions and later resumption. Return chess-source-relations/1 JSON only. "
         + extraction_scope
-        + "moves or FEN. A segment is one uninterrupted line: split at every variation and return. "
+        + "moves or FEN. "
+        + (
+            "The theory_sections index is a provisional document outline, not a chess "
+            "parent assignment. A repeated heading in preview_source_refs is a catalogue "
+            "entry, not a second played line. Explain the moves at body_source_ref once. "
+            "Use parent_label and theory_section_entries to find relevant prior source "
+            "paths, then declare the exact move entry relationship from source evidence. "
+            "Sibling numbered sections return to their shared ancestor position, never "
+            "continue from the preceding sibling's terminal move. A 'see line' citation "
+            "or similar position alone does not merge positions. "
+            if theory_outline is not None
+            else ""
+        )
+        + (
+            "An active_source_unit restricts which predecessor score can receive new moves. "
+            "Two scores may share the same FEN: their source occurrences and ownership remain "
+            "distinct. Continue only through the supplied continuation_anchors; do not "
+            "recreate a new root for that predecessor. "
+            if predecessor_context is not None and continuation_anchors else ""
+        )
+        + "A segment is one uninterrupted line: split at every variation and return. "
         "Give each genuinely independent game its own identity and explicit seed_ref. "
         + game_origin
         + "confirmed diagram supplies the position. A cited past-game line starting at a later "
@@ -1135,6 +1240,15 @@ def apply_relations(
                         "id": token.id,
                         "kind": "move",
                         "source": _source_slice(token),
+                        **(
+                            {"leading_source": {
+                                "page": token.leading_source[0],
+                                "order": token.leading_source[1],
+                                "start": token.leading_source[2],
+                                "end": token.leading_source[3],
+                            }}
+                            if token.leading_source is not None else {}
+                        ),
                         "sequence": segment.game_ref,
                         "parent": event_parent,
                         "mainline": isinstance(entry, (Root, Continue))
@@ -1270,6 +1384,11 @@ def compile_relations(context: CcefPromptContext, state: RelationState) -> Extra
             by_span.setdefault(f"s{source['page']}_{source['order']}", []).append(
                 (source["start"], source["end"])
             )
+            leading = event.get("leading_source")
+            if leading is not None:
+                by_span.setdefault(f"s{leading['page']}_{leading['order']}", []).append(
+                    (leading["start"], leading["end"])
+                )
     events = [event for event in state.events if event.get("kind") == "move"]
     events.extend(state.problems)
     counter = 0
@@ -1854,6 +1973,8 @@ def formal_score_note_issues(
     context: CcefPromptContext,
     tokens: list[SourceToken],
     responses: list[RelationResponse],
+    *,
+    ignored_source_refs: set[str] | None = None,
 ) -> list[dict[str, Any]]:
     """Find source score chains omitted from the graph for local semantic review."""
     spans = {
@@ -1895,6 +2016,8 @@ def formal_score_note_issues(
     by_span: dict[str, list[SourceToken]] = {}
     all_by_span: dict[str, list[SourceToken]] = {}
     for token in tokens:
+        if token.span_ref in (ignored_source_refs or set()):
+            continue
         all_by_span.setdefault(token.span_ref, []).append(token)
         if token.id not in already_reviewable:
             by_span.setdefault(token.span_ref, []).append(token)
@@ -2163,10 +2286,47 @@ def apply_relation_patches(
         segment = found.get(change.segment_id)
         if segment is None or not change.source_refs:
             raise ValueError("relation patch cites an unknown segment")
+        old_game = segment.game_ref
+        old_line = segment.line_ref
         segment.line_ref = change.line_ref
         segment.entry = change.entry
         if change.game_ref is not None:
             segment.game_ref = change.game_ref
+        if (old_game, old_line) != (segment.game_ref, segment.line_ref):
+            # A corrected entrance carries its dependent variations. The
+            # references, not a shared section label, define this closure.
+            moved = {segment.id}
+            old_lines = {old_line: segment.line_ref}
+            while True:
+                dependents = []
+                for other in found.values():
+                    if other.id in moved or other.game_ref != old_game:
+                        continue
+                    parent_line = getattr(other.entry, "target_line_ref", None)
+                    after_ref = getattr(other.entry, "after_move_ref", None)
+                    if parent_line in old_lines or any(
+                        after_ref in parent.move_refs
+                        for parent in found.values()
+                        if parent.id in moved
+                    ):
+                        dependents.append(other)
+                if not dependents:
+                    break
+                for other in dependents:
+                    parent_line = getattr(other.entry, "target_line_ref", None)
+                    if parent_line in old_lines and isinstance(
+                        other.entry, (AlternativeTo, BranchAfter)
+                    ):
+                        other.entry.target_line_ref = old_lines[parent_line]
+                    other.game_ref = segment.game_ref
+                    moved.add(other.id)
+                    old_lines[other.line_ref] = other.line_ref
+            for response in updated:
+                for unresolved in response.unresolved:
+                    for candidate in unresolved.candidates:
+                        if candidate.game_ref == old_game and candidate.line_ref in old_lines:
+                            candidate.game_ref = segment.game_ref
+                            candidate.line_ref = old_lines[candidate.line_ref]
         if not isinstance(change.entry, Root):
             claimed_elsewhere = {
                 ref

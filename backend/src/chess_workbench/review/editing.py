@@ -48,9 +48,11 @@ from chess_workbench.schemas.review import (
     PdfReviewEditOperation,
     PdfReviewEditText,
     PdfReviewExcludeItem,
+    PdfReviewExcludeItems,
     PdfReviewMakeMainline,
     PdfReviewPromoteVariation,
     PdfReviewReattachVariation,
+    PdfReviewRehomeSourceGroup,
     PdfReviewResolveUnresolved,
     PdfReviewSetInitialPosition,
     PdfReviewSetNag,
@@ -88,6 +90,8 @@ def apply_review_edit(
         decisions = _set_nag(result, operation)
     elif isinstance(operation, PdfReviewExcludeItem):
         decisions = _exclude_item(result, operation)
+    elif isinstance(operation, PdfReviewExcludeItems):
+        decisions = _exclude_items(result, operation)
     elif isinstance(operation, PdfReviewDetachPositionAnchor):
         decisions = _detach_position_anchor(result, operation)
     elif isinstance(operation, PdfReviewResolveUnresolved):
@@ -96,6 +100,8 @@ def apply_review_edit(
         decisions = _set_initial_position(result, operation)
     elif isinstance(operation, PdfReviewReattachVariation):
         decisions = _reattach_variation(result, operation)
+    elif isinstance(operation, PdfReviewRehomeSourceGroup):
+        decisions = _rehome_source_group(result, operation)
     else:  # pragma: no cover - discriminated request contract is exhaustive.
         raise TypeError("unsupported review edit operation")
 
@@ -499,6 +505,32 @@ def _exclude_item(package: ReviewPackage, operation: PdfReviewExcludeItem) -> di
     }
 
 
+def _exclude_items(
+    package: ReviewPackage, operation: PdfReviewExcludeItems
+) -> dict[str, JsonValue]:
+    """Apply several explicit non-score exclusions in one undoable revision."""
+    selected_ids = set(operation.item_ids)
+    if len(selected_ids) != len(operation.item_ids):
+        raise ValueError("review selection contains duplicate items")
+    removed_ids = [item.id for item in package.items if item.id in selected_ids]
+    if len(removed_ids) != len(selected_ids):
+        raise ValueError("review item was not found")
+    if any(_is_sequence(item) and item.id in selected_ids for item in package.items):
+        raise ValueError("move sequences must be removed with delete_subtree")
+    for index in range(len(package.items) - 1, -1, -1):
+        if package.items[index].id in selected_ids:
+            package.items.pop(index)
+    before = len(package.diagnostics)
+    package.diagnostics = [
+        diagnostic for diagnostic in package.diagnostics if diagnostic.item_id not in selected_ids
+    ]
+    return {
+        "operation": "exclude_items",
+        "item_ids": cast(JsonValue, removed_ids),
+        "removed_diagnostic_count": before - len(package.diagnostics),
+    }
+
+
 def _detach_position_anchor(
     package: ReviewPackage, operation: PdfReviewDetachPositionAnchor
 ) -> dict[str, JsonValue]:
@@ -565,6 +597,86 @@ def _set_initial_position(
         raise ValueError("review initial position is unchanged")
     sequence.initial_position = FenPosition(kind="fen", fen=fen)
     return {"operation": "set_initial_position", "sequence_id": sequence.id, "fen": fen}
+
+
+def _rehome_source_group(
+    package: ReviewPackage, operation: PdfReviewRehomeSourceGroup
+) -> dict[str, JsonValue]:
+    """Transfer the source-cited roots of one section as one undoable edit."""
+    if operation.source_sequence_id == operation.target_sequence_id:
+        raise ValueError("source and target score must differ")
+    source = _sequence(package, operation.source_sequence_id)
+    target = _sequence(package, operation.target_sequence_id)
+    if not isinstance(source, MoveSequenceItemV1_1) or not isinstance(target, MoveSequenceItemV1_1):
+        raise ValueError("source-group transfer requires CCEF 1.1")
+    hashes = set(operation.source_fragment_sha256s)
+    selected = {
+        node.id
+        for node in source.nodes
+        if any(ref.fragment_sha256 in hashes for ref in node.evidence)
+    }
+    roots = [
+        node.id for node in source.nodes if node.id in selected and node.parent_id not in selected
+    ]
+    if not roots:
+        raise ValueError("source group contains no moves in this score")
+
+    moved_nodes = 0
+    moved_roots = 0
+    moved_node_ids: set[str] = set()
+    for root_id in roots:
+        source_now = next(
+            (
+                item
+                for item in package.items
+                if isinstance(item, MoveSequenceItemV1_1)
+                and item.id == operation.source_sequence_id
+            ),
+            None,
+        )
+        if source_now is None:
+            break
+        root = next((node for node in source_now.nodes if node.id == root_id), None)
+        if root is None:
+            continue  # A previous root carried this whole dependent subtree.
+        if root.validation_status != "valid" or root.fen_before is None:
+            raise ValueError("source group has a move without a confirmed entry position")
+        target_now = _sequence(package, operation.target_sequence_id)
+        wanted = tuple(root.fen_before.split()[:4])
+        candidates: list[str | None] = [
+            node.id
+            for node in target_now.nodes
+            if node.validation_status == "valid"
+            and node.fen_after is not None
+            and tuple(node.fen_after.split()[:4]) == wanted
+        ]
+        if tuple(_board_after(target_now, None).fen(en_passant="fen").split()[:4]) == wanted:
+            candidates.append(None)
+        if len(candidates) != 1:
+            raise ValueError("source-group entry has no unique target position")
+        before_target_ids = {node.id for node in target_now.nodes}
+        _reattach_variation(
+            package,
+            PdfReviewReattachVariation(
+                kind="reattach_variation",
+                sequence_id=operation.source_sequence_id,
+                node_id=root_id,
+                target_sequence_id=operation.target_sequence_id,
+                parent_node_id=candidates[0],
+            ),
+        )
+        newly_moved = {node.id for node in target_now.nodes if node.id not in before_target_ids}
+        moved_nodes += len(newly_moved)
+        moved_roots += 1
+        moved_node_ids.update(newly_moved)
+    return {
+        "operation": "rehome_source_group",
+        "source_sequence_id": operation.source_sequence_id,
+        "target_sequence_id": operation.target_sequence_id,
+        "moved_root_count": moved_roots,
+        "moved_node_count": moved_nodes,
+        "moved_node_ids": cast(JsonValue, sorted(moved_node_ids)),
+    }
 
 
 def _reattach_variation(

@@ -40,6 +40,7 @@ import {
 } from './reviewSourceCoverage';
 import { ReviewSourceText, CoverageSummary } from './ReviewSourceText';
 import { ReviewSourceContext, useReviewSource } from './reviewSourceContext';
+import { reviewTheorySections } from './reviewTheorySections';
 import { formatMoveNotation, moveNotationText } from './moveNotation';
 import {
   buildReviewMoveRows,
@@ -288,6 +289,15 @@ export function PdfReviewPage({ runId }: { runId: string }) {
   );
 
   const [selectedPage, setSelectedPage] = useState<number | null>(null);
+  const [selectedTheoryRef, setSelectedTheoryRef] = useState<string | null>(
+    null,
+  );
+  const [sourceGroupPreview, setSourceGroupPreview] = useState<{
+    operation: Extract<ReviewEditOperation, { kind: 'rehome_source_group' }>;
+    result: PdfReviewReattachPreview;
+    version: number;
+  } | null>(null);
+  const [sourceGroupBusy, setSourceGroupBusy] = useState(false);
   const [onlyPendingCommentary, setOnlyPendingCommentary] = useState(false);
   const [focusedSourceMove, setFocusedSourceMove] =
     useState<SourceMoveTarget | null>(null);
@@ -385,6 +395,39 @@ export function PdfReviewPage({ runId }: { runId: string }) {
       fetchJson,
       { shouldRetryOnError: false },
     );
+  const theorySectionStatus = useMemo(
+    () => (sourceEvidence ? reviewTheorySections(sourceEvidence, items) : []),
+    [sourceEvidence, items],
+  );
+  const theoryRehomeOffer = useMemo(() => {
+    const owners = new Set(
+      theorySectionStatus
+        .map((status) => status.ownerSequenceId)
+        .filter(Boolean),
+    );
+    const wrongOwners = new Set(
+      theorySectionStatus.flatMap((status) => status.wrongOwnerSequenceIds),
+    );
+    if (owners.size !== 1 || wrongOwners.size !== 1) return null;
+    const targetSequenceId = [...owners][0];
+    const sourceSequenceId = [...wrongOwners][0];
+    if (!targetSequenceId || sourceSequenceId === targetSequenceId) return null;
+    return {
+      kind: 'rehome_source_group' as const,
+      source_sequence_id: sourceSequenceId,
+      target_sequence_id: targetSequenceId,
+      source_fragment_sha256s: [
+        ...new Set(
+          theorySectionStatus.flatMap((status) => status.sourceFragmentHashes),
+        ),
+      ],
+    };
+  }, [theorySectionStatus]);
+  const selectedTheory = theorySectionStatus.find(
+    (status) => status.section.body_source_ref === selectedTheoryRef,
+  );
+  const displayedItems = selectedTheory ? selectedTheory.items : items;
+  const reviewPanelRef = useRef<HTMLElement | null>(null);
   const sourceIndex = useMemo(
     () =>
       sourceEvidence?.evidence_status === 'ready'
@@ -555,6 +598,60 @@ export function PdfReviewPage({ runId }: { runId: string }) {
 
   const activeDescriptor =
     pages.find((page) => page.physical_page === selectedPage) ?? pages[0];
+
+  async function previewTheoryRehome() {
+    if (!theoryRehomeOffer || !reviewSession || !editing) return;
+    setSourceGroupBusy(true);
+    try {
+      const result = await requestJson<PdfReviewReattachPreview>(
+        `/api/pdf-review-sessions/${encodeURIComponent(reviewSession.id)}/reattach-preview`,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            expected_version: reviewSession.version,
+            operation: theoryRehomeOffer,
+          }),
+        },
+      );
+      setSourceGroupPreview({
+        operation: theoryRehomeOffer,
+        result,
+        version: reviewSession.version,
+      });
+    } catch (error) {
+      void message.error(
+        error instanceof Error ? error.message : '无法预览来源归属修复',
+      );
+    } finally {
+      setSourceGroupBusy(false);
+    }
+  }
+
+  async function confirmTheoryRehome() {
+    if (
+      !sourceGroupPreview ||
+      sourceGroupPreview.version !== reviewSession?.version
+    )
+      return;
+    const saved = await applyEdit(sourceGroupPreview.operation);
+    if (saved) setSourceGroupPreview(null);
+  }
+
+  function selectTheorySection(bodyRef: string | null, physicalPage: number) {
+    setSelectedTheoryRef(bodyRef);
+    selectPage(physicalPage);
+    if (reviewPanelRef.current) reviewPanelRef.current.scrollTop = 0;
+    const status = theorySectionStatus.find(
+      (entry) => entry.section.body_source_ref === bodyRef,
+    );
+    if (status?.firstMove) {
+      const sequence = sequenceById(status.firstMove.sequenceId);
+      const node = sequence?.nodes.find(
+        (entry) => entry.id === status.firstMove?.nodeId,
+      );
+      if (sequence && node) selectNode(sequence, node);
+    }
+  }
 
   function selectPage(physicalPage: number) {
     if (pages.some((page) => page.physical_page === physicalPage)) {
@@ -1554,6 +1651,29 @@ export function PdfReviewPage({ runId }: { runId: string }) {
     void applyEdit({ kind: 'exclude_item', item_id: itemId });
   }
 
+  function excludeSelectedItems(itemIds: string[]): Promise<boolean> {
+    if (itemIds.length === 0 || document === undefined)
+      return Promise.resolve(false);
+    const selected = new Set(itemIds);
+    const pages = [
+      ...new Set(
+        document.inspection.issues
+          .filter(
+            (issue) => issue.item_id !== null && selected.has(issue.item_id),
+          )
+          .flatMap((issue) => issue.evidence.map((ref) => ref.page)),
+      ),
+    ].sort((left, right) => left - right);
+    if (
+      !window.confirm(
+        `确认排除所选 ${itemIds.length} 项内容？涉及第 ${pages.join('、')} 页。\n选中内容不会进入发布；原 PDF 和提取结果保留，本次修改可撤销。`,
+      )
+    ) {
+      return Promise.resolve(false);
+    }
+    return applyEdit({ kind: 'exclude_items', item_ids: itemIds });
+  }
+
   function detachPositionAnchor(issueId: string) {
     if (
       !window.confirm(
@@ -2047,6 +2167,94 @@ export function PdfReviewPage({ runId }: { runId: string }) {
           aria-label="原书页面"
           className="min-w-0 lg:h-full lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain"
         >
+          {(sourceEvidence?.theory_sections?.length ?? 0) > 0 ? (
+            <details className="mb-3 rounded border border-stone-200 bg-white p-2 text-sm">
+              <summary className="cursor-pointer font-medium">
+                开局理论目录 · {(sourceEvidence?.theory_sections ?? []).length}{' '}
+                节
+              </summary>
+              <div className="mt-2 max-h-52 space-y-1 overflow-y-auto">
+                {theorySectionStatus.map((status) => (
+                  <button
+                    key={`${status.section.label}-${status.section.body_source_ref ?? status.section.page}`}
+                    type="button"
+                    onClick={() =>
+                      selectTheorySection(
+                        status.section.body_source_ref,
+                        status.section.page,
+                      )
+                    }
+                    className="flex w-full items-center justify-between gap-2 rounded px-1 py-1 text-left hover:bg-stone-100"
+                    style={{
+                      paddingLeft: `${Math.min(status.section.label.length - 1, 3) * 0.75 + 0.25}rem`,
+                    }}
+                    title={status.section.opening_text}
+                    aria-pressed={
+                      selectedTheoryRef === status.section.body_source_ref
+                    }
+                  >
+                    <span className="truncate">
+                      {status.section.label}: {status.section.opening_text}
+                    </span>
+                    <span
+                      className={`shrink-0 text-xs ${status.wrongOwner || status.blocked ? 'text-red-700' : 'text-stone-500'}`}
+                    >
+                      第 {status.section.page} 页 ·{' '}
+                      {status.section.body_source_ref === null
+                        ? '尚未展开'
+                        : `${status.compiled}/${status.declared} 招已入谱`}
+                      {status.blocked > 0 ? ` · ${status.blocked} 招受阻` : ''}
+                      {status.wrongOwner > 0
+                        ? ` · ${status.wrongOwner} 招归属待核`
+                        : ''}
+                      {status.unexaminedCandidates > 0
+                        ? ` · ${status.unexaminedCandidates} 处候选待核`
+                        : ''}
+                    </span>
+                  </button>
+                ))}
+              </div>
+              {editing && theoryRehomeOffer ? (
+                <div className="mt-2 border-t border-stone-200 pt-2">
+                  <button
+                    type="button"
+                    disabled={sourceGroupBusy || commandBusy}
+                    onClick={() => void previewTheoryRehome()}
+                    className="rounded border border-red-400 px-2 py-1 text-red-800 disabled:opacity-40"
+                  >
+                    预览修复理论棋谱归属
+                  </button>
+                  {sourceGroupPreview &&
+                  sourceGroupPreview.version === reviewSession?.version ? (
+                    <div className="mt-2 rounded bg-amber-50 p-2 text-xs">
+                      <p>
+                        预计迁移 {sourceGroupPreview.result.moved_node_count}{' '}
+                        招，涉及 {sourceGroupPreview.result.moved_root_count}{' '}
+                        处入口；修订后问题{' '}
+                        {sourceGroupPreview.result.issue_count}{' '}
+                        项。确认后可撤销。
+                      </p>
+                      <button
+                        type="button"
+                        disabled={commandBusy}
+                        onClick={() => void confirmTheoryRehome()}
+                        className="mr-2 text-emerald-800 underline"
+                      >
+                        确认整组迁移
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSourceGroupPreview(null)}
+                        className="text-stone-600 underline"
+                      >
+                        取消
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+            </details>
+          ) : null}
           <div className="mb-3 flex flex-wrap gap-2" aria-label="页面切换">
             {pages.map((page) => (
               <button
@@ -2139,6 +2347,7 @@ export function PdfReviewPage({ runId }: { runId: string }) {
           }}
         >
           <section
+            ref={reviewPanelRef}
             aria-label="候选内容与自动检查"
             tabIndex={0}
             onClickCapture={onReviewClickCapture}
@@ -2148,6 +2357,39 @@ export function PdfReviewPage({ runId }: { runId: string }) {
             onMouseMoveCapture={extendMoveSelectionThroughVisibleRange}
             className="min-w-0 lg:h-full lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain"
           >
+            {selectedTheory ? (
+              <div className="mb-2 rounded border border-amber-200 bg-amber-50 p-2 text-sm">
+                <div className="flex items-center justify-between gap-2">
+                  <strong>
+                    {selectedTheory.section.label} ·{' '}
+                    {selectedTheory.section.opening_text}
+                  </strong>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedTheoryRef(null)}
+                    className="text-emerald-800 underline"
+                  >
+                    显示完整棋谱
+                  </button>
+                </div>
+                <div>
+                  已声明 {selectedTheory.declared} 招 · 已入谱{' '}
+                  {selectedTheory.compiled} 招 · 受阻 {selectedTheory.blocked}{' '}
+                  招
+                </div>
+                {selectedTheory.wrongOwner > 0 ? (
+                  <div className="text-red-700">
+                    {selectedTheory.wrongOwner} 招挂在另一局棋谱，请检查来源归属
+                  </div>
+                ) : null}
+                {selectedTheory.unexaminedCandidates > 0 ? (
+                  <div>
+                    {selectedTheory.unexaminedCandidates}{' '}
+                    处疑似棋谱尚待核对（不等同于漏谱）
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
             <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-stone-200 pb-2 text-xs text-stone-600">
               <span>
                 正文着法：
@@ -2179,7 +2421,7 @@ export function PdfReviewPage({ runId }: { runId: string }) {
             </div>
             <div className="max-w-prose space-y-2">
               {groupReviewItems(
-                items.filter(
+                displayedItems.filter(
                   (item) =>
                     item.kind !== 'prose' ||
                     !onlyPendingCommentary ||
@@ -2260,6 +2502,7 @@ export function PdfReviewPage({ runId }: { runId: string }) {
               editable={editing && !commandBusy}
               onAcknowledge={(issueId) => acknowledgeIssues([issueId])}
               onExcludeItem={excludeItem}
+              onExcludeItems={excludeSelectedItems}
               onDetachPositionAnchor={detachPositionAnchor}
               onSelectPage={selectPage}
             />
@@ -3692,6 +3935,7 @@ function IssuesView({
   editable,
   onAcknowledge,
   onExcludeItem,
+  onExcludeItems,
   onDetachPositionAnchor,
   onSelectPage,
 }: {
@@ -3700,15 +3944,72 @@ function IssuesView({
   editable: boolean;
   onAcknowledge: (issueId: string) => void;
   onExcludeItem: (itemId: string) => void;
+  onExcludeItems: (itemIds: string[]) => Promise<boolean>;
   onDetachPositionAnchor: (issueId: string) => void;
   onSelectPage: (page: number) => void;
 }) {
   const { inspection } = document;
+  const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(
+    new Set(),
+  );
+  const dragSelection = useRef<{ checked: boolean } | null>(null);
+
+  useEffect(() => {
+    setSelectedItemIds(new Set());
+  }, [document.normalized_ccef_sha256]);
+  useEffect(() => {
+    const finish = () => {
+      dragSelection.current = null;
+    };
+    window.addEventListener('mouseup', finish);
+    window.addEventListener('blur', finish);
+    return () => {
+      window.removeEventListener('mouseup', finish);
+      window.removeEventListener('blur', finish);
+    };
+  }, []);
+
   const excludableItemIds = new Set(
     (document.package.items ?? [])
       .filter((item) => item.kind !== 'move_sequence')
       .map((item) => item.id),
   );
+  const canSelectIssue = (
+    issue: PdfReviewDocument['inspection']['issues'][number],
+  ) =>
+    issue.blocking &&
+    issue.item_id !== null &&
+    issue.node_id === null &&
+    excludableItemIds.has(issue.item_id) &&
+    !(
+      (issue.scope === 'item' || issue.scope === 'annotation') &&
+      (issue.code === 'position_anchor_no_match' ||
+        issue.code === 'position_anchor_ambiguous')
+    );
+  const selectableItemIds = [
+    ...new Set(
+      inspection.issues
+        .filter(canSelectIssue)
+        .map((issue) => issue.item_id as string),
+    ),
+  ];
+  const selectedAvailableIds = selectableItemIds.filter((id) =>
+    selectedItemIds.has(id),
+  );
+  function selectItem(itemId: string, checked: boolean) {
+    setSelectedItemIds((current) => {
+      const next = new Set(current);
+      if (checked) next.add(itemId);
+      else next.delete(itemId);
+      return next;
+    });
+  }
+  async function excludeSelection() {
+    if (selectedAvailableIds.length === 0) return;
+    if (await onExcludeItems(selectedAvailableIds))
+      setSelectedItemIds(new Set());
+  }
+
   return (
     <section className="mt-6">
       <h2 className="text-lg font-semibold text-stone-900">自动检查</h2>
@@ -3716,6 +4017,42 @@ function IssuesView({
         问题 {inspection.issue_count} · 阻断 {inspection.blocking_issue_count} ·
         内容项 {inspection.item_count} · 棋步 {inspection.move_node_count}
       </p>
+      {editable && selectableItemIds.length > 0 ? (
+        <div className="sticky top-0 z-10 my-2 rounded border border-amber-300 bg-amber-50 p-2 text-sm shadow-sm">
+          <div className="flex flex-wrap items-center gap-2">
+            <span>
+              可排除 {selectableItemIds.length} 项 · 已选{' '}
+              {selectedAvailableIds.length} 项
+            </span>
+            <button
+              type="button"
+              onClick={() => setSelectedItemIds(new Set(selectableItemIds))}
+              className="rounded border border-amber-400 bg-white px-2 py-1"
+            >
+              全选
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedItemIds(new Set())}
+              disabled={selectedAvailableIds.length === 0}
+              className="rounded border border-stone-300 bg-white px-2 py-1 disabled:opacity-40"
+            >
+              清空选择
+            </button>
+            <button
+              type="button"
+              onClick={() => void excludeSelection()}
+              disabled={selectedAvailableIds.length === 0}
+              className="rounded bg-amber-700 px-2 py-1 text-white disabled:opacity-40"
+            >
+              排除所选（{selectedAvailableIds.length}）
+            </button>
+          </div>
+          <p className="mt-1 text-xs text-stone-600">
+            点击选择框，或按住鼠标划过多项；从已选项开始拖动可连续取消。
+          </p>
+        </div>
+      ) : null}
       {inspection.issues.length === 0 ? (
         <p className="rounded border border-emerald-300 bg-emerald-50 p-3 text-stone-800">
           没有发现自动检查问题，但仍需人工批准
@@ -3728,12 +4065,48 @@ function IssuesView({
               (issue.scope === 'item' || issue.scope === 'annotation') &&
               (issue.code === 'position_anchor_no_match' ||
                 issue.code === 'position_anchor_ambiguous');
+            const selectable = editable && canSelectIssue(issue);
+            const itemId = issue.item_id;
+            const selected = itemId !== null && selectedItemIds.has(itemId);
             return (
               <li
                 key={issue.issue_id}
-                className="rounded border border-stone-200 bg-white p-3"
+                onMouseEnter={(event) => {
+                  if (
+                    selectable &&
+                    itemId !== null &&
+                    dragSelection.current !== null &&
+                    (event.buttons & 1) !== 0
+                  ) {
+                    selectItem(itemId, dragSelection.current.checked);
+                  }
+                }}
+                className={`rounded border p-3 ${selected ? 'border-amber-500 bg-amber-50' : 'border-stone-200 bg-white'}`}
               >
                 <div className="flex flex-wrap items-center gap-2">
+                  {selectable && itemId !== null ? (
+                    <button
+                      type="button"
+                      role="checkbox"
+                      aria-checked={selected}
+                      aria-label={`选择第 ${issue.evidence[0]?.page ?? '?'} 页内容`}
+                      title="按住并划过其他问题，可连续选择或取消"
+                      onMouseDown={(event) => {
+                        if (event.button !== 0) return;
+                        event.preventDefault();
+                        const checked = !selectedItemIds.has(itemId);
+                        dragSelection.current = { checked };
+                        selectItem(itemId, checked);
+                      }}
+                      onClick={(event) => {
+                        if (event.detail === 0) selectItem(itemId, !selected);
+                      }}
+                      className="inline-flex min-w-12 items-center gap-1 rounded border border-amber-500 bg-white px-1.5 py-0.5 text-xs"
+                    >
+                      <span aria-hidden="true">{selected ? '☑' : '□'}</span>
+                      {selected ? '已选' : '选择'}
+                    </button>
+                  ) : null}
                   <Tag color={issue.severity === 'error' ? 'red' : 'orange'}>
                     {issue.severity === 'error' ? '错误' : '警告'}
                   </Tag>
@@ -3768,13 +4141,10 @@ function IssuesView({
                   >
                     保留文字并取消局面关联
                   </button>
-                ) : editable &&
-                  issue.item_id !== null &&
-                  issue.node_id === null &&
-                  excludableItemIds.has(issue.item_id) ? (
+                ) : selectable && itemId !== null ? (
                   <button
                     type="button"
-                    onClick={() => onExcludeItem(issue.item_id!)}
+                    onClick={() => onExcludeItem(itemId)}
                     className="ml-2 rounded border border-red-300 bg-white px-2 py-0.5 text-xs text-red-700"
                   >
                     排除此内容

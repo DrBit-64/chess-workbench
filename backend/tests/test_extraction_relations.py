@@ -2124,3 +2124,68 @@ def test_patch_can_add_an_entirely_unclaimed_owned_source_line() -> None:
     revised = apply_relation_patches([response], patch, [{"s1_0", "s1_1"}])
     assert [segment.id for segment in revised[0].segments] == ["first", "second"]
     assert len(response.segments) == 1
+
+
+def test_same_external_position_can_start_two_variations_and_patch_moves_descendants() -> None:
+    """A continuation anchor identifies a position, not a unique line group."""
+    from chess import STARTING_FEN
+    from chess_workbench.extraction.relations import (
+        RelationResponse,
+        canonicalize_continuation_games,
+    )
+
+    context = _context("1 e4 1 d4 d5")
+    tokens = {token.raw: token.id for token in source_tokens(context)}
+    def response(game: str, segments: list[dict[str, object]]) -> RelationResponse:
+        return parse_relation_response(json.dumps({
+            "schema_version": "chess-source-relations/1",
+            "games": [{"id": game, "kind": "continuation", "source_refs": ["s1_0"],
+                       "seed_ref": "anchor-1"}],
+            "segments": segments, "notes": [], "unresolved": [],
+        }))
+    first = response("first", [{"id": "first-root", "game_ref": "first", "line_ref": "main",
+        "entry": {"kind": "root"}, "move_refs": [tokens["e4"]], "evidence_refs": ["s1_0"]}])
+    second = response("second", [
+        {"id": "second-root", "game_ref": "second", "line_ref": "choice",
+         "entry": {"kind": "root"}, "move_refs": [tokens["d4"]], "evidence_refs": ["s1_0"]},
+        {"id": "reply", "game_ref": "second", "line_ref": "reply",
+         "entry": {"kind": "branch_after", "target_line_ref": "choice",
+                   "target_move_ref": tokens["d4"]},
+         "move_refs": [tokens["d5"]], "evidence_refs": ["s1_0"]},
+    ])
+    separate = canonicalize_continuation_games([first, second])
+    assert separate[1].games[0].id == "second"
+    patch = RelationPatchResponse.model_validate({
+        "schema_version": "chess-source-relation-patch/1",
+        "patches": [{"segment_id": "second-root", "game_ref": "first",
+                     "line_ref": "choice", "entry": {"kind": "alternative_to",
+                     "target_line_ref": "main", "target_move_ref": tokens["e4"]},
+                     "source_refs": ["s1_0"]}],
+    })
+    fixed = apply_relation_patches(separate, patch)
+    assert fixed[1].segments[1].game_ref == "first"
+    state = RelationState(external_anchors={"anchor-1": ("0" * 64, STARTING_FEN)})
+    for result in fixed:
+        apply_relations(context, result, list(source_tokens(context)), {"s1_0"}, state)
+    package = compile_relations(context, state)
+    nodes = [node for item in package.items if isinstance(item, MoveSequenceItemV1_1)
+             for node in item.nodes]
+    assert len(nodes) == 3
+    assert all(node.validation_status == "valid" for node in nodes)
+
+
+def test_source_promotion_without_equals_is_kept_as_playable_token() -> None:
+    import chess
+    from chess_workbench.extraction.relations import QuoteRef, _resolve_quote
+    from chess_workbench.extraction.validation import _clean_move_token
+
+    context = _context("7 cxd8Q+ Rxd8")
+    promotion = next(token for token in source_tokens(context) if token.raw == "cxd8Q+")
+    quote = QuoteRef(fragment_ref=context.pages[0].fragments[0].fragment.fragment_sha256,
+                     quote="cxd8Q+", occurrence=0)
+    assert _resolve_quote(quote, context) is not None
+    assert _clean_move_token(promotion.raw) == "cxd8=Q+"
+    board = chess.Board()
+    for san in "e4 d5 exd5 Nf6 d4 Bg4 Bb5+ c6 dxc6 Bxd1 c7+ Nc6".split():
+        board.push_san(san)
+    assert board.parse_san(_clean_move_token(promotion.raw))

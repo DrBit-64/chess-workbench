@@ -23,6 +23,7 @@ from chess_workbench.schemas.review import (
     PdfReviewDetachPositionAnchor,
     PdfReviewDocumentRead,
     PdfReviewExcludeItem,
+    PdfReviewExcludeItems,
     PdfReviewMakeMainline,
     PdfReviewPageRead,
     PdfReviewPromoteVariation,
@@ -261,6 +262,66 @@ def test_explicitly_excluding_a_non_chess_figure_clears_its_blocker() -> None:
     assert all(item.id != "photo1" for item in result.package.items)
     assert inspect_review_candidate(result.package).blocking_issue_count == 0
     assert result.decisions["operation"] == "exclude_item"
+
+
+def test_batch_excludes_only_selected_non_score_items() -> None:
+    payload = _package().model_dump(mode="json")
+    payload["items"].extend(
+        [
+            {
+                "kind": "figure",
+                "id": "board1",
+                "figure_type": "chessboard",
+                "evidence": [{"page": 1}],
+            },
+            {
+                "kind": "figure",
+                "id": "board2",
+                "figure_type": "chessboard",
+                "evidence": [{"page": 2}],
+            },
+            {
+                "kind": "unresolved",
+                "id": "text1",
+                "unresolved_type": "text",
+                "reason_code": "ambiguous_relation",
+                "raw_text": "12... Rc8",
+                "evidence": [{"page": 2}],
+            },
+        ]
+    )
+    payload["diagnostics"] = [
+        {
+            "severity": "warning",
+            "code": "diagram_position_unresolved",
+            "message": "Position unavailable",
+            "item_id": "board1",
+            "evidence": [{"page": 1}],
+        }
+    ]
+    package = ExtractionPackageV1_1.model_validate(payload)
+    result = apply_review_edit(
+        package,
+        PdfReviewExcludeItems(kind="exclude_items", item_ids=["board1", "text1"]),
+    )
+
+    assert [item.id for item in result.package.items] == ["seq1", "board2"]
+    assert result.package.diagnostics == []
+    assert result.decisions == {
+        "operation": "exclude_items",
+        "item_ids": ["board1", "text1"],
+        "removed_diagnostic_count": 1,
+    }
+    assert {issue.code for issue in inspect_review_candidate(result.package).issues} == {
+        "synthetic_warning",
+        "chessboard_position_unresolved",
+    }
+
+    with pytest.raises(ValueError, match="move sequences"):
+        apply_review_edit(
+            package,
+            PdfReviewExcludeItems(kind="exclude_items", item_ids=["board1", "seq1"]),
+        )
 
 
 def test_detaching_an_unmatched_annotation_anchor_keeps_the_text_in_flow() -> None:
@@ -940,3 +1001,48 @@ def test_source_prose_can_become_a_move_while_retaining_other_words() -> None:
         item.kind == "prose" and item.text == "is a developing move."
         for item in result.package.items
     )
+
+
+def test_rehome_source_group_moves_all_scoped_descendants_in_one_edit() -> None:
+    from chess_workbench.schemas.review import PdfReviewRehomeSourceGroup
+
+    payload = _package().model_dump(mode="json")
+    other = payload["items"][0].copy()
+    other["id"] = "theory"
+    other["nodes"] = [node for node in other["nodes"] if node["id"] in {"n1", "n2"}]
+    other["annotations"] = []
+    other["reading_flow"] = [
+        {"kind": "move", "node_id": "n1"},
+        {"kind": "move", "node_id": "n2"},
+    ]
+    payload["items"].append(other)
+    group_hash = "a" * 64
+    for node in payload["items"][0]["nodes"]:
+        if node["id"] in {"n4", "n5"}:
+            node["evidence"] = [
+                {
+                    "page": 2,
+                    "fragment_sha256": group_hash,
+                    "start_offset": 0,
+                    "end_offset": 2,
+                }
+            ]
+    package = ExtractionPackageV1_1.model_validate(payload)
+    changed = apply_review_edit(
+        package,
+        PdfReviewRehomeSourceGroup(
+            kind="rehome_source_group",
+            source_sequence_id="seq1",
+            target_sequence_id="theory",
+            source_fragment_sha256s=[group_hash],
+        ),
+    )
+    assert changed.decisions["moved_root_count"] == 1
+    assert changed.decisions["moved_node_count"] == 2
+    source, target = changed.package.items
+    assert source.kind == target.kind == "move_sequence"
+    assert {node.id for node in source.nodes} == {"n1", "n2", "n3"}
+    assert {node.id for node in target.nodes} == {"n1", "n2", "n4", "n5"}
+    assert next(node for node in target.nodes if node.id == "n4").parent_id == "n1"
+    assert target.annotations[0].text == "Comment on the Sicilian branch."
+    assert all(node.validation_status == "valid" for node in target.nodes)

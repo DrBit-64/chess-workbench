@@ -652,3 +652,104 @@ async def test_v8_append_uses_approved_review_as_v9_predecessor(tmp_path: Path) 
             assert append.append.predecessor_normalized_ccef_sha256 == approved_hash
     finally:
         await database.close()
+
+
+@pytest.mark.asyncio
+async def test_append_uses_saved_document_review_as_immutable_base(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A later PDF segment inherits saved human edits to the document head."""
+    from chess_workbench.extraction.evidence import PixelBox, RenderedPage, RenderProfile, TextFragment
+    import json
+    from uuid import uuid4
+    from chess_workbench.services.pdf_incremental_extraction import _load_incremental_input
+    from chess_workbench.services.pdf_persistence import PDF_RELATION_EXTRACTION_PIPELINE_VERSION
+    from chess_workbench.services.source_storage import store_content_addressed_bytes
+
+    database, settings, run_id = await _setup(
+        tmp_path, "reviewed-document-append", pipeline_version=PDF_RELATION_EXTRACTION_PIPELINE_VERSION
+    )
+    await _complete_review(
+        database, settings, run_id,
+        normalized_payload=_package_payload_v1_1(run_id, FIRST_PAGE, LAST_PAGE),
+    )
+    class LastPageRenderer:
+        def render_page(self, pdf_bytes: bytes, physical_page: int,
+                        profile: RenderProfile) -> RenderedPage:
+            return RenderedPage(
+                physical_page=physical_page, width=100, height=100, dpi=profile.dpi,
+                png_bytes=b"\x89PNG\r\n\x1a\nfixture",
+                embedded_fragments=[TextFragment(
+                    order=0, text="1 e4 e5", box=PixelBox(x0=0, y0=0, x1=90, y1=20),
+                    confidence=None,
+                )], renderer_name="fixture", renderer_version="1",
+            )
+    monkeypatch.setattr(
+        "chess_workbench.services.pdf_incremental_extraction.PdfiumPageRenderer",
+        LastPageRenderer,
+    )
+    try:
+        async with database.session() as session, session.begin():
+            asset = await session.scalar(select(PdfAsset))
+            assert asset is not None
+            asset.page_count = 10
+            document = (await PdfDocumentService(session, settings).adopt_run(run_id)).document
+            predecessor = await session.scalar(select(PdfExtractionDocumentRevision).where(
+                PdfExtractionDocumentRevision.document_id == document.id,
+            ))
+            assert predecessor is not None
+            reviewed = ExtractionPackageV1_1.model_validate(
+                {**_package_payload_v1_1(run_id, FIRST_PAGE, LAST_PAGE),
+                 "package_id": str(document.id)}
+            )
+            sequence = next(item for item in reviewed.items if item.kind == "move_sequence")
+            sequence.nodes[0].nags = [3]
+            raw = (json.dumps(reviewed.model_dump(mode="json"), ensure_ascii=False,
+                              sort_keys=True, separators=(",", ":")) + "\n").encode()
+            blob = store_content_addressed_bytes(
+                settings.source_storage_root, namespace="review-revisions",
+                suffix=".json", raw_bytes=raw,
+            )
+            review_session = PdfReviewSession(
+                id=uuid4(), document_id=document.id,
+                baseline_document_revision_id=predecessor.id,
+                baseline_ccef_sha256=predecessor.normalized_ccef_sha256,
+                status="approved", version=2,
+            )
+            first_revision = PdfReviewRevision(
+                id=uuid4(), session_id=review_session.id, revision_number=1,
+                parent_revision_id=None, relative_path=predecessor.relative_path,
+                media_type="application/json", byte_size=predecessor.byte_size,
+                package_sha256=predecessor.normalized_ccef_sha256,
+            )
+            second_revision = PdfReviewRevision(
+                id=uuid4(), session_id=review_session.id, revision_number=2,
+                parent_revision_id=first_revision.id, relative_path=blob.relative_path,
+                media_type="application/json", byte_size=blob.size_bytes,
+                package_sha256=blob.sha256,
+            )
+            session.add(review_session)
+            await session.flush()
+            review_session.version = 2
+            await session.flush()
+            session.add(first_revision)
+            await session.flush()
+            session.add(second_revision)
+            await session.flush()
+            reviewed_hash = blob.sha256
+        async with database.session() as session, session.begin():
+            dbg = await session.scalar(select(PdfReviewSession).where(PdfReviewSession.baseline_document_revision_id == predecessor.id))
+            assert dbg is not None
+            assert dbg.version == 2
+            append = await PdfDocumentService(session, settings).register_append(
+                document_id=document.id, expected_version=1, first_page=7, last_page=8,
+                profile={}, idempotency_key=None,
+            )
+            assert append.job.payload["review_package_sha256"] == reviewed_hash
+            append.job.status = "running"
+        loaded = await _load_incremental_input(database, settings, append.job.payload)
+        assert loaded.base_sha256 == reviewed_hash
+        sequence = next(item for item in loaded.base_package.items if item.kind == "move_sequence")
+        assert sequence.nodes[0].nags == [3]
+    finally:
+        await database.close()

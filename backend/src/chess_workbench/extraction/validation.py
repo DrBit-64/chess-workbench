@@ -198,6 +198,7 @@ def _clean_move_token(move_text: str) -> str | None:
     token = _UNDOTTED_MOVE_NUMBER_PREFIX.sub("", token, count=1)
     if token.startswith("0-0"):
         token = token.replace("0", "O")
+    token = re.sub(r"([a-h](?:x[a-h])?[18])([QRBN])(?=[+#]?(?:[!?]|$))", r"\1=\2", token)
     while True:
         match = _TRAILING_ANNOTATION.search(token)
         if match is None:

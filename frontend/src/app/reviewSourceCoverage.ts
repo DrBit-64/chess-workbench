@@ -13,12 +13,13 @@ export interface SourceMoveTarget {
 export interface SourceMention {
   start: number;
   end: number;
-  status: 'recorded' | 'pending' | 'plan' | 'mention';
+  status: 'recorded' | 'blocked' | 'pending' | 'plan' | 'mention';
   target?: SourceMoveTarget;
 }
 export interface ParagraphCoverage {
   mentions: SourceMention[];
   recorded: number;
+  blocked: number;
   pending: number;
   plan: number;
   mention: number;
@@ -142,6 +143,7 @@ export function paragraphCoverage(
   const result: ParagraphCoverage = {
     mentions: [],
     recorded: 0,
+    blocked: 0,
     pending: 0,
     plan: 0,
     mention: 0,
@@ -201,6 +203,9 @@ export function paragraphCoverage(
         ),
       ) ?? [];
     if (targets.length === 0 && part.token.kind === 'square') continue;
+    const declared = (part.fragment.declared_move_spans ?? []).some(
+      (span) => span.start === part.token.start && span.end === part.token.end,
+    );
     const roles = part.fragment.roles ?? [];
     const exclusivelyNonScore =
       roles.length > 0 &&
@@ -208,13 +213,15 @@ export function paragraphCoverage(
     const status =
       targets.length === 1
         ? 'recorded'
-        : targets.length > 1
-          ? 'pending'
-          : exclusivelyNonScore && roles.includes('plan')
-            ? 'plan'
-            : exclusivelyNonScore && roles.includes('mention')
-              ? 'mention'
-              : 'pending';
+        : declared
+          ? 'blocked'
+          : targets.length > 1
+            ? 'pending'
+            : exclusivelyNonScore && roles.includes('plan')
+              ? 'plan'
+              : exclusivelyNonScore && roles.includes('mention')
+                ? 'mention'
+                : 'pending';
     result[status]++;
     result.mentions.push({
       start: shown.starts[start],
@@ -228,7 +235,10 @@ export function paragraphCoverage(
 }
 
 export function needsSourceReview(coverage: ParagraphCoverage | null): boolean {
-  return coverage !== null && (coverage.unaligned || coverage.pending > 0);
+  return (
+    coverage !== null &&
+    (coverage.unaligned || coverage.pending > 0 || coverage.blocked > 0)
+  );
 }
 
 export function combineCoverage(
@@ -241,6 +251,7 @@ export function combineCoverage(
   return {
     mentions: known.flatMap((value) => value.mentions),
     recorded: known.reduce((sum, value) => sum + value.recorded, 0),
+    blocked: known.reduce((sum, value) => sum + value.blocked, 0),
     pending: known.reduce((sum, value) => sum + value.pending, 0),
     plan: known.reduce((sum, value) => sum + value.plan, 0),
     mention: known.reduce((sum, value) => sum + value.mention, 0),

@@ -12844,6 +12844,18 @@ export interface operations {
                                 bbox: {
                                     [key: string]: number;
                                 };
+                                /** Declared Move Spans */
+                                declared_move_spans?: {
+                                    /** End */
+                                    end: number;
+                                    /** Start */
+                                    start: number;
+                                    /**
+                                     * Token Id
+                                     * @default null
+                                     */
+                                    token_id: string | null;
+                                }[];
                                 /** Fragment Sha256 */
                                 fragment_sha256: string;
                                 /** Move Mentions */
@@ -12909,6 +12921,21 @@ export interface operations {
                          * Format: uuid
                          */
                         run_id: string;
+                        /** Theory Sections */
+                        theory_sections?: {
+                            /** Body Source Ref */
+                            body_source_ref: string | null;
+                            /** Label */
+                            label: string;
+                            /** Opening Text */
+                            opening_text: string;
+                            /** Page */
+                            page: number;
+                            /** Parent Label */
+                            parent_label: string | null;
+                            /** Preview Source Refs */
+                            preview_source_refs: string[];
+                        }[];
                     };
                 };
             };
@@ -13538,6 +13565,14 @@ export interface operations {
                              */
                             kind: "exclude_item";
                         } | {
+                            /** Item Ids */
+                            item_ids: string[];
+                            /**
+                             * Kind
+                             * @enum {string}
+                             */
+                            kind: "exclude_items";
+                        } | {
                             /** Issue Id */
                             issue_id: string;
                             /**
@@ -13621,6 +13656,18 @@ export interface operations {
                              * @default null
                              */
                             target_sequence_id?: string | null;
+                        } | {
+                            /**
+                             * Kind
+                             * @enum {string}
+                             */
+                            kind: "rehome_source_group";
+                            /** Source Fragment Sha256S */
+                            source_fragment_sha256s: string[];
+                            /** Source Sequence Id */
+                            source_sequence_id: string;
+                            /** Target Sequence Id */
+                            target_sequence_id: string;
                         };
                     } | {
                         /**
@@ -17542,7 +17589,7 @@ export interface operations {
                 "application/json": {
                     /** Expected Version */
                     expected_version: number;
-                    /** PdfReviewReattachVariation */
+                    /** Operation */
                     operation: {
                         /**
                          * Kind
@@ -17563,6 +17610,18 @@ export interface operations {
                          * @default null
                          */
                         target_sequence_id?: string | null;
+                    } | {
+                        /**
+                         * Kind
+                         * @enum {string}
+                         */
+                        kind: "rehome_source_group";
+                        /** Source Fragment Sha256S */
+                        source_fragment_sha256s: string[];
+                        /** Source Sequence Id */
+                        source_sequence_id: string;
+                        /** Target Sequence Id */
+                        target_sequence_id: string;
                     };
                 };
             };
@@ -17579,6 +17638,16 @@ export interface operations {
                         blocking_issue_count: number;
                         /** Issue Count */
                         issue_count: number;
+                        /**
+                         * Moved Node Count
+                         * @default 0
+                         */
+                        moved_node_count: number;
+                        /**
+                         * Moved Root Count
+                         * @default 0
+                         */
+                        moved_root_count: number;
                     };
                 };
             };

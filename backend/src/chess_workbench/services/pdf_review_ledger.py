@@ -218,9 +218,13 @@ class PdfReviewLedgerService:
                 "validation_error", 422, "review variation cannot attach to this position"
             ) from exc
         inspection = inspect_review_candidate(edited.package)
+        moved_nodes = edited.decisions.get("moved_node_count", 0)
+        moved_roots = edited.decisions.get("moved_root_count", 0)
         return PdfReviewReattachPreviewRead(
             issue_count=inspection.issue_count,
             blocking_issue_count=inspection.blocking_issue_count,
+            moved_node_count=moved_nodes if isinstance(moved_nodes, int) else 0,
+            moved_root_count=moved_roots if isinstance(moved_roots, int) else 0,
         )
 
     async def _recovery_human_edits(
@@ -248,6 +252,10 @@ class PdfReviewLedgerService:
                 node_id = decision.get("node_id")
                 if isinstance(node_id, str):
                     touched.add(node_id)
+            elif operation == "rehome_source_group":
+                moved = decision.get("moved_node_ids")
+                if isinstance(moved, list):
+                    touched.update(node_id for node_id in moved if isinstance(node_id, str))
             elif operation in ("make_mainline", "promote_variation"):
                 identifiers = decision.get("promoted_node_ids")
                 if isinstance(identifiers, list):
@@ -320,7 +328,9 @@ class PdfReviewLedgerService:
                 self.session, self.settings, review_session.baseline_document_revision_id
             )
             context, responses, owned = (
-                document_replay.context, document_replay.responses, document_replay.owned_spans
+                document_replay.context,
+                document_replay.responses,
+                document_replay.owned_spans,
             )
         elif review_session.extraction_run_id is not None:
             context, responses, owned = await load_review_relations(
@@ -340,13 +350,9 @@ class PdfReviewLedgerService:
                 mainline_node_ids=mainline,
                 human_added_ids=additions,
                 document_base=document_replay.predecessor if document_replay else None,
-                document_continuation=(
-                    document_replay.continuation if document_replay else None
-                ),
+                document_continuation=(document_replay.continuation if document_replay else None),
                 document_id=review_session.document_id,
-                external_anchors=(
-                    document_replay.external_anchors if document_replay else None
-                ),
+                external_anchors=(document_replay.external_anchors if document_replay else None),
             )
         except ValueError as error:
             raise ServiceError("validation_error", 422, str(error)) from error

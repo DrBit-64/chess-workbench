@@ -74,6 +74,20 @@ function sequence(): Sequence {
 }
 
 describe('current-review source coverage', () => {
+  it('separates a model-declared blocked move from an unexamined candidate', () => {
+    const declared = structuredClone(source);
+    declared.pages[0].fragments[0].declared_move_spans = [{ start: 7, end: 9 }];
+    const coverage = paragraphCoverage(
+      text,
+      [ref(0, 22)],
+      buildReviewSourceIndex([sequence()], declared),
+    )!;
+    expect(coverage.recorded).toBe(1);
+    expect(coverage.blocked).toBe(1);
+    expect(coverage.pending).toBe(1);
+    expect(coverage.mentions[1].status).toBe('blocked');
+  });
+
   it('keeps repeated SAN occurrences separate and follows deletion and restoration', () => {
     const game = sequence();
     const check = (items: SourceReviewItem[]) =>

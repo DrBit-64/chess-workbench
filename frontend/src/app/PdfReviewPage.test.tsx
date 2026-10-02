@@ -1298,6 +1298,108 @@ describe('Stage 8D review page (8D-3A)', () => {
     });
   });
 
+  it('drag-selects mixed blocking items and excludes them in one undoable edit', async () => {
+    const board = {
+      id: 'board1',
+      kind: 'figure',
+      figure_type: 'chessboard',
+      caption: null,
+      alt_text: null,
+      evidence: evidence(5),
+      confidence: null,
+      position_fen_candidate: null,
+      warnings: [],
+    } satisfies ReviewItem;
+    const unresolved = {
+      id: 'text1',
+      kind: 'unresolved',
+      unresolved_type: 'text',
+      reason_code: 'ambiguous_relation',
+      raw_text: '12... Rc8',
+      details: null,
+      evidence: evidence(6),
+      confidence: null,
+      warnings: [],
+    } satisfies ReviewItem;
+    const blocked = baseDocument({
+      items: [...baseItems(), board, unresolved],
+      issues: [
+        {
+          issue_id: 'item:board1:chessboard-position-unresolved',
+          item_id: 'board1',
+          node_id: null,
+          scope: 'item',
+          severity: 'error',
+          code: 'chessboard_position_unresolved',
+          message: 'Board position unresolved',
+          blocking: true,
+          evidence: evidence(5),
+        },
+        {
+          issue_id: 'item:text1:unresolved',
+          item_id: 'text1',
+          node_id: null,
+          scope: 'item',
+          severity: 'error',
+          code: 'ambiguous_relation',
+          message: 'Unresolved text',
+          blocking: true,
+          evidence: evidence(6),
+        },
+      ],
+      issueCounts: { issue_count: 2, blocking_issue_count: 2 },
+    });
+    const commands: unknown[] = [];
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const target = String(input);
+      if (target.endsWith('/review/session')) {
+        return json({ replayed: false, session: reviewSession() }, 201);
+      }
+      if (target.endsWith('/commands')) {
+        commands.push(JSON.parse(String(init?.body)));
+        return json({
+          session: reviewSession(2),
+          document: baseDocument({
+            items: baseItems(),
+            issues: [],
+            issueCounts: { issue_count: 0, blocking_issue_count: 0 },
+          }),
+        });
+      }
+      return json(blocked);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    renderPage();
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: '开始编辑审核' }),
+    );
+    const checkboxes = await screen.findAllByRole('checkbox');
+    expect(checkboxes).toHaveLength(2);
+    fireEvent.mouseDown(checkboxes[0]!, { button: 0, buttons: 1 });
+    fireEvent.mouseEnter(checkboxes[1]!.closest('li')!, { buttons: 1 });
+    fireEvent.mouseUp(window);
+    expect(
+      (
+        screen.getByRole('button', {
+          name: '排除所选（2）',
+        }) as HTMLButtonElement
+      ).disabled,
+    ).toBe(false);
+    fireEvent.click(screen.getByRole('button', { name: '排除所选（2）' }));
+
+    await waitFor(() => expect(commands).toHaveLength(1));
+    expect(commands[0]).toEqual({
+      expected_version: 1,
+      command: {
+        kind: 'edit',
+        operation: { kind: 'exclude_items', item_ids: ['board1', 'text1'] },
+      },
+    });
+    expect(confirm.mock.calls[0]?.[0]).toContain('所选 2 项');
+  });
+
   it('keeps annotation text while detaching an unmatched position anchor', async () => {
     const blocked = annotatedDocument();
     const sequence = blocked.package.items?.[0];
@@ -2179,6 +2281,267 @@ describe('Stage 8D review page (8D-3A)', () => {
       anchor_node_id: 'n1',
       moves: ['c7c5'],
     });
+  });
+
+  it('shows numbered theory sections and jumps to their source pages', async () => {
+    const headingHash = 'd'.repeat(64);
+    const secondHeadingHash = 'f'.repeat(64);
+    const items = baseItems();
+    const sequence = items.find((item) => item.kind === 'move_sequence');
+    if (!sequence || sequence.kind !== 'move_sequence')
+      throw new Error('missing fixture score');
+    sequence.nodes[0].evidence = [
+      {
+        ...sequence.nodes[0].evidence[0],
+        fragment_sha256: headingHash,
+        start_offset: 5,
+        end_offset: 7,
+      },
+      {
+        ...sequence.nodes[0].evidence[0],
+        fragment_sha256: secondHeadingHash,
+        start_offset: 8,
+        end_offset: 12,
+      },
+    ];
+    const source: PdfSourceEvidence = {
+      run_id: RUN_ID,
+      first_page: 5,
+      last_page: 6,
+      evidence_status: 'ready',
+      error_code: null,
+      theory_sections: [
+        {
+          label: 'A',
+          parent_label: null,
+          body_source_ref: 's5_0',
+          preview_source_refs: [],
+          page: 5,
+          opening_text: '1 e4',
+        },
+        {
+          label: 'B',
+          parent_label: null,
+          body_source_ref: null,
+          preview_source_refs: ['s6_0'],
+          page: 6,
+          opening_text: '1 d4',
+        },
+        {
+          label: 'C',
+          parent_label: null,
+          body_source_ref: 's5_1',
+          preview_source_refs: [],
+          page: 5,
+          opening_text: '8 h3 Bxf3',
+        },
+      ],
+      pages: [
+        {
+          physical_page: 5,
+          fragments: [
+            {
+              order: 0,
+              text: 'A: 1 e4',
+              origin: 'embedded_text',
+              bbox: {},
+              fragment_sha256: headingHash,
+              move_mentions: [{ start: 5, end: 7, kind: 'candidate' }],
+              declared_move_spans: [{ start: 5, end: 7 }],
+            },
+            {
+              order: 1,
+              text: 'C: 8 h3 Bxf3',
+              origin: 'embedded_text',
+              bbox: {},
+              fragment_sha256: secondHeadingHash,
+              move_mentions: [
+                { start: 5, end: 7, kind: 'candidate' },
+                { start: 8, end: 12, kind: 'candidate' },
+              ],
+              declared_move_spans: [
+                { start: 5, end: 7 },
+                { start: 8, end: 12 },
+              ],
+            },
+          ],
+        },
+        {
+          physical_page: 6,
+          fragments: [
+            {
+              order: 0,
+              text: 'B: 1 d4',
+              origin: 'embedded_text',
+              bbox: {},
+              fragment_sha256: 'e'.repeat(64),
+            },
+          ],
+        },
+      ],
+    };
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL) =>
+        json(
+          String(input).endsWith('/source') ? source : baseDocument({ items }),
+        ),
+      ),
+    );
+    renderPage();
+    const summary = await screen.findByText('开局理论目录 · 3 节');
+    fireEvent.click(summary);
+    expect(
+      screen.getByRole('button', { name: /A: 1 e4.*1\/1 招已入谱/ }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole('button', {
+        name: /C: 8 h3 Bxf3.*1\/2 招已入谱.*1 招受阻/,
+      }),
+    ).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /B: 1 d4.*尚未展开/ }));
+    expect(screen.getByRole('img', { name: '物理页 6 图片' })).toBeTruthy();
+  });
+
+  it('previews a whole misowned theory group and saves it as one review edit', async () => {
+    const exampleHash = '1'.repeat(64);
+    const theoryHash = '2'.repeat(64);
+    const bodyHash = '3'.repeat(64);
+    const items = baseItems();
+    const example = items.find((item) => item.kind === 'move_sequence');
+    if (!example || example.kind !== 'move_sequence')
+      throw new Error('missing score');
+    const theory = structuredClone(example);
+    theory.id = 'theory';
+    theory.nodes = [structuredClone(example.nodes[0])];
+    theory.nodes[0].evidence = [
+      {
+        ...theory.nodes[0].evidence[0],
+        page: 5,
+        fragment_sha256: theoryHash,
+        start_offset: 0,
+        end_offset: 3,
+      },
+    ];
+    example.nodes[0].evidence = [
+      {
+        ...example.nodes[0].evidence[0],
+        page: 6,
+        fragment_sha256: bodyHash,
+        start_offset: 0,
+        end_offset: 3,
+      },
+    ];
+    example.nodes[1].evidence = [
+      {
+        ...example.nodes[1].evidence[0],
+        page: 5,
+        fragment_sha256: exampleHash,
+        start_offset: 0,
+        end_offset: 3,
+      },
+    ];
+    items.push(theory);
+    const document = baseDocument({ items });
+    const source: PdfSourceEvidence = {
+      run_id: RUN_ID,
+      first_page: 5,
+      last_page: 6,
+      evidence_status: 'ready',
+      error_code: null,
+      theory_sections: [
+        {
+          label: 'A',
+          parent_label: null,
+          body_source_ref: 's6_0',
+          preview_source_refs: [],
+          page: 6,
+          opening_text: '1 e4',
+        },
+      ],
+      pages: [
+        {
+          physical_page: 5,
+          fragments: [
+            {
+              order: 0,
+              text: 'e5',
+              origin: 'embedded_text',
+              bbox: {},
+              fragment_sha256: exampleHash,
+            },
+            {
+              order: 1,
+              text: 'e4',
+              origin: 'embedded_text',
+              bbox: {},
+              fragment_sha256: theoryHash,
+            },
+          ],
+        },
+        {
+          physical_page: 6,
+          fragments: [
+            {
+              order: 0,
+              text: 'e4',
+              origin: 'embedded_text',
+              bbox: {},
+              fragment_sha256: bodyHash,
+              declared_move_spans: [{ start: 0, end: 3 }],
+              move_mentions: [{ start: 0, end: 3, kind: 'candidate' }],
+            },
+          ],
+        },
+      ],
+    };
+    const requests: { operation: Record<string, unknown> }[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        if (url.endsWith('/source')) return json(source);
+        if (url.endsWith('/review/session'))
+          return json({ replayed: false, session: reviewSession() }, 201);
+        if (url.endsWith('/reattach-preview')) {
+          requests.push(JSON.parse(String(init?.body)));
+          return json({
+            issue_count: 0,
+            blocking_issue_count: 0,
+            moved_node_count: 1,
+            moved_root_count: 1,
+          });
+        }
+        if (url.endsWith('/commands')) {
+          requests.push(JSON.parse(String(init?.body)).command);
+          return json({ session: reviewSession(2), document });
+        }
+        return json(document);
+      }),
+    );
+    renderPage();
+    fireEvent.click(
+      await screen.findByRole('button', { name: '开始编辑审核' }),
+    );
+    fireEvent.click(await screen.findByText('开局理论目录 · 1 节'));
+    fireEvent.click(
+      screen.getByRole('button', { name: '预览修复理论棋谱归属' }),
+    );
+    expect(await screen.findByText(/预计迁移 1 招/)).toBeTruthy();
+    expect(requests[0].operation).toMatchObject({
+      kind: 'rehome_source_group',
+      source_sequence_id: 'seq1',
+      target_sequence_id: 'theory',
+      source_fragment_sha256s: [bodyHash],
+    });
+    fireEvent.click(screen.getByRole('button', { name: '确认整组迁移' }));
+    await waitFor(() =>
+      expect(requests[1].operation).toMatchObject({
+        kind: 'rehome_source_group',
+        source_sequence_id: 'seq1',
+        target_sequence_id: 'theory',
+      }),
+    );
   });
 
   it('scopes wide screens to independent scroll panes with accessible labels', async () => {

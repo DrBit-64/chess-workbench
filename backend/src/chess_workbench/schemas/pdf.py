@@ -135,6 +135,12 @@ class PdfSourceMoveMentionRead(StrictContract):
     kind: Literal["candidate", "square"]
 
 
+class PdfDeclaredMoveSpanRead(StrictContract):
+    start: Annotated[int, Field(ge=0)]
+    end: Annotated[int, Field(gt=0)]
+    token_id: str | None = None
+
+
 class PdfSourceFragmentRead(StrictContract):
     order: Annotated[int, Field(ge=0)]
     text: str
@@ -143,6 +149,7 @@ class PdfSourceFragmentRead(StrictContract):
     fragment_sha256: Sha256
     style_runs: list[PdfSourceStyleRunRead] = Field(default_factory=list)
     move_mentions: list[PdfSourceMoveMentionRead] = Field(default_factory=list)
+    declared_move_spans: list[PdfDeclaredMoveSpanRead] = Field(default_factory=list)
     roles: list[Literal["mainline", "variation", "example", "plan", "annotation", "mention"]] = (
         Field(default_factory=list)
     )
@@ -158,6 +165,15 @@ class PdfSourcePageRead(StrictContract):
     fragments: list[PdfSourceFragmentRead]
 
 
+class PdfTheorySectionRead(StrictContract):
+    label: str
+    parent_label: str | None
+    body_source_ref: str | None
+    preview_source_refs: list[str]
+    page: Annotated[int, Field(ge=1)]
+    opening_text: str
+
+
 class PdfSourceEvidenceRead(StrictContract):
     run_id: EntityId
     first_page: Annotated[int, Field(ge=1)]
@@ -165,6 +181,7 @@ class PdfSourceEvidenceRead(StrictContract):
     evidence_status: Literal["ready", "unavailable"]
     error_code: str | None
     reading_hints: list[PdfSourceReadingHintRead] = Field(default_factory=list)
+    theory_sections: list[PdfTheorySectionRead] = Field(default_factory=list)
     pages: list[PdfSourcePageRead]
 
 

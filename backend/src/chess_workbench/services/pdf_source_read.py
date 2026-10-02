@@ -16,6 +16,7 @@ from chess_workbench.extraction.pdfium import PdfiumPageRenderer
 from chess_workbench.extraction.relations import (
     RelationPatchResponse,
     RelationState,
+    _resolve_quote,
     apply_relation_patches,
     apply_relations,
     canonicalize_continuation_games,
@@ -23,6 +24,10 @@ from chess_workbench.extraction.relations import (
     reading_hints,
     reconcile_continuation_seed,
     source_tokens,
+)
+from chess_workbench.extraction.theory_outline import (
+    build_theory_outline,
+    build_theory_outline_from_fragments,
 )
 from chess_workbench.review.source_mentions import source_move_mentions
 from chess_workbench.services.content import ServiceError
@@ -80,6 +85,18 @@ class PdfSourceReadService:
             )
         if document is not None:
             parts = [await self.read_source(segment.extraction_run_id) for segment in segments]
+            combined_pages = [page for part in parts for page in cast(list[Any], part["pages"])]
+            outline = build_theory_outline_from_fragments(
+                (page["physical_page"], fragment["order"], fragment["text"], fragment["origin"])
+                for page in combined_pages
+                for fragment in page["fragments"]
+            )
+            if outline is not None:
+                preview_refs = {ref for section in outline.sections for ref in section.preview_refs}
+                for page in combined_pages:
+                    for fragment in page["fragments"]:
+                        if f"s{page['physical_page']}_{fragment['order']}" in preview_refs:
+                            fragment["roles"] = sorted(set(fragment.get("roles", [])) | {"mention"})
             return {
                 "run_id": str(run_id),
                 "first_page": document.first_page,
@@ -95,7 +112,8 @@ class PdfSourceReadService:
                     for part in parts
                     for hint in cast(list[Any], part.get("reading_hints", []))
                 ],
-                "pages": [page for part in parts for page in cast(list[Any], part["pages"])],
+                "theory_sections": outline.as_input() if outline else [],
+                "pages": combined_pages,
             }
         view, source, committed = await self._state(run_id)
         if committed is None:
@@ -110,7 +128,13 @@ class PdfSourceReadService:
                     for page in range(source.first_page, source.last_page + 1)
                 ],
             }
-        role_map, hints = await self._relation_preview(run_id, committed)
+        role_map, hints, declared = await self._relation_preview(run_id, committed)
+        outline = build_theory_outline(committed.context)
+        if outline is not None:
+            for section in outline.sections:
+                for ref in section.preview_refs:
+                    page, order = ref.removeprefix("s").split("_", 1)
+                    role_map.setdefault((int(page), int(order)), set()).add("mention")
         mentions = source_move_mentions(committed.context)
         return {
             "run_id": str(run_id),
@@ -119,6 +143,7 @@ class PdfSourceReadService:
             "evidence_status": "ready",
             "error_code": None,
             "reading_hints": hints,
+            "theory_sections": outline.as_input() if outline else [],
             "pages": [
                 {
                     "physical_page": page.physical_page,
@@ -134,6 +159,12 @@ class PdfSourceReadService:
                             ],
                             "roles": sorted(role_map.get((page.physical_page, entry.order), set())),
                             "move_mentions": mentions.get((page.physical_page, entry.order), []),
+                            "declared_move_spans": [
+                                {"start": start, "end": end, "token_id": token_id}
+                                for start, end, token_id in sorted(
+                                    declared.get((page.physical_page, entry.order), set())
+                                )
+                            ],
                         }
                         for entry in page.fragments
                     ],
@@ -144,10 +175,16 @@ class PdfSourceReadService:
 
     async def _relation_preview(
         self, run_id: UUID, committed: _CommittedEvidence
-    ) -> tuple[dict[tuple[int, int], set[str]], list[dict[str, object]]]:
+    ) -> tuple[
+        dict[tuple[int, int], set[str]],
+        list[dict[str, object]],
+        dict[tuple[int, int], set[tuple[int, int, str]]],
+    ]:
         context = committed.context
         tokens = source_tokens(context)
         hints = reading_hints(context, tokens)
+        token_by_id = {token.id: token for token in tokens}
+        declared: dict[tuple[int, int], set[tuple[int, int, str]]] = {}
         async with self.database.session() as session:
             artifact = await session.scalar(
                 select(ExtractionArtifact).where(
@@ -156,7 +193,7 @@ class PdfSourceReadService:
                 )
             )
         if artifact is None:
-            return {}, hints
+            return {}, hints, declared
         try:
             manifest = json.loads(await _read_artifact_bytes(self.settings, artifact))
             parsed_windows = []
@@ -182,12 +219,28 @@ class PdfSourceReadService:
                 predecessor_spans = (
                     request_body.get("predecessor_source_spans", []) or predecessor_spans
                 )
-                parsed_windows.append(
-                    (
-                        parse_relation_response(chunk["response"]["content"]),
-                        set(request_body["window"]["owned_span_refs"]),
-                    )
-                )
+                response = parse_relation_response(chunk["response"]["content"])
+                # Count the original model declarations before a repair can demote
+                # them into prose. This exposes blocked score without guessing that
+                # every move-shaped phrase in the book is a missing move.
+                for segment in response.segments:
+                    for move_ref in segment.move_refs:
+                        token = (
+                            token_by_id.get(move_ref)
+                            if isinstance(move_ref, str)
+                            else _resolve_quote(move_ref, context)
+                        )
+                        if token is None:
+                            continue
+                        declared.setdefault((token.page, token.order), set()).add(
+                            (token.start, token.end, token.id)
+                        )
+                        if token.leading_source is not None:
+                            lead_page, lead_order, lead_start, lead_end = token.leading_source
+                            declared.setdefault((lead_page, lead_order), set()).add(
+                                (lead_start, lead_end, token.id)
+                            )
+                parsed_windows.append((response, set(request_body["window"]["owned_span_refs"])))
             responses = canonicalize_continuation_games(
                 [
                     reconcile_continuation_seed(
@@ -216,7 +269,7 @@ class PdfSourceReadService:
             for response, (_, owned) in zip(responses, parsed_windows, strict=True):
                 apply_relations(context, response, tokens, owned, state)
         except (KeyError, TypeError, ValueError):
-            return {}, hints
+            return {}, hints, declared
         role_map: dict[tuple[int, int], set[str]] = {}
         for event in state.events:
             if event.get("kind") != "move":
@@ -241,7 +294,7 @@ class PdfSourceReadService:
                         role_map.setdefault((int(page), int(order)), set()).add(note.kind)
                     except ValueError:
                         continue
-        return role_map, hints
+        return role_map, hints, declared
 
     async def read_page(self, run_id: UUID, physical_page: int) -> tuple[bytes, str]:
         async with self.database.session() as session:
