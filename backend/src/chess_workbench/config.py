@@ -115,6 +115,11 @@ class Settings(BaseSettings):
     engine_max_time_ms: int = Field(default=30_000, ge=100, le=600_000, strict=False)
     engine_worker_enabled: bool = Field(default=True, strict=False)
     engine_worker_poll_ms: int = Field(default=250, ge=50, le=10_000, strict=False)
+    pdf_worker_concurrency: int = Field(default=2, ge=1, le=3, strict=False)
+    ccef_provider_concurrency: int = Field(default=2, ge=1, le=3, strict=False)
+    ccef_provider_total_timeout_seconds: float = Field(
+        default=1800.0, ge=1.0, le=3600.0, strict=False
+    )
 
     lichess_api_token_file: Path | None = Field(default=None, repr=False, strict=False)
 

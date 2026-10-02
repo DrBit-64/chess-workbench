@@ -27,7 +27,7 @@ from chess_workbench.services.pdf_persistence import (
 )
 from chess_workbench.services.pdf_review import PdfReviewReadService
 from chess_workbench.services.pdf_review_ledger import PdfReviewLedgerService
-from chess_workbench.services.source_storage import store_content_addressed_bytes
+from chess_workbench.services.source_storage import StoredSourceBlob, store_content_addressed_bytes
 from chess_workbench.store.models import (
     ExtractionArtifact,
     ExtractionRun,
@@ -91,6 +91,19 @@ class PdfDocumentAppendCommit:
     segment: PdfExtractionDocumentSegment
     revision: PdfExtractionDocumentRevision
     replayed: bool
+
+
+async def prepare_aggregate_blob(
+    settings: Settings, aggregate: ExtractionPackageV1_1
+) -> StoredSourceBlob:
+    """Write the immutable composed package before opening the head transaction."""
+    return await asyncio.to_thread(
+        store_content_addressed_bytes,
+        settings.source_storage_root,
+        namespace="derived/extraction",
+        suffix=".json",
+        raw_bytes=_canonical_ccef_bytes(aggregate),
+    )
 
 
 class PdfDocumentService:
@@ -494,6 +507,9 @@ class PdfDocumentService:
         segment_normalized_ccef_sha256: str,
         aggregate: ExtractionPackageV1_1,
         review_revision_id: UUID | None = None,
+        prepared_blob: StoredSourceBlob | None = None,
+        expected_worker_id: str | None = None,
+        expected_attempt_count: int | None = None,
     ) -> PdfDocumentAppendCommit:
         """Advance one document head from an already verified append package.
 
@@ -544,6 +560,15 @@ class PdfDocumentService:
         if row is None:
             raise ServiceError("not_found", 404, "PDF document append was not found")
         append, run, job = row
+        if expected_worker_id is not None and (
+            job.status != "running"
+            or job.lease_owner != expected_worker_id
+            or job.attempt_count != expected_attempt_count
+            or job.cancel_requested_at is not None
+        ):
+            raise ServiceError(
+                "stale_version", 409, "PDF extraction job lease changed before commit"
+            )
         if job.status not in {"running", "succeeded"}:
             raise ServiceError(
                 "ambiguous_context", 409, "PDF document append is not ready to commit"
@@ -617,14 +642,7 @@ class PdfDocumentService:
         elif review_revision_id is not None:
             raise ServiceError("stale_version", 409, "PDF review changed after the append started")
 
-        aggregate_bytes = _canonical_ccef_bytes(aggregate)
-        aggregate_blob = await asyncio.to_thread(
-            store_content_addressed_bytes,
-            self.settings.source_storage_root,
-            namespace="derived/extraction",
-            suffix=".json",
-            raw_bytes=aggregate_bytes,
-        )
+        aggregate_blob = prepared_blob or await prepare_aggregate_blob(self.settings, aggregate)
         next_revision_number = document.version + 1
         segment = PdfExtractionDocumentSegment(
             id=uuid5(

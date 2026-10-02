@@ -132,31 +132,37 @@ def _explicit_side_to_move(
 def _resolve_operational_position(
     pages: list[DiagramEvidencePage], recognition: ChessDiagramRecognition
 ) -> tuple[str, int, str, str] | None:
-    placements = [recognition.piece_placement]
-    if recognition.orientation == "unknown":
-        rotated = _rotate_placement(recognition.piece_placement)
-        if rotated != placements[0]:
-            placements.append(rotated)
+    preferred = recognition.piece_placement
+    rotated = _rotate_placement(preferred)
     source_page = next(page for page in pages if page.physical_page == recognition.physical_page)
     explicit_side = _explicit_side_to_move(source_page, recognition)
-    for move_number, side, source_move in _move_candidates(pages, recognition):
-        if explicit_side is not None and side != explicit_side:
-            continue
-        legal: list[tuple[str, str]] = []
-        san = _clean_move_token(source_move)
-        if san is None:
-            continue
-        for placement in placements:
-            try:
-                board = chess.Board(f"{placement} {side} - - 0 {move_number}")
-                board.parse_san(san)
-            except ValueError:
+
+    def legal_anchor(placements: list[str]) -> tuple[str, int, str, str] | None:
+        for move_number, side, source_move in _move_candidates(pages, recognition):
+            if explicit_side is not None and side != explicit_side:
                 continue
-            if board.is_valid():
-                legal.append((placement, board.fen(en_passant="fen")))
-        if len(legal) == 1:
-            return legal[0][1], move_number, side, source_move
-    return None
+            legal: list[str] = []
+            san = _clean_move_token(source_move)
+            if san is None:
+                continue
+            for placement in placements:
+                try:
+                    board = chess.Board(f"{placement} {side} - - 0 {move_number}")
+                    board.parse_san(san)
+                except ValueError:
+                    continue
+                if board.is_valid():
+                    legal.append(board.fen(en_passant="fen"))
+            if len(legal) == 1:
+                return legal[0], move_number, side, source_move
+        return None
+
+    if recognition.orientation == "unknown":
+        return legal_anchor([preferred, rotated] if rotated != preferred else [preferred])
+    # A pawn-placement orientation guess can be wrong in an endgame. Keep the
+    # recognized orientation first, but use the opposite one if no printed
+    # move from the diagram is legal there.
+    return legal_anchor([preferred]) or (legal_anchor([rotated]) if rotated != preferred else None)
 
 
 def _diagram_fragment(

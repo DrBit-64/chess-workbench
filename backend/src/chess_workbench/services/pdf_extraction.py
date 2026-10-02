@@ -61,6 +61,7 @@ from chess_workbench.services.ccef_failure_debug import (
     store_deepseek_invalid_response_capture,
 )
 from chess_workbench.services.content import ServiceError
+from chess_workbench.services.extraction_runtime import ExtractionRuntime
 from chess_workbench.services.pdf_persistence import (
     PDF_ANNOTATED_EXTRACTION_PIPELINE_VERSION,
     PDF_EVIDENCE_PIPELINE_VERSION,
@@ -69,6 +70,7 @@ from chess_workbench.services.pdf_persistence import (
     PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION,
     PDF_SOURCE_EXTRACTION_PIPELINE_VERSION,
 )
+from chess_workbench.services.pdf_render import render_pdf_page
 from chess_workbench.services.source_storage import (
     StoredSourceBlob,
     read_verified_content_addressed_bytes,
@@ -122,6 +124,7 @@ class _ExtractionInput:
     created_at: datetime
     pipeline_version: str
     attempt_count: int
+    lease_owner: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -292,6 +295,7 @@ async def _load_input(database: Database, payload: dict[str, Any]) -> _Extractio
         created_at=run.created_at,
         pipeline_version=pipeline_version,
         attempt_count=job.attempt_count,
+        lease_owner=job.lease_owner,
     )
 
 
@@ -455,6 +459,18 @@ async def _register_artifacts(
         )
         if locked_run is None:
             raise EngineError("invalid_job_payload", "PDF extraction Job payload is invalid")
+        if source.lease_owner is not None:
+            job = await session.get(Job, source.job_id)
+            if (
+                job is None
+                or job.status != "running"
+                or job.lease_owner != source.lease_owner
+                or job.attempt_count != source.attempt_count
+                or job.cancel_requested_at is not None
+            ):
+                raise EngineError(
+                    "lease_lost", "PDF extraction job no longer owns the result", retryable=False
+                )
         existing = list(
             await session.scalars(
                 select(ExtractionArtifact).where(
@@ -787,9 +803,11 @@ def _active_provider(
     recovery: bool = False,
     reasoning_effort_override: Literal["low", "high", "max"] | None = None,
     invalid_response_recorder: DeepSeekInvalidResponseRecorder | None = None,
+    runtime: ExtractionRuntime | None = None,
+    run_id: str = "",
 ) -> StructuredGenerationProvider:
     if provider is not None:
-        return provider
+        return runtime.limit(provider, run_id=run_id) if runtime is not None else provider
     effort = settings.ccef_provider_reasoning_effort
     if recovery:
         recovery_effort = settings.ccef_recovery_reasoning_effort
@@ -811,7 +829,7 @@ def _active_provider(
             "AI extraction provider is not configured",
             retryable=False,
         )
-    return DeepSeekV4FlashProvider(
+    active = DeepSeekV4FlashProvider(
         api_key=api_key.get_secret_value(),
         endpoint=settings.ccef_provider_endpoint,
         model=(settings.ccef_recovery_model or settings.ccef_provider_model)
@@ -824,6 +842,7 @@ def _active_provider(
         json_output_enabled=json_output_enabled,
         invalid_response_recorder=invalid_response_recorder,
     )
+    return runtime.limit(active, run_id=run_id) if runtime is not None else active
 
 
 def _deepseek_invalid_response_recorder(
@@ -889,6 +908,7 @@ async def process_pdf_extraction_job(
     ocr_adapter: OcrAdapter | None = None,
     diagram_recognizer: ChessDiagramRecognizer | None = None,
     provider: StructuredGenerationProvider | None = None,
+    runtime: ExtractionRuntime | None = None,
 ) -> dict[str, Any]:
     """Render one immutable run, write CAS blobs, then atomically register indexes."""
     source = await _load_input(database, payload)
@@ -918,6 +938,8 @@ async def process_pdf_extraction_job(
             active_provider = _active_provider(
                 settings,
                 provider,
+                runtime=runtime,
+                run_id=str(source.run_id),
                 thinking_enabled=source.pipeline_version
                 == PDF_RELATION_EXTRACTION_PIPELINE_VERSION,
                 json_output_enabled=source.pipeline_version
@@ -928,6 +950,8 @@ async def process_pdf_extraction_job(
                 _active_provider(
                     settings,
                     provider,
+                    runtime=runtime,
+                    run_id=str(source.run_id),
                     recovery=True,
                     invalid_response_recorder=_deepseek_invalid_response_recorder(settings, source),
                 )
@@ -941,10 +965,13 @@ async def process_pdf_extraction_job(
                 committed,
                 active_provider,
                 patch_provider=patch_provider,
+                runtime=runtime,
             )
         active_provider = _active_provider(
             settings,
             provider,
+            runtime=runtime,
+            run_id=str(source.run_id),
             thinking_enabled=source.pipeline_version == PDF_RELATION_EXTRACTION_PIPELINE_VERSION,
             json_output_enabled=source.pipeline_version != PDF_RELATION_EXTRACTION_PIPELINE_VERSION,
             invalid_response_recorder=_deepseek_invalid_response_recorder(settings, source),
@@ -967,6 +994,8 @@ async def process_pdf_extraction_job(
             active_provider = _active_provider(
                 settings,
                 provider,
+                runtime=runtime,
+                run_id=str(source.run_id),
                 thinking_enabled=is_semantic_v4,
                 json_output_enabled=not is_semantic_v4,
                 invalid_response_recorder=(
@@ -986,6 +1015,8 @@ async def process_pdf_extraction_job(
         active_provider = _active_provider(
             settings,
             provider,
+            runtime=runtime,
+            run_id=str(source.run_id),
             thinking_enabled=is_semantic_v4,
             json_output_enabled=not is_semantic_v4,
             invalid_response_recorder=(
@@ -1029,13 +1060,24 @@ async def process_pdf_extraction_job(
     for physical_page in range(source.first_page, source.last_page + 1):
         evidence_error: PdfEvidenceError | None = None
         try:
-            rendered = await asyncio.to_thread(
-                active_renderer.render_page,
-                pdf_bytes,
-                physical_page,
-                render_profile,
-            )
-            rendered_blob = await _store_blob(settings, suffix=".png", raw_bytes=rendered.png_bytes)
+            if runtime is None:
+                rendered = await render_pdf_page(
+                    active_renderer, pdf_bytes, physical_page, render_profile
+                )
+            else:
+                async with runtime.local_stage:
+                    rendered = await render_pdf_page(
+                        active_renderer, pdf_bytes, physical_page, render_profile
+                    )
+            if runtime is None:
+                rendered_blob = await _store_blob(
+                    settings, suffix=".png", raw_bytes=rendered.png_bytes
+                )
+            else:
+                async with runtime.local_stage:
+                    rendered_blob = await _store_blob(
+                        settings, suffix=".png", raw_bytes=rendered.png_bytes
+                    )
             if _non_whitespace_count(rendered) >= render_profile.embedded_text_min_chars:
                 origin: Literal["embedded_text", "ocr"] = "embedded_text"
                 engine_name = rendered.renderer_name
@@ -1084,16 +1126,25 @@ async def process_pdf_extraction_job(
         )
         recognitions: list[ChessDiagramRecognition] = []
         try:
-            recognitions = await asyncio.to_thread(
-                active_diagram_recognizer.recognize,
-                ChessDiagramRecognitionRequest(
-                    physical_page=physical_page,
-                    page_width=rendered.width,
-                    page_height=rendered.height,
-                    page_png_bytes=rendered.png_bytes,
-                    embedded_images=rendered.embedded_images,
-                ),
+            recognition_request = ChessDiagramRecognitionRequest(
+                physical_page=physical_page,
+                page_width=rendered.width,
+                page_height=rendered.height,
+                page_png_bytes=rendered.png_bytes,
+                embedded_images=rendered.embedded_images,
             )
+            if runtime is None:
+                recognitions = await asyncio.to_thread(
+                    active_diagram_recognizer.recognize, recognition_request
+                )
+            else:
+
+                def recognize_current_page(
+                    request: ChessDiagramRecognitionRequest = recognition_request,
+                ) -> list[ChessDiagramRecognition]:
+                    return active_diagram_recognizer.recognize(request)
+
+                recognitions = await runtime.run_local(recognize_current_page)
         except ChessDiagramError as error:
             warnings.append(
                 {
@@ -1136,17 +1187,20 @@ async def process_pdf_extraction_job(
         )
         await asyncio.sleep(0)
 
-    resolved_pages = resolve_diagram_evidence(
-        [
-            DiagramEvidencePage(
-                physical_page=page.rendered.physical_page,
-                width=page.rendered.width,
-                height=page.rendered.height,
-                fragments=page.fragments,
-                recognitions=page.recognitions,
-            )
-            for page in pending_pages
-        ]
+    diagram_pages = [
+        DiagramEvidencePage(
+            physical_page=page.rendered.physical_page,
+            width=page.rendered.width,
+            height=page.rendered.height,
+            fragments=page.fragments,
+            recognitions=page.recognitions,
+        )
+        for page in pending_pages
+    ]
+    resolved_pages = (
+        await runtime.run_local(lambda: resolve_diagram_evidence(diagram_pages))
+        if runtime is not None
+        else resolve_diagram_evidence(diagram_pages)
     )
     for pending, resolved in zip(pending_pages, resolved_pages, strict=True):
         page_origin: PageEvidenceOrigin = "mixed" if resolved.diagram_count else pending.origin
@@ -1271,6 +1325,8 @@ async def process_pdf_extraction_job(
             _active_provider(
                 settings,
                 provider,
+                runtime=runtime,
+                run_id=str(source.run_id),
                 recovery=True,
                 invalid_response_recorder=_deepseek_invalid_response_recorder(settings, source),
             )
@@ -1284,6 +1340,7 @@ async def process_pdf_extraction_job(
             committed,
             active_provider,
             patch_provider=patch_provider,
+            runtime=runtime,
         )
     from chess_workbench.services import pdf_legacy_extraction
 

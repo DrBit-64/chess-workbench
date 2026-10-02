@@ -3,6 +3,8 @@ from __future__ import annotations
 import asyncio
 import contextlib
 from dataclasses import dataclass
+from typing import Any
+from uuid import uuid4
 
 from sanic import Request, Sanic
 from sanic.config import Config
@@ -20,6 +22,7 @@ from chess_workbench.api.pgn import pgn_blueprint
 from chess_workbench.config import Settings
 from chess_workbench.services import ServiceError
 from chess_workbench.services.engine import process_analysis_job
+from chess_workbench.services.extraction_runtime import ExtractionRuntime
 from chess_workbench.services.pdf_extraction import process_pdf_extraction_job
 from chess_workbench.services.pdf_incremental_extraction import (
     process_pdf_incremental_extraction_job,
@@ -35,6 +38,7 @@ class AppContext:
     pgn_import_lock: asyncio.Lock
     pdf_persistence_lock: asyncio.Lock
     worker_task: asyncio.Task[None] | None = None
+    extraction_runtime: ExtractionRuntime | None = None
 
 
 ChessWorkbenchApp = Sanic[Config, AppContext]
@@ -89,20 +93,55 @@ def create_app(settings: Settings | None = None) -> ChessWorkbenchApp:
 
     @app.before_server_start
     async def start_worker(starting_app: ChessWorkbenchApp) -> None:
-        if starting_app.ctx.settings.engine_worker_enabled:
-            handlers: dict[str, JobHandler] = {
-                "pdf_extraction": process_pdf_extraction_job,
-                "pdf_incremental_extraction": process_pdf_incremental_extraction_job,
-            }
-            if starting_app.ctx.settings.stockfish_path.is_file():
-                handlers["engine_analysis"] = process_analysis_job
-            worker = SqlWorker(
-                starting_app.ctx.database,
-                starting_app.ctx.settings,
-                worker_id=f"api-{id(starting_app)}",
-                handlers=handlers,
+        if not starting_app.ctx.settings.engine_worker_enabled:
+            return
+        settings = starting_app.ctx.settings
+        runtime = ExtractionRuntime(
+            settings.ccef_provider_concurrency,
+            settings.ccef_provider_total_timeout_seconds,
+        )
+        starting_app.ctx.extraction_runtime = runtime
+
+        async def standalone(
+            database: Database, settings: Settings, payload: dict[str, Any]
+        ) -> dict[str, Any]:
+            return await process_pdf_extraction_job(database, settings, payload, runtime=runtime)
+
+        async def incremental(
+            database: Database, settings: Settings, payload: dict[str, Any]
+        ) -> dict[str, Any]:
+            return await process_pdf_incremental_extraction_job(
+                database, settings, payload, runtime=runtime
             )
-            starting_app.ctx.worker_task = asyncio.create_task(worker.run_forever())
+
+        pdf_handlers: dict[str, JobHandler] = {
+            "pdf_extraction": standalone,
+            "pdf_incremental_extraction": incremental,
+        }
+        process_id = uuid4().hex
+        workers = [
+            SqlWorker(
+                starting_app.ctx.database,
+                settings,
+                worker_id=f"api-{process_id}-pdf-{slot}",
+                handlers=pdf_handlers,
+            )
+            for slot in range(settings.pdf_worker_concurrency)
+        ]
+        if settings.stockfish_path.is_file():
+            workers.append(
+                SqlWorker(
+                    starting_app.ctx.database,
+                    settings,
+                    worker_id=f"api-{process_id}-engine",
+                    handlers={"engine_analysis": process_analysis_job},
+                )
+            )
+
+        async def supervise() -> None:
+            await asyncio.gather(*(worker.run_forever() for worker in workers))
+
+        starting_app.ctx.worker_task = asyncio.create_task(supervise())
 
     @app.after_server_stop
     async def close_database(stopping_app: ChessWorkbenchApp) -> None:

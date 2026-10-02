@@ -40,6 +40,7 @@ from chess_workbench.services.pdf_extraction import (
     _render_profile,
 )
 from chess_workbench.services.pdf_persistence import PdfExtractionView, PdfPersistenceService
+from chess_workbench.services.pdf_render import render_pdf_page
 from chess_workbench.services.source_storage import read_verified_content_addressed_bytes
 from chess_workbench.store.database import Database
 from chess_workbench.store.models import (
@@ -338,8 +339,8 @@ class PdfSourceReadService:
             max_bytes=self.settings.pdf_max_bytes,
         )
         try:
-            rendered = await asyncio.to_thread(
-                PdfiumPageRenderer().render_page,
+            rendered = await render_pdf_page(
+                PdfiumPageRenderer(),
                 pdf_bytes,
                 physical_page,
                 _render_profile(view.profile),

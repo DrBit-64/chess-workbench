@@ -184,7 +184,9 @@ def _embedded_fragments(
             for offset, character in enumerate(line):
                 if character.isspace():
                     continue
-                font_name, font_size, bold, color = _character_style(text_page, start + offset)
+                font_name, font_size, bold, style_color = _character_style(
+                    text_page, start + offset
+                )
                 if style_runs and (
                     style_runs[-1].end == offset
                     and (
@@ -193,7 +195,7 @@ def _embedded_fragments(
                         style_runs[-1].bold,
                         style_runs[-1].color,
                     )
-                    == (font_name, font_size, bold, color)
+                    == (font_name, font_size, bold, style_color)
                 ):
                     style_runs[-1] = style_runs[-1].model_copy(update={"end": offset + 1})
                 else:
@@ -204,7 +206,7 @@ def _embedded_fragments(
                             font_family=font_name,
                             font_size=font_size,
                             bold=bold,
-                            color=color,
+                            color=style_color,
                         )
                     )
             fragments.append(

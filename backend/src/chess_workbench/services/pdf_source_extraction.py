@@ -22,6 +22,8 @@ from chess_workbench.extraction.provider import (
     StructuredGenerationProviderError,
 )
 from chess_workbench.extraction.score import score_candidate
+from chess_workbench.services.extraction_checkpoints import ExtractionCheckpoints
+from chess_workbench.services.extraction_runtime import ExtractionRuntime
 from chess_workbench.services.pdf_documents import (
     PDF_RELATION_INCREMENTAL_EXTRACTION_PIPELINE_VERSION,
 )
@@ -149,26 +151,49 @@ async def process_source_candidate(
     external_base_sha256: str | None = None,
     predecessor_context: CcefPromptContext | None = None,
     continuation_anchors: list[dict[str, Any]] | None = None,
+    runtime: ExtractionRuntime | None = None,
 ) -> dict[str, Any]:
     """Run one page-owned semantic pipeline and commit its reviewable CCEF."""
 
     async def retain_response(chunk_number: int, request: Any, response: Any) -> None:
-        # A later chunk may fail; each paid response remains in local ignored debug CAS.
-        await asyncio.to_thread(
-            store_content_addressed_bytes,
-            settings.source_storage_root,
-            namespace=(
-                f"debug/source-extraction/{source.run_id}/attempt-{source.attempt_count}"
-                f"/chunk-{chunk_number}"
-            ),
-            suffix=".json",
-            raw_bytes=_json_bytes(
-                {
-                    "request": request.model_dump(mode="json"),
-                    "response": response.model_dump(mode="json"),
-                }
-            ),
-        )
+        # Keep the historical debug receipt alongside the new replayable index.
+        def store() -> None:
+            store_content_addressed_bytes(
+                settings.source_storage_root,
+                namespace=(
+                    f"debug/source-extraction/{source.run_id}/attempt-{source.attempt_count}"
+                    f"/chunk-{chunk_number}"
+                ),
+                suffix=".json",
+                raw_bytes=_json_bytes(
+                    {
+                        "request": request.model_dump(mode="json"),
+                        "response": response.model_dump(mode="json"),
+                    }
+                ),
+            )
+
+        if runtime is not None:
+            await runtime.run_local(store)
+        else:
+            await asyncio.to_thread(store)
+
+    checkpoints = ExtractionCheckpoints(
+        settings.source_storage_root,
+        run_id=str(source.run_id),
+        attempt=source.attempt_count,
+        pipeline=source.pipeline_version,
+        source_sha256=source.pdf_sha256,
+        predecessor_sha256=external_base_sha256,
+        runtime=runtime,
+    )
+    if source.pipeline_version in {
+        PDF_RELATION_EXTRACTION_PIPELINE_VERSION,
+        PDF_RELATION_INCREMENTAL_EXTRACTION_PIPELINE_VERSION,
+    }:
+        provider = checkpoints.wrap(provider, "relation")
+        if patch_provider is not None:
+            patch_provider = checkpoints.wrap(patch_provider, "patch")
 
     try:
         if source.pipeline_version in {
@@ -183,6 +208,7 @@ async def process_source_candidate(
                 predecessor_context=predecessor_context,
                 continuation_anchors=continuation_anchors,
                 base_sha256=external_base_sha256,
+                local_run=runtime.run_local if runtime is not None else None,
             )
         else:
             generated = await generate_semantic_page_chunks(

@@ -735,6 +735,17 @@ def _theory_owned_windows(context: CcefPromptContext, outline: Any) -> list[list
     return groups
 
 
+def _split_owned_refs(owned: list[str]) -> tuple[list[str], list[str]]:
+    pages = list(dict.fromkeys(ref.split("_", 1)[0] for ref in owned))
+    if len(pages) > 1:
+        first_half = set(pages[: len(pages) // 2])
+        left = [ref for ref in owned if ref.split("_", 1)[0] in first_half]
+        right = [ref for ref in owned if ref.split("_", 1)[0] not in first_half]
+        return left, right
+    middle = len(owned) // 2
+    return owned[:middle], owned[middle:]
+
+
 async def generate_relation_chunks(
     context: CcefPromptContext,
     provider: StructuredGenerationProvider,
@@ -747,6 +758,7 @@ async def generate_relation_chunks(
         [int, StructuredGenerationRequest, StructuredGenerationResponse], Awaitable[None]
     ]
     | None = None,
+    local_run: Callable[[Callable[[], Any]], Awaitable[Any]] | None = None,
 ) -> ChunkedGenerationResult:
     """Read the entire selected range; emit explicit relations in bounded groups."""
     from .relations import (
@@ -799,45 +811,76 @@ async def generate_relation_chunks(
         if theory_outline is not None
         else _relation_owned_windows(context)
     )
-    for owned in owned_windows:
-        request = build_relation_request(
-            context,
-            tokens,
-            state,
-            owned,
-            predecessor_context=predecessor_context,
-            continuation_anchors=continuation_anchors,
-            theory_outline=theory_outline,
-        )
-        response = await provider.generate(request)
+    pending_windows = [(owned, True) for owned in owned_windows]
+    while pending_windows:
+        owned, can_split = pending_windows.pop(0)
+
+        def prepare_request(owned: list[str] = owned) -> StructuredGenerationRequest:
+            return build_relation_request(
+                context,
+                tokens,
+                state,
+                owned,
+                predecessor_context=predecessor_context,
+                continuation_anchors=continuation_anchors,
+                theory_outline=theory_outline,
+            )
+
+        request = await local_run(prepare_request) if local_run is not None else prepare_request()
+        try:
+            response = await provider.generate(request)
+        except StructuredGenerationProviderError as error:
+            # Keep the full reading context; shrink only this output range after
+            # a complete-response budget failure. Never recursively retry.
+            if (
+                can_split
+                and len(owned) > 1
+                and error.code == "invalid_response"
+                and error.message.startswith("Generation exhausted its output budget")
+            ):
+                left, right = _split_owned_refs(owned)
+                pending_windows[:0] = [(left, False), (right, False)]
+                continue
+            raise
         if on_response is not None:
             await on_response(len(chunks) + 1, request, response)
-        if response.finish_reason == "length":
-            parsed = recover_completed_relation_prefix(response.content)
+
+        def fold_response(
+            owned: list[str] = owned,
+            request: StructuredGenerationRequest = request,
+            response: StructuredGenerationResponse = response,
+        ) -> None:
+            if response.finish_reason == "length":
+                parsed = recover_completed_relation_prefix(response.content)
+            else:
+                try:
+                    parsed = parse_relation_response(response.content)
+                except ValueError:
+                    parsed = None
+            if parsed is not None and continuation_anchors:
+                source_request = json.loads(request.messages[1].content)
+                parsed = reconcile_continuation_seed(
+                    parsed,
+                    tokens,
+                    continuation_anchors,
+                    predecessor_tokens=source_request.get("predecessor_move_tokens"),
+                    predecessor_spans=source_request.get("predecessor_source_spans"),
+                )
+                parsed = canonicalize_continuation_games(
+                    [*[response for response, _ in parsed_windows], parsed]
+                )[-1]
+            if parsed is None:
+                state.problems.extend(
+                    _problem_for_refs(context, owned, token_index, [], len(state.problems))
+                )
+            else:
+                apply_relations(context, parsed, tokens, set(owned), state)
+                parsed_windows.append((parsed, set(owned)))
+
+        if local_run is not None:
+            await local_run(fold_response)
         else:
-            try:
-                parsed = parse_relation_response(response.content)
-            except ValueError:
-                parsed = None
-        if parsed is not None and continuation_anchors:
-            source_request = json.loads(request.messages[1].content)
-            parsed = reconcile_continuation_seed(
-                parsed,
-                tokens,
-                continuation_anchors,
-                predecessor_tokens=source_request.get("predecessor_move_tokens"),
-                predecessor_spans=source_request.get("predecessor_source_spans"),
-            )
-            parsed = canonicalize_continuation_games(
-                [*[response for response, _ in parsed_windows], parsed]
-            )[-1]
-        if parsed is None:
-            state.problems.extend(
-                _problem_for_refs(context, owned, token_index, [], len(state.problems))
-            )
-        else:
-            apply_relations(context, parsed, tokens, set(owned), state)
-            parsed_windows.append((parsed, set(owned)))
+            fold_response()
         pages = [int(ref.split("_")[0][1:]) for ref in owned]
         chunks.append(
             SemanticChunkResult(
@@ -848,7 +891,11 @@ async def generate_relation_chunks(
                 event_count=len(state.events),
             )
         )
-    package = compile_relations(context, state)
+    package = (
+        await local_run(lambda: compile_relations(context, state))
+        if local_run is not None
+        else compile_relations(context, state)
+    )
     parsed_responses = [parsed for parsed, _ in parsed_windows]
     style_issues = style_continuity_issues(context, package, state, parsed_responses, tokens)
     issues = style_issues + validation_relation_issues(package, state, parsed_responses, tokens)
@@ -865,7 +912,13 @@ async def generate_relation_chunks(
     if issues and len(parsed_windows) == len(chunks):
         # One bounded clarification is triggered only by an observed invalid
         # relation root; ordinary successful segments cost no extra call.
-        request = build_relation_patch_request(context, tokens, parsed_responses, issues[:4])
+        request = (
+            await local_run(
+                lambda: build_relation_patch_request(context, tokens, parsed_responses, issues[:4])
+            )
+            if local_run is not None
+            else build_relation_patch_request(context, tokens, parsed_responses, issues[:4])
+        )
         try:
             patch_response = await (patch_provider or provider).generate(request)
         except StructuredGenerationProviderError:

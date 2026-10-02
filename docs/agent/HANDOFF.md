@@ -2,6 +2,14 @@
 
 2026-10-01. The operator accepted independent v8 and incremental v9 PDF extraction for personal use. Future extraction work should start from a concrete saved failure. R5/P6 broad six-book evaluation, incomplete multi-source scope and Chinese endgame book remain deferred.
 
+## PDF concurrency implemented and accepted locally (2026-10-03)
+
+Read [ADR 0027](../decisions/0027-bounded-async-pdf-extraction.md), [C1–C4 plan](pdf-concurrency-plan-2026-10-03.md) and [implementation/acceptance](pdf-concurrency-implementation-2026-10-03.md). Default two PDF workers share two DeepSeek slots and one serial local stage; all PDFium use is on one thread. Full-response checkpoints bind the exact request, model, source and v9 predecessor. v9 writes its aggregate before the short head transaction and checks current lease/attempt/review version. No migration, API contract or frontend code change; no commit.
+
+Website review URLs: Endgame p66–68 `acec9fe7-dd01-56fa-93ae-b33dec1ad4da`, p174–176 `c260f68c-5999-5307-b7d1-6014c9280e3b`, p234–235 `aefc6143-7968-5709-99c4-54b2405da563`. They are normal source records, not temporary tests, and are unapproved. Raw candidates matched 89/91 mainline plies and 6/6 selected complete branches; one human review command on Game 59 restored the other two plies. First B/C failures and generic diagram-direction/output-exhaustion improvements are retained in the record. Initial A/B HTTP intervals overlapped ~68.5 seconds and C stayed queued ~78.1 seconds; observed balance delta ¥0.58, under the ¥13 cap. The output-split fallback has a controlled test but did not trigger in the successful real C2 call.
+
+Focused owning tests passed 102; saved Catalan/Makogonov responses and a previously approved Scandinavian v9 candidate replayed with unchanged semantic results and no new model calls. The diagram answer key for Game 81 was visually corrected from g1 to g2 after initial preparation. Current backend was restarted with final code on port 8000; Vite stays on 5173. Chromium loaded all three review pages without page errors and restored Game 59 review version 2. Do not approve/publish these candidates automatically. User can resume Game 59's review session `c77d2635-d667-5602-aa98-0b7369f62193` at version 2. The old planning-only handoff is superseded.
+
 ## Scandinavian Chapter One published (2026-10-02)
 
 At the operator's request, the local website extracted *Smerdon's Scandinavian*, Section One, Chapter One (physical PDF pages 39–74). The user explicitly authorized sending only those pages' text/layout and necessary board crops to the configured DeepSeek endpoint. The v8 p39–52 run is `f90ac153-58c0-5a40-856e-a90dbebefb48`; the v9 p53–74 append is `62c9a5e3-cee0-5796-ad58-dc1ffb81c675`. Both succeeded on their first job attempt. Their document is `b332e5a0-8826-5631-bc81-0c3c60eb78bd`; review `a40f8536-f5fe-5825-8c3a-3c8abf38ed78` is approved at version 9 with 809 legal move nodes and zero review issues.

@@ -33,12 +33,14 @@ from chess_workbench.extraction.provider import (
     StructuredGenerationProvider,
 )
 from chess_workbench.services.content import ServiceError
+from chess_workbench.services.extraction_runtime import ExtractionRuntime
 from chess_workbench.services.pdf_documents import (
     PDF_INCREMENTAL_EXTRACTION_JOB_KIND,
     PDF_INCREMENTAL_EXTRACTION_PIPELINE_VERSION,
     PDF_RELATION_INCREMENTAL_EXTRACTION_PIPELINE_VERSION,
     PDF_SOURCE_INCREMENTAL_EXTRACTION_PIPELINE_VERSION,
     PdfDocumentService,
+    prepare_aggregate_blob,
 )
 from chess_workbench.services.pdf_extraction import (
     _CCEF_ARTIFACT_KINDS,
@@ -53,6 +55,7 @@ from chess_workbench.services.pdf_extraction import (
     _render_profile,
     process_pdf_extraction_job,
 )
+from chess_workbench.services.pdf_render import render_pdf_page
 from chess_workbench.services.source_storage import read_verified_content_addressed_bytes
 from chess_workbench.services.uci import EngineError
 from chess_workbench.store.database import Database
@@ -198,9 +201,7 @@ async def _load_incremental_input(
         or run.last_page != append.last_page
         or terminal_segment is None
         or len(previous_artifacts) > 1
-        or (
-            (review_revision is None) != (payload.get("review_revision_id") is None)
-        )
+        or ((review_revision is None) != (payload.get("review_revision_id") is None))
         or (
             review_revision is not None
             and (
@@ -258,8 +259,8 @@ async def _load_incremental_input(
                 expected_size=source_file.size_bytes,
                 max_bytes=settings.pdf_max_bytes,
             )
-            rendered = await asyncio.to_thread(
-                PdfiumPageRenderer().render_page,
+            rendered = await render_pdf_page(
+                PdfiumPageRenderer(),
                 pdf_bytes,
                 predecessor.last_page,
                 _render_profile(source.profile),
@@ -287,11 +288,15 @@ def _active_source_sequence(
     predecessor_context: CcefPromptContext | None = None,
 ) -> MoveSequenceItemV1_1 | None:
     """Pick the score appearing last in source reading order, even on a shared page."""
-    source_order = {
-        (page.physical_page, entry.fragment.fragment_sha256): entry.order
-        for page in predecessor_context.pages
-        for entry in page.fragments
-    } if predecessor_context is not None else {}
+    source_order = (
+        {
+            (page.physical_page, entry.fragment.fragment_sha256): entry.order
+            for page in predecessor_context.pages
+            for entry in page.fragments
+        }
+        if predecessor_context is not None
+        else {}
+    )
     ranked: list[tuple[tuple[int, float, float, int], MoveSequenceItemV1_1]] = []
     for item in package.items:
         if not isinstance(item, MoveSequenceItemV1_1):
@@ -303,10 +308,12 @@ def _active_source_sequence(
             (
                 (
                     ref.page,
-                    float(source_order.get(
-                        (ref.page, ref.fragment_sha256 or ""),
-                        ref.bbox[1] if ref.bbox is not None else 0.0,
-                    )),
+                    float(
+                        source_order.get(
+                            (ref.page, ref.fragment_sha256 or ""),
+                            ref.bbox[1] if ref.bbox is not None else 0.0,
+                        )
+                    ),
                     ref.bbox[0] if ref.bbox is not None else 0.0,
                     ref.start_offset or 0,
                 )
@@ -399,11 +406,15 @@ async def _load_predecessor_context(
 def _continuation_catalog(
     package: ExtractionPackageV1_1,
     continuation: CcefContinuationContext,
-    predecessor_context: CcefPromptContext,
+    predecessor_context: CcefPromptContext | None = None,
 ) -> list[dict[str, Any]]:
     """Offer only anchors belonging to the last source score."""
     sequences = {item.id: item for item in package.items if isinstance(item, MoveSequenceItemV1_1)}
-    active = _active_source_sequence(package, predecessor_context)
+    active = (
+        _active_source_sequence(package, predecessor_context)
+        if predecessor_context is not None
+        else next(reversed(sequences.values()), None)
+    )
     selected = [
         sequence
         for sequence in continuation.sequences
@@ -501,11 +512,12 @@ async def process_pdf_incremental_extraction_job(
     payload: dict[str, Any],
     *,
     provider: StructuredGenerationProvider | None = None,
+    runtime: ExtractionRuntime | None = None,
 ) -> dict[str, Any]:
     """Extract one adjacent segment and atomically advance its logical document."""
 
     inputs = await _load_incremental_input(database, settings, payload)
-    await process_pdf_extraction_job(database, settings, payload)
+    await process_pdf_extraction_job(database, settings, payload, runtime=runtime)
     evidence = await _load_committed_evidence(database, settings, inputs.source)
     if evidence is None:
         raise EngineError(
@@ -568,6 +580,8 @@ async def process_pdf_incremental_extraction_job(
             active_provider = _active_provider(
                 settings,
                 provider,
+                runtime=runtime,
+                run_id=str(inputs.source.run_id),
                 thinking_enabled=relation_increment,
                 json_output_enabled=not relation_increment,
                 invalid_response_recorder=_deepseek_invalid_response_recorder(
@@ -578,6 +592,8 @@ async def process_pdf_incremental_extraction_job(
                 _active_provider(
                     settings,
                     provider,
+                    runtime=runtime,
+                    run_id=str(inputs.source.run_id),
                     thinking_enabled=True,
                     json_output_enabled=False,
                     reasoning_effort_override="low",
@@ -599,6 +615,7 @@ async def process_pdf_incremental_extraction_job(
                 external_base_sha256=inputs.base_sha256,
                 predecessor_context=predecessor_context,
                 continuation_anchors=catalog,
+                runtime=runtime,
             )
         candidate = await _load_normalized_candidate(database, settings, inputs.source)
         if candidate is None:
@@ -624,6 +641,7 @@ async def process_pdf_incremental_extraction_job(
         context=continuation,
         document_id=inputs.document_id,
     )
+    prepared_blob = await prepare_aggregate_blob(settings, aggregate)
     committed = None
     for attempt in range(5):
         try:
@@ -633,6 +651,9 @@ async def process_pdf_incremental_extraction_job(
                     segment_normalized_ccef_sha256=segment_hash,
                     aggregate=aggregate,
                     review_revision_id=inputs.review_revision_id,
+                    prepared_blob=prepared_blob,
+                    expected_worker_id=inputs.source.lease_owner,
+                    expected_attempt_count=inputs.source.attempt_count,
                 )
             break
         except OperationalError as error:

@@ -164,3 +164,28 @@ def test_explicit_side_caption_filters_conflicting_prose_move_context() -> None:
         "side_to_move": "b",
         "source_token": "e4?",
     }
+
+
+def test_wrong_orientation_guess_uses_legal_printed_move() -> None:
+    recognition = ChessDiagramRecognition(
+        physical_page=1,
+        page_box=PixelBox(x0=100, y0=100, x1=500, y1=500),
+        image_sha256="d" * 64,
+        piece_placement="8/8/r2pk3/1PK5/P7/8/8/3R4",
+        orientation="black",
+        mean_confidence=0.95,
+        min_confidence=0.95,
+        square_confidences=[0.95] * 64,
+        engine_name="local-test",
+        engine_version="1",
+    )
+    page = DiagramEvidencePage(
+        physical_page=1,
+        width=1000,
+        height=1000,
+        fragments=[_text_fragment("66.g5! Rh4+ is the winning line", y0=0.55, y1=0.58)],
+        recognitions=[recognition],
+    )
+    marker = json.loads(resolve_diagram_evidence([page])[0].fragments[0].text)
+    assert marker["operational_fen"] == "4R3/8/8/7P/5KP1/3kp2r/8/8 w - - 0 66"
+    assert marker["next_formal_move"]["source_token"] == "g5!"

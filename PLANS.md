@@ -2,6 +2,12 @@
 
 2026-10-01: PDF extraction has been accepted for personal use. The current product path is v8 extraction → review → publication and v9 incremental extraction. New failures should be investigated from a real saved task. The six-book R5/P6 evaluation is deferred.
 
+## Bounded asynchronous PDF extraction completed (2026-10-03)
+
+[ADR 0027](docs/decisions/0027-bounded-async-pdf-extraction.md), the [C1–C4 plan](docs/agent/pdf-concurrency-plan-2026-10-03.md) and [implementation/acceptance record](docs/agent/pdf-concurrency-implementation-2026-10-03.md) are current. Two independent PDF jobs can await DeepSeek concurrently, a third stays queued, model calls share a two-slot limit, and local/native stages serialize. Paid responses have run-bound checkpoints; v8/v9 source relation semantics and review approval remain unchanged.
+
+Normal website Endgame runs p66–68, p174–176 and p234–235 now have reviewable candidates. Raw source comparison covered 89/91 printed mainline plies and all six selected score branches; one human review command restored the remaining two plies. The first B/C runs exposed a diagram-orientation failure and a model output-budget failure; their original records remain. Generic fixes and successful new runs are documented, with the real output-split fallback still only fixture-tested. Catalan, Makogonov and reviewed v9 saved-response replay passed without new paid calls. Future PDF work remains driven by a concrete observed failure, not automatic resumption of broad R5/P6.
+
 ## Repository cleanup completed (2026-10-01)
 
 1. Removed the GitHub Actions workflow and historical cumulative Stage acceptance targets. Keep small local checks and optional full verification.

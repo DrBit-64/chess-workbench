@@ -1,0 +1,272 @@
+{
+  "schema": "chess-workbench/evaluation/pdf-concurrency-endgame/1",
+  "created_on": "2026-10-03",
+  "status": "independent_reference_compared_with_website_runs",
+  "book": {
+    "title": "Endgame Strategy",
+    "author": "Mikhail Shereshevsky",
+    "edition": "New In Chess 2022, revised and expanded",
+    "pdf_sha256": "47412de1ce54ef70e965edfbe121507bf2e584adac97f0c6587d203ce9515545",
+    "physical_page_count": 678
+  },
+  "method": "Agent read embedded source text and independently inspected the six starting diagram images before any provider call; python-chess validated each starting position, the complete printed mainline and selected branch paths.",
+  "coverage": {
+    "games": 6,
+    "mainline_plies": 91,
+    "selected_score_branches": 6,
+    "single_move_mentions": 2,
+    "exhaustive_branch_transcription": false,
+    "annotation_proofread": false
+  },
+  "notes": [
+    "All ranges are one-based physical PDF pages, not the table-of-contents page numbers.",
+    "Fullmove numbers and side to move follow the printed score. Halfmove clocks are initialized to zero, not recovered historical clocks.",
+    "mainline_san is chess-authority-normalized; check and annotation typography is not copied blindly. Compare starting piece placement, turn, castling, en-passant and printed move number; do not require historical halfmove clocks.",
+    "after_mainline_plies is the exact parent after playing this many mainline plies; zero is the initial diagram. Match within the named game and source range, never by a same-FEN node in any game.",
+    "There are other printed nested variations beyond these selected checks. Their omission must not be concealed by claiming this file is exhaustive.",
+    "Each final page has the next game's title only. Preserve it as text if appropriate; do not invent a third playable score or require its absent moves.",
+    "Reference data is for evaluation only. Do not inject these FENs or transcribed lines into production model requests to make the trial pass.",
+    "No DeepSeek request or live website task was created while preparing this reference.",
+    "Visual re-audit on 2026-10-03 corrected Game 81 White king from g1 to g2 in the independent answer key; the printed diagram visibly places it on g2. The previous reference allowed the same short SAN line, so legality alone did not catch this error."
+  ],
+  "deduplication_audit": {
+    "as_of": "2026-10-03",
+    "checked": [
+      "Website SQL extraction_runs joined to jobs/pdf_assets by PDF content hash, including failed/cancelled/archived jobs",
+      "Local data/debug experiment SQLite databases containing extraction_runs",
+      "Known Endgame P6 and source-extraction experiment inventories/reports"
+    ],
+    "website_historical_union": [
+      [
+        19,
+        48
+      ],
+      [
+        100,
+        103
+      ]
+    ],
+    "known_offline_ranges": [
+      [
+        19,
+        22
+      ],
+      [
+        23,
+        27
+      ],
+      [
+        100,
+        103
+      ]
+    ],
+    "selected_range_overlaps_found": 0,
+    "recheck_before_submit": true,
+    "caveat": "No overlapping saved extraction was found in the checked local records; this does not assert anything about external or deleted records."
+  },
+  "windows": [
+    {
+      "id": "endgame-concurrency-a",
+      "first_page": 66,
+      "last_page": 68,
+      "games": [
+        23,
+        24
+      ],
+      "expected_playable_games": 2,
+      "trailing_header_only_game": 25,
+      "notes": "Leading text concludes a previous explanation but contains no continuing score; both target game diagrams and their complete printed mainlines are included."
+    },
+    {
+      "id": "endgame-concurrency-b",
+      "first_page": 174,
+      "last_page": 176,
+      "games": [
+        59,
+        60
+      ],
+      "expected_playable_games": 2,
+      "trailing_header_only_game": 61,
+      "notes": "Game 59 heading, diagram and score are on p174; Game 60 heading is on p174, initial diagram on p175 and score ends on p176. Includes alternatives before mainline and promotions."
+    },
+    {
+      "id": "endgame-concurrency-c",
+      "first_page": 234,
+      "last_page": 235,
+      "games": [
+        80,
+        81
+      ],
+      "expected_playable_games": 2,
+      "trailing_header_only_game": 82,
+      "notes": "Game 80 begins black to move; Game 81 begins white to move from a different diagram. Includes a recommended line printed before the actual two-ply score."
+    }
+  ],
+  "games": [
+    {
+      "number": 23,
+      "title": "Mikhail Shereshevsky – Alexander Beliavsky",
+      "event": "Lviv 1977",
+      "pages": [
+        66,
+        67
+      ],
+      "diagram_page": 66,
+      "first_move": "20.Bd4!?",
+      "last_move": "38.Na6",
+      "result": "1-0",
+      "branches": [],
+      "initial_fen": "r5k1/1b5p/1q2p1p1/ppbpBr1n/6Q1/PP1BP3/2PN2PP/R4RK1 w - - 0 20",
+      "mainline_san": "Bd4 Bxd4 Qxd4 Qxd4 exd4 Rxf1+ Rxf1 b4 g4 Ng7 axb4 axb4 Nf3 Ne8 Ne5 Nd6 Kf2 Ba6 Ke3 Bxd3 Nxd3 Rc8 Nxb4 Rc3+ Kf4 Kf8 Rf3 Rc7 Ke3+ Ke7 Kd2 Ne4+ Kc1 Nc3 Re3 Kd7 Na6",
+      "mainline_plies": 37
+    },
+    {
+      "number": 24,
+      "title": "Alexander Alekhine – Friedrich Sämisch",
+      "event": "Baden-Baden 1925 (11)",
+      "pages": [
+        67,
+        68
+      ],
+      "diagram_page": 67,
+      "first_move": "34.Qd4",
+      "last_move": "45.Bxh7",
+      "result": "1-0",
+      "branches": [
+        {
+          "id": "g24-qc4",
+          "page": 68,
+          "after_mainline_plies": 6,
+          "san": "Qc4+",
+          "kind": "single_move_mention"
+        },
+        {
+          "id": "g24-qe4",
+          "page": 68,
+          "after_mainline_plies": 12,
+          "san": "Qe4",
+          "kind": "single_move_mention"
+        },
+        {
+          "id": "g24-bxh7",
+          "page": 68,
+          "after_mainline_plies": 12,
+          "san": "Bxh7 Qxf3 Qxb6 Qd1+",
+          "kind": "score_line"
+        }
+      ],
+      "initial_fen": "2n1q3/6kp/5pp1/8/2B5/2Q2P2/1P4PP/1K6 w - - 0 34",
+      "mainline_san": "Qd4 Qe7 Bd3 Qc7 g4 Kf7 h4 Nb6 h5 gxh5 gxh5 Qc6 Be4 Qb5 h6 Qb3 Bc2 Qb5 Qd3 Qxd3 Bxd3 Nc8 Bxh7",
+      "mainline_plies": 23
+    },
+    {
+      "number": 59,
+      "title": "Veselin Topalov – Alexander Beliavsky",
+      "event": "Linares 1995 (8)",
+      "pages": [
+        174
+      ],
+      "diagram_page": 174,
+      "first_move": "72.Kb6!",
+      "last_move": "73.Ka7!",
+      "result": "1-0",
+      "branches": [
+        {
+          "id": "g59-b6",
+          "page": 174,
+          "after_mainline_plies": 0,
+          "san": "b6 Ra5+",
+          "kind": "score_line"
+        }
+      ],
+      "initial_fen": "8/8/P7/1PK5/8/8/8/r3k3 w - - 0 72",
+      "mainline_san": "Kb6 Kd2 Ka7",
+      "mainline_plies": 3
+    },
+    {
+      "number": 60,
+      "title": "Tamir Nabaty – Ilya Smirin",
+      "event": "Netanya 2019 (1)",
+      "pages": [
+        174,
+        175,
+        176
+      ],
+      "diagram_page": 175,
+      "first_move": "66.h6?",
+      "last_move": "76...Qe4+",
+      "result": "1/2-1/2",
+      "branches": [
+        {
+          "id": "g60-g5",
+          "page": 175,
+          "after_mainline_plies": 0,
+          "san": "g5 Rh4+ Kf3 Rxh5 Rxe3+ Kd4 Re4+ Kd5 Ra4 Ke6 Kg4 Rh1 Rf4",
+          "kind": "score_line",
+          "note": "Source prints the winning alternative before the actual 66.h6?; do not promote it to the played mainline."
+        },
+        {
+          "id": "g60-promotion",
+          "page": 176,
+          "after_mainline_plies": 5,
+          "san": "e1=Q Rxe1 Kxe1 Kg6 Kf2 Kh7",
+          "kind": "score_line",
+          "note": "Alternative to 68...Re3; the source line continues across an analysis diagram."
+        }
+      ],
+      "initial_fen": "4R3/8/8/7P/5KP1/3kp2r/8/8 w - - 0 66",
+      "mainline_san": "h6 e2 g5 Kd2 Kf5 Re3 Rxe3 Kxe3 h7 e1=Q h8=Q Qb1+ Ke6 Qb6+ Kf7 Qb7+ Kg6 Qe4+ Kf7 Qd5+ Kg6 Qe4+",
+      "mainline_plies": 22
+    },
+    {
+      "number": 80,
+      "title": "Ding Liren – Viswanathan Anand",
+      "event": "Shamkir 2019 (4)",
+      "pages": [
+        234
+      ],
+      "diagram_page": 234,
+      "first_move": "31...Nc4",
+      "last_move": "33.Rg3",
+      "result": "1/2-1/2",
+      "branches": [
+        {
+          "id": "g80-h5",
+          "page": 234,
+          "after_mainline_plies": 0,
+          "san": "h5 b3 h4 Rh3 Nxg6",
+          "kind": "score_line"
+        }
+      ],
+      "initial_fen": "r3r1k1/6p1/6Pp/p2Pn3/1p6/3pP1R1/1P1B1P2/R3K3 b - - 0 31",
+      "mainline_san": "Nc4 Rg4 Ne5 Rg3",
+      "mainline_plies": 4
+    },
+    {
+      "number": 81,
+      "title": "Anish Giri – Viswanathan Anand",
+      "event": "Paris rapid 2019 (2)",
+      "pages": [
+        234,
+        235
+      ],
+      "diagram_page": 235,
+      "first_move": "52.Rb7?",
+      "last_move": "52...Rg5!",
+      "result": "0-1",
+      "branches": [
+        {
+          "id": "g81-rb8",
+          "page": 235,
+          "after_mainline_plies": 0,
+          "san": "Rb8+ Kf7 Rb7+ Kf6 Rb6+ Ke5 Rb7",
+          "kind": "score_line",
+          "note": "The prose gives this recommended line before the two played moves; it is a variation, not the mainline."
+        }
+      ],
+      "initial_fen": "6k1/6p1/1R5p/1p1r3P/6P1/8/6K1/8 w - - 0 52",
+      "mainline_san": "Rb7 Rg5",
+      "mainline_plies": 2
+    }
+  ]
+}
