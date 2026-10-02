@@ -45,6 +45,8 @@ async def export_module_pgn(
     *,
     leaf_occurrence_id: UUID | None = None,
     max_nodes: int = MAX_EXPORT_NODES,
+    extra_headers: dict[str, str] | None = None,
+    extra_comments: dict[UUID, list[str]] | None = None,
 ) -> str:
     course = await session.get(Course, course_id)
     if course is None or course.archived_at is not None:
@@ -111,7 +113,10 @@ async def export_module_pgn(
         else (import_game.movetext_result if import_game is not None else "*")
     )
     headers = _headers(import_game, module, root.full_fen, result)
-    return _render(headers, tree_root, result)
+    if extra_headers:
+        headers = [(name, value) for name, value in headers if name not in extra_headers]
+        headers.extend(extra_headers.items())
+    return _render(headers, tree_root, result, extra_comments=extra_comments)
 
 
 async def export_import_pgn(session: AsyncSession, import_id: UUID) -> str:
@@ -258,7 +263,13 @@ def _headers(
     return headers
 
 
-def _render(headers: list[tuple[str, str]], root: _ExportNode, result: str) -> str:
+def _render(
+    headers: list[tuple[str, str]],
+    root: _ExportNode,
+    result: str,
+    *,
+    extra_comments: dict[UUID, list[str]] | None = None,
+) -> str:
     lines = [f'[{name} "{_tag_value(value)}"]' for name, value in headers]
     parts: list[str] = []
     root_annotation = root.annotation
@@ -267,6 +278,8 @@ def _render(headers: list[tuple[str, str]], root: _ExportNode, result: str) -> s
     elif root.occurrence.context.get("pgn_comment"):
         parts.append(_comment(str(root.occurrence.context["pgn_comment"])))
 
+    comments = extra_comments or {}
+    parts.extend(_comment(text) for text in comments.get(root.occurrence.id, []))
     stack: list[tuple[str, _ExportNode | str]] = [("process", root)]
     while stack:
         action, value = stack.pop()
@@ -276,6 +289,7 @@ def _render(headers: list[tuple[str, str]], root: _ExportNode, result: str) -> s
         node = cast(_ExportNode, value)
         if action == "move":
             parts.extend(_move_tokens(node))
+            parts.extend(_comment(text) for text in comments.get(node.occurrence.id, []))
             continue
         if action == "branch":
             stack.append(("literal", ")"))

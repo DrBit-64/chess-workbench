@@ -26,3 +26,7 @@ These are candidate directions, not an obligation to build the entire original p
 Use focused backend tests and frontend tests for changed behavior. Run the matching formatter, lint and type checks. The local Makefile still provides full backend/frontend checks, contract drift checks and smoke tests when a change warrants them. Historical cumulative Stage acceptance and GitHub Actions CI have been retired.
 
 The dated PDF evidence, protocol and implementation reports remain under agent/. Current extraction boundaries are documented in architecture/pdf-extraction-current.md and decisions/0022-source-first-pdf-extraction-redesign.md. Historical project scope is preserved at archive/2026-10-01-before-cleanup/chess-workbench-project-description-historical.md.
+
+## 2026-10-02：课程 → Lichess 研讨
+
+按用户新需求增加课程小节／大章节的单向研讨发布。前端预览展平目录，后端复用 PGN 导出后调用官方创建／导入接口；一次性配置 study:write 令牌文件。不是旧路线图里的 Lichess 实战导入、同步或训练闭环。具体约束见 [ADR 0024](decisions/0024-lichess-study-export.md)。

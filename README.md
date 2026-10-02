@@ -123,6 +123,32 @@ make install-chess-diagram-model
 
 **纯扫描 PDF 另需 OCR。** 棋盘图模型不负责正文 OCR。带有可用文字层的 PDF 可以直接提取；没有文字层的页面需要另行提供兼容的 PaddleOCR runner，并设置 `CHESS_WORKBENCH_PADDLE_OCR_RUNNER_PATH`。仓库目前只有 [runner 接口适配器](backend/src/chess_workbench/extraction/paddleocr.py)，没有一键安装 OCR 服务的脚本。
 
+## 可选：把课程发送到 Lichess 研讨
+
+课程页现在有 **发送到 Lichess** 按钮，可以发送当前小节，或整个大章节（含下面的小节）。
+发送前会列出展平后的章节，例如 `后兵开局 / 例局一`；确认后创建研讨并返回可打开的链接。
+
+首次使用需要配置一次个人令牌：
+
+1. 登录 [Lichess 个人令牌页面](https://lichess.org/account/oauth/token)，创建仅带 **`study:write`** 权限的令牌。
+2. 将令牌单独一行保存到仓库外，例如 `~/.config/chess-workbench/lichess-token`，并设置 `chmod 600`。
+3. 在项目 `.env` 中填写其绝对路径，重启后端：
+
+```dotenv
+CHESS_WORKBENCH_LICHESS_API_TOKEN_FILE=/home/your-user/.config/chess-workbench/lichess-token
+```
+
+令牌只由后端读取，不需要粘贴到网页。这个功能不依赖 DeepSeek，不消耗模型额度。
+
+每次发送都会创建一个新的 **不公开列出（unlisted）** 研讨，持链接的人可以访问；可以在
+Lichess 内另行修改可见性。主线、分支、起始 FEN、棋步标注和已批准的局部注释会随 PGN
+导出；章节正文归入起始局面的文字注释。PDF、图片文件、原书定位和 Markdown 排版不会迁移。
+没有棋谱的目录条目及其独立正文会在预览中列为跳过。
+
+[官方 API](https://lichess.org/api#tag/Studies/operation/apiStudyImportPGN) 限制单研讨最多 64 章；
+超出容量时请选择较小范围。两边后续修改不会自动同步。若导入不完整或网络结果不确定，
+页面会保留已取得的研讨链接并提示检查，不会自动重发。
+
 ## 数据保存、备份与更新
 
 默认配置下，应用数据都在项目的 `data/` 目录：

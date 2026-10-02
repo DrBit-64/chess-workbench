@@ -67,6 +67,7 @@ import {
   type CourseMoveAction,
 } from './CourseScore';
 import { createDraftState, editorDraftReducer } from './editorDraft';
+import { LichessStudyExport } from './LichessStudyExport';
 
 const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
@@ -1114,6 +1115,16 @@ export function CourseEditor() {
                   : '导出章节 PGN'}
               </Button>
             </a>
+          ) : null}
+          {moduleId ? (
+            <LichessStudyExport
+              key={`${course.id}:${moduleId}`}
+              courseId={course.id}
+              moduleId={moduleId}
+              modules={modules}
+              orientation={boardOrientation}
+              unsavedChanges={dirty}
+            />
           ) : null}
           {moduleId && current ? (
             <a

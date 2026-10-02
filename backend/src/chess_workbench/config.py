@@ -28,33 +28,41 @@ class SecretFileError(ValueError):
 def load_ccef_provider_api_key(settings: "Settings") -> SecretStr | None:
     """Load the optional provider key without retaining plaintext in configuration."""
 
-    path = settings.ccef_provider_api_key_file or settings.deepseek_api_key_file
+    return load_secret_file(
+        settings.ccef_provider_api_key_file or settings.deepseek_api_key_file,
+        label="AI provider API key",
+    )
+
+
+def load_secret_file(path: Path | None, *, label: str) -> SecretStr | None:
+    """Read one server-owned token without putting its value or path in errors."""
+
     if path is None:
         return None
     try:
         with path.open("rb") as secret_file:
             file_stat = os.fstat(secret_file.fileno())
             if not stat.S_ISREG(file_stat.st_mode):
-                raise SecretFileError("AI provider API key file is not a regular file")
+                raise SecretFileError(f"{label} file is not a regular file")
             if os.name == "posix" and stat.S_IMODE(file_stat.st_mode) & 0o077:
-                raise SecretFileError("AI provider API key file permissions are too broad")
+                raise SecretFileError(f"{label} file permissions are too broad")
             raw = secret_file.read(MAX_SECRET_FILE_BYTES + 1)
     except SecretFileError:
         raise
     except OSError:
-        raise SecretFileError("AI provider API key file is unavailable") from None
+        raise SecretFileError(f"{label} file is unavailable") from None
     if len(raw) > MAX_SECRET_FILE_BYTES:
-        raise SecretFileError("AI provider API key file is too large")
+        raise SecretFileError(f"{label} file is too large")
     try:
         value = raw.decode("utf-8")
     except UnicodeDecodeError:
-        raise SecretFileError("AI provider API key file is not valid UTF-8") from None
+        raise SecretFileError(f"{label} file is not valid UTF-8") from None
     if value.endswith("\n"):
         value = value[:-1]
         if value.endswith("\r"):
             value = value[:-1]
     if not value or value != value.strip() or "\n" in value or "\r" in value:
-        raise SecretFileError("AI provider API key file does not contain one valid secret")
+        raise SecretFileError(f"{label} file does not contain one valid secret")
     return SecretStr(value)
 
 
@@ -107,6 +115,8 @@ class Settings(BaseSettings):
     engine_max_time_ms: int = Field(default=30_000, ge=100, le=600_000, strict=False)
     engine_worker_enabled: bool = Field(default=True, strict=False)
     engine_worker_poll_ms: int = Field(default=250, ge=50, le=10_000, strict=False)
+
+    lichess_api_token_file: Path | None = Field(default=None, repr=False, strict=False)
 
     # Stage 8C secrets are file-only. The legacy inline field is retained only
     # to reject old .env configuration with a clear, masked validation error.

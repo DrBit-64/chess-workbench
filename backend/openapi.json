@@ -970,7 +970,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -1027,7 +1031,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -1282,7 +1290,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -1339,7 +1351,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -1396,7 +1412,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -1592,7 +1612,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -1840,7 +1864,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -1897,7 +1925,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -1954,7 +1986,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -2163,7 +2199,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -2220,7 +2260,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -2277,7 +2321,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -2450,7 +2498,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -2507,7 +2559,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -2727,7 +2783,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -2784,7 +2844,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -2841,7 +2905,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -2982,7 +3050,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -3039,7 +3111,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -3096,7 +3172,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -3295,7 +3375,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -3723,7 +3807,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -3780,7 +3868,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -3837,7 +3929,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -4054,7 +4150,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -4281,7 +4381,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -4464,7 +4568,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -4720,7 +4828,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -4777,7 +4889,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -4834,7 +4950,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -5450,7 +5570,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -5507,7 +5631,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -5540,6 +5668,718 @@
         "summary": "Read one Module's blocks and occurrence tree for the editor",
         "tags": [
           "courses"
+        ]
+      }
+    },
+    "/api/courses/{course_id}/lichess-studies": {
+      "post": {
+        "operationId": "createLichessStudy",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "module_id": {
+                    "format": "uuid",
+                    "title": "Module Id",
+                    "type": "string"
+                  },
+                  "name": {
+                    "maxLength": 100,
+                    "minLength": 1,
+                    "title": "Name",
+                    "type": "string"
+                  },
+                  "orientation": {
+                    "default": "white",
+                    "enum": [
+                      "white",
+                      "black"
+                    ],
+                    "title": "Orientation",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "module_id",
+                  "name"
+                ],
+                "title": "LichessStudyCreate",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "expected_chapters": {
+                      "minimum": 1,
+                      "title": "Expected Chapters",
+                      "type": "integer"
+                    },
+                    "imported_chapters": {
+                      "minimum": 0,
+                      "title": "Imported Chapters",
+                      "type": "integer"
+                    },
+                    "message": {
+                      "title": "Message",
+                      "type": "string"
+                    },
+                    "status": {
+                      "enum": [
+                        "complete",
+                        "partial",
+                        "uncertain"
+                      ],
+                      "title": "Status",
+                      "type": "string"
+                    },
+                    "study_url": {
+                      "title": "Study Url",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "study_url",
+                    "status",
+                    "imported_chapters",
+                    "expected_chapters",
+                    "message"
+                  ],
+                  "title": "LichessStudyResult",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Publication outcome"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error",
+                        "payload_too_large",
+                        "unsupported_media_type",
+                        "invalid_pgn",
+                        "pgn_limit_exceeded",
+                        "idempotency_conflict",
+                        "course_mode_conflict",
+                        "pgn_not_exportable",
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Course or module missing"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error",
+                        "payload_too_large",
+                        "unsupported_media_type",
+                        "invalid_pgn",
+                        "pgn_limit_exceeded",
+                        "idempotency_conflict",
+                        "course_mode_conflict",
+                        "pgn_not_exportable",
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "PGN cannot be exported"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error",
+                        "payload_too_large",
+                        "unsupported_media_type",
+                        "invalid_pgn",
+                        "pgn_limit_exceeded",
+                        "idempotency_conflict",
+                        "course_mode_conflict",
+                        "pgn_not_exportable",
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Request or Lichess capacity limit"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error",
+                        "payload_too_large",
+                        "unsupported_media_type",
+                        "invalid_pgn",
+                        "pgn_limit_exceeded",
+                        "idempotency_conflict",
+                        "course_mode_conflict",
+                        "pgn_not_exportable",
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Lichess request failed or result is uncertain"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error",
+                        "payload_too_large",
+                        "unsupported_media_type",
+                        "invalid_pgn",
+                        "pgn_limit_exceeded",
+                        "idempotency_conflict",
+                        "course_mode_conflict",
+                        "pgn_not_exportable",
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Token not configured or unavailable"
+          }
+        },
+        "summary": "Create a new unlisted Lichess study from saved course content",
+        "tags": [
+          "lichess"
+        ]
+      }
+    },
+    "/api/courses/{course_id}/lichess-study-preview": {
+      "get": {
+        "operationId": "previewLichessStudy",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "module_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "course_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "blockers": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "title": "Blockers",
+                      "type": "array"
+                    },
+                    "chapters": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "module_id": {
+                            "format": "uuid",
+                            "title": "Module Id",
+                            "type": "string"
+                          },
+                          "move_count": {
+                            "title": "Move Count",
+                            "type": "integer"
+                          },
+                          "name": {
+                            "title": "Name",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "module_id",
+                          "name",
+                          "move_count"
+                        ],
+                        "title": "LichessChapterPreview",
+                        "type": "object"
+                      },
+                      "title": "Chapters",
+                      "type": "array"
+                    },
+                    "max_chapters": {
+                      "default": 64,
+                      "title": "Max Chapters",
+                      "type": "integer"
+                    },
+                    "name": {
+                      "title": "Name",
+                      "type": "string"
+                    },
+                    "skipped_modules": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "title": "Skipped Modules",
+                      "type": "array"
+                    },
+                    "token_configured": {
+                      "title": "Token Configured",
+                      "type": "boolean"
+                    },
+                    "warnings": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "title": "Warnings",
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "chapters",
+                    "skipped_modules",
+                    "warnings",
+                    "blockers",
+                    "token_configured"
+                  ],
+                  "title": "LichessStudyPreview",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Export preview"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error",
+                        "payload_too_large",
+                        "unsupported_media_type",
+                        "invalid_pgn",
+                        "pgn_limit_exceeded",
+                        "idempotency_conflict",
+                        "course_mode_conflict",
+                        "pgn_not_exportable",
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Course or module missing"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error",
+                        "payload_too_large",
+                        "unsupported_media_type",
+                        "invalid_pgn",
+                        "pgn_limit_exceeded",
+                        "idempotency_conflict",
+                        "course_mode_conflict",
+                        "pgn_not_exportable",
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "PGN cannot be exported"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error",
+                        "payload_too_large",
+                        "unsupported_media_type",
+                        "invalid_pgn",
+                        "pgn_limit_exceeded",
+                        "idempotency_conflict",
+                        "course_mode_conflict",
+                        "pgn_not_exportable",
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Invalid request"
+          }
+        },
+        "summary": "Preview a flattened chapter or subsection for a new Lichess study",
+        "tags": [
+          "lichess"
         ]
       }
     },
@@ -5692,7 +6532,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -5749,7 +6593,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -5971,7 +6819,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -6028,7 +6880,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -6135,7 +6991,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -6192,7 +7052,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -6249,7 +7113,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -6432,7 +7300,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -6489,7 +7361,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -6546,7 +7422,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -7054,7 +7934,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -8768,7 +9652,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -8825,7 +9713,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -9422,7 +10314,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -9479,7 +10375,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -9536,7 +10436,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -9901,7 +10805,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -9958,7 +10866,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -10015,7 +10927,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -10275,7 +11191,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -10598,7 +11518,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -10655,7 +11579,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -10712,7 +11640,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -10912,7 +11844,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -10969,7 +11905,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -11100,7 +12040,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -11391,7 +12335,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -11448,7 +12396,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -11505,7 +12457,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -11698,7 +12654,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -11938,7 +12898,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -11995,7 +12959,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -12052,7 +13020,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -12206,7 +13178,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -12263,7 +13239,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -12320,7 +13300,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -12750,7 +13734,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -12807,7 +13795,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -12864,7 +13856,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -12921,7 +13917,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -13095,7 +14095,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -14315,7 +15319,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -14372,7 +15380,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -14429,7 +15441,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -14867,7 +15883,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -16061,7 +17081,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -16118,7 +17142,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -16175,7 +17203,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -16635,7 +17667,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -16692,7 +17728,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -17099,7 +18139,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -17866,7 +18910,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -17923,7 +18971,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -17980,7 +19032,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -18067,7 +19123,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -18451,7 +19511,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -22224,7 +23288,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -22281,7 +23349,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -22338,7 +23410,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -22437,7 +23513,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -22494,7 +23574,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -22551,7 +23635,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -22867,7 +23955,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -22966,7 +24058,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -23433,7 +24529,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -23490,7 +24590,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -23547,7 +24651,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -23805,7 +24913,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -23862,7 +24974,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -28485,7 +29601,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -28542,7 +29662,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -28599,7 +29723,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -28656,7 +29784,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -32429,7 +33561,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -32486,7 +33622,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -32543,7 +33683,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -33046,7 +34190,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -33103,7 +34251,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -33160,7 +34312,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -33217,7 +34373,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -33390,7 +34550,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -33447,7 +34611,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -33504,7 +34672,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -35733,7 +36905,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -35790,7 +36966,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -35847,7 +37027,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -36329,7 +37513,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -36386,7 +37574,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -36443,7 +37635,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -36500,7 +37696,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -36557,7 +37757,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -36757,7 +37961,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -36846,7 +38054,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -36903,7 +38115,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -37135,7 +38351,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -37285,7 +38505,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -37492,7 +38716,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -37549,7 +38777,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -37606,7 +38838,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -37778,7 +39014,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -37968,7 +39208,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -38025,7 +39269,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -38082,7 +39330,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -38613,7 +39865,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -38670,7 +39926,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -38727,7 +39987,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -39061,7 +40325,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -39601,7 +40869,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -39658,7 +40930,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -39715,7 +40991,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -39929,7 +41209,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -39986,7 +41270,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -40043,7 +41331,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -40219,7 +41511,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -40451,7 +41747,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -40508,7 +41808,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -40565,7 +41869,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -40740,7 +42048,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -40797,7 +42109,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -41134,7 +42450,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -41191,7 +42511,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -41379,7 +42703,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -41597,7 +42925,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -41654,7 +42986,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -41832,7 +43168,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -42075,7 +43415,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -42132,7 +43476,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -42189,7 +43537,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -42368,7 +43720,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -42425,7 +43781,11 @@
                         "pgn_not_exportable",
                         "source_storage_unavailable",
                         "engine_unavailable",
-                        "engine_failure"
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
                       ],
                       "title": "Code",
                       "type": "string"
@@ -42626,6 +43986,9 @@
     },
     {
       "name": "knowledge-notes"
+    },
+    {
+      "name": "lichess"
     },
     {
       "name": "pdf"

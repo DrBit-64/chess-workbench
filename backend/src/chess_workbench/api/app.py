@@ -14,6 +14,7 @@ from chess_workbench.api.engine import engine_blueprint
 from chess_workbench.api.errors import ApiError, handle_api_error
 from chess_workbench.api.graph import graph_blueprint
 from chess_workbench.api.health import health_blueprint
+from chess_workbench.api.lichess import lichess_blueprint
 from chess_workbench.api.pdf import pdf_blueprint
 from chess_workbench.api.pgn import pgn_blueprint
 from chess_workbench.config import Settings
@@ -82,6 +83,7 @@ def create_app(settings: Settings | None = None) -> ChessWorkbenchApp:
     app.blueprint(graph_blueprint)
     app.blueprint(content_blueprint)
     app.blueprint(pgn_blueprint)
+    app.blueprint(lichess_blueprint)
     app.blueprint(pdf_blueprint)
     app.blueprint(engine_blueprint)
 

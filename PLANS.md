@@ -10,6 +10,10 @@
 4. Archived one-off experiments and old delegation tooling; remove the unused PDFium probe.
 5. Recorded focused checks, contract drift, a known stale frontend test file and diff review in docs/agent/HANDOFF.md.
 
+## Lichess study export (2026-10-02)
+
+The operator requested publishing a saved subsection or parent chapter from the course page to a new Lichess study. Official API/source feasibility is confirmed; implementation follows ADR 0024. It is a one-way PGN export with flattened chapter names and one-time study:write token-file setup. Lichess game import and bidirectional sync remain outside this slice.
+
 ## Product direction after cleanup
 
 - Maintain the accepted PDF extraction, review and publication flow when a concrete user task fails.

@@ -25,3 +25,5 @@ ADR 记录会长期影响数据兼容性、模块边界或运维方式的决定�
 - [0021：有界结构补全与提取恢复路由](0021-bounded-structural-extraction-recovery.md)
 - [0022：来源片段驱动的 PDF 提取重构与分步开发（个人使用已验收）](0022-source-first-pdf-extraction-redesign.md)
 - [0023：退役旧版 PDF 新建入口并保留历史结果](0023-retire-legacy-pdf-entry-preserve-history.md)
+
+- [0024：从课程单向创建 Lichess 研讨](0024-lichess-study-export.md)
