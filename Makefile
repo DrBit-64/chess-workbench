@@ -5,8 +5,9 @@ PROJECT_ROOT := $(CURDIR)
 UV_CACHE_DIR ?= $(PROJECT_ROOT)/.cache/uv
 export UV_CACHE_DIR
 PNPM ?= $(shell if command -v pnpm >/dev/null 2>&1; then printf '%s' pnpm; elif command -v corepack >/dev/null 2>&1; then printf '%s' 'corepack pnpm'; fi)
+DEV_WEB_ARGS ?=
 
-.PHONY: check-pnpm bootstrap-backend bootstrap-frontend bootstrap lock migrate dev-api dev-web install-stockfish install-chess-diagram-model backend-format backend-lint backend-typecheck backend-static backend-test backend-migration-check backend-check frontend-format frontend-lint frontend-typecheck frontend-test frontend-build frontend-check contracts check-contracts verify smoke
+.PHONY: check-pnpm bootstrap-backend bootstrap-frontend bootstrap lock migrate dev dev-api dev-web install-stockfish install-chess-diagram-model backend-format backend-lint backend-typecheck backend-static backend-test backend-migration-check backend-check frontend-format frontend-lint frontend-typecheck frontend-test frontend-build frontend-check contracts check-contracts verify smoke
 
 install-stockfish:
 	uv run --project backend --locked python scripts/install_stockfish.py
@@ -36,11 +37,14 @@ lock: check-pnpm
 migrate: bootstrap-backend
 	uv run --project backend --locked alembic -c backend/alembic.ini upgrade head
 
+dev:
+	bash ./start.sh
+
 dev-api: migrate
 	uv run --project backend --locked python -m chess_workbench
 
 dev-web: check-pnpm
-	$(PNPM) --dir frontend dev
+	$(PNPM) --dir frontend dev $(DEV_WEB_ARGS)
 
 backend-format:
 	uv run --project backend --locked ruff format --config backend/pyproject.toml backend/src backend/tests scripts/contracts.py scripts/assert_health.py scripts/check_backend_coverage.py scripts/check_migrations.py scripts/install_stockfish.py scripts/install_chess_diagram_model.py --check

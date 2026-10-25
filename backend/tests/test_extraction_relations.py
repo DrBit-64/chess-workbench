@@ -2129,6 +2129,7 @@ def test_patch_can_add_an_entirely_unclaimed_owned_source_line() -> None:
 def test_same_external_position_can_start_two_variations_and_patch_moves_descendants() -> None:
     """A continuation anchor identifies a position, not a unique line group."""
     from chess import STARTING_FEN
+
     from chess_workbench.extraction.relations import (
         RelationResponse,
         canonicalize_continuation_games,
@@ -2174,8 +2175,80 @@ def test_same_external_position_can_start_two_variations_and_patch_moves_descend
     assert all(node.validation_status == "valid" for node in nodes)
 
 
+def test_pdf_castling_separator_preserves_quote_and_score_continuation() -> None:
+    from chess_workbench.extraction.relations import QuoteRef, _resolve_quote
+    from chess_workbench.extraction.validation import _clean_move_token
+
+    context = _context("1 d4 d5 2 c4 e6 3 Nf3 Nf6 4 g3 Be7 5 Bg2 O\ufffeO 6 Qc2")
+    tokens = source_tokens(context)
+    assert len(tokens) == 11
+    castle = next(token for token in tokens if token.raw == "O\ufffeO")
+    quote = QuoteRef(
+        fragment_ref=context.pages[0].fragments[0].fragment.fragment_sha256,
+        quote=castle.raw,
+        occurrence=0,
+    )
+    assert _resolve_quote(quote, context) is not None
+    assert _clean_move_token(castle.raw) == "O-O"
+    relation = parse_relation_response(json.dumps({
+        "schema_version": "chess-source-relations/1",
+        "games": [{"id": "game", "kind": "game", "source_refs": ["s1_0"], "seed_ref": "start"}],
+        "segments": [{
+            "id": "main", "game_ref": "game", "line_ref": "main",
+            "entry": {"kind": "root"},
+            "move_refs": [quote.model_dump(mode="json") if token.id == castle.id else token.id
+                          for token in tokens],
+            "evidence_refs": ["s1_0"],
+        }],
+        "notes": [],
+        "unresolved": [],
+    }))
+    state = RelationState()
+    apply_relations(context, relation, tokens, {"s1_0"}, state)
+    package = compile_relations(context, state)
+    score = next(item for item in package.items if isinstance(item, MoveSequenceItemV1_1))
+    assert len(score.nodes) == 11
+    assert all(node.validation_status == "valid" for node in score.nodes)
+
+
+def test_repeated_source_move_in_new_line_does_not_steal_mainline_tail() -> None:
+    context = _context("1 e4 e5 2 Nf3 (2 Nf3 d6) 2...Nc6")
+    by_raw: dict[str, list[str]] = {}
+    for token in source_tokens(context):
+        by_raw.setdefault(token.raw, []).append(token.id)
+    e4, e5, d6, nc6 = (by_raw[san][0] for san in ("e4", "e5", "d6", "Nc6"))
+    first_nf3, repeated_nf3 = by_raw["Nf3"]
+    relation = parse_relation_response(json.dumps({
+        "schema_version": "chess-source-relations/1",
+        "games": [{"id": "game", "kind": "game", "source_refs": ["s1_0"], "seed_ref": "start"}],
+        "segments": [
+            {"id": "played", "game_ref": "game", "line_ref": "main",
+             "entry": {"kind": "root"}, "move_refs": [e4, e5, first_nf3],
+             "evidence_refs": ["s1_0"]},
+            {"id": "illustration", "game_ref": "game", "line_ref": "sideline",
+             "entry": {"kind": "continue", "after_move_ref": e5},
+             "move_refs": [repeated_nf3, d6], "evidence_refs": ["s1_0"]},
+            {"id": "played_reply", "game_ref": "game", "line_ref": "main",
+             "entry": {"kind": "continue", "after_move_ref": first_nf3},
+             "move_refs": [nc6], "evidence_refs": ["s1_0"]},
+        ],
+        "notes": [], "unresolved": [],
+    }))
+    state = RelationState()
+    apply_relations(context, relation, source_tokens(context), {"s1_0"}, state)
+    assert not state.problems
+    assert state.parent[nc6] == first_nf3
+    assert state.parent[d6] == first_nf3
+    assert state.token_line[d6] == ("game", "sideline")
+    package = compile_relations(context, state)
+    score = next(item for item in package.items if isinstance(item, MoveSequenceItemV1_1))
+    assert len(score.nodes) == 5
+    assert all(node.validation_status == "valid" for node in score.nodes)
+
+
 def test_source_promotion_without_equals_is_kept_as_playable_token() -> None:
     import chess
+
     from chess_workbench.extraction.relations import QuoteRef, _resolve_quote
     from chess_workbench.extraction.validation import _clean_move_token
 
@@ -2186,6 +2259,394 @@ def test_source_promotion_without_equals_is_kept_as_playable_token() -> None:
     assert _resolve_quote(quote, context) is not None
     assert _clean_move_token(promotion.raw) == "cxd8=Q+"
     board = chess.Board()
-    for san in "e4 d5 exd5 Nf6 d4 Bg4 Bb5+ c6 dxc6 Bxd1 c7+ Nc6".split():
+    for san in ["e4", "d5", "exd5", "Nf6", "d4", "Bg4", "Bb5+", "c6", "dxc6", "Bxd1", "c7+", "Nc6"]:
         board.push_san(san)
     assert board.parse_san(_clean_move_token(promotion.raw))
+
+
+def test_repeated_external_boundary_move_reuses_owned_source_across_windows() -> None:
+    """Later model windows may cite a prior CCEF node and repeat the first move."""
+    import chess
+
+    from chess_workbench.extraction.relations import reconcile_continuation_seed
+
+    context = _context("1 e4 1 e4 e5 1 ... c5")
+    tokens = source_tokens(context)
+    e4_first, e4_repeated = [token.id for token in tokens if token.raw == "e4"]
+    e5 = next(token.id for token in tokens if token.raw == "e5")
+    c5 = next(token.id for token in tokens if token.raw == "c5")
+    anchor = {
+        "id": "anchor-start",
+        "after_node_id": "prior-node",
+        "position_fen": chess.STARTING_FEN,
+    }
+    state = RelationState(
+        external_anchors={"anchor-start": ("0" * 64, chess.STARTING_FEN)},
+        external_node_refs={"prior-node": "anchor-start"},
+    )
+
+    def fold(segments: list[dict[str, object]], *, declare: bool = False) -> None:
+        response = parse_relation_response(
+            json.dumps(
+                {
+                    "schema_version": "chess-source-relations/1",
+                    "games": (
+                        [
+                            {
+                                "id": "continued",
+                                "kind": "continuation",
+                                "source_refs": ["s1_0"],
+                                "seed_ref": "anchor-start",
+                            }
+                        ]
+                        if declare
+                        else []
+                    ),
+                    "segments": segments,
+                    "notes": [],
+                    "unresolved": [],
+                }
+            )
+        )
+        if declare:
+            response = reconcile_continuation_seed(response, tokens, [anchor])
+        apply_relations(context, response, tokens, {"s1_0"}, state)
+
+    fold(
+        [
+            {
+                "id": "first",
+                "game_ref": "continued",
+                "line_ref": "old-main",
+                "entry": {"kind": "continue", "after_move_ref": "prior-node"},
+                "move_refs": [e4_first],
+                "evidence_refs": ["s1_0"],
+            }
+        ],
+        declare=True,
+    )
+    fold(
+        [
+            {
+                "id": "repeat",
+                "game_ref": "continued",
+                "line_ref": "new-main",
+                "entry": {"kind": "continue", "after_move_ref": "prior-node"},
+                "move_refs": [e4_repeated, e5],
+                "evidence_refs": ["s1_0"],
+            }
+        ]
+    )
+    fold(
+        [
+            {
+                "id": "branch",
+                "game_ref": "continued",
+                "line_ref": "branch",
+                "entry": {
+                    "kind": "branch_after",
+                    "target_line_ref": "new-main",
+                    "target_move_ref": e4_repeated,
+                },
+                "move_refs": [c5],
+                "evidence_refs": ["s1_0"],
+            }
+        ]
+    )
+    assert state.token_aliases[e4_repeated] == e4_first
+    assert len(state.events) == 3
+    package = compile_relations(context, state)
+    sequence = next(
+        item for item in package.items if isinstance(item, MoveSequenceItemV1_1)
+    )
+    assert len(sequence.nodes) == 3
+    assert all(node.validation_status == "valid" for node in sequence.nodes)
+
+
+def test_multiple_continuations_branch_and_broken_prior_quote_reuses_owned_move() -> (
+    None
+):
+    """A repeated boundary is a branch; a bad hash can still identify an owned move."""
+    context = _context("1 e4 1 ... e5 1 ... c5 2 Nf3")
+    tokens = source_tokens(context)
+    move = {token.raw: token.id for token in tokens}
+    state = RelationState()
+
+    def fold(segments: list[dict[str, object]], *, declare: bool = False) -> None:
+        response = parse_relation_response(
+            json.dumps(
+                {
+                    "schema_version": "chess-source-relations/1",
+                    "games": (
+                        [
+                            {
+                                "id": "game",
+                                "kind": "game",
+                                "source_refs": ["s1_0"],
+                                "seed_ref": "start",
+                            }
+                        ]
+                        if declare
+                        else []
+                    ),
+                    "segments": segments,
+                    "notes": [],
+                    "unresolved": [],
+                }
+            )
+        )
+        apply_relations(context, response, tokens, {"s1_0"}, state)
+
+    fold(
+        [
+            {
+                "id": "opening",
+                "game_ref": "game",
+                "line_ref": "main",
+                "entry": {"kind": "root"},
+                "move_refs": [move["e4"]],
+                "evidence_refs": ["s1_0"],
+            }
+        ],
+        declare=True,
+    )
+    fold(
+        [
+            {
+                "id": "first_black",
+                "game_ref": "game",
+                "line_ref": "first_black",
+                "entry": {"kind": "continue", "after_move_ref": move["e4"]},
+                "move_refs": [move["e5"]],
+                "evidence_refs": ["s1_0"],
+            },
+            {
+                "id": "other_black",
+                "game_ref": "game",
+                "line_ref": "other_black",
+                "entry": {"kind": "continue", "after_move_ref": move["e4"]},
+                "move_refs": [move["c5"]],
+                "evidence_refs": ["s1_0"],
+            },
+        ]
+    )
+    fold(
+        [
+            {
+                "id": "resume_first",
+                "game_ref": "game",
+                "line_ref": "first_black",
+                "entry": {
+                    "kind": "alternative_to",
+                    "target_line_ref": "other_black",
+                    "target_move_ref": move["c5"],
+                },
+                "move_refs": [
+                    {"fragment_ref": "0" * 64, "quote": "e5", "occurrence": 0},
+                    move["Nf3"],
+                ],
+                "evidence_refs": ["s1_0"],
+            }
+        ]
+    )
+    package = compile_relations(context, state)
+    sequence = next(item for item in package.items if isinstance(item, MoveSequenceItemV1_1))
+    assert [node.san_candidate for node in sequence.nodes] == ["e4", "e5", "c5", "Nf3"]
+    assert all(node.validation_status == "valid" for node in sequence.nodes)
+    assert not state.problems
+
+
+def test_unplayed_numbered_directory_choice_anchors_sibling_lines() -> None:
+    context = _context("1 e4 e5 2 Nf3 Nc6; 3 Bb5; A: 3 Bc4; B: 3 d4")
+    tokens = source_tokens(context)
+    by_raw = {token.raw: token.id for token in tokens}
+    response = parse_relation_response(
+        json.dumps(
+            {
+                "schema_version": "chess-source-relations/1",
+                "games": [
+                    {"id": "game", "kind": "game", "source_refs": ["s1_0"], "seed_ref": "start"}
+                ],
+                "segments": [
+                    {
+                        "id": "main",
+                        "game_ref": "game",
+                        "line_ref": "main",
+                        "entry": {"kind": "root"},
+                        "move_refs": [by_raw[raw] for raw in ("e4", "e5", "Nf3", "Nc6")],
+                        "evidence_refs": ["s1_0"],
+                    },
+                    *[
+                        {
+                            "id": raw,
+                            "game_ref": "game",
+                            "line_ref": raw,
+                            "entry": {
+                                "kind": "alternative_to",
+                                "target_line_ref": "main",
+                                "target_move_ref": by_raw["Bb5"],
+                            },
+                            "move_refs": [by_raw[raw]],
+                            "evidence_refs": ["s1_0"],
+                        }
+                        for raw in ("Bc4", "d4")
+                    ],
+                ],
+                "notes": [],
+                "unresolved": [],
+            }
+        )
+    )
+    state = RelationState()
+    apply_relations(context, response, tokens, {"s1_0"}, state)
+    assert state.parent[by_raw["Bc4"]] == by_raw["Nc6"]
+    assert state.parent[by_raw["d4"]] == by_raw["Nc6"]
+    assert by_raw["Bb5"] not in state.parent
+    package = compile_relations(context, state)
+    sequence = next(item for item in package.items if isinstance(item, MoveSequenceItemV1_1))
+    assert len(sequence.nodes) == 6
+    assert all(node.validation_status == "valid" for node in sequence.nodes)
+
+
+def test_unique_segment_id_recovers_omitted_line_ref() -> None:
+    response = parse_relation_response(
+        json.dumps(
+            {
+                "schema_version": "chess-source-relations/1",
+                "games": [],
+                "segments": [
+                    {
+                        "id": "line-a",
+                        "game_ref": "game",
+                        "entry": {"kind": "root"},
+                        "move_refs": ["t1_0_0"],
+                        "evidence_refs": ["s1_0"],
+                    },
+                    {
+                        "id": "line-b",
+                        "game_ref": "game",
+                        "entry": {
+                            "kind": "alternative_to",
+                            "target_line_ref": "line-a",
+                            "target_move_ref": "t1_0_0",
+                        },
+                        "move_refs": ["t1_0_3"],
+                        "evidence_refs": ["s1_0"],
+                    },
+                ],
+                "notes": [],
+                "unresolved": [],
+            }
+        )
+    )
+    assert [segment.line_ref for segment in response.segments] == ["line-a", "line-b"]
+
+
+def test_exact_source_move_overrides_stale_existing_line_label() -> None:
+    context = _context("1 e4 e5 2 Nf3 Nc6 3 Bb5 3 Bc4")
+    tokens = source_tokens(context)
+    by_raw = {token.raw: token.id for token in tokens}
+    response = parse_relation_response(
+        json.dumps(
+            {
+                "schema_version": "chess-source-relations/1",
+                "games": [
+                    {"id": "game", "kind": "game", "source_refs": ["s1_0"], "seed_ref": "start"}
+                ],
+                "segments": [
+                    {
+                        "id": "main",
+                        "game_ref": "game",
+                        "line_ref": "main",
+                        "entry": {"kind": "root"},
+                        "move_refs": [by_raw[raw] for raw in ("e4", "e5", "Nf3", "Nc6")],
+                        "evidence_refs": ["s1_0"],
+                    },
+                    {
+                        "id": "bb5",
+                        "game_ref": "game",
+                        "line_ref": "bb5",
+                        "entry": {
+                            "kind": "branch_after",
+                            "target_line_ref": "main",
+                            "target_move_ref": by_raw["Nc6"],
+                        },
+                        "move_refs": [by_raw["Bb5"]],
+                        "evidence_refs": ["s1_0"],
+                    },
+                    {
+                        "id": "bc4",
+                        "game_ref": "game",
+                        "line_ref": "bc4",
+                        "entry": {
+                            "kind": "alternative_to",
+                            "target_line_ref": "main",
+                            "target_move_ref": by_raw["Bb5"],
+                        },
+                        "move_refs": [by_raw["Bc4"]],
+                        "evidence_refs": ["s1_0"],
+                    },
+                ],
+                "notes": [],
+                "unresolved": [],
+            }
+        )
+    )
+    state = RelationState()
+    apply_relations(context, response, tokens, {"s1_0"}, state)
+    assert state.parent[by_raw["Bb5"]] == by_raw["Nc6"]
+    assert state.parent[by_raw["Bc4"]] == by_raw["Nc6"]
+    assert not state.problems
+
+
+def test_continue_uses_exact_cited_tail_over_stale_existing_line_name() -> None:
+    context = _context("1 e4 e5 2 Nf3 Nc6 3 Bb5")
+    tokens = source_tokens(context)
+    by_raw = {token.raw: token.id for token in tokens}
+    response = parse_relation_response(
+        json.dumps(
+            {
+                "schema_version": "chess-source-relations/1",
+                "games": [
+                    {"id": "game", "kind": "game", "source_refs": ["s1_0"], "seed_ref": "start"}
+                ],
+                "segments": [
+                    {
+                        "id": "main",
+                        "game_ref": "game",
+                        "line_ref": "main",
+                        "entry": {"kind": "root"},
+                        "move_refs": [by_raw["e4"], by_raw["e5"]],
+                        "evidence_refs": ["s1_0"],
+                    },
+                    {
+                        "id": "branch",
+                        "game_ref": "game",
+                        "line_ref": "branch",
+                        "entry": {
+                            "kind": "branch_after",
+                            "target_line_ref": "main",
+                            "target_move_ref": by_raw["e5"],
+                        },
+                        "move_refs": [by_raw["Nf3"], by_raw["Nc6"]],
+                        "evidence_refs": ["s1_0"],
+                    },
+                    {
+                        "id": "return",
+                        "game_ref": "game",
+                        "line_ref": "main",
+                        "entry": {"kind": "continue", "after_move_ref": by_raw["Nc6"]},
+                        "move_refs": [by_raw["Bb5"]],
+                        "evidence_refs": ["s1_0"],
+                    },
+                ],
+                "notes": [],
+                "unresolved": [],
+            }
+        )
+    )
+    state = RelationState()
+    apply_relations(context, response, tokens, {"s1_0"}, state)
+    assert state.parent[by_raw["Bb5"]] == by_raw["Nc6"]
+    assert state.token_line[by_raw["Bb5"]] == ("game", "branch")
+    assert not state.problems

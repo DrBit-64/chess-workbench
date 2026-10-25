@@ -1,17 +1,27 @@
 """One-way course publication to a new Lichess study."""
 
-from typing import Annotated, Literal
+from typing import Annotated, Literal, Self
 from uuid import UUID
 
-from pydantic import Field, StringConstraints
+from pydantic import Field, StringConstraints, model_validator
 
 from chess_workbench.schemas.domain import StrictContract
 
 StudyName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=100)]
 
 
-class LichessStudyCreate(StrictContract):
-    module_id: UUID
+class LichessStudyScope(StrictContract):
+    module_id: UUID | None = None
+    module_ids: list[UUID] | None = Field(default=None, min_length=1)
+
+    @model_validator(mode="after")
+    def one_scope_format(self) -> Self:
+        if self.module_id is not None and self.module_ids is not None:
+            raise ValueError("module_id and module_ids cannot be provided together")
+        return self
+
+
+class LichessStudyCreate(LichessStudyScope):
     name: StudyName
     orientation: Literal["white", "black"] = "white"
 

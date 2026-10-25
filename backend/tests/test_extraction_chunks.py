@@ -879,6 +879,7 @@ def test_relation_owned_groups_limit_output_without_narrowing_reading_context() 
         max_prompt_chars=100000,
     )
     assert _relation_owned_windows(context) == [
-        ["s1_0", "s2_0", "s3_0"],
-        ["s4_0", "s5_0"],
+        ["s1_0", "s2_0"],
+        ["s3_0", "s4_0"],
+        ["s5_0"],
     ]

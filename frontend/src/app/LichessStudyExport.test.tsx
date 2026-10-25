@@ -24,28 +24,35 @@ const subsection: CourseModule = {
   parent_id: 'chapter',
   title: '例局一',
 };
+const otherChapter: CourseModule = {
+  ...chapter,
+  id: 'other-chapter',
+  title: '残局专题',
+  sort_order: 1,
+};
 
-function preview(scope: string, configured = true) {
+function preview(scope: string | string[], configured = true) {
+  const ids = typeof scope === 'string' ? [scope] : scope;
   return {
     name: '课程 · 后兵开局',
     token_configured: configured,
-    chapters:
-      scope === 'chapter'
-        ? [
-            {
-              module_id: 'subsection',
-              name: '后兵开局 / 例局一',
-              move_count: 30,
-            },
-            { module_id: 'second', name: '后兵开局 / 例局二', move_count: 48 },
-          ]
-        : [
-            {
-              module_id: 'subsection',
-              name: '后兵开局 / 例局一',
-              move_count: 30,
-            },
-          ],
+    chapters: ids.includes('chapter')
+      ? [
+          {
+            module_id: 'chapter',
+            name: '后兵开局',
+            move_count: 0,
+          },
+          { module_id: 'subsection', name: '例局一', move_count: 30 },
+          { module_id: 'second', name: '例局二', move_count: 48 },
+        ]
+      : [
+          {
+            module_id: 'subsection',
+            name: '例局一',
+            move_count: 30,
+          },
+        ],
     skipped_modules: [],
     warnings: [],
     blockers: [],
@@ -65,7 +72,7 @@ function mount(unsavedChanges = false) {
       <LichessStudyExport
         courseId="course"
         moduleId="subsection"
-        modules={[chapter, subsection]}
+        modules={[chapter, subsection, otherChapter]}
         orientation="black"
         unsavedChanges={unsavedChanges}
       />
@@ -81,37 +88,56 @@ function json(body: unknown) {
 }
 
 describe('Lichess study publication', () => {
-  it('previews the whole parent chapter then sends once and exposes the study link', async () => {
+  it('previews multiple chapters with their children then sends the same selection once', async () => {
     const fetchMock = vi.fn(
       async (input: RequestInfo | URL, init?: RequestInit) => {
         if (init?.method === 'POST')
           return json({
             status: 'complete',
             study_url: 'https://lichess.org/study/Study123',
-            imported_chapters: 2,
-            expected_chapters: 2,
-            message: '已创建研讨，导入 2 个章节',
+            imported_chapters: 4,
+            expected_chapters: 4,
+            message: '已创建研讨，导入 4 个章节',
           });
         const scope = new URL(
           String(input),
           'http://localhost',
-        ).searchParams.get('module_id');
-        return json(preview(scope ?? ''));
+        ).searchParams.getAll('module_ids');
+        const selected = preview(scope);
+        if (scope.includes(otherChapter.id))
+          selected.chapters.push({
+            module_id: otherChapter.id,
+            name: otherChapter.title,
+            move_count: 10,
+          });
+        return json(selected);
       },
     );
     vi.stubGlobal('fetch', fetchMock);
     mount();
     expect(fetchMock).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole('button', { name: '发送到 Lichess' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: '所选章节发送到 Lichess' }),
+    );
     await screen.findByText('将创建 1 个研讨章节');
     fireEvent.mouseDown(screen.getByRole('combobox', { name: '发送范围' }));
     fireEvent.click(
       await screen.findByText('整个章节：后兵开局（含所有小节）'),
     );
-    await screen.findByText('将创建 2 个研讨章节');
+    await screen.findByText('将创建 3 个研讨章节');
+    expect(screen.getByText('后兵开局 · 空章节（无棋步）')).toBeTruthy();
+    expect(screen.getByText('例局一 · 30 个半回合')).toBeTruthy();
     fireEvent.change(screen.getByLabelText('研讨名称'), {
       target: { value: '我的后兵课程' },
     });
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: '发送范围' }));
+    fireEvent.click(
+      await screen.findByText('整个章节：残局专题（含所有小节）'),
+    );
+    await screen.findByText('将创建 4 个研讨章节');
+    expect((screen.getByLabelText('研讨名称') as HTMLInputElement).value).toBe(
+      '我的后兵课程',
+    );
     fireEvent.click(screen.getByRole('button', { name: '创建并发送' }));
     const link = await screen.findByRole('link', { name: '打开 Lichess 研讨' });
     expect(link.getAttribute('href')).toBe(
@@ -123,7 +149,7 @@ describe('Lichess study publication', () => {
     expect(posts).toHaveLength(1);
     expect(posts[0]?.[0]).toBe('/api/courses/course/lichess-studies');
     expect(JSON.parse(String(posts[0]?.[1]?.body))).toEqual({
-      module_id: 'chapter',
+      module_ids: ['subsection', 'chapter', 'other-chapter'],
       name: '我的后兵课程',
       orientation: 'black',
     });
@@ -134,13 +160,34 @@ describe('Lichess study publication', () => {
     ).toBe(true);
   });
 
+  it('clearing the multi-selection disables publication without previewing the whole course', async () => {
+    const fetchMock = vi.fn(async () => json(preview('subsection')));
+    vi.stubGlobal('fetch', fetchMock);
+    mount();
+    fireEvent.click(
+      screen.getByRole('button', { name: '所选章节发送到 Lichess' }),
+    );
+    await screen.findByText('将创建 1 个研讨章节');
+    const calls = fetchMock.mock.calls.length;
+    fireEvent.click(screen.getByRole('button', { name: '清空选择' }));
+    await screen.findByText('请至少选择一个章节或小节');
+    expect(
+      screen
+        .getByRole('button', { name: '创建并发送' })
+        .hasAttribute('disabled'),
+    ).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(calls);
+  });
+
   it('explains one-time token setup without asking for a token in the browser', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(async () => json(preview('subsection', false))),
     );
     mount();
-    fireEvent.click(screen.getByRole('button', { name: '发送到 Lichess' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: '所选章节发送到 Lichess' }),
+    );
     await screen.findByText('首次使用需要配置 Lichess 令牌');
     expect(
       screen
@@ -172,7 +219,9 @@ describe('Lichess study publication', () => {
     );
     vi.stubGlobal('fetch', fetchMock);
     mount();
-    fireEvent.click(screen.getByRole('button', { name: '发送到 Lichess' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: '所选章节发送到 Lichess' }),
+    );
     await waitFor(() =>
       expect(
         screen
@@ -201,7 +250,9 @@ describe('Lichess study publication', () => {
       vi.fn(async () => json(preview('subsection'))),
     );
     mount(true);
-    fireEvent.click(screen.getByRole('button', { name: '发送到 Lichess' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: '所选章节发送到 Lichess' }),
+    );
     await screen.findByText('将创建 1 个研讨章节');
     expect(
       screen.getByText('请先保存当前说明的修改，再发送到 Lichess'),

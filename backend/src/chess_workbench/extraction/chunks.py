@@ -654,10 +654,10 @@ def _relation_owned_windows(context: CcefPromptContext) -> list[list[str]]:
     for page in context.pages:
         page_chars = sum(len(entry.fragment.text) for entry in page.fragments)
         page_tokens = token_counts.get(page.physical_page, 0)
-        # A 130-token, four-page score exhausted a 48k output budget before
-        # producing complete JSON. Keep the broad reading range, but bound
-        # each generated group so the model can finish its relationships.
-        if current and (chars + page_chars > 35_000 or tokens + page_tokens > 100 or pages >= 4):
+        # A dense Catalan four-page group consumed its output budget before
+        # producing complete JSON. Keep the broad reading range, but ask for
+        # at most two pages of new relationships in each response.
+        if current and (chars + page_chars > 35_000 or tokens + page_tokens > 100 or pages >= 2):
             groups.append(current)
             current, chars, tokens, pages = [], 0, 0, 0
         current.extend(
@@ -681,12 +681,15 @@ def _theory_owned_windows(context: CcefPromptContext, outline: Any) -> list[list
     token_counts: dict[str, int] = {}
     for token in source_tokens(context):
         token_counts[token.span_ref] = token_counts.get(token.span_ref, 0) + 1
-    body_refs = {
-        section.source_ref for section in outline.sections if section.source_ref is not None
+    body_labels = {
+        section.source_ref: section.label
+        for section in outline.sections
+        if section.source_ref is not None
     }
     preview_refs = {ref for section in outline.sections for ref in section.preview_refs}
-    units: list[list[tuple[str, int, int]]] = []
+    units: list[tuple[str | None, list[tuple[str, int, int]]]] = []
     current_unit: list[tuple[str, int, int]] = []
+    current_label: str | None = None
     for page in context.pages:
         for entry in page.fragments:
             if entry.fragment.origin != "diagram" and is_board_glyph_line(entry.fragment.text):
@@ -694,24 +697,35 @@ def _theory_owned_windows(context: CcefPromptContext, outline: Any) -> list[list
             ref = f"s{page.physical_page}_{entry.order}"
             if ref in preview_refs:
                 continue
-            if ref in body_refs and current_unit:
-                units.append(current_unit)
-                current_unit = []
+            if ref in body_labels:
+                if current_unit:
+                    units.append((current_label, current_unit))
+                    current_unit = []
+                current_label = body_labels[ref]
             current_unit.append((ref, page.physical_page, len(entry.fragment.text)))
     if current_unit:
-        units.append(current_unit)
+        units.append((current_label, current_unit))
 
     groups: list[list[str]] = []
     current: list[str] = []
     chars = 0
     tokens = 0
     first_page = 0
-    for unit in units:
+    previous_label: str | None = None
+    for label, unit in units:
         unit_chars = sum(size for _, _, size in unit)
         unit_tokens = sum(token_counts.get(ref, 0) for ref, _, _ in unit)
         unit_last = unit[-1][1]
+        # Do not bury a new sibling or outer branch behind the previous
+        # section's continuation. Child sections may share a bounded group.
+        new_branch = label is not None and (
+            previous_label is None or not label.startswith(previous_label)
+        )
         if current and (
-            chars + unit_chars > 35_000 or tokens + unit_tokens > 100 or unit_last - first_page >= 4
+            new_branch
+            or chars + unit_chars > 35_000
+            or tokens + unit_tokens > 100
+            or unit_last - first_page >= 4
         ):
             groups.append(current)
             current, chars, tokens, first_page = [], 0, 0, 0
@@ -730,6 +744,8 @@ def _theory_owned_windows(context: CcefPromptContext, outline: Any) -> list[list
             current.append(ref)
             chars += size
             tokens += token_counts.get(ref, 0)
+        if label is not None:
+            previous_label = label
     if current:
         groups.append(current)
     return groups
@@ -803,7 +819,14 @@ async def generate_relation_chunks(
         for anchor in (continuation_anchors or [])
         if base_sha256 is not None
     }
-    state = RelationState(external_anchors=trusted_anchors)
+    state = RelationState(
+        external_anchors=trusted_anchors,
+        external_node_refs={
+            anchor["after_node_id"]: anchor["id"]
+            for anchor in (continuation_anchors or [])
+            if isinstance(anchor.get("after_node_id"), str)
+        },
+    )
     chunks: list[SemanticChunkResult] = []
     parsed_windows: list[tuple[Any, set[str]]] = []
     owned_windows = (

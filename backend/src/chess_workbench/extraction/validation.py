@@ -193,6 +193,9 @@ def _normalize_node(node: MoveNode, board: chess.Board | None) -> _Outcome:
 def _clean_move_token(move_text: str) -> str | None:
     """Reduce a preserved source token to its conservative parse token."""
     token = move_text.translate(_FIGURINES).replace("…", "...").replace("×", "x")
+    if token.startswith(("O", "0")):
+        for separator in "‐‑‒–—−\u00ad\ufffe":
+            token = token.replace(separator, "-")
     token = token.replace("X", "x")
     token = _MOVE_NUMBER_PREFIX.sub("", token, count=1)
     token = _UNDOTTED_MOVE_NUMBER_PREFIX.sub("", token, count=1)

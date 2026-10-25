@@ -108,6 +108,9 @@ export function CourseScore({
   }
 
   const rootNotes = notesByOccurrence.get(rootId) ?? [];
+  const rootComment = pgnComment(
+    occurrences.find((item) => item.id === rootId),
+  );
   return (
     <nav aria-label="课程棋谱" className="overflow-hidden bg-white">
       <button
@@ -127,6 +130,7 @@ export function CourseScore({
         onContextMenu={openNoteMenu}
         onSelectOccurrence={() => onSelectOccurrence(rootId)}
       />
+      {rootComment ? <PgnComment text={rootComment} /> : null}
       {layout.mainlineRows.length === 0 ? (
         <p className="px-3 py-6 text-center text-sm text-stone-500">
           在棋盘走一步以创建棋谱
@@ -144,7 +148,11 @@ export function CourseScore({
           const blackNotes = row.black
             ? (notesByOccurrence.get(row.black.occurrence.id) ?? [])
             : [];
-          const splitPair = row.black !== null && whiteNotes.length > 0;
+          const whiteComment = pgnComment(row.white?.occurrence);
+          const blackComment = pgnComment(row.black?.occurrence);
+          const splitPair =
+            row.black !== null &&
+            (whiteNotes.length > 0 || whiteComment !== null);
           return (
             <div key={row.key}>
               <MainlineRow
@@ -162,6 +170,7 @@ export function CourseScore({
                   }
                 }}
               />
+              {whiteComment ? <PgnComment text={whiteComment} /> : null}
               {splitPair ? (
                 <MainlineRow
                   row={{ ...row, white: null }}
@@ -179,6 +188,7 @@ export function CourseScore({
                   }
                 }}
               />
+              {blackComment ? <PgnComment text={blackComment} /> : null}
               {anchors.flatMap((anchor) =>
                 (layout.variationsByParent.get(anchor) ?? []).map(
                   (variation) => (
@@ -401,6 +411,11 @@ function VariationLine({
           </ReactMarkdown>
         </span>
       ))}
+      {pgnComment(move.occurrence) ? (
+        <span className="basis-full whitespace-pre-wrap py-0.5 italic text-stone-600">
+          {pgnComment(move.occurrence)}
+        </span>
+      ) : null}
       {(variationsByParent.get(move.occurrence.id) ?? []).map((nested) => (
         <VariationLine
           key={nested.key}
@@ -513,6 +528,19 @@ function CourseNotes({
       </ReactMarkdown>
     </div>
   ));
+}
+
+function pgnComment(occurrence: CourseOccurrence | undefined): string | null {
+  const value = occurrence?.context?.pgn_comment;
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+function PgnComment({ text }: { text: string }) {
+  return (
+    <div className="whitespace-pre-wrap border-b border-stone-100 px-3 py-1.5 text-sm italic leading-5 text-stone-700">
+      {text}
+    </div>
+  );
 }
 
 function BranchRails({ depth }: { depth: number }) {

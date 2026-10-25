@@ -49,8 +49,6 @@ import type {
   ModuleEditor,
   Occurrence,
   PdfAssetListResponse,
-  PdfExtractionDocumentListResponse,
-  PdfExtractionListResponse,
 } from '../logic/api/types';
 import {
   FAST_MOVE_ANIMATION_MS,
@@ -98,6 +96,7 @@ export function CourseEditor() {
   const sectionAnalysisController = useRef<AbortController>();
   const [moduleModal, setModuleModal] = useState(false);
   const [publishModal, setPublishModal] = useState(false);
+  const [courseLichessOpen, setCourseLichessOpen] = useState(false);
   const [publishTarget, setPublishTarget] = useState<string>();
   const [historyOpen, setHistoryOpen] = useState(false);
   const [readingMode, setReadingMode] = useState(true);
@@ -234,14 +233,6 @@ export function CourseEditor() {
   );
   const { data: pdfAssets } = useSWR<PdfAssetListResponse>(
     hasPdfPageSources ? '/api/pdf-assets' : null,
-    fetchJson,
-  );
-  const { data: pdfExtractions } = useSWR<PdfExtractionListResponse>(
-    hasPdfPageSources ? '/api/pdf-extractions' : null,
-    fetchJson,
-  );
-  const { data: pdfDocuments } = useSWR<PdfExtractionDocumentListResponse>(
-    hasPdfPageSources ? '/api/pdf-extraction-documents' : null,
     fetchJson,
   );
   const editorError = moduleEditorError ?? explorerEditorError;
@@ -504,9 +495,10 @@ export function CourseEditor() {
     [citableSources],
   );
   const pdfPreviews = useMemo(() => {
-    if (!pdfAssets || !pdfExtractions || !pdfDocuments) return [];
+    if (!pdfAssets) return [];
     const result: Array<{
       spanId: string;
+      assetId: string;
       page: number;
       title: string;
       contentUrl: string;
@@ -522,38 +514,21 @@ export function CourseEditor() {
           item.source_file_id === span.source_file_id &&
           item.source_version_id === span.source_version_id,
       );
-      if (!asset) continue;
-      const document = pdfDocuments.items.find(
-        (item) =>
-          item.pdf_asset_id === asset.id &&
-          item.first_page <= page &&
-          item.last_page >= page,
-      );
-      const run = pdfExtractions.items.find(
-        (item) =>
-          item.pdf_asset_id === asset.id &&
-          item.first_page <= page &&
-          item.last_page >= page &&
-          item.job.status === 'succeeded' &&
-          item.candidate !== null,
-      );
-      const targetId = document?.id ?? run?.id;
-      if (!targetId) continue;
+      if (!asset || page > asset.page_count) continue;
       result.push({
         spanId: span.id,
+        assetId: asset.id,
         page,
         title: citable.source.title,
-        contentUrl: `/api/pdf-extractions/${targetId}/review/pages/${page}`,
+        contentUrl: `/api/pdf-assets/${asset.id}/pages/${page}`,
       });
     }
-    return result;
-  }, [
-    citableSources,
-    courseSourceSpanIds,
-    pdfAssets,
-    pdfDocuments,
-    pdfExtractions,
-  ]);
+    return result.sort((a, b) =>
+      a.assetId === b.assetId
+        ? a.page - b.page
+        : a.assetId.localeCompare(b.assetId),
+    );
+  }, [citableSources, courseSourceSpanIds, pdfAssets]);
   const sourcePageBySpanId = useMemo(
     () => new Map(pdfPreviews.map((item) => [item.spanId, item.page] as const)),
     [pdfPreviews],
@@ -561,6 +536,26 @@ export function CourseEditor() {
   const activePdfPreview =
     pdfPreviews.find((item) => item.spanId === activeSourceSpanId) ??
     pdfPreviews[0];
+  const activePdfPages = activePdfPreview
+    ? [
+        ...new Set(
+          pdfPreviews
+            .filter((item) => item.assetId === activePdfPreview.assetId)
+            .map((item) => item.page),
+        ),
+      ].sort((a, b) => a - b)
+    : [];
+  const activePdfPageIndex = activePdfPreview
+    ? activePdfPages.indexOf(activePdfPreview.page)
+    : -1;
+  function stepSourcePage(direction: -1 | 1) {
+    if (!activePdfPreview) return;
+    const page = activePdfPages[activePdfPageIndex + direction];
+    const next = pdfPreviews.find(
+      (item) => item.assetId === activePdfPreview.assetId && item.page === page,
+    );
+    if (next) setActiveSourceSpanId(next.spanId);
+  }
 
   function selectSourcePreview(spanId: string) {
     if (!sourcePageBySpanId.has(spanId)) return;
@@ -1072,11 +1067,14 @@ export function CourseEditor() {
             menu={{
               items: [
                 { key: 'rename', label: '重命名课程' },
+                { key: 'send-course-lichess', label: '整门课程发送到 Lichess' },
                 { key: 'delete', label: '删除课程', danger: true },
               ],
               onClick: ({ key }) => {
                 if (key === 'rename') void renameCourse();
-                else void deleteCourse();
+                else if (key === 'send-course-lichess')
+                  setCourseLichessOpen(true);
+                else if (key === 'delete') void deleteCourse();
               },
             }}
           >
@@ -1088,6 +1086,15 @@ export function CourseEditor() {
               ⚙
             </Button>
           </Dropdown>
+          <LichessStudyExport
+            courseId={course.id}
+            courseTitle={course.title}
+            modules={modules}
+            orientation={boardOrientation}
+            visible={courseLichessOpen}
+            onClose={() => setCourseLichessOpen(false)}
+            unsavedChanges={dirty}
+          />
           <Tag color={course.mode === 'traditional' ? 'blue' : 'purple'}>
             {course.mode === 'traditional' ? '传统课程' : '开局探索器'}
           </Tag>
@@ -1181,6 +1188,23 @@ export function CourseEditor() {
         >
           {leftPaneMode === 'source' && activePdfPreview ? (
             <figure className="m-0 flex min-h-0 flex-col">
+              <div className="mb-2 flex items-center justify-center gap-2">
+                <Button
+                  size="small"
+                  disabled={activePdfPageIndex <= 0}
+                  onClick={() => stepSourcePage(-1)}
+                >
+                  上一页
+                </Button>
+                <span className="text-sm">第 {activePdfPreview.page} 页</span>
+                <Button
+                  size="small"
+                  disabled={activePdfPageIndex >= activePdfPages.length - 1}
+                  onClick={() => stepSourcePage(1)}
+                >
+                  下一页
+                </Button>
+              </div>
               <img
                 src={activePdfPreview.contentUrl}
                 alt={`${activePdfPreview.title} 第 ${activePdfPreview.page} 页`}
@@ -1860,7 +1884,7 @@ function ModuleDirectory({
       return (
         <li key={item.id}>
           <div
-            className={`flex items-center ${item.id === selectedId ? 'bg-emerald-50' : ''} ${indicator === 'before' ? 'border-t-2 border-emerald-600' : ''} ${indicator === 'after' ? 'border-b-2 border-emerald-600' : ''}`}
+            className={`flex w-full min-w-0 items-center ${item.id === selectedId ? 'bg-emerald-50' : ''} ${indicator === 'before' ? 'border-t-2 border-emerald-600' : ''} ${indicator === 'after' ? 'border-b-2 border-emerald-600' : ''}`}
             style={{ paddingLeft: `${depth * 16}px` }}
             onDragOver={(event) => {
               if (!canDrop()) return;
@@ -1929,13 +1953,14 @@ function ModuleDirectory({
             >
               ⠿
             </button>
-            <Button
-              type="text"
-              className="min-w-0 flex-1 justify-start truncate text-left"
+            <button
+              type="button"
+              className="h-8 min-w-0 flex-1 overflow-hidden rounded px-4 text-left text-sm text-stone-800 hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-emerald-700"
+              title={item.title}
               onClick={() => onSelect(item.id)}
             >
-              {item.title}
-            </Button>
+              <span className="block truncate">{item.title}</span>
+            </button>
             <Dropdown
               trigger={['click']}
               menu={{

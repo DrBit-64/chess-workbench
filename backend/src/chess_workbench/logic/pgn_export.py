@@ -272,11 +272,9 @@ def _render(
 ) -> str:
     lines = [f'[{name} "{_tag_value(value)}"]' for name, value in headers]
     parts: list[str] = []
-    root_annotation = root.annotation
-    if root_annotation is not None and root_annotation.comment:
-        parts.append(_comment(root_annotation.comment))
-    elif root.occurrence.context.get("pgn_comment"):
-        parts.append(_comment(str(root.occurrence.context["pgn_comment"])))
+    root_comment = _current_comment(root, "comment")
+    if root_comment:
+        parts.append(_comment(root_comment))
 
     comments = extra_comments or {}
     parts.extend(_comment(text) for text in comments.get(root.occurrence.id, []))
@@ -325,8 +323,9 @@ def _move_tokens(node: _ExportNode) -> list[str]:
         prefix = f"{move_number}..."
     tokens: list[str] = []
     annotation = node.annotation
-    if annotation is not None and annotation.starting_comment:
-        tokens.append(_comment(annotation.starting_comment))
+    starting_comment = _current_comment(node, "starting_comment")
+    if starting_comment:
+        tokens.append(_comment(starting_comment))
     tokens.extend((prefix, node.edge.san))
     nags = (
         annotation.nags
@@ -334,14 +333,20 @@ def _move_tokens(node: _ExportNode) -> list[str]:
         else ([node.occurrence.nag] if node.occurrence.nag is not None else [])
     )
     tokens.extend(f"${int(nag)}" for nag in nags)
-    comment = (
-        annotation.comment
-        if annotation is not None
-        else str((node.occurrence.context or {}).get("pgn_comment", ""))
-    )
+    comment = _current_comment(node, "comment")
     if comment:
         tokens.append(_comment(comment))
     return tokens
+
+
+def _current_comment(node: _ExportNode, kind: str) -> str:
+    # Occurrence context is editable; imported annotations remain the source copy.
+    # An explicit empty value clears a comment rather than reviving the import.
+    context = node.occurrence.context or {}
+    key = f"pgn_{kind}"
+    if key in context:
+        return str(context[key] or "")
+    return str(getattr(node.annotation, kind, ""))
 
 
 def _tag_value(value: str) -> str:

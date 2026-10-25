@@ -27,6 +27,9 @@ from typing import Any, cast
 from uuid import NAMESPACE_URL, UUID, uuid5
 
 import pytest
+from pypdf import PdfWriter
+from sqlalchemy import func, select
+
 from chess_workbench.api.app import ChessWorkbenchApp, create_app
 from chess_workbench.config import Settings
 from chess_workbench.services.pdf_persistence import PdfPersistenceService
@@ -44,8 +47,6 @@ from chess_workbench.store.models import (
     SourceFile,
     SourceVersion,
 )
-from pypdf import PdfWriter
-from sqlalchemy import func, select
 
 PDF_EXTRACTION_PIPELINE_VERSION = "pdf-extraction:v2"
 PDF_SEMANTIC_EXTRACTION_PIPELINE_VERSION = "pdf-extraction:v4"
@@ -368,6 +369,29 @@ async def test_asset_get_and_list_agree_with_persistence_order(tmp_path: Path) -
         assert missing.status == 404
         assert missing.json["code"] == "not_found"
         assert missing.json["message"] == "PDF asset not found"
+    finally:
+        await app.ctx.database.close()
+
+
+async def test_asset_page_renders_without_an_extraction_job(tmp_path: Path) -> None:
+    app = build_app(tmp_path, "direct-page")
+    await create_schema(app)
+    client = cast(Any, app.asgi_client)
+    try:
+        uploaded = await upload_pdf(client, make_pdf(2))
+        assert uploaded.status == 201
+        asset_id = uploaded.json["asset"]["id"]
+
+        _, page = await client.get(f"/api/pdf-assets/{asset_id}/pages/2")
+        assert page.status == 200
+        assert page.content_type == "image/png"
+        assert page.body.startswith(b"\x89PNG\r\n\x1a\n")
+        assert await count_rows(app, ExtractionRun) == 0
+
+        _, outside = await client.get(f"/api/pdf-assets/{asset_id}/pages/3")
+        assert outside.status == 404
+        _, missing = await client.get(f"/api/pdf-assets/{MISSING_UUID}/pages/1")
+        assert missing.status == 404
     finally:
         await app.ctx.database.close()
 

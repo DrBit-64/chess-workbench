@@ -17,10 +17,13 @@ from chess_workbench.extraction.prompting import (
 )
 from chess_workbench.extraction.relations import (
     RelationState,
+    _prompt_continuation_anchors,
     build_relation_request,
     source_tokens,
 )
 from chess_workbench.extraction.theory_outline import (
+    TheoryOutline,
+    TheorySection,
     build_theory_outline,
     build_theory_outline_from_fragments,
 )
@@ -122,3 +125,39 @@ def test_catalogue_can_name_branches_whose_body_is_in_a_later_append() -> None:
     assert sections["B"].preview_refs == ("s2_1",)
     assert sections["A1"].source_ref == "s5_0"
     assert sections["A1"].preview_refs == ("s4_0",)
+
+
+def test_new_theory_sibling_starts_a_new_output_window() -> None:
+    context = _context([["11 Nh4", "D4: 6 O-O", "6...O-O-O", "D41: 7 c4", "7...Qh5", "D42: 7 c3"]])
+    sections = (
+        TheorySection("D4", "D", "s1_1", 1, 1, (), "6 O-O"),
+        TheorySection("D41", "D4", "s1_3", 1, 3, (), "7 c4"),
+        TheorySection("D42", "D4", "s1_5", 1, 5, (), "7 c3"),
+    )
+    outline = TheoryOutline(sections, (), "s1_1")
+    assert _theory_owned_windows(context, outline) == [
+        ["s1_0"],
+        ["s1_1", "s1_2", "s1_3", "s1_4"],
+        ["s1_5"],
+    ]
+
+
+def test_theory_prompt_keeps_ancestor_and_recent_anchors() -> None:
+    sections = (
+        TheorySection("D", None, "s10_0", 10, 0, (), "5 Be2"),
+        TheorySection("D4", "D", "s50_0", 50, 0, (), "6 O-O"),
+    )
+    outline = TheoryOutline(sections, (), "s10_0")
+    anchors = [
+        {
+            "id": f"anchor-{number}",
+            "source_occurrence": {"page": number},
+            "mainline": number <= 8,
+        }
+        for number in range(1, 201)
+    ]
+    selected = _prompt_continuation_anchors(anchors, outline, ["s50_0"])
+    ids = {anchor["id"] for anchor in selected}
+    assert 10 < len(selected) < 20
+    assert {"anchor-10", "anchor-11", "anchor-199", "anchor-200"} <= ids
+    assert "anchor-120" not in ids

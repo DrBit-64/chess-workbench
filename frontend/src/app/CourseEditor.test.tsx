@@ -322,6 +322,50 @@ describe('Stage 4B course editor', () => {
     });
   });
 
+  it('opens whole-course Lichess publication from the course settings menu', async () => {
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url === '/api/citable-sources') return json([]);
+      if (url === '/api/courses/course-1') return json(course);
+      if (url === '/api/courses/course-1/modules') return json([module]);
+      if (url === '/api/courses/course-1/editor/module-1') {
+        return json({
+          module,
+          content_blocks: [],
+          occurrences: [root],
+          notes: [],
+        });
+      }
+      if (
+        url ===
+        '/api/courses/course-1/lichess-study-preview?module_ids=module-1'
+      ) {
+        return json({
+          name: '可交互课程',
+          token_configured: true,
+          chapters: [{ module_id: 'module-1', name: '第一章', move_count: 1 }],
+          skipped_modules: [],
+          warnings: [],
+          blockers: [],
+          max_chapters: 64,
+        });
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderEditor();
+    fireEvent.click(
+      await screen.findByRole('button', { name: '可交互课程 设置' }),
+    );
+    fireEvent.click(await screen.findByText('整门课程发送到 Lichess'));
+    expect(await screen.findByText('课程：可交互课程')).toBeTruthy();
+    expect(await screen.findByText('将创建 1 个研讨章节')).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/courses/course-1/lichess-study-preview?module_ids=module-1',
+      expect.anything(),
+    );
+  });
+
   it('precomputes each unique non-terminal position in the current subsection', async () => {
     const analyzedFens: string[] = [];
     const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
@@ -1072,9 +1116,18 @@ describe('Stage 4B course editor', () => {
         },
       },
     };
+    const nextPageSource = {
+      ...pageSource,
+      source_span: {
+        ...pageSource.source_span,
+        id: 'span-page-322',
+        locator: { ...pageSource.source_span.locator, page_number: 322 },
+      },
+    };
     const fetchMock = vi.fn((input: RequestInfo | URL) => {
       const url = String(input);
-      if (url === '/api/citable-sources') return json([pageSource]);
+      if (url === '/api/citable-sources')
+        return json([pageSource, nextPageSource]);
       if (url === '/api/pdf-assets') {
         return json({
           items: [
@@ -1082,6 +1135,7 @@ describe('Stage 4B course editor', () => {
               id: 'asset-pdf',
               source_file_id: 'file-pdf',
               source_version_id: 'version-pdf',
+              page_count: 328,
             },
           ],
         });
@@ -1114,7 +1168,7 @@ describe('Stage 4B course editor', () => {
           occurrences: [
             {
               ...root,
-              context: { source_span_ids: ['span-page-321'] },
+              context: { source_span_ids: ['span-page-321', 'span-page-322'] },
             },
             e4,
           ],
@@ -1137,7 +1191,15 @@ describe('Stage 4B course editor', () => {
       name: '扫描棋书 第 321 页',
     });
     expect(page.getAttribute('src')).toBe(
-      '/api/pdf-extractions/document-pdf/review/pages/321',
+      '/api/pdf-assets/asset-pdf/pages/321',
+    );
+    fireEvent.click(screen.getByRole('button', { name: '下一页' }));
+    expect(page.getAttribute('src')).toBe(
+      '/api/pdf-assets/asset-pdf/pages/322',
+    );
+    fireEvent.click(screen.getByRole('button', { name: '上一页' }));
+    expect(page.getAttribute('src')).toBe(
+      '/api/pdf-assets/asset-pdf/pages/321',
     );
   });
 

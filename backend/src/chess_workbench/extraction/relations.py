@@ -277,6 +277,19 @@ def reconcile_continuation_seed(
                 return False
 
         if isinstance(first_segment.entry, Continue):
+            # The prompt also exposes the predecessor's CCEF node ID on each
+            # trusted anchor. A continuation may cite that ID directly rather
+            # than its read-only source token; both identify the same boundary.
+            direct = [
+                anchor
+                for anchor in anchors
+                if anchor.get("after_node_id") == first_segment.entry.after_move_ref
+                and fits(anchor)
+            ]
+            if len(direct) == 1:
+                game.seed_ref = direct[0]["id"]
+                first_segment.entry = Root(kind="root")
+                continue
             cited = prior_by_id.get(first_segment.entry.after_move_ref)
             span = prior_spans.get(cited["span_ref"]) if cited is not None else None
             if span is not None and cited is not None:
@@ -335,13 +348,16 @@ class SourceToken:
             "move_number": self.move_number,
             "side": self.side,
             **(
-                {"leading_source": {
-                    "page": self.leading_source[0],
-                    "order": self.leading_source[1],
-                    "start": self.leading_source[2],
-                    "end": self.leading_source[3],
-                }}
-                if self.leading_source is not None else {}
+                {
+                    "leading_source": {
+                        "page": self.leading_source[0],
+                        "order": self.leading_source[1],
+                        "start": self.leading_source[2],
+                        "end": self.leading_source[3],
+                    }
+                }
+                if self.leading_source is not None
+                else {}
             ),
         }
 
@@ -360,6 +376,8 @@ class RelationState:
     problems: list[dict[str, Any]] = field(default_factory=list)
     external_anchors: dict[str, tuple[str, str]] = field(default_factory=dict)
     external_bindings: dict[str, tuple[str, str]] = field(default_factory=dict)
+    external_node_refs: dict[str, str] = field(default_factory=dict)
+    token_aliases: dict[str, str] = field(default_factory=dict)
 
 
 def _source_slice(token: SourceToken) -> dict[str, int]:
@@ -397,9 +415,7 @@ def source_tokens(context: CcefPromptContext) -> list[SourceToken]:
                 start, end = match.span()
                 leading_source = None
                 raw = match.group()
-                if (
-                    entry.order > 0 and start == 0 and raw in {"0-0", "O-O"}
-                ):
+                if entry.order > 0 and start == 0 and raw in {"0-0", "O-O"}:
                     previous = page.fragments[entry.order - 1]
                     prefix = previous.fragment.text.rstrip()
                     previous_box = previous.fragment.box
@@ -411,7 +427,10 @@ def source_tokens(context: CcefPromptContext) -> list[SourceToken]:
                         and 0 <= current_box.y0 - previous_box.y1 < 0.04
                     ):
                         leading_source = (
-                            page.physical_page, previous.order, len(prefix) - 2, len(prefix)
+                            page.physical_page,
+                            previous.order,
+                            len(prefix) - 2,
+                            len(prefix),
                         )
                         raw = prefix[-2:] + raw
                 if re.fullmatch(r"[a-h][18]", match.group(), re.IGNORECASE):
@@ -595,6 +614,57 @@ def reading_hints(context: CcefPromptContext, tokens: list[SourceToken]) -> list
     return hints
 
 
+def _prompt_continuation_anchors(
+    anchors: list[dict[str, Any]],
+    outline: TheoryOutline | None,
+    owned_span_refs: list[str],
+) -> list[dict[str, Any]]:
+    """Offer relevant legal entrances while keeping the full source text readable.
+
+    A long theory chapter can contain hundreds of valid old nodes. The model
+    needs the current section's ancestor and the latest continuation boundary,
+    not every unrelated side-line as an attachable choice. The compiler still
+    receives the complete trusted catalogue and validates any chosen anchor.
+    """
+    if outline is None or len(anchors) <= 160:
+        return anchors
+    by_label = {section.label: section for section in outline.sections}
+    owned = set(owned_span_refs)
+    relevant_pages: set[int] = set()
+    cited_pages = [
+        source["page"]
+        for anchor in anchors
+        if isinstance((source := anchor.get("source_occurrence")), dict)
+        and isinstance(source.get("page"), int)
+    ]
+    if cited_pages:
+        latest = max(cited_pages)
+        relevant_pages.update((latest - 1, latest))
+    for section in outline.sections:
+        if section.source_ref not in owned:
+            continue
+        parent_label = section.parent_label
+        while parent_label is not None:
+            parent = by_label.get(parent_label)
+            if parent is None:
+                break
+            if parent.source_ref not in owned:
+                relevant_pages.update((parent.page, parent.page + 1))
+            parent_label = parent.parent_label
+    selected = [
+        anchor
+        for anchor in anchors
+        if isinstance((source := anchor.get("source_occurrence")), dict)
+        and source.get("page") in relevant_pages
+    ]
+    # Root-side context remains available for direct move-order references.
+    earliest_mainline = [anchor for anchor in anchors if anchor.get("mainline")][:8]
+    selected_ids = {anchor["id"] for anchor in selected}
+    return [
+        anchor for anchor in anchors if anchor["id"] in selected_ids or anchor in earliest_mainline
+    ] or anchors
+
+
 def build_relation_request(
     context: CcefPromptContext,
     tokens: list[SourceToken],
@@ -690,19 +760,25 @@ def build_relation_request(
         document["predecessor_move_tokens"] = [
             token.as_input() for token in source_tokens(predecessor_context)
         ]
-        document["prior_structure"]["continuation_anchors"] = continuation_anchors or []
+        document["prior_structure"]["continuation_anchors"] = _prompt_continuation_anchors(
+            continuation_anchors or [], theory_outline, owned_span_refs
+        )
         owners = {anchor["sequence_id"] for anchor in continuation_anchors or []}
         if len(owners) == 1:
             owner = next(iter(owners))
             document["active_source_unit"] = {
                 "sequence_id": owner,
                 "title": next(
-                    (anchor["sequence_title"] for anchor in continuation_anchors or []
-                     if anchor["sequence_id"] == owner and anchor.get("sequence_title")),
+                    (
+                        anchor["sequence_title"]
+                        for anchor in continuation_anchors or []
+                        if anchor["sequence_id"] == owner and anchor.get("sequence_title")
+                    ),
                     None,
                 ),
                 "source_occurrences": [
-                    anchor["source_occurrence"] for anchor in continuation_anchors or []
+                    anchor["source_occurrence"]
+                    for anchor in continuation_anchors or []
                     if anchor["sequence_id"] == owner and anchor.get("source_occurrence")
                 ][-8:],
             }
@@ -755,12 +831,16 @@ def build_relation_request(
             "Two scores may share the same FEN: their source occurrences and ownership remain "
             "distinct. Continue only through the supplied continuation_anchors; do not "
             "recreate a new root for that predecessor. "
-            if predecessor_context is not None and continuation_anchors else ""
+            if predecessor_context is not None and continuation_anchors
+            else ""
         )
         + "A segment is one uninterrupted line: split at every variation and return. "
         "Give each genuinely independent game its own identity and explicit seed_ref. "
         + game_origin
-        + "confirmed diagram supplies the position. A cited past-game line starting at a later "
+        + "confirmed diagram supplies the position. Only IDs listed in seeds or "
+        "prior_structure.continuation_anchors are usable starts. A diagram source span "
+        "without an operational seed in seeds is only a figure, never a diagram_line root. "
+        "A cited past-game line starting at a later "
         "move is a variation from the current game's matching position, not a new startpos "
         "game. A move-order illustration sharing printed opening tokens with the current "
         "score branches at its first distinct source token; never claim one token in two "
@@ -805,7 +885,25 @@ def parse_relation_response(text: str) -> RelationResponse:
     try:
         return RelationResponse.model_validate_json(text)
     except ValidationError as error:
-        raise ValueError(f"invalid relation response: {error.errors()[0]['msg']}") from None
+        errors = error.errors()
+        if errors and all(
+            issue["type"] == "missing"
+            and len(issue["loc"]) == 3
+            and issue["loc"][0] == "segments"
+            and issue["loc"][2] == "line_ref"
+            for issue in errors
+        ):
+            data = json.loads(text)
+            segments = data.get("segments", [])
+            ids = [segment.get("id") for segment in segments]
+            if all(isinstance(value, str) and value for value in ids) and len(ids) == len(set(ids)):
+                # Some otherwise complete model responses use the segment ID
+                # as their line identity throughout. Restore that one omitted
+                # redundant field, then apply the full strict schema again.
+                for segment in segments:
+                    segment.setdefault("line_ref", segment["id"])
+                return RelationResponse.model_validate(data)
+        raise ValueError(f"invalid relation response: {errors[0]['msg']}") from None
 
 
 def recover_completed_relation_prefix(text: str) -> RelationResponse | None:
@@ -970,6 +1068,36 @@ def _unique_repeated_anchor(
     return matches[0] if len(matches) == 1 else None
 
 
+def _owned_move_for_broken_quote(
+    quote: QuoteRef,
+    entry: Entry,
+    game_ref: str,
+    by_id: dict[str, SourceToken],
+    state: RelationState,
+) -> str | None:
+    """Reuse one earlier source move when a later window miscites its fragment hash."""
+    if isinstance(entry, Root):
+        return None
+    target_ref = entry.after_move_ref if isinstance(entry, Continue) else entry.target_move_ref
+    target = _source_token_ref(target_ref, by_id)
+    target_id = state.token_aliases.get(target.id if target else target_ref, target_ref)
+    if target_id not in state.parent:
+        return None
+    parent = state.parent[target_id] if isinstance(entry, AlternativeTo) else target_id
+    san = _clean_move_token(quote.quote)
+    if san is None:
+        return None
+    matches = [
+        token.id
+        for token in by_id.values()
+        if token.id in state.parent
+        and state.parent[token.id] == parent
+        and state.token_line.get(token.id, (None, None))[0] == game_ref
+        and _clean_move_token(token.raw) == san
+    ]
+    return matches[0] if len(matches) == 1 else None
+
+
 def apply_relations(
     context: CcefPromptContext,
     response: RelationResponse,
@@ -1049,7 +1177,23 @@ def apply_relations(
     while pending:
         next_pending: list[LineSegment] = []
         progressed = False
-        for segment in pending:
+        for original_segment in pending:
+            segment = original_segment
+            first_ref = segment.move_refs[0] if segment.move_refs else None
+            if isinstance(first_ref, QuoteRef) and _resolve_quote(first_ref, context) is None:
+                earlier = _owned_move_for_broken_quote(
+                    first_ref, segment.entry, segment.game_ref, by_id, state
+                )
+                if earlier is not None:
+                    segment = segment.model_copy(deep=True)
+                    segment.move_refs = segment.move_refs[1:]
+                    segment.entry = Continue(kind="continue", after_move_ref=earlier)
+                    if not segment.move_refs:
+                        state.line_aliases[(segment.game_ref, segment.line_ref)] = state.token_line[
+                            earlier
+                        ]
+                        progressed = True
+                        continue
             refs: list[SourceToken] = []
             invalid_at: int | None = None
             for index, ref in enumerate(segment.move_refs):
@@ -1135,6 +1279,28 @@ def apply_relations(
             elif isinstance(entry, Continue):
                 after_token = _source_token_ref(entry.after_move_ref, by_id)
                 after_ref = after_token.id if after_token is not None else entry.after_move_ref
+                after_ref = state.token_aliases.get(after_ref, after_ref)
+                if (
+                    after_ref not in state.parent
+                    and state.external_node_refs.get(after_ref)
+                    == state.games[segment.game_ref].seed_ref
+                    and refs
+                ):
+                    # A later window may repeat the first owned move immediately
+                    # after the same read-only predecessor node. Reuse the unique
+                    # earlier source occurrence; the repeated citation remains an
+                    # alias for dependent branches, never a duplicate move event.
+                    repeated = _unique_repeated_anchor(refs[0].id, segment.game_ref, by_id, state)
+                    if repeated is not None and state.parent[repeated] is None:
+                        original_line = state.token_line[repeated]
+                        state.token_aliases[refs[0].id] = repeated
+                        state.line_aliases[(segment.game_ref, segment.line_ref)] = original_line
+                        line_ref = original_line
+                        refs = refs[1:]
+                        if not refs:
+                            progressed = True
+                            continue
+                        after_ref = repeated
                 if after_ref not in state.parent:
                     after_ref = (
                         _unique_repeated_anchor(
@@ -1149,32 +1315,93 @@ def apply_relations(
                 if after_ref not in state.parent:
                     next_pending.append(segment)
                     continue
+                cited_line_ref = state.token_line.get(after_ref)
+                if (
+                    cited_line_ref is not None
+                    and cited_line_ref[0] == segment.game_ref
+                    and cited_line_ref != line_ref
+                    and line_ref in state.lines
+                    and state.lines[cited_line_ref][2] == after_ref
+                ):
+                    # The model can reuse a named main line while continuing
+                    # a different, exactly cited branch tail. Follow the
+                    # source move without changing the other line's identity.
+                    line_ref = cited_line_ref
                 if line_ref not in state.lines:
-                    # Some responses name every resumed span as a new line.
-                    # The cited move or its unique repeated mention identifies
-                    # the existing line, without searching legal positions.
-                    line_ref = state.token_line[after_ref]
-                    state.line_aliases[(segment.game_ref, segment.line_ref)] = line_ref
-                line = state.lines[line_ref]
-                if line[0] != segment.game_ref or line[2] != after_ref:
-                    state.problems.extend(
-                        _problem_for_refs(
-                            context,
-                            segment.evidence_refs,
-                            by_id,
-                            segment.move_refs,
-                            len(state.problems),
-                        )
+                    origin_line_ref = state.token_line[after_ref]
+                    origin_line = state.lines[origin_line_ref]
+                    cited = _source_token_ref(after_ref, by_id)
+                    first = refs[0]
+                    next_ply = (
+                        cited is not None
+                        and cited.move_number is not None
+                        and cited.side is not None
+                        and first.move_number == cited.move_number + (1 if cited.side == "b" else 0)
+                        and first.side is not None
+                        and first.side != cited.side
                     )
-                    progressed = True
-                    continue
-                parent = after_ref
+                    if origin_line[2] != after_ref and next_ply:
+                        # Several complete variation groups can resume the
+                        # same earlier move. The first extends its line; later
+                        # groups are sibling branches at that exact source
+                        # occurrence, even if the model says "continue" again.
+                        repeated = _unique_repeated_anchor(first.id, segment.game_ref, by_id, state)
+                        if repeated is not None and state.parent[repeated] == after_ref:
+                            state.token_aliases[first.id] = repeated
+                            refs = refs[1:]
+                            if not refs:
+                                state.line_aliases[(segment.game_ref, segment.line_ref)] = (
+                                    state.token_line[repeated]
+                                )
+                                progressed = True
+                                continue
+                            after_ref = repeated
+                            if line_ref == origin_line_ref:
+                                line_ref = state.token_line[repeated]
+                            else:
+                                # A separately named line repeats the shared
+                                # source move before its first distinct reply.
+                                # Preserve that reply as a branch so a later
+                                # played-line continuation keeps its own tail.
+                                entry = BranchAfter(
+                                    kind="branch_after",
+                                    target_line_ref=origin_line_ref[1],
+                                    target_move_ref=repeated,
+                                )
+                                parent = repeated
+                        else:
+                            entry = BranchAfter(
+                                kind="branch_after",
+                                target_line_ref=origin_line_ref[1],
+                                target_move_ref=after_ref,
+                            )
+                            parent = after_ref
+                    else:
+                        # Some responses name every resumed span as a new line.
+                        line_ref = origin_line_ref
+                        state.line_aliases[(segment.game_ref, segment.line_ref)] = line_ref
+                if isinstance(entry, Continue):
+                    line = state.lines[line_ref]
+                    if line[0] != segment.game_ref or line[2] != after_ref:
+                        state.problems.extend(
+                            _problem_for_refs(
+                                context,
+                                segment.evidence_refs,
+                                by_id,
+                                segment.move_refs,
+                                len(state.problems),
+                            )
+                        )
+                        progressed = True
+                        continue
+                    parent = after_ref
             else:
                 target_line_ref = (segment.game_ref, entry.target_line_ref)
                 target_line_ref = state.line_aliases.get(target_line_ref, target_line_ref)
                 target_line = state.lines.get(target_line_ref)
                 target_token = _source_token_ref(entry.target_move_ref, by_id)
                 target_ref = target_token.id if target_token is not None else entry.target_move_ref
+                target_ref = state.token_aliases.get(target_ref, target_ref)
                 if target_ref not in state.parent:
                     target_ref = (
                         _unique_repeated_anchor(
@@ -1182,6 +1409,51 @@ def apply_relations(
                         )
                         or target_ref
                     )
+                if target_ref in state.parent:
+                    # The exact cited source move identifies its line more
+                    # reliably than a model label. When the label names a
+                    # different existing line, use the cited move locally;
+                    # do not overwrite that label for later segments.
+                    cited_line_ref = state.token_line.get(target_ref)
+                    if cited_line_ref is not None and cited_line_ref[0] == segment.game_ref:
+                        if target_line is None:
+                            state.line_aliases[(segment.game_ref, entry.target_line_ref)] = (
+                                cited_line_ref
+                            )
+                        if target_line_ref != cited_line_ref:
+                            target_line_ref = cited_line_ref
+                            target_line = state.lines.get(target_line_ref)
+                if (
+                    isinstance(entry, AlternativeTo)
+                    and target_line is not None
+                    and target_ref not in state.parent
+                    and target_token is not None
+                    and target_token.move_number is not None
+                    and target_token.side is not None
+                    and refs[0].move_number == target_token.move_number
+                    and refs[0].side == target_token.side
+                ):
+                    # A theory directory can cite an unplayed choice (such as
+                    # "5 Be2") as the alternative's target. If the named line
+                    # ends exactly one ply before that choice, its last owned
+                    # move is the explicit parent of this sibling variation.
+                    last_ref = target_line[2]
+                    last_token = _source_token_ref(last_ref, by_id) if last_ref else None
+                    if (
+                        last_ref in state.parent
+                        and last_token is not None
+                        and last_token.move_number is not None
+                        and last_token.side is not None
+                        and last_token.side != target_token.side
+                        and target_token.move_number
+                        == last_token.move_number + (1 if last_token.side == "b" else 0)
+                    ):
+                        target_ref = last_ref
+                        entry = BranchAfter(
+                            kind="branch_after",
+                            target_line_ref=entry.target_line_ref,
+                            target_move_ref=last_ref,
+                        )
                 if target_line is None or target_ref not in state.parent:
                     next_pending.append(segment)
                     continue
@@ -1241,13 +1513,16 @@ def apply_relations(
                         "kind": "move",
                         "source": _source_slice(token),
                         **(
-                            {"leading_source": {
-                                "page": token.leading_source[0],
-                                "order": token.leading_source[1],
-                                "start": token.leading_source[2],
-                                "end": token.leading_source[3],
-                            }}
-                            if token.leading_source is not None else {}
+                            {
+                                "leading_source": {
+                                    "page": token.leading_source[0],
+                                    "order": token.leading_source[1],
+                                    "start": token.leading_source[2],
+                                    "end": token.leading_source[3],
+                                }
+                            }
+                            if token.leading_source is not None
+                            else {}
                         ),
                         "sequence": segment.game_ref,
                         "parent": event_parent,

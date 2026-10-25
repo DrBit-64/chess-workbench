@@ -11,8 +11,6 @@ from uuid import UUID
 import chess.pgn
 import httpx
 import pytest
-from pydantic import SecretStr
-
 from chess_workbench.api import lichess as lichess_api
 from chess_workbench.api.app import ChessWorkbenchApp, create_app
 from chess_workbench.config import Settings
@@ -20,6 +18,7 @@ from chess_workbench.schemas.lichess import LichessChapterPreview, LichessStudyP
 from chess_workbench.services.content import ServiceError
 from chess_workbench.services.lichess_study import PreparedStudy, prepare_study, publish_study
 from chess_workbench.store.base import Base
+from pydantic import SecretStr
 
 TOKEN = "fixture-only-lichess-token"
 MAIN_PGN = (
@@ -117,17 +116,19 @@ async def test_flattened_scope_keeps_order_branches_annotations_and_fen(tmp_path
         )
     assert [chapter.name for chapter in prepared.preview.chapters] == [
         "大章节",
-        "大章节 / 残局",
-        "大章节 / 例局一",
+        "残局",
+        "例局一",
+        "目录占位",
     ]
-    assert prepared.preview.skipped_modules == ["大章节 / 目录占位"]
+    assert prepared.preview.skipped_modules == []
     assert not prepared.preview.blockers
     assert len(subsection.preview.chapters) == 1
+    assert subsection.preview.chapters[0].name == "例局一"
     games = read_games(prepared.pgn)
-    assert len(games) == 3
+    assert len(games) == 4
     assert games[0].headers["Event"] == "Original event"
     assert games[0].headers["White"] == "White player"
-    assert games[1].headers["ChapterName"] == "大章节 / 残局"
+    assert games[1].headers["ChapterName"] == "残局"
     assert games[1].board().fullmove_number == 37
     assert games[1].headers["SetUp"] == "1"
     d4 = games[2].variations[0]
@@ -137,6 +138,46 @@ async def test_flattened_scope_keeps_order_branches_annotations_and_fen(tmp_path
     assert "中文计划" in games[2].comment
     assert "章节正文" in games[2].comment
     assert [node.san() for node in games[2].mainline()] == ["d4", "d5", "c4"]
+    assert games[3].headers["ChapterName"] == "目录占位"
+    assert not games[3].variations
+    await app.ctx.database.close()
+
+
+async def test_directory_chapter_precedes_children_without_repeating_parent_title(
+    tmp_path: Path,
+) -> None:
+    app, receipt = await fixture_course(tmp_path)
+    client = cast(Any, app.asgi_client)
+    child = receipt["games"][3]
+    _, directory = await client.post(
+        "/api/course-modules",
+        json={
+            "course_id": receipt["course_id"],
+            "title": "第一章：目录",
+            "description": "这一章的学习顺序",
+            "sort_order": 9,
+        },
+    )
+    assert directory.status == 201
+    _, moved = await client.patch(
+        f"/api/course-modules/{child['module_id']}",
+        json={"expected_version": 1, "parent_id": directory.json["id"], "sort_order": 0},
+    )
+    assert moved.status == 200
+    async with app.ctx.database.session() as session:
+        prepared = await prepare_study(
+            session, UUID(receipt["course_id"]), UUID(directory.json["id"]), token_configured=True
+        )
+    assert [(chapter.name, chapter.move_count) for chapter in prepared.preview.chapters] == [
+        ("第一章：目录", 0),
+        ("其他章节", 4),
+    ]
+    games = read_games(prepared.pgn)
+    assert not games[0].variations
+    assert games[0].headers["ChapterName"] == "第一章：目录"
+    assert "这一章的学习顺序" in games[0].comment
+    assert games[1].headers["ChapterName"] == "其他章节"
+    assert [node.san() for node in games[1].mainline()] == ["d4", "d5", "c4"]
     await app.ctx.database.close()
 
 
@@ -152,7 +193,7 @@ async def test_api_previews_then_sends_the_selected_section(
     )
     assert preview.status == 200
     assert preview.json["token_configured"] is True
-    assert len(preview.json["chapters"]) == 3
+    assert len(preview.json["chapters"]) == 4
     assert TOKEN not in preview.text
     requests: list[httpx.Request] = []
 
@@ -172,8 +213,8 @@ async def test_api_previews_then_sends_the_selected_section(
         assert form["orientation"] == ["black"]
         assert "name" not in form  # ChapterName tags name every chapter, not only the first.
         games = read_games(form["pgn"][0])
-        assert len(games) == 3
-        return httpx.Response(200, json={"chapters": [{"id": f"Chap000{i}"} for i in range(3)]})
+        assert len(games) == 4
+        return httpx.Response(200, json={"chapters": [{"id": f"Chap000{i}"} for i in range(4)]})
 
     async def fixture_publish(prepared: PreparedStudy, **kwargs: Any) -> Any:
         return await publish_study(prepared, **kwargs, transport=httpx.MockTransport(handler))
@@ -185,7 +226,7 @@ async def test_api_previews_then_sends_the_selected_section(
     )
     assert result.status == 200, result.json
     assert result.json["status"] == "complete"
-    assert result.json["imported_chapters"] == 3
+    assert result.json["imported_chapters"] == 4
     assert result.json["study_url"] == "https://lichess.org/study/Study123"
     assert len(requests) == 2
     assert TOKEN not in result.text
@@ -248,7 +289,8 @@ async def test_capacity_blocker_stops_before_any_external_write(
         prepared = await prepare_study(
             session,
             UUID(receipt["course_id"]),
-            UUID(receipt["games"][0]["module_id"]),
+            None,
+            module_ids=[UUID(game["module_id"]) for game in receipt["games"][:2]],
             token_configured=True,
         )
     assert prepared.preview.blockers
@@ -264,6 +306,109 @@ async def test_capacity_blocker_stops_before_any_external_write(
             token=SecretStr(TOKEN),
             transport=httpx.MockTransport(handler),
         )
+    await app.ctx.database.close()
+
+
+async def test_multi_scope_preview_and_send_keep_course_order_without_duplicates(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    app, receipt = await fixture_course(tmp_path)
+    client = cast(Any, app.asgi_client)
+    course_path = f"/api/courses/{receipt['course_id']}"
+    parent, child, _, other = receipt["games"]
+    _, omitted = await client.post(
+        "/api/course-modules",
+        json={"course_id": receipt["course_id"], "title": "未选章节", "sort_order": 9},
+    )
+    assert omitted.status == 201
+    # Click order, duplicates and overlap must not alter export order or repeat a child.
+    ids = [other["module_id"], child["module_id"], parent["module_id"], parent["module_id"]]
+    _, preview = await client.get(
+        f"{course_path}/lichess-study-preview", params=[("module_ids", mid) for mid in ids]
+    )
+    expected_names = ["大章节", "残局", "例局一", "目录占位", "其他章节"]
+    assert preview.status == 200, preview.json
+    assert [c["name"] for c in preview.json["chapters"]] == expected_names
+    _, course = await client.get(course_path)
+    assert preview.json["name"] == course.json["title"]
+    requests: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        if request.url.path == "/api/study":
+            return httpx.Response(200, json={"id": "Study123"})
+        games = read_games(parse_qs(request.content.decode())["pgn"][0])
+        assert [g.headers["ChapterName"] for g in games] == expected_names
+        assert games[1].board().fullmove_number == 37
+        assert "中文计划" in games[2].comment
+        assert not games[3].variations
+        return httpx.Response(200, json={"chapters": [{"id": f"Chap000{i}"} for i in range(5)]})
+
+    async def fixture_publish(prepared: PreparedStudy, **kwargs: Any) -> Any:
+        return await publish_study(prepared, **kwargs, transport=httpx.MockTransport(handler))
+
+    monkeypatch.setattr(lichess_api, "publish_study", fixture_publish)
+    _, result = await client.post(
+        f"{course_path}/lichess-studies", json={"module_ids": ids, "name": "多个章节"}
+    )
+    assert result.status == 200, result.json
+    assert result.json["status"] == "complete"
+    assert result.json["expected_chapters"] == 5
+    assert len(requests) == 2
+    _, empty = await client.post(
+        f"{course_path}/lichess-studies", json={"module_ids": [], "name": "空选择"}
+    )
+    assert empty.status == 422
+    assert len(requests) == 2
+    await app.ctx.database.close()
+
+
+async def test_whole_course_preview_and_publication_preserve_directory_order(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    app, receipt = await fixture_course(tmp_path)
+    client = cast(Any, app.asgi_client)
+    course_path = f"/api/courses/{receipt['course_id']}"
+    _, preview = await client.get(f"{course_path}/lichess-study-preview")
+    assert preview.status == 200
+    assert [(chapter["name"], chapter["move_count"]) for chapter in preview.json["chapters"]] == [
+        ("大章节", 4),
+        ("残局", 2),
+        ("例局一", 4),
+        ("目录占位", 0),
+        ("其他章节", 4),
+    ]
+    assert preview.json["name"]
+    assert not preview.json["blockers"]
+    requests: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        if request.url.path == "/api/study":
+            return httpx.Response(200, json={"id": "Study123"})
+        assert request.url.path == "/api/study/Study123/import-pgn"
+        games = read_games(parse_qs(request.content.decode())["pgn"][0])
+        assert [game.headers["ChapterName"] for game in games] == [
+            "大章节",
+            "残局",
+            "例局一",
+            "目录占位",
+            "其他章节",
+        ]
+        assert not games[3].variations
+        return httpx.Response(200, json={"chapters": [{"id": f"Chap000{i}"} for i in range(5)]})
+
+    async def fixture_publish(prepared: PreparedStudy, **kwargs: Any) -> Any:
+        return await publish_study(prepared, **kwargs, transport=httpx.MockTransport(handler))
+
+    monkeypatch.setattr(lichess_api, "publish_study", fixture_publish)
+    _, result = await client.post(
+        f"{course_path}/lichess-studies", json={"name": "整门课程", "orientation": "white"}
+    )
+    assert result.status == 200, result.json
+    assert result.json["status"] == "complete"
+    assert result.json["expected_chapters"] == 5
+    assert len(requests) == 2
     await app.ctx.database.close()
 
 

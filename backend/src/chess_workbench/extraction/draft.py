@@ -12,8 +12,9 @@ from dataclasses import dataclass
 from .prompting import CcefPromptContext
 
 _NUMBER = re.compile(r"(?<![A-Za-z0-9-])[1-9]\d{0,2}(?:\s*\.{1,3}|…)?\s*")
+_CASTLING_JOIN = r"[-‐‑‒–—−\u00ad\ufffe]"
 _SAN_CORE = (
-    r"(?:O-O(?:-O)?|0-0(?:-0)?|[a-h]?[xX]?[a-h][18]=?[QRBN]|[KQRBN♔♕♖♗♘♙♚♛♜♝♞♟]?[a-h]?[1-8]?[xX]?[a-h][1-8])"
+    rf"(?:O{_CASTLING_JOIN}O(?:{_CASTLING_JOIN}O)?|0{_CASTLING_JOIN}0(?:{_CASTLING_JOIN}0)?|[a-h]?[xX]?[a-h][18]=?[QRBN]|[KQRBN♔♕♖♗♘♙♚♛♜♝♞♟]?[a-h]?[1-8]?[xX]?[a-h][1-8])"
     r"[+#]?[!?]*"
 )
 _MOVE = re.compile(_SAN_CORE + r"(?![A-Za-z0-9])")

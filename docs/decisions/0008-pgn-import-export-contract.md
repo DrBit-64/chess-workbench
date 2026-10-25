@@ -82,7 +82,12 @@ SHA256(
 
 `headers` 使用有序 `{name,value}` 数组，而不是 Course/Module description。PgnImport 相关外键
 均为 RESTRICT；Course 归档不删除 receipt 或 Source。现有单值 occurrence.nag 暂时保留兼容，
-但 PGN annotation 是 round-trip 权威值，后续只能通过单独兼容 migration 移除旧字段。
+但 PGN annotation 的完整 NAG 列表是 round-trip 权威值，后续只能通过单独兼容 migration 移除旧字段。
+
+2026-10-07 注释编辑补充：导入 annotation 保留来源注释；当前课程的可编辑
+`occurrence.context.pgn_comment` / `pgn_starting_comment` 存在时，导出使用该当前值，
+与课程页面一致。显式空字符串表示清除注释；缺少相应键时才回退到导入 annotation。
+通过现有 occurrence PATCH 和版本检查进行文字修订，保留来源资产、导入 receipt、棋步和 NAG。
 
 ### 4. 统一导入 API
 

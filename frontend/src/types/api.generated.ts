@@ -220,7 +220,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Preview a flattened chapter or subsection for a new Lichess study */
+        /** Preview a course or selected chapters and subsections for a new Lichess study */
         get: operations["previewLichessStudy"];
         put?: never;
         post?: never;
@@ -736,6 +736,23 @@ export interface paths {
         };
         /** Read one registered immutable PDF asset */
         get: operations["getPdfAsset"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/pdf-assets/{asset_id}/pages/{physical_page}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Render a registered PDF page without an extraction job */
+        get: operations["getPdfAssetPage"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4230,8 +4247,14 @@ export interface operations {
                     /**
                      * Module Id
                      * Format: uuid
+                     * @default null
                      */
-                    module_id: string;
+                    module_id?: string | null;
+                    /**
+                     * Module Ids
+                     * @default null
+                     */
+                    module_ids?: string[] | null;
                     /** Name */
                     name: string;
                     /**
@@ -4391,8 +4414,9 @@ export interface operations {
     };
     previewLichessStudy: {
         parameters: {
-            query: {
-                module_id: string;
+            query?: {
+                module_ids?: string[];
+                module_id?: string;
             };
             header?: never;
             path: {
@@ -8353,6 +8377,53 @@ export interface operations {
                 };
             };
             /** @description PDF asset not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Code
+                         * @enum {string}
+                         */
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        /**
+                         * Details
+                         * @default null
+                         */
+                        details: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** Message */
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    getPdfAssetPage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                physical_page: number;
+                asset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description PDF page */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/png": string;
+                };
+            };
+            /** @description PDF asset or page not found */
             404: {
                 headers: {
                     [name: string]: unknown;

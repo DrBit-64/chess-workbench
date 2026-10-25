@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Literal
 from uuid import UUID
 
+import chess.pgn
 import httpx
 from pydantic import SecretStr
 from sqlalchemy import select
@@ -35,8 +36,9 @@ class PreparedStudy:
 async def prepare_study(
     session: AsyncSession,
     course_id: UUID,
-    module_id: UUID,
+    module_id: UUID | None,
     *,
+    module_ids: list[UUID] | None = None,
     token_configured: bool,
 ) -> PreparedStudy:
     course = await session.get(Course, course_id)
@@ -50,13 +52,26 @@ async def prepare_study(
         )
     )
     by_id = {module.id: module for module in modules}
-    selected = by_id.get(module_id)
-    if selected is None:
+    root_ids = {module.id for module in modules if module.parent_id is None}
+    if module_ids is not None:
+        selected_ids = set(module_ids)
+    elif module_id is not None:
+        selected_ids = {module_id}
+    else:
+        selected_ids = root_ids
+    if not selected_ids <= by_id.keys():
         raise ServiceError("not_found", 404, "章节不属于当前课程，或已归档")
-    # The current course contract allows a chapter and one level of subsections.
-    scope = [selected, *(module for module in modules if module.parent_id == selected.id)]
+    # Select in course order, including a chosen parent's children once even if also selected.
+    scope = [
+        item
+        for parent in modules
+        if parent.parent_id is None
+        for item in (parent, *(child for child in modules if child.parent_id == parent.id))
+        if item.id in selected_ids or parent.id in selected_ids
+    ]
+    selected = by_id[next(iter(selected_ids))] if len(selected_ids) == 1 else None
+    whole_course = module_id is None and selected_ids == root_ids
     previews: list[LichessChapterPreview] = []
-    skipped: list[str] = []
     warnings: list[str] = []
     blockers: list[str] = []
     pgns: list[str] = []
@@ -65,17 +80,13 @@ async def prepare_study(
         parent = by_id.get(module.parent_id) if module.parent_id else None
         path = f"{parent.title} / {module.title}" if parent else module.title
         editor = await content.get_module_editor(course_id, module.id)
-        if not editor.occurrences:
-            skipped.append(path)
-            continue
         roots = [node for node in editor.occurrences if node.parent_id is None]
-        if len(roots) != 1:
+        if editor.occurrences and len(roots) != 1:
             raise ServiceError("pgn_not_exportable", 409, f"「{path}」的棋谱起点不唯一")
-        root = roots[0]
-        name = path if len(path) <= 80 else path[:77] + "..."
-        if name != path:
+        name = module.title if len(module.title) <= 80 else module.title[:77] + "..."
+        if name != module.title:
             warnings.append(f"章节标题已缩短：{path}")
-        move_count = len(editor.occurrences) - 1
+        move_count = len(editor.occurrences) - 1 if roots else 0
         previews.append(
             LichessChapterPreview(module_id=module.id, name=name, move_count=move_count)
         )
@@ -89,28 +100,36 @@ async def prepare_study(
                 introduction.append(block.heading)
             elif block.kind == "narrative" and block.markdown:
                 introduction.append(block.markdown)
-        if introduction:
-            comments[root.id] = ["\n\n".join(introduction)]
+        if roots and introduction:
+            comments[roots[0].id] = ["\n\n".join(introduction)]
         for note in editor.notes:
             if note.review_status == "approved" and note.target.kind == "occurrence":
                 comments.setdefault(note.target.occurrence_id, []).append(note.rendered_markdown)
-        try:
-            pgn = await export_module_pgn(
-                session,
-                course_id,
-                module.id,
-                extra_headers={"ChapterName": name},
-                extra_comments=comments,
-            )
-        except PgnExportError as error:
-            raise ServiceError(
-                "pgn_not_exportable", 409, f"「{path}」无法导出 PGN：{error}"
-            ) from error
+        if roots:
+            try:
+                pgn = await export_module_pgn(
+                    session,
+                    course_id,
+                    module.id,
+                    extra_headers={"ChapterName": name},
+                    extra_comments=comments,
+                )
+            except PgnExportError as error:
+                raise ServiceError(
+                    "pgn_not_exportable", 409, f"「{path}」无法导出 PGN：{error}"
+                ) from error
+        else:
+            # A directory becomes a zero-move study chapter before its children.
+            game = chess.pgn.Game()
+            game.headers["ChapterName"] = name
+            if introduction:
+                game.comment = "\n\n".join(introduction)
+            pgn = str(game)
         # Scala strings count UTF-16 code units. Check the actual upstream limit.
         if len(pgn.encode("utf-16-le")) // 2 > MAX_CHAPTER_CHARS:
             blockers.append(f"「{path}」的棋谱和注释超过 Lichess 单章 100000 字符上限")
         pgns.append(pgn.rstrip())
-    if not previews:
+    if not any(chapter.move_count for chapter in previews):
         blockers.append("所选范围没有可发送的棋谱")
     if len(previews) > MAX_CHAPTERS:
         blockers.append(
@@ -118,9 +137,13 @@ async def prepare_study(
         )
     return PreparedStudy(
         preview=LichessStudyPreview(
-            name=f"{course.title} · {selected.title}"[:100],
+            name=(
+                course.title
+                if whole_course or selected is None
+                else f"{course.title} · {selected.title}"
+            )[:100],
             chapters=previews,
-            skipped_modules=skipped,
+            skipped_modules=[],
             warnings=warnings,
             blockers=blockers,
             token_configured=token_configured,

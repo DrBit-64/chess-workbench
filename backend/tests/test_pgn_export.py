@@ -9,6 +9,8 @@ from uuid import UUID, uuid4
 
 import chess
 import pytest
+from sqlalchemy import select
+
 from chess_workbench.api.app import ChessWorkbenchApp, create_app
 from chess_workbench.config import Settings
 from chess_workbench.logic.pgn import PgnHeader, PgnNode, parse_pgn, parse_pgn_document
@@ -32,7 +34,6 @@ from chess_workbench.store.models import (
     PgnImport,
     PgnOccurrenceAnnotation,
 )
-from sqlalchemy import select
 
 FIXTURE_DIR = Path(__file__).parent / "fixtures" / "pgn"
 
@@ -126,6 +127,73 @@ async def test_leaf_export_is_one_path_and_cross_module_leaf_is_rejected(
     assert cross_scope.status == 409
     assert cross_scope.json["code"] == "pgn_not_exportable"
     assert cross_scope.json["details"]["reason"] == "leaf_scope"
+
+
+async def test_export_uses_edited_comments_without_changing_imported_annotations(
+    tmp_path: Path,
+) -> None:
+    app = build_test_app(tmp_path)
+    await create_schema(app)
+    client = cast(Any, app.asgi_client)
+    text = '[Result "*"]\n\n{old root} 1. e4 {old move} e5 ({old start} 1... c5 {old branch}) *'
+    receipt = await import_text(client, text)
+    game = receipt["games"][0]
+    _, response = await client.get(
+        f"/api/courses/{receipt['course_id']}/occurrences?module_id={game['module_id']}"
+    )
+    assert response.status == 200, response.json
+    originals = {
+        "old root": ("王翼印度防御", None),
+        "old move": ("更新后的讲解", None),
+        "old branch": ("", "新的分支说明"),
+    }
+    for occurrence in response.json:
+        context = occurrence["context"]
+        edit = originals.get(context.get("pgn_comment"))
+        if edit is None:
+            continue
+        comment, starting = edit
+        context["pgn_comment"] = comment
+        if starting is not None:
+            context["pgn_starting_comment"] = starting
+        _, edited = await client.patch(
+            f"/api/occurrences/{occurrence['id']}",
+            json={"expected_version": occurrence["version"], "context": context},
+        )
+        assert edited.status == 200, edited.json
+    _, exported = await client.get(
+        f"/api/courses/{receipt['course_id']}/pgn?module_id={game['module_id']}"
+    )
+    assert exported.status == 200
+    result = parse_pgn(exported.text)
+    assert result.root.comment == "王翼印度防御"
+    first = result.root.children[0]
+    assert first.comment == "更新后的讲解"
+    assert first.children[1].starting_comment == "新的分支说明"
+    assert first.children[1].comment == ""
+    expected_text = (
+        text.replace("old root", "王翼印度防御")
+        .replace("old move", "更新后的讲解")
+        .replace("old start", "新的分支说明")
+        .replace("{old branch}", "")
+    )
+    assert compare_games(parse_pgn(expected_text), result).equivalent
+    async with app.ctx.database.session() as session:
+        annotations = list(
+            await session.scalars(
+                select(PgnOccurrenceAnnotation).where(
+                    PgnOccurrenceAnnotation.pgn_import_game_id == UUID(game["id"])
+                )
+            )
+        )
+    assert {annotation.comment for annotation in annotations} == {
+        "old root",
+        "old move",
+        "old branch",
+        "",
+    }
+    assert "old start" in {annotation.starting_comment for annotation in annotations}
+    await app.ctx.database.close()
 
 
 async def test_corrupted_occurrence_structure_fails_without_recursion(
@@ -388,7 +456,7 @@ def test_path_validation_headers_and_fallback_rendering() -> None:
     )
     node = _ExportNode(child, _edge(edge_id), annotation, [])
     tokens = _move_tokens(node)
-    assert tokens == ["{before}", "1.", "e4", "$1", "$3", "{after ] move}"]
+    assert tokens == ["{before}", "1.", "e4", "$1", "$3", "{move fallback}"]
     fallback = _ExportNode(child, _edge(edge_id), None, [])
     assert _move_tokens(fallback)[-1] == "{move fallback}"
     with pytest.raises(PgnExportError) as missing_edge:

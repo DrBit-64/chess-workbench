@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json as json_module
+from hashlib import sha256
 from typing import Any, cast
 from uuid import UUID
 
@@ -15,6 +16,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from chess_workbench.api.contracts import openapi_schema, parse_body
 from chess_workbench.api.errors import ApiError
+from chess_workbench.extraction.evidence import PdfEvidenceError, RenderProfile
+from chess_workbench.extraction.pdfium import PdfiumPageRenderer
 from chess_workbench.schemas.domain import ErrorResponse
 from chess_workbench.schemas.pdf import (
     PdfAssetEnvelope,
@@ -54,6 +57,7 @@ from chess_workbench.schemas.review import (
     PdfReviewSessionEnvelope,
     PdfReviewSessionRead,
 )
+from chess_workbench.services.content import ServiceError
 from chess_workbench.services.jobs import job_read
 from chess_workbench.services.pdf import prepare_pdf_asset
 from chess_workbench.services.pdf_documents import (
@@ -73,10 +77,12 @@ from chess_workbench.services.pdf_persistence import (
     PdfExtractionView,
     PdfPersistenceService,
 )
+from chess_workbench.services.pdf_render import render_pdf_page
 from chess_workbench.services.pdf_review import PdfReviewReadService
 from chess_workbench.services.pdf_review_ledger import PdfReviewLedgerService
 from chess_workbench.services.pdf_review_publication import PdfReviewPublicationService
 from chess_workbench.services.pdf_source_read import PdfSourceReadService
+from chess_workbench.services.source_storage import read_verified_content_addressed_bytes
 from chess_workbench.store.database import Database
 
 pdf_blueprint = Blueprint("pdf", url_prefix="/api")
@@ -174,6 +180,46 @@ async def get_pdf_asset(request: Request, asset_id: UUID) -> HTTPResponse:
     if view is None:
         raise ApiError(404, "not_found", "PDF asset not found")
     return json(_asset_read(view).model_dump(mode="json"))
+
+
+@pdf_blueprint.get("/pdf-assets/<asset_id:uuid>/pages/<physical_page:int>")
+@openapi.operation("getPdfAssetPage")
+@openapi.summary("Render a registered PDF page without an extraction job")
+@openapi.tag("pdf")
+@openapi.response(200, {"image/png": {"type": "string", "format": "binary"}}, "PDF page")
+@openapi.response(404, ERROR_SCHEMA, "PDF asset or page not found")
+async def get_pdf_asset_page(request: Request, asset_id: UUID, physical_page: int) -> HTTPResponse:
+    database = cast(Database, request.app.ctx.database)
+    async with database.session() as session:
+        view = await PdfPersistenceService(session).get_asset(asset_id)
+    if view is None or not 1 <= physical_page <= view.asset.page_count:
+        raise ApiError(404, "not_found", "PDF asset page not found")
+    settings = request.app.ctx.settings
+    pdf_bytes = await asyncio.to_thread(
+        read_verified_content_addressed_bytes,
+        settings.source_storage_root,
+        relative_path=view.source_file.relative_path,
+        expected_sha256=view.asset.content_sha256,
+        expected_size=view.asset.byte_size,
+        max_bytes=settings.pdf_max_bytes,
+    )
+    try:
+        rendered = await render_pdf_page(
+            PdfiumPageRenderer(), pdf_bytes, physical_page, RenderProfile()
+        )
+    except PdfEvidenceError as error:
+        raise ServiceError("source_storage_unavailable", 503, "PDF page is unavailable") from error
+    body = rendered.png_bytes
+    return raw(
+        body,
+        content_type="image/png",
+        headers={
+            "Content-Length": str(len(body)),
+            "ETag": f'"{sha256(body).hexdigest()}"',
+            "Cache-Control": "private, max-age=31536000, immutable",
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
 
 
 @pdf_blueprint.post("/pdf-extractions", name="create_pdf_extraction")

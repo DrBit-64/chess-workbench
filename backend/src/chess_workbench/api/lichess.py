@@ -15,6 +15,7 @@ from chess_workbench.schemas.lichess import (
     LichessStudyCreate,
     LichessStudyPreview,
     LichessStudyResult,
+    LichessStudyScope,
 )
 from chess_workbench.services.lichess_study import prepare_study, publish_study
 from chess_workbench.store.database import Database
@@ -26,23 +27,32 @@ ERROR_SCHEMA = {"application/json": openapi_schema(ErrorResponse)}
 @lichess_blueprint.get("/courses/<course_id:uuid>/lichess-study-preview")
 @openapi.operation("previewLichessStudy")
 @openapi.tag("lichess")
-@openapi.summary("Preview a flattened chapter or subsection for a new Lichess study")
-@openapi.parameter("module_id", UUID, "query", required=True)
+@openapi.summary("Preview a course or selected chapters and subsections for a new Lichess study")
+@openapi.parameter("module_id", UUID, "query", required=False)
+@openapi.parameter("module_ids", list[UUID], "query", required=False)
 @openapi.response(200, {"application/json": openapi_schema(LichessStudyPreview)}, "Export preview")
 @openapi.response(404, ERROR_SCHEMA, "Course or module missing")
 @openapi.response(409, ERROR_SCHEMA, "PGN cannot be exported")
 @openapi.response(422, ERROR_SCHEMA, "Invalid request")
 async def preview_lichess_study(request: Request, course_id: UUID) -> HTTPResponse:
+    selection: dict[str, object] = {}
+    if (raw_module_id := request.args.get("module_id")) is not None:
+        selection["module_id"] = raw_module_id
+    if raw_module_ids := request.args.getlist("module_ids"):
+        selection["module_ids"] = raw_module_ids
     try:
-        module_id = UUID(request.args.get("module_id", ""))
+        scope = LichessStudyScope.model_validate(selection)
     except ValueError:
-        raise ApiError(422, "validation_error", "请选择要发送的章节或小节") from None
+        raise ApiError(
+            422, "validation_error", "章节选择无效，请使用单个或多个有效章节 ID"
+        ) from None
     database = cast(Database, request.app.ctx.database)
     async with database.session() as session:
         prepared = await prepare_study(
             session,
             course_id,
-            module_id,
+            scope.module_id,
+            module_ids=scope.module_ids,
             token_configured=request.app.ctx.settings.lichess_api_token_file is not None,
         )
     return json(prepared.preview.model_dump(mode="json"), headers={"Cache-Control": "no-store"})
@@ -77,7 +87,9 @@ async def create_lichess_study(request: Request, course_id: UUID) -> HTTPRespons
         )
     database = cast(Database, request.app.ctx.database)
     async with database.session() as session:
-        prepared = await prepare_study(session, course_id, body.module_id, token_configured=True)
+        prepared = await prepare_study(
+            session, course_id, body.module_id, module_ids=body.module_ids, token_configured=True
+        )
     # Close the read transaction before waiting for the external service.
     result = await publish_study(
         prepared, name=body.name, orientation=body.orientation, token=token

@@ -5692,9 +5692,22 @@
                 "additionalProperties": false,
                 "properties": {
                   "module_id": {
+                    "default": null,
                     "format": "uuid",
+                    "nullable": true,
                     "title": "Module Id",
                     "type": "string"
+                  },
+                  "module_ids": {
+                    "default": null,
+                    "items": {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    "minItems": 1,
+                    "nullable": true,
+                    "title": "Module Ids",
+                    "type": "array"
                   },
                   "name": {
                     "maxLength": 100,
@@ -5713,7 +5726,6 @@
                   }
                 },
                 "required": [
-                  "module_id",
                   "name"
                 ],
                 "title": "LichessStudyCreate",
@@ -6090,8 +6102,20 @@
         "parameters": [
           {
             "in": "query",
+            "name": "module_ids",
+            "required": false,
+            "schema": {
+              "items": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "type": "array"
+            }
+          },
+          {
+            "in": "query",
             "name": "module_id",
-            "required": true,
+            "required": false,
             "schema": {
               "format": "uuid",
               "type": "string"
@@ -6377,7 +6401,7 @@
             "description": "Invalid request"
           }
         },
-        "summary": "Preview a flattened chapter or subsection for a new Lichess study",
+        "summary": "Preview a course or selected chapters and subsections for a new Lichess study",
         "tags": [
           "lichess"
         ]
@@ -14130,6 +14154,109 @@
           }
         },
         "summary": "Read one registered immutable PDF asset",
+        "tags": [
+          "pdf"
+        ]
+      }
+    },
+    "/api/pdf-assets/{asset_id}/pages/{physical_page}": {
+      "get": {
+        "operationId": "getPdfAssetPage",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "physical_page",
+            "required": true,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "asset_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "image/png": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "PDF page"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Stable machine-readable error shared by all Stage 2 endpoints.",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_fen",
+                        "illegal_position",
+                        "invalid_uci",
+                        "illegal_move",
+                        "invalid_move",
+                        "not_found",
+                        "stale_version",
+                        "resource_referenced",
+                        "ambiguous_context",
+                        "validation_error",
+                        "payload_too_large",
+                        "unsupported_media_type",
+                        "invalid_pgn",
+                        "pgn_limit_exceeded",
+                        "idempotency_conflict",
+                        "course_mode_conflict",
+                        "pgn_not_exportable",
+                        "source_storage_unavailable",
+                        "engine_unavailable",
+                        "engine_failure",
+                        "lichess_unconfigured",
+                        "lichess_export_limit",
+                        "lichess_request_failed",
+                        "lichess_create_uncertain"
+                      ],
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "default": null,
+                      "nullable": true,
+                      "title": "Details",
+                      "type": "object"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "title": "Message",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "title": "ErrorResponse",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "PDF asset or page not found"
+          }
+        },
+        "summary": "Render a registered PDF page without an extraction job",
         "tags": [
           "pdf"
         ]
