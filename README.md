@@ -49,13 +49,15 @@ make bootstrap
 ./start.sh
 ```
 
-也可以运行 `make dev`。脚本会同时启动前后端，自动创建 / 升级数据库，并在当前终端显示两者的日志。等待前后端启动完成后，浏览器打开 **http://127.0.0.1:5173**；API 默认地址是 `http://127.0.0.1:8000`。
+也可以运行 `make dev`。脚本会同时启动前后端，自动创建 / 升级数据库，并在当前终端显示两者的日志。等待前后端启动完成后，浏览器打开 Vite 输出的 **Local** 地址，默认是 **http://127.0.0.1:5173**；API 默认地址是 `http://127.0.0.1:8000`。
 
 保留这一个终端即可；停止时按一次 **Ctrl+C**，脚本会同时关闭前后端及其子进程。如果其中一个服务启动失败或退出，另一个也会停止。以后再次使用仍运行 `./start.sh`，不需要重新复制 `.env`。从其他目录启动时，可以直接使用脚本的绝对路径。
 
 需要分别调试时，仍可在两个终端运行 `make dev-api` 和 `make dev-web`。统一脚本要求 Bash 4.3 及以上和 `setsid`，常见 Linux / WSL2 环境已提供；5173 端口被占用时会报错退出。
 
 前端会把 `/api` 请求和 WebSocket 连接转发给后端，无需单独配置跨域。
+
+若要更换网页端口，在 `.env` 中设置 `CHESS_WORKBENCH_WEB_PORT=5210`，然后重新启动。`./start.sh` 和 `make dev-web` 都会读取该设置，后端端口无需一起更改。
 
 ### 3. 开始使用
 
@@ -198,8 +200,9 @@ ssh -N -L 5173:127.0.0.1:5173 user@your-server
 | --- | --- |
 | 找不到 `pnpm` / `uv` / `make` | 确认工具已安装并在当前终端的 PATH 中；Node.js 使用 22.x |
 | 网页能打开，但读取数据失败 | 检查启动终端的后端日志；可访问 `http://127.0.0.1:8000/api/health` 查看后端是否可用 |
-| 8000 端口被占用 | 修改 `.env` 的 `CHESS_WORKBENCH_PORT`，同时修改 `CHESS_WORKBENCH_API_PROXY_TARGET`，然后重启前后端 |
-| 5173 端口被占用 | 统一脚本会报错退出；先关闭原来的网站再启动。分开调试时可用 `pnpm --dir frontend dev --port 5174` 指定空闲端口 |
+| 8000 端口被占用 | 先确认是否已经运行了 `./start.sh`；它已包含后端，不需要再运行 `make dev-api`。确需更换后端端口时，同时修改 `.env` 的 `CHESS_WORKBENCH_PORT` 和 `CHESS_WORKBENCH_API_PROXY_TARGET` |
+| 网页端口被占用 | 统一脚本会报错退出；先关闭原来的网站再启动。也可通过 `.env` 的 `CHESS_WORKBENCH_WEB_PORT` 指定空闲端口 |
+| WSL 内能访问，Windows 浏览器却拒绝连接 | 在 Windows PowerShell 中运行 `netsh interface ipv4 show excludedportrange protocol=tcp`；若网页端口落在系统保留范围内，在 `.env` 中选择范围外的 `CHESS_WORKBENCH_WEB_PORT`（例如 5210）并重启。还需确认 Windows 用户目录的 `.wslconfig` 未禁用 `localhostForwarding`；参见 [WSL 网络说明](https://learn.microsoft.com/en-us/windows/wsl/networking) |
 | 引擎不可用 | 确认可执行文件适合当前系统、有执行权限，路径正确，并在安装后重启后端 |
 | 提取报 `provider_unconfigured` | 检查密钥文件配置、绝对路径和文件权限；修改后重启后端 |
 | 提取报 `ocr_unavailable` | 当前页面需要 OCR，而本机未配置可用的 OCR runner |
