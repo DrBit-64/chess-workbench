@@ -28,7 +28,7 @@ trap 'exit 130' INT
 trap 'exit 143' TERM
 
 printf '正在启动 ChessWorkbench，按 Ctrl+C 同时关闭前后端。\n'
-printf '网页地址：http://127.0.0.1:5173（等待下方 Vite 就绪提示）\n\n'
+printf '网页地址请查看下方 Vite 就绪后的 Local 提示。\n\n'
 
 setsid make --no-print-directory dev-api &
 service_pids+=("$!")

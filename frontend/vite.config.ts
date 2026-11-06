@@ -13,7 +13,7 @@ export default defineConfig(({ mode }) => {
     plugins: [react(), tailwindcss()],
     server: {
       host: '127.0.0.1',
-      port: 5173,
+      port: Number(env.CHESS_WORKBENCH_WEB_PORT || '5173'),
       proxy: {
         '/api': {
           target: apiTarget,
