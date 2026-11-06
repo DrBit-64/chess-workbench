@@ -6,6 +6,7 @@ from collections.abc import Iterator
 from pathlib import Path
 from typing import Any, cast
 from unittest.mock import AsyncMock
+from uuid import UUID
 
 import chess
 import pytest
@@ -18,12 +19,14 @@ from chess_workbench.schemas.engine import (
     EngineGameCreate,
     EngineGameMoveCreate,
     EngineParameters,
+    TablebaseRead,
 )
 from chess_workbench.services.content import ContentService
 from chess_workbench.services.engine import (
     EngineService,
     analysis_cache_key,
     play_game_move,
+    process_analysis_job,
 )
 from chess_workbench.services.tablebase import TablebaseService
 from chess_workbench.services.uci import (
@@ -599,6 +602,65 @@ async def test_small_real_syzygy_fixture_probes_wdl_dtz_and_best_moves() -> None
     assert result.best_moves
     board = chess.Board("k7/8/1QK5/8/8/8/8/8 w - - 0 1")
     assert all(chess.Move.from_uci(uci) in board.legal_moves for uci in result.best_moves)
+
+
+async def test_syzygy_fifty_move_draws_replace_old_cached_wins(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Real KBBvKN table outputs before and after ...Ne2. Stub only the probe
+    # to keep the five-piece table out of the repository.
+    before = AnalysisRequest(fen="8/8/8/1B6/8/8/8/1KBk2n1 b - - 0 1")
+    after = AnalysisRequest(fen="8/8/8/1B6/8/8/4n3/1KBk4 w - - 1 2")
+    probes = {before.fen: (-1, -132, "g1e2"), after.fen: (1, 131, "b5a4")}
+
+    async def probe(_service: TablebaseService, fen: str) -> TablebaseRead:
+        wdl, dtz, move = probes[fen]
+        return TablebaseRead(
+            available=True, eligible=True, wdl=wdl, dtz=dtz, best_moves=[move], reason=None
+        )
+
+    monkeypatch.setattr(TablebaseService, "probe", probe)
+    settings = Settings(database_url=f"sqlite+aiosqlite:///{tmp_path / 'analysis.db'}")
+    database = Database(settings.database_url)
+    try:
+        async with database.engine.begin() as connection:
+            await connection.run_sync(Base.metadata.create_all)
+        lookup = AnalysisCacheLookupRequest(fens=[before.fen, after.fen])
+        async with database.session() as session, session.begin():
+            session.add(
+                EngineAnalysis(
+                    cache_key=analysis_cache_key(
+                        before.fen,
+                        source="tablebase",
+                        engine_name="Syzygy",
+                        engine_version="v1",
+                        parameters=before.parameters,
+                    ),
+                    fen=before.fen,
+                    source="tablebase",
+                    engine_name="Syzygy",
+                    engine_version="v1",
+                    parameters=before.parameters.model_dump(mode="json"),
+                    lines=[],
+                    elapsed_ms=0,
+                    from_cache=False,
+                )
+            )
+            await session.flush()
+            service = EngineService(session, settings)
+            assert (await service.lookup_cached_fens(lookup)).missing_fens == lookup.fens
+            result = await service.analyze(before)
+            assert not result.from_cache and result.lines[0].wdl == (0, 1000, 0)
+
+        receipt = await process_analysis_job(database, settings, after.model_dump(mode="json"))
+        assert not receipt["from_cache"]
+        async with database.session() as session:
+            service = EngineService(session, settings)
+            result = await service.get_analysis(UUID(receipt["analysis_id"]))
+            assert result.lines[0].wdl == (0, 1000, 0)
+            assert (await service.lookup_cached_fens(lookup)).cached_fens == lookup.fens
+    finally:
+        await database.close()
 
 
 def test_fake_engine_fixture_is_executable() -> None:

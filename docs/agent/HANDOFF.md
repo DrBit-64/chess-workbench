@@ -6,6 +6,8 @@ Landscape prose introductions use the full reading area even when their course d
 
 Chromium reproduced the half-width introduction and incorrect scan before the fixes. Checks included fullscreen, chapter switches and reloading a bookmark. A separate Vite/Sanic smoke test with native Stockfish 18 sent simultaneous white- and black-to-move requests, including duplicate cold requests, and verified that both positions had one reusable cached record each.
 
+Optional Syzygy analysis now scores raw WDL +1 and −1 as drawn under the fifty-move rule. New analysis requests use the v2 Syzygy cache key, including batch lookup and queued analysis. Verified both categories with real five-piece KBBvKN WDL and DTZ files for consecutive positions in the same endgame.
+
 ## Fullscreen course reading and computer analysis (2026-11-07)
 
 On supported phones the reader toolbar can put the whole document in fullscreen, keeping the score, scans and chapter menu usable. Landscape reading in a normal tab uses the small viewport height and scrolls individual panels. Mobile traditional courses request the active position from the computer's existing engine API by default. Mobile and desktop course boards share MultiPV arrows and a White-perspective evaluation bar that follows board orientation. Desktop analysis remains opt-in. The chapter command includes nested sections, skips prose-only roots, terminal and cached positions, and can be rerun to resume after leaving the page. Keep the reading page open during a batch.

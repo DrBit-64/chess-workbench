@@ -50,6 +50,31 @@ from chess_workbench.store.models import (
     EngineGameReview,
 )
 
+SYZYGY_ANALYSIS_VERSION = "v2"
+
+
+def _tablebase_lines(board: chess.Board, probe: TablebaseRead, multipv: int) -> list[AnalysisLine]:
+    assert probe.wdl is not None
+    white_wdl = probe.wdl if board.turn == chess.WHITE else -probe.wdl
+    # Syzygy ±1 is drawn with a fifty-move claim; only ±2 is decisive.
+    if white_wdl == 2:
+        distribution = (1000, 0, 0)
+    elif white_wdl == -2:
+        distribution = (0, 0, 1000)
+    else:
+        distribution = (0, 1000, 0)
+    return [
+        AnalysisLine(
+            rank=rank,
+            score_cp=None,
+            mate=None,
+            wdl=distribution,
+            uci=[uci],
+            san=[board.san(chess.Move.from_uci(uci))],
+        )
+        for rank, uci in enumerate(probe.best_moves[:multipv], 1)
+    ]
+
 
 def analysis_cache_key(
     fen: str,
@@ -174,7 +199,7 @@ class EngineService:
                 (
                     row.source == "tablebase"
                     and row.engine_name == "Syzygy"
-                    and row.engine_version == "v1"
+                    and row.engine_version == SYZYGY_ANALYSIS_VERSION
                 )
                 or (
                     identity is not None
@@ -233,7 +258,7 @@ class EngineService:
             request.fen,
             source="tablebase",
             engine_name="Syzygy",
-            engine_version="v1",
+            engine_version=SYZYGY_ANALYSIS_VERSION,
             parameters=request.parameters,
         )
         cached = await self.session.scalar(
@@ -242,30 +267,13 @@ class EngineService:
         if cached is not None:
             return _analysis_read(cached, from_cache=True)
         board = chess.Board(request.fen)
-        assert tablebase.wdl is not None
-        white_wdl = tablebase.wdl if board.turn == chess.WHITE else -tablebase.wdl
-        distribution = (
-            (1000, 0, 0) if white_wdl > 0 else (0, 0, 1000) if white_wdl < 0 else (0, 1000, 0)
-        )
-        lines: list[AnalysisLine] = []
-        for rank, uci in enumerate(tablebase.best_moves[: request.parameters.multipv], 1):
-            move = chess.Move.from_uci(uci)
-            lines.append(
-                AnalysisLine(
-                    rank=rank,
-                    score_cp=None,
-                    mate=None,
-                    wdl=distribution,
-                    uci=[uci],
-                    san=[board.san(move)],
-                )
-            )
+        lines = _tablebase_lines(board, tablebase, request.parameters.multipv)
         row = EngineAnalysis(
             cache_key=key,
             fen=board.fen(en_passant="fen"),
             source="tablebase",
             engine_name="Syzygy",
-            engine_version="v1",
+            engine_version=SYZYGY_ANALYSIS_VERSION,
             parameters=request.parameters.model_dump(mode="json"),
             lines=[line.model_dump(mode="json") for line in lines],
             depth=None,
@@ -643,7 +651,7 @@ async def process_analysis_job(
             request.fen,
             source="tablebase",
             engine_name="Syzygy",
-            engine_version="v1",
+            engine_version=SYZYGY_ANALYSIS_VERSION,
             parameters=request.parameters,
         )
         async with database.session() as tb_sess, tb_sess.begin():
@@ -655,24 +663,7 @@ async def process_analysis_job(
 
         # Build tablebase lines (no DB).
         board = chess.Board(request.fen)
-        assert tb_probe.wdl is not None and tb_probe.best_moves is not None
-        white_wdl = tb_probe.wdl if board.turn == chess.WHITE else -tb_probe.wdl
-        distribution = (
-            (1000, 0, 0) if white_wdl > 0 else (0, 0, 1000) if white_wdl < 0 else (0, 1000, 0)
-        )
-        tb_lines: list[AnalysisLine] = []
-        for rank, uci in enumerate(tb_probe.best_moves[: request.parameters.multipv], 1):
-            move = chess.Move.from_uci(uci)
-            tb_lines.append(
-                AnalysisLine(
-                    rank=rank,
-                    score_cp=None,
-                    mate=None,
-                    wdl=distribution,
-                    uci=[uci],
-                    san=[board.san(move)],
-                )
-            )
+        tb_lines = _tablebase_lines(board, tb_probe, request.parameters.multipv)
 
         async with database.session() as tb_persist, tb_persist.begin():
             row = EngineAnalysis(
@@ -680,7 +671,7 @@ async def process_analysis_job(
                 fen=board.fen(en_passant="fen"),
                 source="tablebase",
                 engine_name="Syzygy",
-                engine_version="v1",
+                engine_version=SYZYGY_ANALYSIS_VERSION,
                 parameters=request.parameters.model_dump(mode="json"),
                 lines=[line.model_dump(mode="json") for line in tb_lines],
                 depth=None,
