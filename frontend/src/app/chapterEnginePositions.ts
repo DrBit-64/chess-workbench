@@ -20,11 +20,23 @@ export function hasBookBoard(
   );
 }
 
-export function isTerminalPosition(fen: string): boolean {
+export type BoardOutcome = 'white-wins' | 'black-wins' | 'draw';
+
+export function boardOutcome(fen: string): BoardOutcome | undefined {
   try {
-    return new Chess(fen).isGameOver();
+    const board = new Chess(fen);
+    if (board.isCheckmate())
+      return board.turn() === 'w' ? 'black-wins' : 'white-wins';
+    // The FEN clock can establish the automatic 75-move draw, but a 50-move
+    // draw needs a player's claim, which the position alone cannot establish.
+    if (
+      board.isStalemate() ||
+      board.isInsufficientMaterial() ||
+      Number(fen.split(' ')[4]) >= 150
+    )
+      return 'draw';
   } catch {
-    return false;
+    return;
   }
 }
 
@@ -47,7 +59,7 @@ export async function loadChapterFens(
       }
     }
   }
-  return [...positions].filter((fen) => !isTerminalPosition(fen));
+  return [...positions].filter((fen) => !boardOutcome(fen));
 }
 
 export async function findMissingChapterFens(

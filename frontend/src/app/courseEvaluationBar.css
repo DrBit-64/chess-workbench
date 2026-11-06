@@ -84,7 +84,7 @@
 }
 
 @media (orientation: landscape) {
-  .mobile-book-reader
+  .mobile-book-reader[data-has-board='true']
     .course-workbench-grid:has(.course-board-with-evaluation) {
     grid-template-columns:
       min(

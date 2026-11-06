@@ -8,7 +8,7 @@ import type {
   EngineCapabilities,
   EngineParameters,
 } from '../logic/api/engineTypes';
-import { isTerminalPosition } from './chapterEnginePositions';
+import { boardOutcome } from './chapterEnginePositions';
 import { winningChances } from './courseEvaluation';
 
 const DEFAULT_PARAMETERS: EngineParameters = {
@@ -72,12 +72,9 @@ export function useCourseEngine(
     [customParameters, defaults],
   );
   const arrowCount = Math.min(preferredArrowCount, parameters.multipv, 4);
-  const terminal = useMemo(
-    () => Boolean(fen && isTerminalPosition(fen)),
-    [fen],
-  );
+  const outcome = useMemo(() => (fen ? boardOutcome(fen) : undefined), [fen]);
   const available = capabilities?.available || capabilities?.syzygy_available;
-  const shouldAnalyze = Boolean(enabled && available && !terminal);
+  const shouldAnalyze = Boolean(enabled && available && !outcome);
 
   useEffect(() => {
     if (!shouldAnalyze || !fen) return;
@@ -117,7 +114,7 @@ export function useCourseEngine(
       : undefined;
   const analysis = current?.analysis;
   const analysisError =
-    enabled && fen && !terminal
+    enabled && fen && !outcome
       ? capabilityError
         ? '无法读取电脑端引擎状态'
         : capabilities && !available
@@ -165,7 +162,7 @@ export function useCourseEngine(
     analysis,
     analysisError,
     analyzing,
-    terminal,
+    outcome,
     arrows,
   };
 }

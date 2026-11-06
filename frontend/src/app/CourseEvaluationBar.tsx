@@ -1,16 +1,26 @@
 import type { AnalysisLine } from '../logic/api/engineTypes';
+import type { BoardOutcome } from './chapterEnginePositions';
 import { scoreLabel, whiteEvaluationPercent } from './courseEvaluation';
 import './courseEvaluationBar.css';
 
+const terminalScores = {
+  'white-wins': { percent: 100, label: '1–0', description: '白方将杀获胜' },
+  'black-wins': { percent: 0, label: '0–1', description: '黑方将杀获胜' },
+  draw: { percent: 50, label: '½–½', description: '和棋' },
+} as const;
+
 export function CourseEvaluationBar({
   line,
+  outcome,
   orientation,
 }: {
   line?: AnalysisLine;
+  outcome?: BoardOutcome;
   orientation: 'white' | 'black';
 }) {
-  const whitePercent = whiteEvaluationPercent(line);
-  if (whitePercent == null || !line)
+  const result = outcome && terminalScores[outcome];
+  const whitePercent = result?.percent ?? whiteEvaluationPercent(line);
+  if (whitePercent == null)
     return (
       <div
         className="course-evaluation-bar is-empty"
@@ -20,9 +30,10 @@ export function CourseEvaluationBar({
       />
     );
 
-  const label = scoreLabel(line);
+  const label = result?.label ?? (line ? scoreLabel(line) : '');
   const percent = Math.round(whitePercent);
-  const description = `白方视角 ${label}，白方胜势 ${percent}%`;
+  const description =
+    result?.description ?? `白方视角 ${label}，白方胜势 ${percent}%`;
   const favorWhite = whitePercent >= 50;
   const labelAtBottom = favorWhite === (orientation === 'white');
   return (
@@ -30,7 +41,7 @@ export function CourseEvaluationBar({
       className="course-evaluation-bar"
       data-orientation={orientation}
       role="meter"
-      aria-label="引擎局面评分"
+      aria-label={result ? '棋局结果' : '引擎局面评分'}
       aria-valuemin={0}
       aria-valuemax={100}
       aria-valuenow={percent}

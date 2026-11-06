@@ -24,7 +24,7 @@ export type CourseSectionAnalysisProgress = {
   running: boolean;
   checking: boolean;
   cached: number;
-  lookupFailed: boolean;
+  error?: string;
 };
 
 export function CourseEnginePanel({
@@ -54,7 +54,7 @@ export function CourseEnginePanel({
     analysis,
     analysisError,
     analyzing,
-    terminal,
+    outcome,
   } = engine;
 
   return (
@@ -73,7 +73,7 @@ export function CourseEnginePanel({
                 ? `${analysis.engine_name} · 深度 ${analysis.depth ?? '—'}`
                 : analyzing
                   ? '正在计算当前局面'
-                  : terminal
+                  : outcome
                     ? '当前局面已结束'
                     : '等待引擎'
               : '关闭'}
@@ -114,7 +114,9 @@ export function CourseEnginePanel({
                 ? '正在检查缓存'
                 : sectionProgress.running
                   ? '正在分析'
-                  : '已完成'}
+                  : sectionProgress.error
+                    ? '已停止'
+                    : '已完成'}
               「{sectionProgress.sectionTitle}」
             </div>
             {sectionProgress.checking ? (
@@ -130,7 +132,8 @@ export function CourseEnginePanel({
                 )}
                 size="small"
                 status={
-                  !sectionProgress.running && sectionProgress.failed
+                  !sectionProgress.running &&
+                  (sectionProgress.error || sectionProgress.failed)
                     ? 'exception'
                     : undefined
                 }
@@ -146,15 +149,14 @@ export function CourseEnginePanel({
             ) : null}
             {!sectionProgress.running && !sectionProgress.checking ? (
               <div className="text-xs text-stone-600" aria-live="polite">
-                {sectionProgress.lookupFailed
-                  ? '章节或缓存读取失败，未启动分析'
-                  : sectionProgress.total === 0
+                {sectionProgress.error ??
+                  (sectionProgress.total === 0
                     ? sectionProgress.cached
                       ? `全部 ${sectionProgress.cached} 个局面已有缓存`
                       : '没有可分析的局面'
                     : sectionProgress.failed
                       ? `${sectionProgress.failed} 个局面失败，可再次运行补齐`
-                      : '本小节分析已保存'}
+                      : '本小节分析已保存')}
               </div>
             ) : null}
           </div>
@@ -197,7 +199,7 @@ export function CourseEnginePanel({
                 {analysis.from_cache ? ' · 缓存' : ''}
               </div>
             </div>
-          ) : terminal ? (
+          ) : outcome ? (
             <div className="course-engine-empty">终局无需继续计算。</div>
           ) : (
             <div className="course-engine-empty">正在连接本地引擎…</div>

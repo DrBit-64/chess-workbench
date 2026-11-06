@@ -39,8 +39,11 @@ import { useCompactReaderViewport } from '../components/useCompactReaderViewport
 import { ReaderFullscreenButton } from '../components/ReaderFullscreenButton';
 import { CourseWorkbenchLayout } from '../components/CourseWorkbenchLayout';
 import { WorkbenchBoard as Chessboard } from '../components/WorkbenchBoard';
-import { fetchJson, requestJson } from '../logic/api/client';
-import type { EngineParameters } from '../logic/api/engineTypes';
+import { ApiError, fetchJson, requestJson } from '../logic/api/client';
+import type {
+  EngineCapabilities,
+  EngineParameters,
+} from '../logic/api/engineTypes';
 import type {
   Course,
   CitableSource,
@@ -66,7 +69,7 @@ import {
 import {
   findMissingChapterFens,
   hasBookBoard,
-  isTerminalPosition,
+  boardOutcome,
   loadChapterFens,
 } from './chapterEnginePositions';
 import { CourseEvaluationBar } from './CourseEvaluationBar';
@@ -142,6 +145,9 @@ function CourseEditorSession({ courseId }: { courseId: string }) {
   const [activeSourceSpanId, setActiveSourceSpanId] = useState<
     string | undefined
   >(resume?.sourceSpanId);
+  const [sourceOccurrenceId, setSourceOccurrenceId] = useState<string | null>(
+    resume?.sourceOccurrenceId ?? null,
+  );
   const [expandedModuleIds, setExpandedModuleIds] = useState<Set<string>>(
     () => new Set(),
   );
@@ -338,10 +344,16 @@ function CourseEditorSession({ courseId }: { courseId: string }) {
     });
   }, [byId, course?.mode, editor]);
   const sectionAnalysisFens = useMemo(() => {
+    const includeStart =
+      course?.mode !== 'traditional' || hasBookBoard(editor, START_FEN);
     const positions = [
       ...new Set(
         (editor?.occurrences ?? [])
-          .filter((occurrence) => occurrence.module_id === moduleId)
+          .filter(
+            (occurrence) =>
+              occurrence.module_id === moduleId &&
+              (includeStart || occurrence.full_fen !== START_FEN),
+          )
           .map((occurrence) => occurrence.full_fen),
       ),
     ];
@@ -349,8 +361,8 @@ function CourseEditorSession({ courseId }: { courseId: string }) {
     // On phones, defer checking the entire score until a chapter is requested.
     return compactReader
       ? positions
-      : positions.filter((fen) => !isTerminalPosition(fen));
-  }, [compactReader, editor, moduleId]);
+      : positions.filter((fen) => !boardOutcome(fen));
+  }, [compactReader, course?.mode, editor, moduleId]);
 
   const childSectionIds = useMemo(
     () =>
@@ -389,95 +401,83 @@ function CourseEditorSession({ courseId }: { courseId: string }) {
       modules.find((item) => item.id === sectionId)?.title ?? '当前小节';
     const controller = new AbortController();
     sectionAnalysisController.current = controller;
-    setSectionAnalysisProgress({
+    const progress: CourseSectionAnalysisProgress = {
       sectionId,
       sectionTitle,
       completed: 0,
       failed: 0,
-      total: activeFens.length,
+      total: 0,
+      cached: 0,
       running: true,
       checking: true,
-      cached: 0,
-      lookupFailed: false,
-    });
+    };
+    function showProgress() {
+      if (!controller.signal.aborted)
+        setSectionAnalysisProgress({ ...progress });
+    }
+    showProgress();
 
-    let fens: string[];
-    let missingFens: string[];
+    const signal = controller.signal;
+    const unavailable = '电脑端引擎不可用，请检查 Stockfish 后重试';
     try {
-      fens = await loadChapterFens(
+      const fens = await loadChapterFens(
         courseId,
         activeFens,
         descendantIds,
-        controller.signal,
+        signal,
       );
-      if (controller.signal.aborted) return;
-      missingFens = await findMissingChapterFens(
-        fens,
-        parameters,
-        controller.signal,
-      );
-      if (controller.signal.aborted) return;
-      setSectionAnalysisProgress({
-        sectionId,
-        sectionTitle,
-        completed: 0,
-        failed: 0,
-        total: missingFens.length,
-        running: missingFens.length > 0,
-        checking: false,
-        cached: fens.length - missingFens.length,
-        lookupFailed: false,
-      });
-    } catch {
-      if (controller.signal.aborted) return;
-      setSectionAnalysisProgress({
-        sectionId,
-        sectionTitle,
-        completed: 0,
-        failed: 0,
-        total: 0,
-        running: false,
-        checking: false,
-        cached: 0,
-        lookupFailed: true,
-      });
-      sectionAnalysisController.current = undefined;
-      return;
-    }
-    if (!missingFens.length) {
-      sectionAnalysisController.current = undefined;
-      return;
-    }
+      const missing = await findMissingChapterFens(fens, parameters, signal);
+      progress.cached = fens.length - missing.length;
+      progress.total = missing.length;
+      if (!missing.length) return;
 
-    let completed = 0;
-    let failed = 0;
-    for (const position of missingFens) {
-      if (controller.signal.aborted) return;
-      try {
-        await requestJson('/api/engine/analyses', {
-          method: 'POST',
-          signal: controller.signal,
-          body: JSON.stringify({ fen: position, parameters }),
-        });
-      } catch {
-        if (controller.signal.aborted) return;
-        failed += 1;
+      // Check on each explicit run, including retries after an engine was installed.
+      const capabilities = await requestJson<EngineCapabilities>(
+        '/api/engine/capabilities',
+        { method: 'GET', signal },
+      );
+      if (!capabilities.available && !capabilities.syzygy_available) {
+        progress.error = unavailable;
+        return;
       }
-      if (controller.signal.aborted) return;
-      completed += 1;
-      setSectionAnalysisProgress({
-        sectionId,
-        sectionTitle,
-        completed,
-        failed,
-        total: missingFens.length,
-        running: completed < missingFens.length,
-        checking: false,
-        cached: fens.length - missingFens.length,
-        lookupFailed: false,
-      });
+      progress.checking = false;
+      showProgress();
+
+      for (const fen of missing) {
+        if (signal.aborted) return;
+        try {
+          await requestJson('/api/engine/analyses', {
+            method: 'POST',
+            signal,
+            body: JSON.stringify({ fen, parameters }),
+          });
+        } catch (error) {
+          if (signal.aborted) return;
+          if (
+            error instanceof ApiError &&
+            error.status === 503 &&
+            !capabilities.syzygy_available
+          ) {
+            progress.error = unavailable;
+            return;
+          }
+          if (error instanceof TypeError) {
+            progress.error = '已与工作台断开连接，请重新连接后重试';
+            return;
+          }
+          progress.failed += 1;
+        }
+        progress.completed += 1;
+        showProgress();
+      }
+    } catch {
+      progress.error = '无法读取章节、缓存或引擎状态，请重试';
+    } finally {
+      progress.running = false;
+      progress.checking = false;
+      showProgress();
+      sectionAnalysisController.current = undefined;
     }
-    sectionAnalysisController.current = undefined;
   }
 
   const explorerEntries = useMemo(() => {
@@ -670,6 +670,7 @@ function CourseEditorSession({ courseId }: { courseId: string }) {
       moduleId: readingModuleId,
       occurrenceId: current?.id,
       sourceSpanId: activePdfPreview?.spanId ?? activeSourceSpanId,
+      sourceOccurrenceId,
       panel: readerPanel,
       leftPane: leftPaneMode,
     });
@@ -682,6 +683,7 @@ function CourseEditorSession({ courseId }: { courseId: string }) {
     leftPaneMode,
     readerPanel,
     readingModuleId,
+    sourceOccurrenceId,
   ]);
   const activePdfPages = activePdfPreview
     ? [
@@ -701,14 +703,14 @@ function CourseEditorSession({ courseId }: { courseId: string }) {
     const next = pdfPreviews.find(
       (item) => item.assetId === activePdfPreview.assetId && item.page === page,
     );
-    if (next) setActiveSourceSpanId(next.spanId);
+    if (next) {
+      setSourceOccurrenceId(current?.id ?? null);
+      setActiveSourceSpanId(next.spanId);
+    }
   }
 
-  const lastSourceOccurrence = useRef(
-    resume?.sourceSpanId ? resume.occurrenceId : undefined,
-  );
   function openReaderSource() {
-    if (current && lastSourceOccurrence.current !== current.id) {
+    if (current && sourceOccurrenceId !== current.id) {
       const moveSources = current.context?.source_span_ids;
       const sources = [
         ...currentNotes.flatMap((note) => note.rendered_source_span_ids),
@@ -720,14 +722,14 @@ function CourseEditorSession({ courseId }: { courseId: string }) {
       );
       if (cited) setActiveSourceSpanId(cited);
     }
-    lastSourceOccurrence.current = current?.id;
+    setSourceOccurrenceId(current?.id ?? null);
     showReaderPanel('source');
   }
 
   function selectSourcePreview(spanId: string) {
     if (!sourcePageBySpanId.has(spanId)) return;
     setActiveSourceSpanId(spanId);
-    lastSourceOccurrence.current = current?.id;
+    setSourceOccurrenceId(current?.id ?? null);
     showReaderPanel('source');
   }
 
@@ -1250,23 +1252,23 @@ function CourseEditorSession({ courseId }: { courseId: string }) {
       </div>
     );
 
-  const activeAnalysisFens =
-    !hasReaderBoard && course.mode === 'traditional' ? [] : sectionAnalysisFens;
   const canAnalyzeChapter = Boolean(
-    activeAnalysisFens.length || childSectionIds.length,
+    editor?.module.id === moduleId &&
+    (sectionAnalysisFens.length || childSectionIds.length),
   );
-  const startChapterAnalysis = () =>
-    void analyzeCurrentSection(
-      engine.parameters,
-      activeAnalysisFens,
-      childSectionIds,
-    );
+  const startChapterAnalysis = () => {
+    if (canAnalyzeChapter)
+      void analyzeCurrentSection(
+        engine.parameters,
+        sectionAnalysisFens,
+        childSectionIds,
+      );
+  };
   const progress = sectionAnalysisProgress;
   let chapterStatus: string | undefined;
   if (progress) {
     if (progress.checking) chapterStatus = '正在检查章节和缓存…';
-    else if (progress.lookupFailed)
-      chapterStatus = '章节或缓存读取失败，可重试';
+    else if (progress.error) chapterStatus = progress.error;
     else if (progress.running)
       chapterStatus = `正在分析 ${progress.completed} / ${progress.total}`;
     else if (progress.failed)
@@ -1493,7 +1495,7 @@ function CourseEditorSession({ courseId }: { courseId: string }) {
                   size="small"
                   type={leftPaneMode === 'source' ? 'primary' : 'default'}
                   disabled={!activePdfPreview}
-                  onClick={() => showReaderPanel('source')}
+                  onClick={openReaderSource}
                 >
                   原文
                 </Button>
@@ -1589,6 +1591,7 @@ function CourseEditorSession({ courseId }: { courseId: string }) {
                     engine.enabled ? (
                       <CourseEvaluationBar
                         line={engine.analysis?.lines[0]}
+                        outcome={engine.outcome}
                         orientation={boardOrientation}
                       />
                     ) : undefined
@@ -1615,7 +1618,7 @@ function CourseEditorSession({ courseId }: { courseId: string }) {
                 <div className="mt-3 w-full">
                   <CourseEnginePanel
                     engine={engine}
-                    sectionPositions={activeAnalysisFens.length}
+                    sectionPositions={sectionAnalysisFens.length}
                     hasDescendants={childSectionIds.length > 0}
                     sectionProgress={sectionAnalysisProgress}
                     onAnalyzeSection={startChapterAnalysis}

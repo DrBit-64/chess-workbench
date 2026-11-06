@@ -1,7 +1,25 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
-import { useReadingScroll } from './courseReadingProgress';
+import { readReadingPlace, useReadingScroll } from './courseReadingProgress';
+
+it('restores legacy scan choices only when the reader had opened the source', () => {
+  const key = 'chess-workbench.reader.v1.legacy-book';
+  const place = {
+    moduleId: 'chapter',
+    occurrenceId: 'e4',
+    sourceSpanId: 'page-1',
+    panel: 'score',
+  };
+  const search = new URLSearchParams();
+  for (const leftPane of ['chapters', 'source']) {
+    localStorage.setItem(key, JSON.stringify({ ...place, leftPane }));
+    expect(readReadingPlace('legacy-book', search)?.sourceOccurrenceId).toBe(
+      leftPane === 'source' ? 'e4' : null,
+    );
+  }
+  localStorage.removeItem(key);
+});
 
 function Reader({ ready }: { ready: boolean }) {
   const scroll = useReadingScroll('slow-source', 'chapter', null, ready);

@@ -1,5 +1,11 @@
 # Current agent handoff
 
+## Mobile reader follow-up checks (2026-11-07)
+
+Landscape prose introductions use the full reading area even when their course data includes a synthetic starting position. Bookmarks now distinguish a scan the reader opened for a move from the default scan in the chapter, so reopening the book on the score can follow that move's citation. The chapter analysis action checks the cache before probing engine availability, reports an interruption, and checks again on retry. The evaluation bar can display a known board outcome at the last move.
+
+Chromium reproduced the half-width introduction and incorrect scan before the fixes. Checks included fullscreen, chapter switches and reloading a bookmark. A separate Vite/Sanic smoke test with native Stockfish 18 sent simultaneous white- and black-to-move requests, including duplicate cold requests, and verified that both positions had one reusable cached record each.
+
 ## Fullscreen course reading and computer analysis (2026-11-07)
 
 On supported phones the reader toolbar can put the whole document in fullscreen, keeping the score, scans and chapter menu usable. Landscape reading in a normal tab uses the small viewport height and scrolls individual panels. Mobile traditional courses request the active position from the computer's existing engine API by default. Mobile and desktop course boards share MultiPV arrows and a White-perspective evaluation bar that follows board orientation. Desktop analysis remains opt-in. The chapter command includes nested sections, skips prose-only roots, terminal and cached positions, and can be rerun to resume after leaving the page. Keep the reading page open during a batch.

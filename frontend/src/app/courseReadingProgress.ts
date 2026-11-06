@@ -6,6 +6,7 @@ interface ReadingPlace {
   moduleId: string;
   occurrenceId?: string;
   sourceSpanId?: string;
+  sourceOccurrenceId: string | null;
   panel: CourseReaderPanel;
   leftPane: 'chapters' | 'source';
 }
@@ -45,12 +46,22 @@ export function readReadingPlace(
   const requested = search.get('module');
   if (search.has('occurrence') || (requested && requested !== saved.moduleId))
     return;
+  const occurrenceId =
+    typeof saved.occurrenceId === 'string' ? saved.occurrenceId : undefined;
+  // Older bookmarks recorded a fallback page even when only the score had
+  // been read. Keep their manual page if the source panel had been opened.
+  const lastSourceMove =
+    saved.sourceOccurrenceId === undefined &&
+    (saved.panel === 'source' || saved.leftPane === 'source')
+      ? occurrenceId
+      : saved.sourceOccurrenceId;
   return {
     moduleId: saved.moduleId,
-    occurrenceId:
-      typeof saved.occurrenceId === 'string' ? saved.occurrenceId : undefined,
+    occurrenceId,
     sourceSpanId:
       typeof saved.sourceSpanId === 'string' ? saved.sourceSpanId : undefined,
+    sourceOccurrenceId:
+      typeof lastSourceMove === 'string' ? lastSourceMove : null,
     panel:
       saved.panel === 'source' || saved.panel === 'chapters'
         ? saved.panel

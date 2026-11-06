@@ -369,9 +369,12 @@ describe('Stage 4B course editor', () => {
   });
 
   it('precomputes each unique non-terminal position in the current subsection', async () => {
+    let available = false;
     const analyzedFens: string[] = [];
     const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
+      if (url === '/api/engine/capabilities')
+        return json({ ...engineCapabilities, available });
       if (url === '/api/citable-sources') return json([]);
       if (url === '/api/courses/course-1') return json(course);
       if (url === '/api/courses/course-1/modules') return json([module]);
@@ -403,6 +406,12 @@ describe('Stage 4B course editor', () => {
       await screen.findByRole('button', { name: '引擎分析当前小节' }),
     );
 
+    expect(
+      await screen.findByText('电脑端引擎不可用，请检查 Stockfish 后重试'),
+    ).toBeTruthy();
+    expect(analyzedFens).toEqual([]);
+    available = true;
+    fireEvent.click(screen.getByRole('button', { name: '引擎分析当前小节' }));
     expect(await screen.findByText('本小节分析已保存')).toBeTruthy();
     expect(screen.getByText('1 / 1')).toBeTruthy();
     expect(screen.getByText('已跳过 1 个缓存局面')).toBeTruthy();
@@ -428,6 +437,7 @@ describe('Stage 4B course editor', () => {
     });
     const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
+      if (url === '/api/engine/capabilities') return json(engineCapabilities);
       if (url === '/api/citable-sources') return json([]);
       if (url === '/api/courses/course-1') return json(course);
       if (url === '/api/courses/course-1/modules') {
@@ -1180,7 +1190,7 @@ describe('Stage 4B course editor', () => {
               ...root,
               context: { source_span_ids: ['span-page-321', 'span-page-322'] },
             },
-            e4,
+            { ...e4, context: { source_span_ids: ['span-page-322'] } },
           ],
           notes: [],
         });
@@ -1190,6 +1200,8 @@ describe('Stage 4B course editor', () => {
     vi.stubGlobal('fetch', fetchMock);
     const first = renderEditor();
     fireEvent.click(await screen.findByRole('button', { name: 'e4 e2e4' }));
+    first.unmount();
+    const resumedScore = renderEditor();
 
     const sourceButton = await screen.findByRole('button', {
       name: /原\s*文/,
@@ -1199,23 +1211,23 @@ describe('Stage 4B course editor', () => {
     );
     fireEvent.click(sourceButton);
     const page = await screen.findByRole('img', {
-      name: '扫描棋书 第 321 页',
+      name: '扫描棋书 第 322 页',
     });
-    expect(page.getAttribute('src')).toBe(
-      '/api/pdf-assets/asset-pdf/pages/321',
-    );
-    fireEvent.click(screen.getByRole('button', { name: '下一页' }));
     expect(page.getAttribute('src')).toBe(
       '/api/pdf-assets/asset-pdf/pages/322',
     );
-    first.unmount();
+    fireEvent.click(screen.getByRole('button', { name: '上一页' }));
+    expect(page.getAttribute('src')).toBe(
+      '/api/pdf-assets/asset-pdf/pages/321',
+    );
+    resumedScore.unmount();
     const reopened = renderEditor();
-    await screen.findByRole('img', { name: '扫描棋书 第 322 页' });
+    await screen.findByRole('img', { name: '扫描棋书 第 321 页' });
     expect(
       await within(screen.getByLabelText('测试棋盘')).findByText(e4Fen),
     ).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: '上一页' }));
-    await screen.findByRole('img', { name: '扫描棋书 第 321 页' });
+    fireEvent.click(screen.getByRole('button', { name: '下一页' }));
+    await screen.findByRole('img', { name: '扫描棋书 第 322 页' });
     reopened.unmount();
     renderEditor('/learn/course-1?module=module-1&occurrence=occ-root');
     expect(
@@ -1699,6 +1711,11 @@ it('keeps the same board and move when browsing the compact directory of a PGN-o
   const lateRoot = new Promise<Response>((resolve) => {
     returnLateRoot = resolve;
   });
+  const child = { ...module, id: 'child', parent_id: module.id, title: '序言' };
+  let loadParent!: (response: Response) => void;
+  const parentResponse = new Promise<Response>((resolve) => {
+    loadParent = resolve;
+  });
   const requestedPositions: string[] = [];
   const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
     switch (String(input)) {
@@ -1718,12 +1735,14 @@ it('keeps the same board and move when browsing the compact directory of a PGN-o
       case '/api/courses/course-1':
         return json(course);
       case '/api/courses/course-1/modules':
-        return json([module]);
+        return json([module, child]);
       case '/api/courses/course-1/editor/module-1':
+        return parentResponse;
+      case '/api/courses/course-1/editor/child':
         return json({
-          module,
+          module: child,
           content_blocks: [],
-          occurrences: [root, e4],
+          occurrences: [],
           notes: [],
         });
       default:
@@ -1732,6 +1751,26 @@ it('keeps the same board and move when browsing the compact directory of a PGN-o
   });
   vi.stubGlobal('fetch', fetchMock);
   renderEditor();
+  await waitFor(() =>
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/courses/course-1/editor/module-1',
+      expect.anything(),
+    ),
+  );
+  fireEvent.click(screen.getByRole('button', { name: '更多阅读选项' }));
+  const batch = await screen.findByRole('menuitem', { name: '分析当前章节' });
+  expect(batch.getAttribute('aria-disabled')).toBe('true');
+  fireEvent.click(screen.getByRole('button', { name: '更多阅读选项' }));
+  await act(async () =>
+    loadParent(
+      await json({
+        module,
+        content_blocks: [],
+        occurrences: [root, e4],
+        notes: [],
+      }),
+    ),
+  );
   const board = await screen.findByLabelText('测试棋盘');
   const reader = screen.getByRole('main');
   expect(reader.classList.contains('mobile-book-reader')).toBe(true);
