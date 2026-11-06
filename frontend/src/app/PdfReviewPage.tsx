@@ -39,6 +39,7 @@ import {
   type SourceMoveTarget,
 } from './reviewSourceCoverage';
 import { ReviewSourceText, CoverageSummary } from './ReviewSourceText';
+import './pdfReviewMobile.css';
 import { ReviewSourceContext, useReviewSource } from './reviewSourceContext';
 import { reviewTheorySections } from './reviewTheorySections';
 import { formatMoveNotation, moveNotationText } from './moveNotation';
@@ -288,6 +289,7 @@ export function PdfReviewPage({ runId }: { runId: string }) {
     fetchJson,
   );
 
+  const [mobilePane, setMobilePane] = useState<'score' | 'source'>('score');
   const [selectedPage, setSelectedPage] = useState<number | null>(null);
   const [selectedTheoryRef, setSelectedTheoryRef] = useState<string | null>(
     null,
@@ -481,6 +483,7 @@ export function PdfReviewPage({ runId }: { runId: string }) {
 
   useEffect(() => {
     setCurrentDocument(null);
+    setMobilePane('score');
     setOnlyPendingCommentary(false);
     setFocusedSourceMove(null);
     setRecoveryPreview(null);
@@ -639,7 +642,10 @@ export function PdfReviewPage({ runId }: { runId: string }) {
 
   function selectTheorySection(bodyRef: string | null, physicalPage: number) {
     setSelectedTheoryRef(bodyRef);
-    selectPage(physicalPage);
+    if (pages.some((page) => page.physical_page === physicalPage)) {
+      setSelectedPage(physicalPage);
+    }
+    setMobilePane('score');
     if (reviewPanelRef.current) reviewPanelRef.current.scrollTop = 0;
     const status = theorySectionStatus.find(
       (entry) => entry.section.body_source_ref === bodyRef,
@@ -653,10 +659,10 @@ export function PdfReviewPage({ runId }: { runId: string }) {
     }
   }
 
-  function selectPage(physicalPage: number) {
-    if (pages.some((page) => page.physical_page === physicalPage)) {
-      setSelectedPage(physicalPage);
-    }
+  function showEvidencePage(physicalPage: number) {
+    if (!pages.some((page) => page.physical_page === physicalPage)) return;
+    setSelectedPage(physicalPage);
+    setMobilePane('source');
   }
 
   const boardSquareStyles = useMemo(
@@ -1753,8 +1759,8 @@ export function PdfReviewPage({ runId }: { runId: string }) {
   );
 
   return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-2 px-6">
+    <div className="pdf-review space-y-3">
+      <div className="flex flex-wrap items-center gap-2 lg:px-6">
         {reviewSession === null ? (
           <button
             type="button"
@@ -1887,7 +1893,7 @@ export function PdfReviewPage({ runId }: { runId: string }) {
         ) : null}
       </div>
       {recoveryPreview !== null ? (
-        <div className="mx-6 space-y-2 rounded border border-emerald-400 bg-emerald-50 p-3 text-sm">
+        <div className="lg:mx-6 space-y-2 rounded border border-emerald-400 bg-emerald-50 p-3 text-sm">
           <div className="font-semibold">
             依赖恢复预览 · 新增 {recoveryPreview.added_moves.length} 招，解决{' '}
             {recoveryPreview.retired_issue_count} 条待审，保留{' '}
@@ -1944,7 +1950,7 @@ export function PdfReviewPage({ runId }: { runId: string }) {
         </div>
       ) : null}
       {attachSelection !== null && editing ? (
-        <div className="mx-6 flex items-center gap-3 rounded border border-blue-300 bg-blue-50 px-3 py-2 text-sm">
+        <div className="lg:mx-6 flex items-center gap-3 rounded border border-blue-300 bg-blue-50 px-3 py-2 text-sm">
           <span>
             已选择整段变化：点击目标棋步，或拖动棋步到目标位置。保存前可选择接在后面或作为并列变化。
           </span>
@@ -1961,7 +1967,7 @@ export function PdfReviewPage({ runId }: { runId: string }) {
         </div>
       ) : null}
       {unresolvedEditor?.pickingTarget && editing ? (
-        <div className="sticky top-0 z-10 mx-6 flex items-center gap-3 rounded border border-blue-300 bg-blue-50 px-3 py-2 text-sm">
+        <div className="sticky top-0 z-10 lg:mx-6 flex max-lg:flex-wrap items-center gap-3 rounded border border-blue-300 bg-blue-50 px-3 py-2 text-sm">
           <span>
             请在棋谱中点选目标棋步；选谱头的“回到初始局面”可从第一步前接续。
           </span>
@@ -2002,7 +2008,7 @@ export function PdfReviewPage({ runId }: { runId: string }) {
       {publishing ? (
         <section
           aria-label="发布计划"
-          className="mx-6 rounded-md border border-emerald-200 bg-emerald-50 p-3"
+          className="pdf-review-publication lg:mx-6 rounded-md border border-emerald-200 bg-emerald-50 p-3"
         >
           <div className="flex flex-wrap items-end gap-3">
             <label className="grid gap-1 text-sm">
@@ -2162,8 +2168,35 @@ export function PdfReviewPage({ runId }: { runId: string }) {
           </div>
         </section>
       ) : null}
-      <div className="grid grid-cols-1 gap-6 px-6 pb-6 lg:h-[calc(100vh-12rem)] lg:grid-cols-3 lg:overflow-hidden">
+      <div
+        data-pane={mobilePane}
+        className="pdf-review-workspace grid grid-cols-1 pb-6 lg:h-[calc(100vh-12rem)] lg:grid-cols-3 lg:gap-6 lg:overflow-hidden lg:px-6"
+      >
+        <div
+          role="group"
+          aria-label="审核内容切换"
+          className="pdf-review-switch hidden"
+        >
+          {(
+            [
+              ['score', '棋谱与检查'],
+              ['source', '原书扫描'],
+            ] as const
+          ).map(([pane, label]) => (
+            <button
+              key={pane}
+              type="button"
+              aria-pressed={mobilePane === pane}
+              aria-controls={`pdf-review-${pane}`}
+              onClick={() => setMobilePane(pane)}
+              className="min-h-11 flex-1 rounded-md px-2 text-sm font-medium text-stone-700 aria-pressed:bg-emerald-800 aria-pressed:text-white"
+            >
+              {label}
+            </button>
+          ))}
+        </div>
         <section
+          id="pdf-review-source"
           aria-label="原书页面"
           className="min-w-0 lg:h-full lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain"
         >
@@ -2285,7 +2318,10 @@ export function PdfReviewPage({ runId }: { runId: string }) {
           ) : null}
         </section>
 
-        <section className="min-w-0">
+        <section
+          aria-label="审核棋盘"
+          className="pdf-review-board-pane min-w-0"
+        >
           <div className="mx-auto max-w-[560px]">
             <Chessboard
               id="pdf-review-board"
@@ -2348,6 +2384,7 @@ export function PdfReviewPage({ runId }: { runId: string }) {
         >
           <section
             ref={reviewPanelRef}
+            id="pdf-review-score"
             aria-label="候选内容与自动检查"
             tabIndex={0}
             onClickCapture={onReviewClickCapture}
@@ -2438,7 +2475,7 @@ export function PdfReviewPage({ runId }: { runId: string }) {
                     key={item.id}
                     item={item}
                     editable={editing && !commandBusy}
-                    onSelectPage={selectPage}
+                    onSelectPage={showEvidencePage}
                     onSelectNode={selectNode}
                     onSelectAnchor={selectProseAnchor}
                     onSelectAnnotation={selectSequenceAnnotation}
@@ -2504,7 +2541,7 @@ export function PdfReviewPage({ runId }: { runId: string }) {
               onExcludeItem={excludeItem}
               onExcludeItems={excludeSelectedItems}
               onDetachPositionAnchor={detachPositionAnchor}
-              onSelectPage={selectPage}
+              onSelectPage={showEvidencePage}
             />
           </section>
         </ReviewSourceContext.Provider>

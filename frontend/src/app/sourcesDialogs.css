@@ -1,0 +1,95 @@
+.sources-book-drawer,
+.sources-form-dialog .ant-modal-body {
+  overflow-wrap: anywhere;
+}
+
+.sources-book-drawer .ant-drawer-header-title,
+.sources-book-drawer .ant-drawer-title {
+  min-width: 0;
+}
+
+.sources-book-drawer .ant-descriptions-item-label {
+  white-space: nowrap;
+}
+
+.sources-book-drawer .ant-input-number,
+.sources-form-dialog .ant-input-number {
+  width: 100%;
+}
+
+.sources-form-dialog input[type='file'] {
+  max-width: 100%;
+}
+
+.sources-result-menu .ant-dropdown-menu {
+  max-width: calc(100vw - 16px);
+  max-height: calc(100dvh - 16px);
+  overflow: auto;
+}
+
+@media (max-width: 767px), (max-height: 500px) and (orientation: landscape) {
+  .sources-book-drawer .ant-drawer-header,
+  .sources-book-drawer .ant-drawer-body {
+    padding: 12px;
+    padding-inline: max(12px, env(safe-area-inset-left))
+      max(12px, env(safe-area-inset-right));
+  }
+
+  .sources-book-drawer .ant-drawer-title {
+    max-height: min(3lh, 25dvh);
+    overflow-y: auto;
+  }
+
+  .sources-book-drawer .ant-drawer-close {
+    flex: none;
+    width: 40px;
+    height: 40px;
+  }
+
+  .sources-book-drawer .ant-drawer-body {
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+  }
+
+  .sources-result-card .ant-card-head-wrapper {
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    padding-block: 8px;
+  }
+
+  .sources-result-card .ant-card-head-title {
+    flex: 1 1 auto;
+    white-space: normal;
+  }
+
+  .sources-result-card .ant-card-extra {
+    max-width: 100%;
+    margin-inline-start: 0;
+  }
+
+  .sources-book-drawer .ant-btn,
+  .sources-form-dialog .ant-btn,
+  .sources-result-menu .ant-dropdown-menu-item {
+    min-height: 40px;
+  }
+
+  .sources-form-dialog .ant-modal {
+    top: max(8px, env(safe-area-inset-top));
+    margin-inline: auto;
+    padding-bottom: 0;
+  }
+
+  .sources-form-dialog .ant-modal-container {
+    display: flex;
+    flex-direction: column;
+    max-height: calc(
+      100dvh - max(8px, env(safe-area-inset-top)) -
+        max(8px, env(safe-area-inset-bottom))
+    );
+    padding: 16px;
+  }
+
+  .sources-form-dialog .ant-modal-body {
+    min-height: 0;
+    overflow-y: auto;
+  }
+}

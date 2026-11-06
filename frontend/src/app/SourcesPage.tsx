@@ -19,6 +19,8 @@ import { useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import useSWR from 'swr';
 
+import './courseCatalog.css';
+
 import {
   ApiError,
   fetchJson,
@@ -41,6 +43,7 @@ import type {
   PdfExtractionListResponse,
   Source,
 } from '../logic/api/types';
+import './sourcesDialogs.css';
 
 const kinds = [
   ['manual', '手工笔记'],
@@ -516,7 +519,7 @@ export function SourcesPage() {
   }
 
   return (
-    <main className="mx-auto max-w-7xl px-6 py-10">
+    <main className="sources-library mx-auto min-w-0 max-w-7xl px-4 py-6 sm:px-6 sm:py-10">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div>
           <Typography.Title className="mb-1!" level={2}>
@@ -526,12 +529,12 @@ export function SourcesPage() {
             一本 PDF 只占一个书籍条目，所有独立或连续提取结果都保存在书籍下面。
           </Typography.Text>
         </div>
-        <Space wrap>
+        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto">
           <Button onClick={() => setManualOpen(true)}>添加其他资料</Button>
           <Button type="primary" onClick={() => setUploadOpen(true)}>
             上传 PDF 棋书
           </Button>
-        </Space>
+        </div>
       </div>
 
       <Input.Search
@@ -552,7 +555,7 @@ export function SourcesPage() {
           </Typography.Text>
         </div>
         {filteredAssets.length ? (
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
             {filteredAssets.map((asset) => {
               const resultCount = resultsForAsset(asset.id);
               const activeCount = runs.filter(
@@ -575,7 +578,11 @@ export function SourcesPage() {
                     </Button>,
                   ]}
                 >
-                  <Space orientation="vertical" size="small">
+                  <Space
+                    className="w-full min-w-0"
+                    orientation="vertical"
+                    size="small"
+                  >
                     <Typography.Text>
                       {asset.author || '未填写作者'}
                       {asset.edition ? ` · ${asset.edition}` : ''}
@@ -619,10 +626,10 @@ export function SourcesPage() {
           />
         </div>
         {otherSources.length ? (
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
             {otherSources.map((source) => (
               <Card key={source.id} title={source.title}>
-                <Space orientation="vertical">
+                <Space className="w-full min-w-0" orientation="vertical">
                   <Tag>
                     {kinds.find((item) => item.value === source.kind)?.label ??
                       source.kind}
@@ -650,13 +657,14 @@ export function SourcesPage() {
 
       <Drawer
         title={selectedAsset?.title ?? 'PDF 棋书'}
-        width={760}
+        rootClassName="sources-book-drawer"
+        size="min(760px, 100%)"
         open={selectedAsset !== null}
         onClose={() => setSelectedAssetId(undefined)}
       >
         {selectedAsset ? (
-          <Space className="w-full" orientation="vertical" size="large">
-            <Descriptions size="small" column={2} bordered>
+          <div className="grid min-w-0 grid-cols-1 gap-6">
+            <Descriptions size="small" column={{ xs: 1, sm: 2 }} bordered>
               <Descriptions.Item label="作者">
                 {selectedAsset.author || '未填写'}
               </Descriptions.Item>
@@ -672,7 +680,7 @@ export function SourcesPage() {
             </Descriptions>
 
             <Card size="small" title="新建独立提取">
-              <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
                 <Form.Item label="起始物理页" className="mb-0!">
                   <InputNumber
                     aria-label="起始物理页"
@@ -696,6 +704,7 @@ export function SourcesPage() {
                   />
                 </Form.Item>
                 <Button
+                  className="col-span-2 sm:col-span-1"
                   type="primary"
                   loading={creatingRun}
                   disabled={creatingRun}
@@ -740,6 +749,7 @@ export function SourcesPage() {
                           key={`document-${document.id}`}
                           size="small"
                           role="listitem"
+                          className="sources-result-card"
                           title={`连续提取 · 第 ${document.first_page}–${document.last_page} 页`}
                           extra={<Tag color="green">v{document.version}</Tag>}
                         >
@@ -766,12 +776,15 @@ export function SourcesPage() {
                                 </Typography.Text>
                               </Space>
                             ) : null}
-                            <div className="flex items-center justify-between gap-3">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
                               <Typography.Text type="secondary">
                                 更新于 {formatDate(document.updated_at)}
                               </Typography.Text>
                               <Dropdown
                                 trigger={['click']}
+                                placement="bottom"
+                                align={{ offset: [0, 0] }}
+                                classNames={{ root: 'sources-result-menu' }}
                                 menu={{
                                   items: [
                                     {
@@ -868,6 +881,7 @@ export function SourcesPage() {
                         key={`run-${run.id}`}
                         size="small"
                         role="listitem"
+                        className="sources-result-card"
                         title={`独立提取 · 第 ${run.first_page}–${run.last_page} 页`}
                         extra={
                           <Space wrap>
@@ -918,12 +932,15 @@ export function SourcesPage() {
                               {run.candidate.error_count}
                             </Typography.Text>
                           ) : null}
-                          <div className="flex items-center justify-between gap-3">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
                             <Typography.Text type="secondary">
                               创建于 {formatDate(run.created_at)}
                             </Typography.Text>
                             <Dropdown
                               trigger={['click']}
+                              placement="bottom"
+                              align={{ offset: [0, 0] }}
+                              classNames={{ root: 'sources-result-menu' }}
                               menu={{
                                 items: [
                                   {
@@ -1007,11 +1024,12 @@ export function SourcesPage() {
                 <Empty description="这本书还没有提取结果" />
               )}
             </div>
-          </Space>
+          </div>
         ) : null}
       </Drawer>
 
       <Modal
+        rootClassName="sources-form-dialog"
         title="上传 PDF 棋书"
         open={uploadOpen}
         onCancel={() => setUploadOpen(false)}
@@ -1066,6 +1084,7 @@ export function SourcesPage() {
       </Modal>
 
       <Modal
+        rootClassName="sources-form-dialog"
         title="继续增量提取"
         open={appendDocument !== null}
         onCancel={() => setAppendDocumentId(undefined)}
@@ -1109,6 +1128,7 @@ export function SourcesPage() {
       </Modal>
 
       <Modal
+        rootClassName="sources-form-dialog"
         title="添加其他资料"
         open={manualOpen}
         onCancel={() => setManualOpen(false)}

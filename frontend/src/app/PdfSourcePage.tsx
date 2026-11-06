@@ -64,11 +64,16 @@ export function PdfSourcePage() {
     sourceUrl,
     fetchJson,
   );
+  const scanPagesUrl = data
+    ? `/api/pdf-extractions/${encodeURIComponent(data.run_id)}/source/pages`
+    : null;
 
   return (
-    <main className="mx-auto max-w-6xl px-4 py-6">
-      <div className="mb-4 flex items-baseline gap-4">
-        <h1 className="text-2xl font-semibold">PDF 原文证据</h1>
+    <main className="mx-auto min-w-0 max-w-6xl px-3 py-6 wrap-anywhere sm:px-4">
+      <div className="mb-4 flex flex-wrap items-baseline gap-x-4 gap-y-2">
+        <h1 className="w-full text-2xl font-semibold sm:w-auto">
+          PDF 原文证据
+        </h1>
         <Link to="/sources">← 返回资料</Link>
         {runId ? (
           <Link
@@ -132,16 +137,32 @@ export function PdfSourcePage() {
           </ul>
         </section>
       ) : null}
-      <div className="grid gap-6">
+      <div className="grid grid-cols-1 gap-6">
         {data?.pages.map((page) => (
-          <Card key={page.physical_page} title={`物理页 ${page.physical_page}`}>
-            <div className="grid gap-4 lg:grid-cols-2">
+          <Card
+            key={page.physical_page}
+            classNames={{ body: 'max-sm:p-3!' }}
+            title={`物理页 ${page.physical_page}`}
+            extra={
+              <a
+                href={`${scanPagesUrl}/${page.physical_page}`}
+                target="_blank"
+                rel="noreferrer"
+                aria-label={`查看物理页 ${page.physical_page} 大图`}
+              >
+                查看大图
+              </a>
+            }
+          >
+            <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
               <img
-                src={`/api/pdf-extractions/${encodeURIComponent(data.run_id)}/source/pages/${page.physical_page}`}
+                src={`${scanPagesUrl}/${page.physical_page}`}
                 alt={`PDF 物理页 ${page.physical_page}`}
-                className="max-h-[75vh] w-full object-contain object-top"
+                loading="lazy"
+                decoding="async"
+                className="h-auto w-full min-w-0 object-contain object-top sm:max-h-[75dvh]"
               />
-              <ol className="max-h-[75vh] space-y-2 overflow-auto pl-6">
+              <ol className="min-w-0 space-y-2 pl-5 sm:max-h-[75dvh] sm:overflow-auto">
                 {page.fragments.map((fragment) => (
                   <li
                     key={`${fragment.order}-${fragment.fragment_sha256}`}

@@ -1,0 +1,75 @@
+/* The same board and both review panes stay mounted across rotations. */
+@media (width < 64rem) {
+  .pdf-review {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .pdf-review-workspace {
+    grid-template-areas: 'board' 'switch' 'content';
+    gap: 0.5rem;
+  }
+
+  .pdf-review-board-pane {
+    grid-area: board;
+  }
+
+  .pdf-review-board-pane .board-material:empty {
+    min-height: 0;
+    padding: 0;
+  }
+
+  .pdf-review-switch {
+    grid-area: switch;
+    display: flex;
+    align-self: start;
+    gap: 0.25rem;
+    padding: 0.25rem;
+    border: 1px solid #d6d3d1;
+    border-radius: 0.5rem;
+    background: white;
+  }
+
+  #pdf-review-source,
+  #pdf-review-score {
+    grid-area: content;
+    min-height: 0;
+    max-height: 70svh;
+    overflow-y: auto;
+  }
+
+  .pdf-review-workspace[data-pane='score'] #pdf-review-source,
+  .pdf-review-workspace[data-pane='source'] #pdf-review-score {
+    display: none;
+  }
+
+  .pdf-review pre {
+    white-space: pre-wrap;
+  }
+
+  .pdf-review-publication label,
+  .pdf-review-publication select {
+    min-width: 0;
+    max-width: 100%;
+  }
+}
+
+@media (width < 64rem) and (orientation: portrait) {
+  .pdf-review-board-pane > div {
+    max-width: min(100%, 44svh, 560px);
+  }
+}
+
+@media (width < 64rem) and (orientation: landscape) {
+  .pdf-review-workspace {
+    grid-template-areas: 'board switch' 'board content';
+    grid-template-columns: minmax(0, min(42%, 92svh)) minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    align-items: start;
+  }
+
+  #pdf-review-source,
+  #pdf-review-score {
+    max-height: calc(92svh - 3.75rem);
+  }
+}

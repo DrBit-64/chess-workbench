@@ -1,16 +1,25 @@
 @media (max-width: 767px) {
-  .course-catalog .ant-card-head,
-  .course-catalog .ant-card-body {
+  :is(.course-catalog, .sources-library) .ant-card-head,
+  :is(.course-catalog, .sources-library) .ant-card-body {
     padding-inline: 14px;
   }
 
-  .course-catalog .ant-card-head-title,
-  .course-catalog .ant-tag {
+  :is(.course-catalog, .sources-library) .ant-card-head-title,
+  :is(.course-catalog, .sources-library) .ant-tag {
     white-space: normal;
     overflow-wrap: anywhere;
   }
 
-  .course-catalog .ant-space-item {
+  .sources-library .ant-card-body {
+    overflow-wrap: anywhere;
+  }
+
+  .sources-library .ant-card-actions button {
+    min-height: 44px;
+    width: 100%;
+  }
+
+  :is(.course-catalog, .sources-library) .ant-space-item {
     min-width: 0;
     max-width: 100%;
   }

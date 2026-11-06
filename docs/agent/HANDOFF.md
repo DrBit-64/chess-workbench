@@ -1,5 +1,11 @@
 # Current agent handoff
 
+## Mobile sources library and PDF review (2026-11-07)
+
+The sources catalog wraps long titles, authors and filenames. The extraction drawer fits the phone viewport; upload, manual and append forms keep their actions accessible even in short landscape. PDF evidence supports a full-size scan link. In the compact review workspace the board stays mounted while the user switches between the score and the scan; source citations open their physical page. Wider review workspaces continue to display both panes together.
+
+Validated against local API fixtures and Chromium at 304/336 px portrait and 741×228 landscape. Tests cover long book metadata, opening extraction results, reaching review/evidence, selecting a PDF, opening the manual-source form and submitting a mock page range. Also checked evidence anchors/scan links, selecting a review move, flipping between evidence pages, retaining a position across panel switches, and desktop behavior. No external extraction or real publication was triggered. Check the actual phone's file picker/keyboard and reading comfort on the operator's books. Advanced review editing (mouse drag selection and context menus), course editing/exploration, and the engine page remain desktop-oriented.
+
 ## Compact reader rotation and narrow shelf (2026-11-06)
 
 A 336×741 → 741×228 rotation could paint the previous board dimensions for a frame. The compact reader now measures the square before mounting the renderer and synchronizes changes before paint. The catalog wraps long titles and descriptions and gives the global navigation its own row on narrow screens. If the user scrolls while citation metadata is arriving, their new reading place takes precedence over a pending restore.

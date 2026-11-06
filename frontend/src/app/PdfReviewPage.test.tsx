@@ -2544,6 +2544,34 @@ describe('Stage 8D review page (8D-3A)', () => {
     );
   });
 
+  it('opens the cited scan from the score and keeps the selected position on return', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => json(baseDocument())),
+    );
+    renderPage();
+
+    const score = await screen.findByLabelText('候选内容与自动检查');
+    fireEvent.click(within(score).getByRole('button', { name: 'e4' }));
+    fireEvent.click(
+      within(score).getAllByRole('button', { name: '第 6 页' })[0],
+    );
+    expect(screen.getByAltText('物理页 6 图片')).toBeTruthy();
+    expect(screen.getByText('原书扫描').getAttribute('aria-pressed')).toBe(
+      'true',
+    );
+
+    fireEvent.click(screen.getByText('棋谱与检查'));
+    expect(screen.getByText('棋谱与检查').getAttribute('aria-pressed')).toBe(
+      'true',
+    );
+    expect(
+      screen
+        .getByTestId('board-pdf-review-board')
+        .getAttribute('data-position'),
+    ).toBe(FEN_AFTER_E4);
+  });
+
   it('scopes wide screens to independent scroll panes with accessible labels', async () => {
     vi.stubGlobal(
       'fetch',
