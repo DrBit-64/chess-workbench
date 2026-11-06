@@ -1,5 +1,11 @@
 # Current agent handoff
 
+## Mainline scan citations (2026-11-07)
+
+The active move's scan button now occupies its own grid row below the white and black moves. Previously it overflowed the move cell, and a tap could select the following variation. The clickable area is at least 44 CSS pixels high. Variation citations can wrap separately from the move number and SAN.
+
+Verified hit targets in Chromium at 336×741 portrait and 741×228 landscape, including fullscreen. Opening citations for white and black reached their respective scan pages and preserved the current move. Also checked an uncited move, a variation citation and desktop context-menu navigation.
+
 ## Mobile reader follow-up checks (2026-11-07)
 
 Landscape prose introductions use the full reading area even when their course data includes a synthetic starting position. Bookmarks now distinguish a scan the reader opened for a move from the default scan in the chapter, so reopening the book on the score can follow that move's citation. The chapter analysis action checks the cache before probing engine availability, reports an interruption, and checks again on retry. The evaluation bar can display a known board outcome at the last move.

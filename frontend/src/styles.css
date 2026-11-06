@@ -770,6 +770,30 @@ body {
   background: #065f46;
 }
 
+.reader-source-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  max-width: 100%;
+  padding: 4px 10px;
+  color: #275c49;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+.course-mainline-row > .reader-source-link {
+  grid-column: 2 / -1;
+  border-top: 1px solid #e7e5e4;
+  background: #f8faf9;
+}
+
+.reader-source-link:is(:hover, :focus-visible) {
+  background: #e8f1ec;
+}
+
 .reader-panel-heading {
   grid-area: heading;
   display: flex;

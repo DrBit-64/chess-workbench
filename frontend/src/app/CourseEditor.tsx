@@ -1731,7 +1731,7 @@ function CourseEditorSession({ courseId }: { courseId: string }) {
                     {compactReader && sourceSpan ? (
                       <button
                         type="button"
-                        className="px-2 py-1 text-xs text-emerald-800 underline"
+                        className="reader-source-link"
                         onClick={() => selectSourcePreview(sourceSpan)}
                       >
                         原书第 {sourcePageBySpanId.get(sourceSpan)} 页

@@ -40,7 +40,7 @@ function ReaderSourceLink({ ids }: { ids: unknown }) {
   return (
     <button
       type="button"
-      className="px-2 py-1 text-xs text-emerald-800 underline"
+      className="reader-source-link"
       onClick={() => sources.open(spanId)}
     >
       原书第 {sources.pages.get(spanId)} 页
@@ -447,12 +447,15 @@ function MainlineRow({
     occurrence: CourseOccurrence,
   ) => void;
 }) {
+  const selected = [row.white, row.black].find(
+    (move) => move && move.occurrence.id === currentId,
+  );
   return (
-    <div className="grid min-h-9 grid-cols-[2.5rem_1fr_1fr] border-b border-stone-100">
+    <div className="course-mainline-row grid min-h-9 grid-cols-[2.5rem_minmax(0,1fr)_minmax(0,1fr)] border-b border-stone-100">
       <span className="flex items-center justify-center bg-stone-50 font-mono text-xs text-stone-400">
         {row.white === null ? `${row.moveNumber}...` : `${row.moveNumber}.`}
       </span>
-      <div className="border-l border-stone-100">
+      <div className="grid border-l border-stone-100">
         {row.white ? (
           <CourseMove
             move={row.white}
@@ -463,7 +466,7 @@ function MainlineRow({
           />
         ) : null}
       </div>
-      <div className="border-l border-stone-100">
+      <div className="grid border-l border-stone-100">
         {row.black ? (
           <CourseMove
             move={row.black}
@@ -474,6 +477,9 @@ function MainlineRow({
           />
         ) : null}
       </div>
+      {selected && (
+        <ReaderSourceLink ids={selected.occurrence.context?.source_span_ids} />
+      )}
     </div>
   );
 }
@@ -521,6 +527,9 @@ function VariationLine({
           onContextMenu={onMoveContextMenu}
         />
       </span>
+      {move.occurrence.id === currentId && (
+        <ReaderSourceLink ids={move.occurrence.context?.source_span_ids} />
+      )}
       {(notesByOccurrence.get(move.occurrence.id) ?? []).map((note) => (
         <span
           key={note.id}
@@ -606,28 +615,25 @@ function CourseMove({
     occurrence.nag === null ? [] : [occurrence.nag],
   ).move;
   return (
-    <>
-      <button
-        type="button"
-        data-reader-anchor={occurrence.id}
-        data-reader-occurrence={occurrence.id}
-        aria-label={`${displayLabel} ${occurrence.inbound_uci ?? ''}`.trim()}
-        aria-current={active ? 'step' : undefined}
-        title={occurrence.inbound_uci ?? undefined}
-        onClick={() => onSelectOccurrence(occurrence.id)}
-        onContextMenu={(event) => onContextMenu(event, occurrence)}
-        className={`${fullWidth ? 'flex h-full w-full' : 'inline-flex'} min-w-0 items-center rounded-sm px-2 py-1 text-left text-sm font-medium hover:bg-emerald-100 ${
-          active ? 'bg-emerald-800 text-white hover:bg-emerald-800' : ''
-        }`}
-      >
-        <MoveNotation
-          san={label}
-          nags={occurrence.nag === null ? [] : [occurrence.nag]}
-          active={active}
-        />
-      </button>
-      {active && <ReaderSourceLink ids={occurrence.context?.source_span_ids} />}
-    </>
+    <button
+      type="button"
+      data-reader-anchor={occurrence.id}
+      data-reader-occurrence={occurrence.id}
+      aria-label={`${displayLabel} ${occurrence.inbound_uci ?? ''}`.trim()}
+      aria-current={active ? 'step' : undefined}
+      title={occurrence.inbound_uci ?? undefined}
+      onClick={() => onSelectOccurrence(occurrence.id)}
+      onContextMenu={(event) => onContextMenu(event, occurrence)}
+      className={`${fullWidth ? 'flex min-h-9 w-full' : 'inline-flex'} min-w-0 items-center rounded-sm px-2 py-1 text-left text-sm font-medium hover:bg-emerald-100 ${
+        active ? 'bg-emerald-800 text-white hover:bg-emerald-800' : ''
+      }`}
+    >
+      <MoveNotation
+        san={label}
+        nags={occurrence.nag === null ? [] : [occurrence.nag]}
+        active={active}
+      />
+    </button>
   );
 }
 
