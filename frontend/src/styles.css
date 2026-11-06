@@ -628,3 +628,183 @@ body {
     overflow: visible;
   }
 }
+
+/* Reader panels stay mounted while switching; the board and navigation have
+   their own grid cells so neither moves with a long chapter or a scanned page. */
+.ant-layout:has(.mobile-book-reader) > .ant-layout-header,
+.mobile-book-reader .course-editor-toolbar,
+.mobile-book-reader .course-pane-resizer,
+.mobile-book-reader .course-workbench-pane > .ant-card-head,
+.mobile-book-reader .board-material {
+  display: none;
+}
+
+.mobile-book-reader {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right)
+    env(safe-area-inset-bottom) env(safe-area-inset-left);
+  background: #fff;
+}
+
+.mobile-book-reader .course-workbench-grid {
+  flex: 1;
+  grid-template-areas:
+    'board heading'
+    'board content'
+    'board steps';
+  grid-template-columns: min(48%, 100dvh) minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 0;
+  height: auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.mobile-book-reader .course-board-pane {
+  grid-area: board;
+  display: grid;
+  place-items: center;
+  container-type: size;
+  overflow: hidden;
+  background: #f5f5f4;
+}
+
+.mobile-book-reader .course-board-pane > .w-full {
+  width: min(100%, 100cqh);
+}
+
+.mobile-book-reader .course-reading-pane,
+.mobile-book-reader .course-reading-pane > .ant-card-body {
+  display: contents;
+}
+
+.mobile-book-reader .course-reading-pane > .ant-card-body::before,
+.mobile-book-reader .course-reading-pane > .ant-card-body::after {
+  display: none;
+}
+
+.mobile-book-reader .course-reading-scroll,
+.mobile-book-reader .course-left-pane {
+  grid-area: content;
+  min-width: 0;
+  min-height: 0;
+  max-height: none;
+  border: 0;
+  border-radius: 0;
+}
+.mobile-book-reader .course-reading-scroll {
+  overflow: auto;
+  padding: 0 0.35rem 0.5rem;
+  overscroll-behavior: contain;
+}
+.mobile-book-reader .course-reading-flow {
+  font-size: 1rem;
+  line-height: 1.65;
+}
+
+.mobile-book-reader .course-left-pane > .ant-card-body {
+  height: 100%;
+  padding: 0.35rem;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.mobile-book-reader[data-reader-panel='score'] .course-left-pane,
+.mobile-book-reader:not([data-reader-panel='score']) .course-reading-scroll {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.mobile-book-reader .course-score-controls {
+  grid-area: steps;
+  padding: 0.2rem 0.25rem;
+  justify-content: center;
+}
+.mobile-book-reader .course-score-controls button,
+.mobile-book-reader .course-left-pane button {
+  min-height: 40px;
+}
+.mobile-book-reader .course-score-controls button {
+  min-width: 44px;
+  min-height: 44px;
+  padding-inline: 0.75rem;
+  font-size: 0.9rem;
+  line-height: 1.2;
+}
+.mobile-book-reader .course-score-controls button[aria-label='上一步'] {
+  margin-left: auto;
+}
+.mobile-book-reader .course-score-controls button[aria-label='下一步'] {
+  background: #dcebe3;
+}
+.mobile-book-reader .course-score-controls button:disabled {
+  opacity: 0.45;
+}
+.mobile-book-reader .course-reading-flow button[aria-current='step'] {
+  color: #fff;
+  background: #065f46;
+}
+
+.reader-panel-heading {
+  grid-area: heading;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  justify-content: space-between;
+  min-width: 0;
+  padding: 0.2rem 0.4rem;
+}
+.reader-panel-title {
+  padding-left: 0.4rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+.reader-floating-bar {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  overflow: hidden;
+  border: 1px solid #d6d3d1;
+  border-radius: 2rem;
+  background: #fff;
+  box-shadow: 0 2px 6px rgb(0 0 0 / 10%);
+}
+.reader-floating-bar button {
+  min-height: 40px;
+  min-width: 44px;
+  padding: 0 0.6rem;
+  border: 0;
+  background: transparent;
+  color: #304a36;
+  cursor: pointer;
+}
+.reader-floating-bar button:focus-visible {
+  outline-offset: -3px;
+}
+.reader-floating-bar button:disabled {
+  color: #78716c;
+  cursor: default;
+}
+
+@media (orientation: portrait) {
+  .mobile-book-reader .course-workbench-grid {
+    grid-template-areas: 'board' 'heading' 'content' 'steps';
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: min(100vw, 44dvh) auto minmax(0, 1fr) auto;
+  }
+}
+
+.mobile-book-reader[data-has-board='false'] .course-workbench-grid {
+  grid-template-areas: 'heading' 'content' 'steps';
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+.mobile-book-reader[data-has-board='false'] .course-board-pane,
+.mobile-book-reader[data-has-board='false'] .course-score-controls {
+  display: none;
+}

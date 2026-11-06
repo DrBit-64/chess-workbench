@@ -1,5 +1,13 @@
 import type { MouseEvent as ReactMouseEvent, ReactNode } from 'react';
-import { Fragment, useEffect, useMemo, useState } from 'react';
+import {
+  createContext,
+  Fragment,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import ReactMarkdown from 'react-markdown';
 import rehypeSanitize from 'rehype-sanitize';
 
@@ -15,6 +23,30 @@ import {
 } from './courseMoveLayout';
 
 type CourseNote = ModuleEditor['notes'][number];
+
+const ReaderActions = createContext<{
+  pages: ReadonlyMap<string, number>;
+  open: (spanId: string) => void;
+  enterVariation?: (first: CourseOccurrence) => void;
+} | null>(null);
+
+function ReaderSourceLink({ ids }: { ids: unknown }) {
+  const sources = useContext(ReaderActions);
+  if (!sources || !Array.isArray(ids)) return null;
+  const spanId = ids.find(
+    (id): id is string => typeof id === 'string' && sources.pages.has(id),
+  );
+  if (!spanId) return null;
+  return (
+    <button
+      type="button"
+      className="px-2 py-1 text-xs text-emerald-800 underline"
+      onClick={() => sources.open(spanId)}
+    >
+      原书第 {sources.pages.get(spanId)} 页
+    </button>
+  );
+}
 
 interface CourseMenuState {
   x: number;
@@ -36,7 +68,11 @@ export function CourseScore({
   onSelectOccurrence,
   onSelectSource,
   onMoveAction,
+  readOnly = false,
+  onEnterVariation,
 }: {
+  onEnterVariation?: (first: CourseOccurrence) => void;
+  readOnly?: boolean;
   occurrences: CourseOccurrence[];
   notes: CourseNote[];
   rootId: string;
@@ -66,6 +102,7 @@ export function CourseScore({
   const [menu, setMenu] = useState<CourseMenuState | null>(null);
 
   function openNoteMenu(event: ReactMouseEvent, note: CourseNote) {
+    if (readOnly) return;
     event.preventDefault();
     const pages = note.rendered_source_span_ids.flatMap((spanId) => {
       const page = sourcePageBySpanId.get(spanId);
@@ -84,6 +121,7 @@ export function CourseScore({
   }
 
   function openMoveMenu(event: ReactMouseEvent, occurrence: CourseOccurrence) {
+    if (readOnly) return;
     event.preventDefault();
     const sourceSpanIds = Array.isArray(occurrence.context?.source_span_ids)
       ? occurrence.context.source_span_ids.filter(
@@ -111,10 +149,12 @@ export function CourseScore({
   const rootComment = pgnComment(
     occurrences.find((item) => item.id === rootId),
   );
-  return (
+  const score = (
     <nav aria-label="课程棋谱" className="overflow-hidden bg-white">
       <button
         type="button"
+        data-reader-anchor={rootId}
+        data-reader-occurrence={rootId}
         aria-current={currentId === rootId ? 'step' : undefined}
         onClick={() => onSelectOccurrence(rootId)}
         className={`w-full border-b border-stone-200 px-3 py-2 text-left text-sm ${
@@ -130,7 +170,7 @@ export function CourseScore({
         onContextMenu={openNoteMenu}
         onSelectOccurrence={() => onSelectOccurrence(rootId)}
       />
-      {rootComment ? <PgnComment text={rootComment} /> : null}
+      {rootComment ? <PgnComment id={rootId} text={rootComment} /> : null}
       {layout.mainlineRows.length === 0 ? (
         <p className="px-3 py-6 text-center text-sm text-stone-500">
           在棋盘走一步以创建棋谱
@@ -170,7 +210,9 @@ export function CourseScore({
                   }
                 }}
               />
-              {whiteComment ? <PgnComment text={whiteComment} /> : null}
+              {whiteComment ? (
+                <PgnComment id={row.white!.occurrence.id} text={whiteComment} />
+              ) : null}
               {splitPair ? (
                 <MainlineRow
                   row={{ ...row, white: null }}
@@ -188,7 +230,9 @@ export function CourseScore({
                   }
                 }}
               />
-              {blackComment ? <PgnComment text={blackComment} /> : null}
+              {blackComment ? (
+                <PgnComment id={row.black!.occurrence.id} text={blackComment} />
+              ) : null}
               {anchors.flatMap((anchor) =>
                 (layout.variationsByParent.get(anchor) ?? []).map(
                   (variation) => (
@@ -217,6 +261,21 @@ export function CourseScore({
       />
     </nav>
   );
+  return (
+    <ReaderActions.Provider
+      value={
+        readOnly
+          ? {
+              pages: sourcePageBySpanId,
+              open: onSelectSource,
+              enterVariation: onEnterVariation,
+            }
+          : null
+      }
+    >
+      {score}
+    </ReaderActions.Provider>
+  );
 }
 
 export function CourseScoreControls({
@@ -228,7 +287,11 @@ export function CourseScoreControls({
   onRecordMovesChange,
   boardOrientation,
   onFlipBoard,
+  readerOnly = false,
+  onRestoreFork,
 }: {
+  onRestoreFork?: (id: string) => boolean;
+  readerOnly?: boolean;
   occurrences: CourseOccurrence[];
   rootId: string;
   currentId?: string;
@@ -251,10 +314,8 @@ export function CourseScoreControls({
       result.set(occurrence.parent_id, children);
     }
     for (const children of result.values()) {
-      children.sort(
-        (left, right) =>
-          left.sort_order - right.sort_order || left.id.localeCompare(right.id),
-      );
+      // Preserve source order for tied siblings, as the displayed score does.
+      children.sort((left, right) => left.sort_order - right.sort_order);
     }
     return result;
   }, [occurrences]);
@@ -269,49 +330,105 @@ export function CourseScoreControls({
     endId = childrenByParent.get(endId)![0].id;
   }
 
+  let branchParent: CourseOccurrence | undefined;
+  let cursor = activeOccurrence;
+  while (cursor?.parent_id) {
+    const parent = occurrenceById.get(cursor.parent_id);
+    if (childrenByParent.get(cursor.parent_id)?.[0]?.id !== cursor.id) {
+      branchParent = parent;
+      break;
+    }
+    cursor = parent;
+  }
+  const controlsRef = useRef<HTMLDivElement>(null);
+  function stepTo(id: string | undefined, returnToFork = false) {
+    if (!id) return;
+    onSelectOccurrence(id);
+    if (!readerOnly || (returnToFork && onRestoreFork?.(id))) return;
+    // Only deliberate navigation scrolls the score. Browsing prose never moves the board.
+    const pane = controlsRef.current
+      ?.closest('.course-workbench-grid')
+      ?.querySelector('.course-reading-scroll');
+    if (!pane || !pane.getClientRects().length) return;
+    const move = pane.querySelector<HTMLElement>(
+      `[data-reader-occurrence="${CSS.escape(id)}"]`,
+    );
+    if (!move) return;
+    const rect = move.getBoundingClientRect();
+    const bounds = pane.getBoundingClientRect();
+    if (rect.top < bounds.top || rect.bottom > bounds.bottom) {
+      pane.scrollTop += rect.top - bounds.top - pane.clientHeight / 3;
+    }
+  }
+
   return (
     <div
+      ref={controlsRef}
       className="course-score-controls flex flex-wrap items-center justify-center gap-1 border-t border-stone-200 bg-stone-50 px-2 py-2"
       aria-label="棋谱导航与棋盘设置"
     >
-      <ScoreControl
-        label="回到开始"
-        symbol="|◀"
-        disabled={activeOccurrence?.id === rootId}
-        onClick={() => onSelectOccurrence(rootId)}
-      />
+      {!readerOnly && (
+        <ScoreControl
+          label="回到开始"
+          symbol="|◀"
+          disabled={activeOccurrence?.id === rootId}
+          onClick={() => stepTo(rootId)}
+        />
+      )}
+      {readerOnly && (
+        <ScoreControl
+          label={`翻转棋盘（当前${boardOrientation === 'white' ? '白方' : '黑方'}视角）`}
+          symbol="翻转"
+          onClick={onFlipBoard}
+        />
+      )}
+      {branchParent && (
+        <ScoreControl
+          label="回到分岔处"
+          symbol="回分岔"
+          onClick={() => stepTo(branchParent.id, true)}
+        />
+      )}
       <ScoreControl
         label="上一步"
-        symbol="‹"
+        symbol={readerOnly ? '上一步' : '‹'}
         disabled={!previousId}
-        onClick={() => previousId && onSelectOccurrence(previousId)}
+        onClick={() => stepTo(previousId)}
       />
       <ScoreControl
         label="下一步"
-        symbol="›"
+        symbol={readerOnly ? '下一步' : '›'}
         disabled={!nextId}
-        onClick={() => nextId && onSelectOccurrence(nextId)}
+        onClick={() => stepTo(nextId)}
       />
-      <ScoreControl
-        label="前往主线末尾"
-        symbol="▶|"
-        disabled={activeOccurrence?.id === endId}
-        onClick={() => onSelectOccurrence(endId)}
-      />
-      <span className="mx-1 h-6 border-l border-stone-300" />
-      <label className="inline-flex cursor-pointer items-center gap-1.5 rounded px-2 py-1 text-xs text-stone-600 hover:bg-stone-100">
-        <input
-          type="checkbox"
-          checked={recordMoves}
-          onChange={(event) => onRecordMovesChange(event.target.checked)}
+      {!readerOnly && (
+        <ScoreControl
+          label="前往主线末尾"
+          symbol="▶|"
+          disabled={activeOccurrence?.id === endId}
+          onClick={() => stepTo(endId)}
         />
-        记录走棋
-      </label>
-      <ScoreControl
-        label={`翻转棋盘（当前${boardOrientation === 'white' ? '白方' : '黑方'}视角）`}
-        symbol="↕"
-        onClick={onFlipBoard}
-      />
+      )}
+      {!readerOnly && (
+        <>
+          <span className="mx-1 h-6 border-l border-stone-300" />
+          <label className="inline-flex cursor-pointer items-center gap-1.5 rounded px-2 py-1 text-xs text-stone-600 hover:bg-stone-100">
+            <input
+              type="checkbox"
+              checked={recordMoves}
+              onChange={(event) => onRecordMovesChange(event.target.checked)}
+            />
+            记录走棋
+          </label>
+        </>
+      )}
+      {!readerOnly && (
+        <ScoreControl
+          label={`翻转棋盘（当前${boardOrientation === 'white' ? '白方' : '黑方'}视角）`}
+          symbol="↕"
+          onClick={onFlipBoard}
+        />
+      )}
     </div>
   );
 }
@@ -381,6 +498,7 @@ function VariationLine({
     occurrence: CourseOccurrence,
   ) => void;
 }) {
+  const reader = useContext(ReaderActions);
   const visualDepth = Math.min(5, variation.depth);
   const parenthetical = variation.presentation === 'parenthetical';
   const moves = variation.moves.map((move, index) => (
@@ -396,23 +514,31 @@ function VariationLine({
         <CourseMove
           move={move}
           active={move.occurrence.id === currentId}
-          onSelectOccurrence={onSelectOccurrence}
+          onSelectOccurrence={(id) => {
+            reader?.enterVariation?.(variation.moves[0].occurrence);
+            onSelectOccurrence(id);
+          }}
           onContextMenu={onMoveContextMenu}
         />
       </span>
       {(notesByOccurrence.get(move.occurrence.id) ?? []).map((note) => (
         <span
           key={note.id}
+          data-reader-anchor={note.id}
           onContextMenu={(event) => onNoteContextMenu(event, note)}
           className="basis-full cursor-context-menu whitespace-normal py-0.5 italic text-stone-600"
         >
           <ReactMarkdown rehypePlugins={[rehypeSanitize]}>
             {note.rendered_markdown}
           </ReactMarkdown>
+          <ReaderSourceLink ids={note.rendered_source_span_ids} />
         </span>
       ))}
       {pgnComment(move.occurrence) ? (
-        <span className="basis-full whitespace-pre-wrap py-0.5 italic text-stone-600">
+        <span
+          data-reader-anchor={move.occurrence.id + ':comment'}
+          className="basis-full whitespace-pre-wrap py-0.5 italic text-stone-600"
+        >
           {pgnComment(move.occurrence)}
         </span>
       ) : null}
@@ -480,23 +606,28 @@ function CourseMove({
     occurrence.nag === null ? [] : [occurrence.nag],
   ).move;
   return (
-    <button
-      type="button"
-      aria-label={`${displayLabel} ${occurrence.inbound_uci ?? ''}`.trim()}
-      aria-current={active ? 'step' : undefined}
-      title={occurrence.inbound_uci ?? undefined}
-      onClick={() => onSelectOccurrence(occurrence.id)}
-      onContextMenu={(event) => onContextMenu(event, occurrence)}
-      className={`${fullWidth ? 'flex h-full w-full' : 'inline-flex'} min-w-0 items-center rounded-sm px-2 py-1 text-left text-sm font-medium hover:bg-emerald-100 ${
-        active ? 'bg-emerald-800 text-white hover:bg-emerald-800' : ''
-      }`}
-    >
-      <MoveNotation
-        san={label}
-        nags={occurrence.nag === null ? [] : [occurrence.nag]}
-        active={active}
-      />
-    </button>
+    <>
+      <button
+        type="button"
+        data-reader-anchor={occurrence.id}
+        data-reader-occurrence={occurrence.id}
+        aria-label={`${displayLabel} ${occurrence.inbound_uci ?? ''}`.trim()}
+        aria-current={active ? 'step' : undefined}
+        title={occurrence.inbound_uci ?? undefined}
+        onClick={() => onSelectOccurrence(occurrence.id)}
+        onContextMenu={(event) => onContextMenu(event, occurrence)}
+        className={`${fullWidth ? 'flex h-full w-full' : 'inline-flex'} min-w-0 items-center rounded-sm px-2 py-1 text-left text-sm font-medium hover:bg-emerald-100 ${
+          active ? 'bg-emerald-800 text-white hover:bg-emerald-800' : ''
+        }`}
+      >
+        <MoveNotation
+          san={label}
+          nags={occurrence.nag === null ? [] : [occurrence.nag]}
+          active={active}
+        />
+      </button>
+      {active && <ReaderSourceLink ids={occurrence.context?.source_span_ids} />}
+    </>
   );
 }
 
@@ -511,21 +642,23 @@ function CourseNotes({
 }) {
   if (notes.length === 0) return null;
   return notes.map((note) => (
-    <div
-      key={note.id}
-      role="button"
-      tabIndex={0}
-      onClick={() => onSelectOccurrence(note)}
-      onKeyDown={(event) => {
-        if (event.key === 'Enter' || event.key === ' ')
-          onSelectOccurrence(note);
-      }}
-      onContextMenu={(event) => onContextMenu(event, note)}
-      className="cursor-context-menu border-b border-stone-100 px-3 py-1.5 text-sm italic leading-5 text-stone-700 hover:bg-stone-50"
-    >
-      <ReactMarkdown rehypePlugins={[rehypeSanitize]}>
-        {note.rendered_markdown}
-      </ReactMarkdown>
+    <div key={note.id} data-reader-anchor={note.id}>
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => onSelectOccurrence(note)}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ')
+            onSelectOccurrence(note);
+        }}
+        onContextMenu={(event) => onContextMenu(event, note)}
+        className="cursor-context-menu border-b border-stone-100 px-3 py-1.5 text-sm italic leading-5 text-stone-700 hover:bg-stone-50"
+      >
+        <ReactMarkdown rehypePlugins={[rehypeSanitize]}>
+          {note.rendered_markdown}
+        </ReactMarkdown>
+      </div>
+      <ReaderSourceLink ids={note.rendered_source_span_ids} />
     </div>
   ));
 }
@@ -535,9 +668,12 @@ function pgnComment(occurrence: CourseOccurrence | undefined): string | null {
   return typeof value === 'string' && value.trim() ? value.trim() : null;
 }
 
-function PgnComment({ text }: { text: string }) {
+function PgnComment({ id, text }: { id: string; text: string }) {
   return (
-    <div className="whitespace-pre-wrap border-b border-stone-100 px-3 py-1.5 text-sm italic leading-5 text-stone-700">
+    <div
+      data-reader-anchor={id + ':comment'}
+      className="whitespace-pre-wrap border-b border-stone-100 px-3 py-1.5 text-sm italic leading-5 text-stone-700"
+    >
       {text}
     </div>
   );

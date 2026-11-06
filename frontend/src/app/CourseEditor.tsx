@@ -35,6 +35,7 @@ import {
 } from 'react-router-dom';
 import useSWR from 'swr';
 
+import { useCompactReaderViewport } from '../components/useCompactReaderViewport';
 import { CourseWorkbenchLayout } from '../components/CourseWorkbenchLayout';
 import { WorkbenchBoard as Chessboard } from '../components/WorkbenchBoard';
 import { fetchJson, requestJson } from '../logic/api/client';
@@ -65,6 +66,14 @@ import {
   CourseScoreControls,
   type CourseMoveAction,
 } from './CourseScore';
+import { CourseSourcePreview } from './CourseSourcePreview';
+import {
+  captureText,
+  readReadingPlace,
+  restoreText,
+  saveReadingPlace,
+  useReadingScroll,
+} from './courseReadingProgress';
 import { createDraftState, editorDraftReducer } from './editorDraft';
 import { LichessStudyExport } from './LichessStudyExport';
 
@@ -72,8 +81,24 @@ const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
 export function CourseEditor() {
   const { courseId = '' } = useParams();
+  const [searchParams] = useSearchParams();
+  // Course and explicit move links open independent reading sessions.
+  return (
+    <CourseEditorSession
+      key={JSON.stringify([
+        courseId,
+        searchParams.get('module'),
+        searchParams.get('occurrence'),
+      ])}
+      courseId={courseId}
+    />
+  );
+}
+
+function CourseEditorSession({ courseId }: { courseId: string }) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const [resume] = useState(() => readReadingPlace(courseId, searchParams));
   const {
     data: course,
     error: courseError,
@@ -101,10 +126,18 @@ export function CourseEditor() {
   const [publishTarget, setPublishTarget] = useState<string>();
   const [historyOpen, setHistoryOpen] = useState(false);
   const [readingMode, setReadingMode] = useState(true);
+  const compactViewport = useCompactReaderViewport();
+  const compactReader =
+    compactViewport && readingMode && course?.mode === 'traditional';
+  const [readerPanel, setReaderPanel] = useState<
+    'score' | 'source' | 'chapters'
+  >(resume?.panel ?? 'score');
   const [leftPaneMode, setLeftPaneMode] = useState<'chapters' | 'source'>(
-    'chapters',
+    resume?.leftPane ?? 'chapters',
   );
-  const [activeSourceSpanId, setActiveSourceSpanId] = useState<string>();
+  const [activeSourceSpanId, setActiveSourceSpanId] = useState<
+    string | undefined
+  >(resume?.sourceSpanId);
   const [expandedModuleIds, setExpandedModuleIds] = useState<Set<string>>(
     () => new Set(),
   );
@@ -132,9 +165,12 @@ export function CourseEditor() {
     createDraftState({ markdown: '', sourceSpanIds: [] }),
   );
   const [form] = Form.useForm();
-  const { data: citableSources = [] } = useSWR<CitableSource[]>(
-    '/api/citable-sources',
-    fetchJson,
+  const { data: citableSourceData, error: citableError } = useSWR<
+    CitableSource[]
+  >('/api/citable-sources', fetchJson);
+  const citableSources = useMemo(
+    () => citableSourceData ?? [],
+    [citableSourceData],
   );
   const { data: explorerCourses = [] } = useSWR<Course[]>(
     publishModal ? '/api/courses?mode=opening_explorer&sort=title_asc' : null,
@@ -143,14 +179,19 @@ export function CourseEditor() {
 
   useEffect(() => {
     if (!moduleId && modules[0]) {
-      const requested = searchParams.get('module');
+      const requested = searchParams.get('module') ?? resume?.moduleId;
+      if (resume && !modules.some((item) => item.id === resume.moduleId)) {
+        setReaderPanel('score');
+        setLeftPaneMode('chapters');
+        setActiveSourceSpanId(undefined);
+      }
       setModuleId(
         modules.find((item) => item.id === requested)?.id ??
           modules.find((item) => item.parent_id === null)?.id ??
           modules[0].id,
       );
     }
-  }, [moduleId, modules, searchParams]);
+  }, [moduleId, modules, resume, searchParams]);
   useEffect(() => {
     setExpandedModuleIds((current) => {
       const next = new Set(current);
@@ -232,13 +273,19 @@ export function CourseEditor() {
       item.source_span.locator.kind === 'page' &&
       item.source_span.source_file_id !== null,
   );
-  const { data: pdfAssets } = useSWR<PdfAssetListResponse>(
-    hasPdfPageSources ? '/api/pdf-assets' : null,
-    fetchJson,
-  );
+  const { data: pdfAssets, error: pdfAssetsError } =
+    useSWR<PdfAssetListResponse>(
+      hasPdfPageSources ? '/api/pdf-assets' : null,
+      fetchJson,
+    );
   const editorError = moduleEditorError ?? explorerEditorError;
   useEffect(() => {
-    const requested = searchParams.get('occurrence');
+    if (!course || !editor) return;
+    const requested =
+      searchParams.get('occurrence') ??
+      (course?.mode === 'traditional' && resume?.moduleId === moduleId
+        ? resume?.occurrenceId
+        : undefined);
     const root =
       editor?.occurrences.find((item) => item.id === requested) ??
       editor?.occurrences.find(
@@ -253,7 +300,7 @@ export function CourseEditor() {
       setOccurrenceId(root.id);
       setPendingFen(undefined);
     }
-  }, [editor, moduleId, occurrenceId, searchParams]);
+  }, [course, editor, moduleId, occurrenceId, resume, searchParams]);
 
   const byId = useMemo(
     () => new Map(editor?.occurrences.map((item) => [item.id, item]) ?? []),
@@ -537,6 +584,66 @@ export function CourseEditor() {
   const activePdfPreview =
     pdfPreviews.find((item) => item.spanId === activeSourceSpanId) ??
     pdfPreviews[0];
+  const readingModuleId =
+    readingMode &&
+    course?.mode === 'traditional' &&
+    editor?.module.id === moduleId
+      ? moduleId
+      : undefined;
+  const sourcesReady = Boolean(
+    (citableSourceData || citableError) &&
+    (!hasPdfPageSources || pdfAssets || pdfAssetsError),
+  );
+  // The selected board and citation buttons affect the width and height
+  // of the reading flow. Restore against the final layout of this chapter.
+  const readingScrollRef = useReadingScroll(
+    courseId,
+    sourcesReady && (current || !editor?.occurrences.length)
+      ? readingModuleId
+      : undefined,
+    searchParams.get('module') === moduleId || !searchParams.has('module')
+      ? searchParams.get('occurrence')
+      : null,
+  );
+  useEffect(() => {
+    if (!readingModuleId || !sourcesReady) return;
+    if (activeSourceSpanId && !sourcePageBySpanId.has(activeSourceSpanId))
+      setActiveSourceSpanId(undefined);
+    if (!activePdfPreview) {
+      if (readerPanel === 'source') setReaderPanel('score');
+      if (leftPaneMode === 'source') setLeftPaneMode('chapters');
+    }
+  }, [
+    activePdfPreview,
+    activeSourceSpanId,
+    leftPaneMode,
+    readerPanel,
+    readingModuleId,
+    sourcePageBySpanId,
+    sourcesReady,
+  ]);
+
+  useEffect(() => {
+    // Don't replace a valid bookmark with a partially loaded editor.
+    if (!readingModuleId || !editor || (editor.occurrences.length && !current))
+      return;
+    saveReadingPlace(courseId, {
+      moduleId: readingModuleId,
+      occurrenceId: current?.id,
+      sourceSpanId: activePdfPreview?.spanId ?? activeSourceSpanId,
+      panel: readerPanel,
+      leftPane: leftPaneMode,
+    });
+  }, [
+    activePdfPreview?.spanId,
+    activeSourceSpanId,
+    courseId,
+    current,
+    editor,
+    leftPaneMode,
+    readerPanel,
+    readingModuleId,
+  ]);
   const activePdfPages = activePdfPreview
     ? [
         ...new Set(
@@ -558,10 +665,36 @@ export function CourseEditor() {
     if (next) setActiveSourceSpanId(next.spanId);
   }
 
+  const lastSourceOccurrence = useRef(
+    resume?.sourceSpanId ? resume.occurrenceId : undefined,
+  );
+  function openReaderSource() {
+    if (current && lastSourceOccurrence.current !== current.id) {
+      const moveSources = current.context?.source_span_ids;
+      const sources = [
+        ...currentNotes.flatMap((note) => note.rendered_source_span_ids),
+        ...(Array.isArray(moveSources) ? moveSources : []),
+      ];
+      const cited = sources.find(
+        (id): id is string =>
+          typeof id === 'string' && sourcePageBySpanId.has(id),
+      );
+      if (cited) setActiveSourceSpanId(cited);
+    }
+    lastSourceOccurrence.current = current?.id;
+    showReaderPanel('source');
+  }
+
   function selectSourcePreview(spanId: string) {
     if (!sourcePageBySpanId.has(spanId)) return;
     setActiveSourceSpanId(spanId);
-    setLeftPaneMode('source');
+    lastSourceOccurrence.current = current?.id;
+    showReaderPanel('source');
+  }
+
+  function showReaderPanel(panel: typeof readerPanel) {
+    if (panel !== 'score') setLeftPaneMode(panel);
+    setReaderPanel(panel);
   }
   const contextNote = referenceNotes.find((note) => note.id === contextNoteId);
   const contextEditorKey =
@@ -613,6 +746,29 @@ export function CourseEditor() {
     fetchJson,
   );
 
+  // A detour into an author's variation should return to the sentence in view,
+  // even if the fork and its commentary span more than one screen.
+  const forkPlaces = useRef(new Map<string, ReturnType<typeof captureText>>());
+  function rememberFork(first: ModuleEditor['occurrences'][number]) {
+    const pane = readingScrollRef.current;
+    if (!pane || !first.parent_id) return;
+    let cursor = current;
+    while (cursor) {
+      if (cursor.id === first.id) return;
+      cursor = cursor.parent_id ? byId.get(cursor.parent_id) : undefined;
+    }
+    forkPlaces.current.set(first.parent_id, captureText(pane));
+  }
+  function restoreFork(id: string) {
+    const place = forkPlaces.current.get(id);
+    if (!place || !readingScrollRef.current) return false;
+    requestAnimationFrame(() => {
+      if (readingScrollRef.current)
+        restoreText(readingScrollRef.current, place);
+    });
+    forkPlaces.current.delete(id);
+    return true;
+  }
   function selectOccurrence(id: string) {
     const selected = byId.get(id);
     if (course?.mode === 'opening_explorer' && selected?.module_id) {
@@ -1055,9 +1211,23 @@ export function CourseEditor() {
       </div>
     );
 
+  // Text-only introductions can carry a synthetic initial-position root.
+  // A diagram-only chapter with an actual starting position still gets a board.
+  const hasReaderBoard = Boolean(
+    current &&
+    (current.full_fen !== START_FEN ||
+      editor?.occurrences.some((node) => node.parent_id !== null) ||
+      editor?.content_blocks.some((block) => block.kind === 'move_sequence')),
+  );
+  const panel =
+    readerPanel === 'source' && !activePdfPreview ? 'score' : readerPanel;
   return (
-    <main className="px-4 py-5 xl:px-6">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+    <main
+      className={compactReader ? 'mobile-book-reader' : 'px-4 py-5 xl:px-6'}
+      data-reader-panel={panel}
+      data-has-board={hasReaderBoard}
+    >
+      <div className="course-editor-toolbar mb-4 flex flex-wrap items-center justify-between gap-3">
         <Space>
           <Link to="/learn">← 返回课程</Link>
           <Typography.Title className="m-0!" level={3}>
@@ -1160,18 +1330,66 @@ export function CourseEditor() {
           title="编辑器数据加载失败"
         />
       ) : null}
-      <CourseWorkbenchLayout>
+      <CourseWorkbenchLayout
+        readerToolbar={
+          compactReader ? (
+            <header className="reader-panel-heading">
+              <h2 className="reader-panel-title">
+                {panel === 'chapters'
+                  ? '章节目录'
+                  : (editor?.module.title ?? course.title)}
+              </h2>
+              <div className="reader-floating-bar" aria-label="切换阅读面板">
+                <button
+                  type="button"
+                  disabled={panel === 'score' && !activePdfPreview}
+                  onClick={() =>
+                    panel === 'score'
+                      ? openReaderSource()
+                      : showReaderPanel('score')
+                  }
+                >
+                  {panel === 'score' ? '原书' : '讲解'}
+                </button>
+                <Dropdown
+                  trigger={['click']}
+                  menu={{
+                    items: [
+                      { key: 'chapters', label: '章节目录' },
+                      { key: 'catalog', label: '返回书架' },
+                      { key: 'edit', label: '编辑课程' },
+                    ],
+                    onClick: ({ key }) => {
+                      if (key === 'chapters') showReaderPanel('chapters');
+                      if (key === 'catalog') navigate('/learn');
+                      if (key === 'edit') setReadingMode(false);
+                    },
+                  }}
+                >
+                  <button
+                    type="button"
+                    aria-label="更多阅读选项"
+                    aria-haspopup="menu"
+                  >
+                    ⋯
+                  </button>
+                </Dropdown>
+              </div>
+            </header>
+          ) : undefined
+        }
+      >
         <Card
           title={leftPaneMode === 'chapters' ? '章节' : '原书页面'}
           size="small"
-          className="course-workbench-pane course-left-pane"
+          className={`course-workbench-pane course-left-pane${leftPaneMode === 'source' ? ' course-source-pane' : ''}`}
           extra={
             course.mode === 'traditional' ? (
               <Space.Compact>
                 <Button
                   size="small"
                   type={leftPaneMode === 'chapters' ? 'primary' : 'default'}
-                  onClick={() => setLeftPaneMode('chapters')}
+                  onClick={() => showReaderPanel('chapters')}
                 >
                   目录
                 </Button>
@@ -1179,7 +1397,7 @@ export function CourseEditor() {
                   size="small"
                   type={leftPaneMode === 'source' ? 'primary' : 'default'}
                   disabled={!activePdfPreview}
-                  onClick={() => setLeftPaneMode('source')}
+                  onClick={() => showReaderPanel('source')}
                 >
                   原文
                 </Button>
@@ -1188,33 +1406,13 @@ export function CourseEditor() {
           }
         >
           {leftPaneMode === 'source' && activePdfPreview ? (
-            <figure className="m-0 flex min-h-0 flex-col">
-              <div className="mb-2 flex items-center justify-center gap-2">
-                <Button
-                  size="small"
-                  disabled={activePdfPageIndex <= 0}
-                  onClick={() => stepSourcePage(-1)}
-                >
-                  上一页
-                </Button>
-                <span className="text-sm">第 {activePdfPreview.page} 页</span>
-                <Button
-                  size="small"
-                  disabled={activePdfPageIndex >= activePdfPages.length - 1}
-                  onClick={() => stepSourcePage(1)}
-                >
-                  下一页
-                </Button>
-              </div>
-              <img
-                src={activePdfPreview.contentUrl}
-                alt={`${activePdfPreview.title} 第 ${activePdfPreview.page} 页`}
-                className="mx-auto block max-h-[calc(100vh-15rem)] max-w-full object-contain"
-              />
-              <figcaption className="mt-2 text-center text-xs text-stone-500">
-                {activePdfPreview.title} · 第 {activePdfPreview.page} 页
-              </figcaption>
-            </figure>
+            <CourseSourcePreview
+              preview={activePdfPreview}
+              moduleId={moduleId ?? ''}
+              pageIndex={activePdfPageIndex}
+              pageCount={activePdfPages.length}
+              onPage={stepSourcePage}
+            />
           ) : course.mode === 'opening_explorer' ? (
             <>
               <Alert
@@ -1261,7 +1459,10 @@ export function CourseEditor() {
                   return next;
                 })
               }
+              readOnly={compactReader}
               onSelect={(id) => {
+                showReaderPanel('score');
+                if (id === moduleId) return;
                 setModuleId(id);
                 setOccurrenceId(undefined);
               }}
@@ -1280,31 +1481,40 @@ export function CourseEditor() {
               <div className="w-full">
                 <Chessboard
                   id="course-editor-board"
-                  position={pendingFen ?? current.full_fen}
+                  position={
+                    compactReader
+                      ? current.full_fen
+                      : (pendingFen ?? current.full_fen)
+                  }
                   boardOrientation={boardOrientation}
                   animationDuration={FAST_MOVE_ANIMATION_MS}
-                  onPieceDrop={onPieceDrop}
+                  arePiecesDraggable={!compactReader}
+                  onPieceDrop={compactReader ? undefined : onPieceDrop}
                   onPieceDragBegin={(_, source) => selectOwnPiece(source)}
                   onPieceDragEnd={() => setSelectedSquare(undefined)}
-                  onSquareClick={onSquareClick}
+                  onSquareClick={compactReader ? undefined : onSquareClick}
                   autoPromoteToQueen
-                  customSquareStyles={boardSquareStyles}
-                  customArrows={engineArrows}
+                  customSquareStyles={
+                    compactReader ? undefined : boardSquareStyles
+                  }
+                  customArrows={compactReader ? undefined : engineArrows}
                   customBoardStyle={{
                     borderRadius: '8px',
                     boxShadow: '0 12px 30px rgba(28,25,23,.16)',
                   }}
                 />
               </div>
-              <div className="mt-3 w-full">
-                <CourseEnginePanel
-                  fen={pendingFen ?? current.full_fen}
-                  sectionFens={sectionAnalysisFens}
-                  sectionProgress={sectionAnalysisProgress}
-                  onAnalyzeSection={analyzeCurrentSection}
-                  onArrowsChange={setEngineArrows}
-                />
-              </div>
+              {!compactReader && (
+                <div className="mt-3 w-full">
+                  <CourseEnginePanel
+                    fen={pendingFen ?? current.full_fen}
+                    sectionFens={sectionAnalysisFens}
+                    sectionProgress={sectionAnalysisProgress}
+                    onAnalyzeSection={analyzeCurrentSection}
+                    onArrowsChange={setEngineArrows}
+                  />
+                </div>
+              )}
             </>
           ) : (
             <Empty description="选择带起始局面的章节" />
@@ -1342,7 +1552,11 @@ export function CourseEditor() {
             ) : null
           }
         >
-          <div className="course-reading-scroll" aria-label="课程内容滚动区">
+          <div
+            className="course-reading-scroll"
+            ref={readingScrollRef}
+            aria-label="课程内容滚动区"
+          >
             <article
               className="course-reading-flow"
               aria-label="课程正文与棋谱"
@@ -1359,6 +1573,8 @@ export function CourseEditor() {
                 if (block.kind === 'move_sequence') {
                   return block.root_occurrence_id ? (
                     <CourseScore
+                      readOnly={compactReader}
+                      onEnterVariation={rememberFork}
                       key={block.id}
                       occurrences={scoreOccurrences}
                       notes={(editor.notes ?? []).filter(
@@ -1375,8 +1591,15 @@ export function CourseEditor() {
                     />
                   ) : null;
                 }
+                const sourceSpan = block.source_span_ids.find((id) =>
+                  sourcePageBySpanId.has(id),
+                );
                 return (
-                  <section key={block.id} className="course-reading-prose">
+                  <section
+                    key={block.id}
+                    data-reader-anchor={block.id}
+                    className="course-reading-prose"
+                  >
                     {block.kind === 'section_header' ? (
                       <Typography.Title level={4}>
                         {block.heading}
@@ -1385,18 +1608,24 @@ export function CourseEditor() {
                     {block.kind === 'narrative' && block.markdown ? (
                       <div
                         onContextMenu={(event) => {
-                          const spanId = block.source_span_ids.find((id) =>
-                            sourcePageBySpanId.has(id),
-                          );
-                          if (!spanId) return;
+                          if (!sourceSpan) return;
                           event.preventDefault();
-                          selectSourcePreview(spanId);
+                          selectSourcePreview(sourceSpan);
                         }}
                       >
                         <ReactMarkdown rehypePlugins={[rehypeSanitize]}>
                           {block.markdown}
                         </ReactMarkdown>
                       </div>
+                    ) : null}
+                    {compactReader && sourceSpan ? (
+                      <button
+                        type="button"
+                        className="px-2 py-1 text-xs text-emerald-800 underline"
+                        onClick={() => selectSourcePreview(sourceSpan)}
+                      >
+                        原书第 {sourcePageBySpanId.get(sourceSpan)} 页
+                      </button>
                     ) : null}
                   </section>
                 );
@@ -1407,6 +1636,8 @@ export function CourseEditor() {
               ) ? (
                 editor.occurrences.find((item) => item.parent_id === null) ? (
                   <CourseScore
+                    readOnly={compactReader}
+                    onEnterVariation={rememberFork}
                     occurrences={scoreOccurrences}
                     notes={(editor.notes ?? []).filter(
                       (note) => note.source_note_id === null,
@@ -1564,6 +1795,8 @@ export function CourseEditor() {
           </div>
           {scoreRootId ? (
             <CourseScoreControls
+              readerOnly={compactReader}
+              onRestoreFork={restoreFork}
               occurrences={scoreOccurrences}
               rootId={scoreRootId}
               currentId={current?.id}
@@ -1828,6 +2061,7 @@ function ModuleDirectory({
   onDelete,
   onReorder,
   reordering,
+  readOnly,
 }: {
   modules: CourseModule[];
   selectedId: string | undefined;
@@ -1838,6 +2072,7 @@ function ModuleDirectory({
   onDelete: (item: CourseModule) => void;
   onReorder: (orderedIds: string[]) => void;
   reordering: boolean;
+  readOnly: boolean;
 }) {
   const draggedId = useRef<string>();
   const [dropIndicator, setDropIndicator] = useState<{
@@ -1935,25 +2170,27 @@ function ModuleDirectory({
             ) : (
               <span className="block w-7 shrink-0" />
             )}
-            <button
-              type="button"
-              draggable={!reordering}
-              disabled={reordering}
-              aria-label={`拖动 ${item.title}`}
-              title="拖动调整同级顺序"
-              onDragStart={(event) => {
-                draggedId.current = item.id;
-                event.dataTransfer.effectAllowed = 'move';
-                event.dataTransfer.setData('text/plain', item.id);
-              }}
-              onDragEnd={() => {
-                draggedId.current = undefined;
-                setDropIndicator(undefined);
-              }}
-              className="grid h-8 w-6 shrink-0 cursor-grab place-items-center rounded text-stone-300 hover:bg-stone-100 hover:text-stone-600 active:cursor-grabbing disabled:cursor-wait"
-            >
-              ⠿
-            </button>
+            {!readOnly && (
+              <button
+                type="button"
+                draggable={!reordering}
+                disabled={reordering}
+                aria-label={`拖动 ${item.title}`}
+                title="拖动调整同级顺序"
+                onDragStart={(event) => {
+                  draggedId.current = item.id;
+                  event.dataTransfer.effectAllowed = 'move';
+                  event.dataTransfer.setData('text/plain', item.id);
+                }}
+                onDragEnd={() => {
+                  draggedId.current = undefined;
+                  setDropIndicator(undefined);
+                }}
+                className="grid h-8 w-6 shrink-0 cursor-grab place-items-center rounded text-stone-300 hover:bg-stone-100 hover:text-stone-600 active:cursor-grabbing disabled:cursor-wait"
+              >
+                ⠿
+              </button>
+            )}
             <button
               type="button"
               className="h-8 min-w-0 flex-1 overflow-hidden rounded px-4 text-left text-sm text-stone-800 hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-emerald-700"
@@ -1962,29 +2199,31 @@ function ModuleDirectory({
             >
               <span className="block truncate">{item.title}</span>
             </button>
-            <Dropdown
-              trigger={['click']}
-              menu={{
-                items: [
-                  { key: 'rename', label: '重命名' },
-                  { key: 'delete', label: '删除小节', danger: true },
-                ],
-                onClick: ({ key, domEvent }) => {
-                  domEvent.stopPropagation();
-                  if (key === 'rename') onRename(item);
-                  else onDelete(item);
-                },
-              }}
-            >
-              <button
-                type="button"
-                aria-label={`${item.title} 设置`}
-                onClick={(event) => event.stopPropagation()}
-                className="mr-1 grid h-8 w-8 shrink-0 place-items-center rounded text-stone-400 hover:bg-stone-100 hover:text-stone-700"
+            {!readOnly && (
+              <Dropdown
+                trigger={['click']}
+                menu={{
+                  items: [
+                    { key: 'rename', label: '重命名' },
+                    { key: 'delete', label: '删除小节', danger: true },
+                  ],
+                  onClick: ({ key, domEvent }) => {
+                    domEvent.stopPropagation();
+                    if (key === 'rename') onRename(item);
+                    else onDelete(item);
+                  },
+                }}
               >
-                ⚙
-              </button>
-            </Dropdown>
+                <button
+                  type="button"
+                  aria-label={`${item.title} 设置`}
+                  onClick={(event) => event.stopPropagation()}
+                  className="mr-1 grid h-8 w-8 shrink-0 place-items-center rounded text-stone-400 hover:bg-stone-100 hover:text-stone-700"
+                >
+                  ⚙
+                </button>
+              </Dropdown>
+            )}
           </div>
           {children.length > 0 && expanded ? (
             <ul className="list-none p-0!">

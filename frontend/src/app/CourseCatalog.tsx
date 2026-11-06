@@ -111,7 +111,7 @@ export function CourseCatalog() {
           aria-label="搜索课程"
           allowClear
           placeholder="搜索标题、说明或分类"
-          className="w-80"
+          className="w-[min(20rem,calc(100vw-3rem))]"
           onSearch={setQuery}
         />
         <Select

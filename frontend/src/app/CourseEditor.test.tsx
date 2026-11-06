@@ -7,7 +7,7 @@ import {
 } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { SWRConfig } from 'swr';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { CourseEditor } from './CourseEditor';
 
@@ -241,7 +241,7 @@ function json(body: unknown, status = 200) {
   );
 }
 
-function renderEditor() {
+function renderEditor(entry = '/learn/course-1') {
   return render(
     <SWRConfig
       value={{
@@ -250,7 +250,7 @@ function renderEditor() {
         shouldRetryOnError: false,
       }}
     >
-      <MemoryRouter initialEntries={['/learn/course-1']}>
+      <MemoryRouter initialEntries={[entry]}>
         <Routes>
           <Route path="/learn/:courseId" element={<CourseEditor />} />
           <Route path="/learn" element={<div>课程列表</div>} />
@@ -261,6 +261,7 @@ function renderEditor() {
 }
 
 describe('Stage 4B course editor', () => {
+  beforeEach(() => localStorage.clear());
   it('renames and archives the course from its settings menu', async () => {
     let currentCourse = { ...course, archived_at: null as string | null };
     const requests: Array<{ url: string; body: Record<string, unknown> }> = [];
@@ -1102,7 +1103,7 @@ describe('Stage 4B course editor', () => {
     });
   });
 
-  it('switches the left pane from chapters to a cited PDF page', async () => {
+  it('restores the selected move and cited PDF page after reopening and respects explicit move links', async () => {
     const pageSource = {
       source: { ...citableSource.source, kind: 'book', title: '扫描棋书' },
       source_version: {
@@ -1186,7 +1187,8 @@ describe('Stage 4B course editor', () => {
       throw new Error(`Unexpected request: ${url}`);
     });
     vi.stubGlobal('fetch', fetchMock);
-    renderEditor();
+    const first = renderEditor();
+    fireEvent.click(await screen.findByRole('button', { name: 'e4 e2e4' }));
 
     const sourceButton = await screen.findByRole('button', {
       name: /原\s*文/,
@@ -1205,10 +1207,21 @@ describe('Stage 4B course editor', () => {
     expect(page.getAttribute('src')).toBe(
       '/api/pdf-assets/asset-pdf/pages/322',
     );
+    first.unmount();
+    const reopened = renderEditor();
+    await screen.findByRole('img', { name: '扫描棋书 第 322 页' });
+    expect(
+      await within(screen.getByLabelText('测试棋盘')).findByText(e4Fen),
+    ).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: '上一页' }));
-    expect(page.getAttribute('src')).toBe(
-      '/api/pdf-assets/asset-pdf/pages/321',
-    );
+    await screen.findByRole('img', { name: '扫描棋书 第 321 页' });
+    reopened.unmount();
+    renderEditor('/learn/course-1?module=module-1&occurrence=occ-root');
+    expect(
+      await within(await screen.findByLabelText('测试棋盘')).findByText(
+        startFen,
+      ),
+    ).toBeTruthy();
   });
 
   it('adds source-ready narrative prose to the ordered reading flow', async () => {
@@ -1671,4 +1684,58 @@ describe('Stage 4B course editor', () => {
       source_title: 'Imported study',
     });
   });
+});
+
+it('keeps the same board and move when browsing the compact directory of a PGN-only chapter', async () => {
+  localStorage.clear();
+  const defaultMedia = window.matchMedia;
+  vi.spyOn(window, 'matchMedia').mockImplementation((query) => ({
+    ...defaultMedia(query),
+    matches: query.includes('(max-height: 600px)'),
+  }));
+  const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+    if (init?.method && init.method !== 'GET')
+      throw new Error('Unexpected write');
+    switch (String(input)) {
+      case '/api/citable-sources':
+        return json([]);
+      case '/api/courses/course-1':
+        return json(course);
+      case '/api/courses/course-1/modules':
+        return json([module]);
+      case '/api/courses/course-1/editor/module-1':
+        return json({
+          module,
+          content_blocks: [],
+          occurrences: [root, e4],
+          notes: [],
+        });
+      default:
+        throw new Error(`Unexpected request: ${String(input)}`);
+    }
+  });
+  vi.stubGlobal('fetch', fetchMock);
+  renderEditor();
+  const board = await screen.findByLabelText('测试棋盘');
+  const reader = screen.getByRole('main');
+  expect(reader.classList.contains('mobile-book-reader')).toBe(true);
+  expect(
+    (screen.getByRole('button', { name: '原书' }) as HTMLButtonElement)
+      .disabled,
+  ).toBe(true);
+  fireEvent.click(screen.getByRole('button', { name: '下一步' }));
+  expect(within(board).getByText(e4Fen)).toBeTruthy();
+  fireEvent.click(screen.getByRole('button', { name: '更多阅读选项' }));
+  fireEvent.click(await screen.findByRole('menuitem', { name: '章节目录' }));
+  expect(reader.getAttribute('data-reader-panel')).toBe('chapters');
+  fireEvent.click(screen.getByRole('button', { name: '第一章' }));
+  expect(reader.getAttribute('data-reader-panel')).toBe('score');
+  expect(screen.getByLabelText('测试棋盘')).toBe(board);
+  expect(within(board).getByText(e4Fen)).toBeTruthy();
+  expect(screen.queryByRole('button', { name: '拖动 第一章' })).toBeNull();
+  expect(
+    fetchMock.mock.calls.every(
+      ([, init]) => !init?.method || init.method === 'GET',
+    ),
+  ).toBe(true);
 });

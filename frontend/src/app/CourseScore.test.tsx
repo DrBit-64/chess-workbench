@@ -1,8 +1,8 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { ModuleEditor } from '../logic/api/types';
-import { CourseScore } from './CourseScore';
+import { CourseScore, CourseScoreControls } from './CourseScore';
 
 type Occurrence = ModuleEditor['occurrences'][number];
 
@@ -91,4 +91,38 @@ describe('CourseScore PGN comments', () => {
       displayed.indexOf('Black challenges the centre'),
     );
   });
+});
+
+it('returns from a nested variation to its nearest fork', () => {
+  const fen = '8/8/8/8/8/8/8/8 w - - 0 1';
+  const occurrences = [
+    occurrence('root', null, null, fen),
+    occurrence('e4', 'root', 'e4', fen),
+    occurrence('d4', 'root', 'd4', fen, undefined, 1),
+    occurrence('d5', 'd4', 'd5', fen),
+    occurrence('Nf6', 'd4', 'Nf6', fen, undefined, 1),
+    occurrence('c4', 'Nf6', 'c4', fen),
+  ];
+  const select = vi.fn();
+  const controls = (id: string) => (
+    <CourseScoreControls
+      occurrences={occurrences}
+      rootId="root"
+      currentId={id}
+      readerOnly
+      onSelectOccurrence={select}
+      recordMoves={false}
+      onRecordMovesChange={vi.fn()}
+      boardOrientation="white"
+      onFlipBoard={vi.fn()}
+    />
+  );
+  const { rerender } = render(controls('c4'));
+  fireEvent.click(screen.getByRole('button', { name: '回到分岔处' }));
+  expect(select).toHaveBeenLastCalledWith('d4');
+  rerender(controls('d4'));
+  fireEvent.click(screen.getByRole('button', { name: '回到分岔处' }));
+  expect(select).toHaveBeenLastCalledWith('root');
+  rerender(controls('e4'));
+  expect(screen.queryByRole('button', { name: '回到分岔处' })).toBeNull();
 });

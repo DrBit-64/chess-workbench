@@ -1,5 +1,9 @@
 # Current plan
 
+## Phone book reader (2026-11-06)
+
+Implemented and browser-verified. The same traditional course supports desktop columns and phone layouts, with a dedicated reading pane, source-page controls and local resume. The remaining acceptance is a short read on the user's own phone with a familiar book. See the current handoff for the trial link and verification details.
+
 ## Lichess-style piece selection and fast movement (2026-10-29)
 
 COMPLETE: shared boards select on pointer press and use a small pointer controller instead of native HTML5 piece dragging. A 3px threshold starts an unscaled pointer-following preview with a 30% origin ghost; release, outside drop, interruption and Esc clean up the gesture. Click/navigation moves use Lichess's 120ms FAST timing with cubic easing; a completed drag skips its own replayed slide. Analysis also switches selection directly between friendly pieces. The existing renderer, chess validation, drawings and course-column controls remain. Focused shared-board tests and all three owning-page tests passed; actual Chromium confirmed timings, gestures, captures, castling and existing arrows without API writes. Temporary frontend test port 5175 is stopped after acceptance.
