@@ -511,18 +511,26 @@ describe('Stage 4B course editor', () => {
     );
     expect(await screen.findByText('e4 e5 Nf3')).toBeTruthy();
     await waitFor(() => expect(analyzedFens).toContain(startFen));
-    const arrows = screen.getByTestId('board-arrows');
+    const renderedArrows = () =>
+      [
+        ...screen
+          .getByRole('group', { name: /交互棋盘/ })
+          .querySelectorAll('[data-source="engine"]'),
+      ].map(
+        (arrow) =>
+          [
+            arrow.getAttribute('data-from'),
+            arrow.getAttribute('data-to'),
+            arrow.getAttribute('fill') ?? '',
+          ] as const,
+      );
     await waitFor(() => {
-      expect(arrows.textContent).toContain('e2');
-      expect(arrows.textContent).toContain('e4');
-      expect(arrows.textContent).toContain('d2');
-      expect(arrows.textContent).toContain('g1');
-      expect(arrows.textContent).not.toContain('c2');
-      const rendered = JSON.parse(arrows.textContent ?? '[]') as [
-        string,
-        string,
-        string,
-      ][];
+      const rendered = renderedArrows();
+      expect(rendered.flat()).toContain('e2');
+      expect(rendered.flat()).toContain('e4');
+      expect(rendered.flat()).toContain('d2');
+      expect(rendered.flat()).toContain('g1');
+      expect(rendered.flat()).not.toContain('c2');
       expect(rendered).toHaveLength(3);
       expect(rendered[0]?.[2]).toBe('rgba(31, 90, 165, 0.86)');
       expect(new Set(rendered.map((arrow) => arrow[2])).size).toBe(3);
@@ -544,7 +552,7 @@ describe('Stage 4B course editor', () => {
     );
     fireEvent.click(await screen.findByText('2 秒'));
     fireEvent.click(screen.getByRole('switch', { name: '显示引擎推荐箭头' }));
-    await waitFor(() => expect(arrows.textContent).toBe('[]'));
+    await waitFor(() => expect(renderedArrows()).toHaveLength(0));
     fireEvent.click(screen.getByRole('switch', { name: '显示引擎推荐箭头' }));
     fireEvent.click(screen.getByLabelText('Close'));
 
@@ -552,9 +560,9 @@ describe('Stage 4B course editor', () => {
     expect(await screen.findByText('e5 Nf3')).toBeTruthy();
     await waitFor(() => expect(analyzedFens).toContain(e4Fen));
     await waitFor(() => {
-      expect(arrows.textContent).toContain('e7');
-      expect(arrows.textContent).toContain('e5');
-      expect(arrows.textContent).not.toContain('e2');
+      expect(renderedArrows().flat()).toContain('e7');
+      expect(renderedArrows().flat()).toContain('e5');
+      expect(renderedArrows().flat()).not.toContain('e2');
     });
     expect(screen.getByLabelText('线路 2 没有更多合法候选着')).toBeTruthy();
     expect(screen.getByLabelText('线路 3 没有更多合法候选着')).toBeTruthy();
@@ -650,7 +658,7 @@ describe('Stage 4B course editor', () => {
     );
     expect(await screen.findByText('转置 × 2')).toBeTruthy();
     const boardFeedback = screen.getByTestId('board-feedback');
-    expect(boardFeedback.getAttribute('data-animation-duration')).toBe('100');
+    expect(boardFeedback.getAttribute('data-animation-duration')).toBe('120');
     fireEvent.click(screen.getByRole('button', { name: '选择 e2' }));
     await waitFor(() => {
       expect(boardFeedback.textContent).toContain('"e3"');

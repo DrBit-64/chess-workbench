@@ -1,5 +1,21 @@
 # Current plan
 
+## Lichess-style piece selection and fast movement (2026-10-29)
+
+COMPLETE: shared boards select on pointer press and use a small pointer controller instead of native HTML5 piece dragging. A 3px threshold starts an unscaled pointer-following preview with a 30% origin ghost; release, outside drop, interruption and Esc clean up the gesture. Click/navigation moves use Lichess's 120ms FAST timing with cubic easing; a completed drag skips its own replayed slide. Analysis also switches selection directly between friendly pieces. The existing renderer, chess validation, drawings and course-column controls remain. Focused shared-board tests and all three owning-page tests passed; actual Chromium confirmed timings, gestures, captures, castling and existing arrows without API writes. Temporary frontend test port 5175 is stopped after acceptance.
+
+## Resizable course columns (2026-10-25)
+
+COMPLETE: the course page now has two draggable separators. Each resizes its adjacent panes, with directory/board/content minimum widths of 220/300/320px. Browser-local preferences retain proportions across reloads and courses; double-click restores defaults and arrow keys provide small adjustments. Board and engine-panel wrappers now fill the middle pane, and the engine header wraps when narrowed. Existing <=1180px and <=760px layouts remain in use with separators hidden. Focused layout/course tests, scoped TypeScript/lint/format checks and real Chromium drag/reload/responsive/board-annotation checks passed. No backend or course data changed.
+
+## Unified seamless board arrows (2026-10-25)
+
+COMPLETE: manual and engine arrows now use shared `BoardArrow` closed outlines with Chessground proportions. The old react-chessboard engine painter is bypassed; each translucent arrow is filled once, with a sharp head and no internal marker/stroke overlap. Focused board and course tests plus browser visual checks passed. Course-column resizing was assessed as a small frontend follow-up: replace fixed Grid tracks with adjustable widths, add two drag separators and relax both 500px board/engine-panel wrappers; retain narrow-screen stacking. No resizing controls were requested for this slice.
+
+## Shared board annotations and material difference (2026-10-25)
+
+COMPLETE: shared `WorkbenchBoard` adds Chessground-style circles/arrows, modifier colors, toggle/recolor and clearing to every course/engine/PDF-review board. Existing piece rendering and move handlers are retained; the shared SVG layer keeps user drawings independent from engine suggestions. Material rows use the current FEN's same-role differences and 9/5/3/3/1 scoring, following Lichess; they support diagram positions, promotions and flipped orientation. Targeted component/helper and owning-page tests pass. Actual Chromium verified drawing, normal click/drag moves, captures, material updates and course flipping without any API write. See the current handoff for evidence and the pre-existing global TypeScript failures.
+
 ## One-command local startup (2026-10-25)
 
 COMPLETE: executable root `start.sh` (also `make dev`) starts the existing backend and frontend commands from any working directory. Ctrl+C/TERM stops both owned process groups; either service exiting stops its peer. The unified launcher uses Vite strict-port mode. README now documents one-terminal startup/shutdown. Verified actual startup and API proxy with an isolated temporary database, real terminal Ctrl+C with both ports closed, and occupied-frontend-port failure without disturbing the existing listener. No course data was changed.

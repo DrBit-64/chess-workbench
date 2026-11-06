@@ -65,6 +65,20 @@ make bootstrap
 
 仓库不附带棋书或个人课程，首次启动没有示例书籍。PDF 页码从文件第一页算起，可能与书上印刷的页码不同。初次提取建议选择一个完整例局；后续增量提取可以续接跨页棋局。
 
+### 棋盘标记与子力差
+
+在宽屏课程页，拖动两条栏间分隔线可调整目录、棋盘和课程内容的宽度，浏览器会记住设置。双击任一分隔线恢复默认；分隔线获得焦点后，也可用左右方向键微调。窄屏仍按原来的方式换行显示。
+
+课程、PDF 审核和引擎页面的棋盘采用相同操作：
+
+- **按下左键**立即选子并显示合法落点；移动超过 3px 后拖动，棋子保持原尺寸跟随指针。点击走棋和棋谱切换使用 120ms 的快档动画，拖放落子直接就位。
+- **右键单击**画圈，**按住右键拖动**画箭头；也支持 Shift + 左键拖动。
+- 默认绿色；Shift/Ctrl + 右键为红色，Alt + 右键为蓝色，两组修饰键同时使用为黄色。
+- 重画同一个标记可取消；左键点击棋盘或按 Esc 可清除。走棋或切换局面后清空临时标记。
+- 棋盘上、下方显示双方同类棋子相抵后多出的子力，优势方另显示净分差。后、车、象/马、兵分别按 9、5、3、1 分计算；翻转棋盘时两行随之交换位置。
+
+交互规则参考 [Chessground 拖动源码](https://github.com/lichess-org/chessground/blob/master/src/drag.ts)和[绘制源码](https://github.com/lichess-org/chessground/blob/master/src/draw.ts)，动画时长采用 [Lichess 的快档设置](https://github.com/lichess-org/lila/blob/master/modules/pref/src/main/Pref.scala)，子力差参考 [Lichess 的当前局面算法](https://github.com/lichess-org/lila/blob/master/ui/lib/src/game/material.ts)。标记用于当前局面的临时分析。
+
 ## 可选：启用本地引擎
 
 Linux x64 环境执行：

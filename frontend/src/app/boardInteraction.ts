@@ -4,7 +4,8 @@ type CustomSquareStyles = Partial<
   Record<Square, Record<string, string | number>>
 >;
 
-export const FAST_MOVE_ANIMATION_MS = 100;
+// Lichess Pref.animationMillis: FAST = 120ms.
+export const FAST_MOVE_ANIMATION_MS = 120;
 
 const LAST_MOVE_COLOUR = 'rgba(155, 199, 0, 0.41)';
 const MOVE_DESTINATION_COLOUR = 'rgba(20, 85, 30, 0.5)';

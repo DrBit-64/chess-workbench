@@ -11,7 +11,7 @@ describe('Lichess-style board interaction', () => {
   it('uses the fast movement duration and marks every legal destination', () => {
     const styles = lichessSquareStyles(startFen, 'e2');
 
-    expect(FAST_MOVE_ANIMATION_MS).toBe(100);
+    expect(FAST_MOVE_ANIMATION_MS).toBe(120);
     expect(styles.e2?.backgroundColor).toBe('rgba(20, 85, 30, 0.5)');
     expect(styles.e3?.background).toContain('radial-gradient');
     expect(styles.e4?.background).toContain('radial-gradient');

@@ -8,9 +8,9 @@ import {
   useRef,
   useState,
 } from 'react';
-import { Chessboard } from 'react-chessboard';
 import useSWR from 'swr';
 
+import { WorkbenchBoard as Chessboard } from '../components/WorkbenchBoard';
 import { ApiError, fetchJson, requestJson } from '../logic/api/client';
 import type {
   Course,

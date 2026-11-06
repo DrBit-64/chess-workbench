@@ -21,6 +21,89 @@ body {
   min-height: 100vh;
 }
 
+.workbench-board {
+  min-width: 0;
+}
+
+.workbench-board-surface {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  outline: none;
+  touch-action: none;
+  user-select: none;
+}
+
+.workbench-board[data-can-drag='true'] [data-piece] {
+  cursor: grab !important;
+}
+
+.workbench-board-surface [data-piece] {
+  transition-timing-function: cubic-bezier(0.65, 0, 0.35, 1) !important;
+}
+
+.workbench-board-surface .workbench-piece-origin {
+  opacity: 0.3 !important;
+}
+
+.workbench-board-surface .workbench-piece-preview {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 20 !important;
+  pointer-events: none;
+  will-change: transform;
+}
+
+.workbench-board-surface:has(.workbench-piece-preview),
+.workbench-board-surface:has(.workbench-piece-preview) * {
+  cursor: grabbing !important;
+}
+
+.workbench-board-surface:focus-visible {
+  outline: 2px solid #15781b;
+  outline-offset: 3px;
+}
+
+.board-drawings {
+  position: absolute;
+  inset: 0;
+  z-index: 12;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.board-material {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 1.8rem;
+  padding: 0.1rem 0.3rem;
+  color: #57534e;
+  user-select: none;
+}
+
+.board-material-group {
+  display: inline-flex;
+  align-items: center;
+  padding-right: 0.4rem;
+}
+
+.board-material-piece {
+  margin-right: -0.4rem;
+  font-family:
+    'Segoe UI Symbol', 'Noto Sans Symbols 2', 'DejaVu Sans', sans-serif;
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.board-material-score {
+  font-size: 0.95rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
 .analysis-grid {
   display: grid;
   grid-template-columns: minmax(480px, 760px) minmax(420px, 1fr);
@@ -151,12 +234,18 @@ body {
 
 .course-engine-header {
   display: flex;
+  flex-wrap: wrap;
   min-height: 2.75rem;
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
   padding: 0.45rem 0.65rem;
   background: #f7f7f5;
+}
+
+.course-engine-header > .ant-space {
+  max-width: 100%;
+  flex-wrap: wrap;
 }
 
 .course-engine-bulk {
@@ -247,15 +336,47 @@ body {
 .course-workbench-grid {
   display: grid;
   grid-template-columns:
-    minmax(300px, 380px)
-    minmax(420px, 500px)
-    minmax(400px, 520px);
-  justify-content: center;
+    minmax(220px, var(--course-left-width, 380fr))
+    12px
+    minmax(300px, var(--course-board-width, 500fr))
+    12px
+    minmax(320px, var(--course-reading-width, 520fr));
   height: calc(100vh - 9rem);
   min-height: 36rem;
-  gap: 0.8rem;
+  gap: 0;
   align-items: stretch;
   overflow: hidden;
+}
+
+.course-pane-resizer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: col-resize;
+  touch-action: none;
+  user-select: none;
+  outline: none;
+}
+
+.course-pane-resizer::after {
+  width: 3px;
+  height: 2.5rem;
+  border-radius: 2px;
+  background: #d6d3d1;
+  content: '';
+}
+
+.course-pane-resizer:hover::after,
+.course-pane-resizer:focus-visible::after,
+.course-workbench-grid.is-resizing .course-pane-resizer::after {
+  height: 100%;
+  background: #3f6b56;
+}
+
+.course-workbench-grid.is-resizing,
+.course-workbench-grid.is-resizing * {
+  cursor: col-resize !important;
+  user-select: none !important;
 }
 
 .course-workbench-pane {
@@ -446,9 +567,14 @@ body {
 
   .course-workbench-grid {
     grid-template-columns: minmax(190px, 0.55fr) minmax(420px, 1fr);
+    gap: 0.8rem;
     height: auto;
     min-height: 0;
     overflow: visible;
+  }
+
+  .course-pane-resizer {
+    display: none;
   }
 
   .course-reading-pane {

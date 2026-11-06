@@ -16,9 +16,9 @@ import {
 } from 'antd';
 import { Chess } from 'chess.js';
 import { useEffect, useMemo, useState } from 'react';
-import { Chessboard } from 'react-chessboard';
 import useSWR from 'swr';
 
+import { WorkbenchBoard as Chessboard } from '../components/WorkbenchBoard';
 import { fetchJson, requestJson } from '../logic/api/client';
 import type {
   Analysis,
@@ -350,8 +350,17 @@ export function AnalysisPage() {
       setSelectedSquare(undefined);
       return;
     }
-    if (mode === 'analysis') moveOnAnalysisBoard(selectedSquare, square);
-    else void moveInGame(selectedSquare, square);
+    const board = new Chess(activeFen);
+    if (
+      board.get(square as Parameters<typeof board.get>[0])?.color ===
+      board.turn()
+    ) {
+      selectOwnPiece(square);
+      return;
+    }
+    if (mode === 'analysis') {
+      if (!moveOnAnalysisBoard(selectedSquare, square)) selectOwnPiece(square);
+    } else void moveInGame(selectedSquare, square);
   }
 
   const topLine = analysis?.lines[0];

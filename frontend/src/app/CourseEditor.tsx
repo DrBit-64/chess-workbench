@@ -25,7 +25,6 @@ import {
   useRef,
   useState,
 } from 'react';
-import { Chessboard } from 'react-chessboard';
 import ReactMarkdown from 'react-markdown';
 import rehypeSanitize from 'rehype-sanitize';
 import {
@@ -36,6 +35,8 @@ import {
 } from 'react-router-dom';
 import useSWR from 'swr';
 
+import { CourseWorkbenchLayout } from '../components/CourseWorkbenchLayout';
+import { WorkbenchBoard as Chessboard } from '../components/WorkbenchBoard';
 import { fetchJson, requestJson } from '../logic/api/client';
 import type {
   AnalysisCacheLookup,
@@ -1159,7 +1160,7 @@ export function CourseEditor() {
           title="编辑器数据加载失败"
         />
       ) : null}
-      <div className="course-workbench-grid">
+      <CourseWorkbenchLayout>
         <Card
           title={leftPaneMode === 'chapters' ? '章节' : '原书页面'}
           size="small"
@@ -1276,7 +1277,7 @@ export function CourseEditor() {
         <section className="course-board-pane min-w-0">
           {current ? (
             <>
-              <div className="mx-auto max-w-[500px]">
+              <div className="w-full">
                 <Chessboard
                   id="course-editor-board"
                   position={pendingFen ?? current.full_fen}
@@ -1295,7 +1296,7 @@ export function CourseEditor() {
                   }}
                 />
               </div>
-              <div className="mx-auto mt-3 max-w-[500px]">
+              <div className="mt-3 w-full">
                 <CourseEnginePanel
                   fen={pendingFen ?? current.full_fen}
                   sectionFens={sectionAnalysisFens}
@@ -1582,7 +1583,7 @@ export function CourseEditor() {
             />
           ) : null}
         </Card>
-      </div>
+      </CourseWorkbenchLayout>
       <Modal
         title="添加叙述正文"
         open={narrativeModal}
