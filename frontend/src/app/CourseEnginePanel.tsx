@@ -10,35 +10,11 @@ import {
   Switch,
   Typography,
 } from 'antd';
-import { Chess } from 'chess.js';
-import type { ComponentProps } from 'react';
-import { useEffect, useMemo, useState } from 'react';
-import { Chessboard } from 'react-chessboard';
-import useSWR from 'swr';
+import { useState } from 'react';
 
-import { fetchJson, requestJson } from '../logic/api/client';
-import type {
-  Analysis,
-  AnalysisLine,
-  EngineCapabilities,
-  EngineParameters,
-} from '../logic/api/engineTypes';
+import { scoreLabel } from './courseEvaluation';
+import type { useCourseEngine } from './useCourseEngine';
 
-const DEFAULT_PARAMETERS: EngineParameters = {
-  multipv: 4,
-  movetime_ms: 800,
-  depth: null,
-  threads: 1,
-  hash_mb: 128,
-  ponder: false,
-};
-
-const BEST_ARROW_COLOR = 'rgba(31, 90, 165, 0.86)';
-const MAX_VISIBLE_WINNING_CHANCE_LOSS = 0.2;
-
-export type CourseEngineArrow = NonNullable<
-  ComponentProps<typeof Chessboard>['customArrows']
->[number];
 export type CourseSectionAnalysisProgress = {
   sectionId: string;
   sectionTitle: string;
@@ -50,180 +26,36 @@ export type CourseSectionAnalysisProgress = {
   cached: number;
   lookupFailed: boolean;
 };
-type BoardSquare = CourseEngineArrow[0];
-
-function scoreLabel(line: AnalysisLine): string {
-  if (line.mate !== null) return `#${line.mate}`;
-  const pawns = (line.score_cp ?? 0) / 100;
-  return `${pawns >= 0 ? '+' : ''}${pawns.toFixed(2)}`;
-}
-
-function winningChances(line: AnalysisLine): number {
-  const score =
-    line.mate !== null
-      ? (21 - Math.min(10, Math.abs(line.mate))) *
-        100 *
-        (line.mate > 0 ? 1 : -1)
-      : (line.score_cp ?? 0);
-  const boundedScore = Math.min(1000, Math.max(-1000, score));
-  return 2 / (1 + Math.exp(-0.00368208 * boundedScore)) - 1;
-}
-
-function alternativeArrowColor(loss: number): string {
-  const ratio = Math.min(
-    1,
-    Math.max(0, loss / MAX_VISIBLE_WINNING_CHANCE_LOSS),
-  );
-  const red = Math.round(57 + 78 * ratio);
-  const green = Math.round(91 + 44 * ratio);
-  const blue = Math.round(143 - 8 * ratio);
-  const opacity = (0.64 - 0.38 * ratio).toFixed(2);
-  return `rgba(${red}, ${green}, ${blue}, ${opacity})`;
-}
-
-function isTerminal(fen: string): boolean {
-  try {
-    return new Chess(fen).isGameOver();
-  } catch {
-    return false;
-  }
-}
 
 export function CourseEnginePanel({
-  fen,
-  sectionFens,
+  engine,
+  sectionPositions,
+  hasDescendants,
   sectionProgress,
   onAnalyzeSection,
-  onArrowsChange,
 }: {
-  fen: string;
-  sectionFens: string[];
+  engine: ReturnType<typeof useCourseEngine>;
+  sectionPositions: number;
+  hasDescendants: boolean;
   sectionProgress?: CourseSectionAnalysisProgress;
-  onAnalyzeSection: (
-    parameters: EngineParameters,
-    fens: string[],
-  ) => Promise<void>;
-  onArrowsChange: (arrows: CourseEngineArrow[]) => void;
+  onAnalyzeSection: () => void;
 }) {
-  const [enabled, setEnabled] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [showArrows, setShowArrows] = useState(true);
-  const [arrowCount, setArrowCount] = useState(3);
-  const [parameters, setParameters] =
-    useState<EngineParameters>(DEFAULT_PARAMETERS);
-  const [analysis, setAnalysis] = useState<Analysis>();
-  const [analyzing, setAnalyzing] = useState(false);
-  const [analysisError, setAnalysisError] = useState<string>();
-  const { data: capabilities, error: capabilityError } =
-    useSWR<EngineCapabilities>(
-      enabled ? '/api/engine/capabilities' : null,
-      fetchJson,
-    );
-
-  useEffect(() => {
-    if (!capabilities) return;
-    setParameters({
-      multipv: capabilities.default_parameters.multipv ?? 4,
-      movetime_ms: capabilities.default_parameters.movetime_ms ?? 800,
-      depth: capabilities.default_parameters.depth ?? null,
-      threads: capabilities.default_parameters.threads ?? 1,
-      hash_mb: capabilities.default_parameters.hash_mb ?? 128,
-      ponder: false,
-    });
-  }, [capabilities]);
-
-  useEffect(() => {
-    setArrowCount((current) => Math.min(current, parameters.multipv, 4));
-  }, [parameters.multipv]);
-
-  useEffect(() => {
-    if (!enabled) {
-      setAnalysis(undefined);
-      setAnalysisError(undefined);
-      setAnalyzing(false);
-      return;
-    }
-    if (!capabilities || isTerminal(fen)) {
-      setAnalysis(undefined);
-      setAnalyzing(false);
-      return;
-    }
-    if (!capabilities.available && !capabilities.syzygy_available) {
-      setAnalysis(undefined);
-      setAnalyzing(false);
-      setAnalysisError(
-        capabilities.install_hint ??
-          'Stockfish 尚未安装，请先运行 make install-stockfish。',
-      );
-      return;
-    }
-
-    const controller = new AbortController();
-    setAnalysis(undefined);
-    setAnalysisError(undefined);
-    setAnalyzing(true);
-    const timer = window.setTimeout(() => {
-      void requestJson<Analysis>('/api/engine/analyses', {
-        method: 'POST',
-        signal: controller.signal,
-        body: JSON.stringify({ fen, parameters }),
-      })
-        .then((result) => {
-          if (!controller.signal.aborted) setAnalysis(result);
-        })
-        .catch((error: unknown) => {
-          if (controller.signal.aborted) return;
-          setAnalysisError(
-            error instanceof Error ? error.message : '实时引擎分析失败',
-          );
-        })
-        .finally(() => {
-          if (!controller.signal.aborted) setAnalyzing(false);
-        });
-    }, 80);
-
-    return () => {
-      window.clearTimeout(timer);
-      controller.abort();
-    };
-  }, [capabilities, enabled, fen, parameters]);
-
-  const arrows = useMemo<CourseEngineArrow[]>(() => {
-    if (!enabled || !showArrows || !analysis) return [];
-    const bestLine = analysis.lines[0];
-    if (!bestLine) return [];
-    const sideMultiplier = fen.split(' ')[1] === 'b' ? -1 : 1;
-    const bestWinningChances = winningChances(bestLine) * sideMultiplier;
-    return analysis.lines
-      .slice(0, Math.min(arrowCount, 4))
-      .flatMap((line, index) => {
-        const move = line.uci[0];
-        if (!move) return [];
-        const loss = Math.max(
-          0,
-          (bestWinningChances - winningChances(line) * sideMultiplier) / 2,
-        );
-        if (index > 0 && loss >= MAX_VISIBLE_WINNING_CHANCE_LOSS) return [];
-        return [
-          [
-            move.slice(0, 2) as BoardSquare,
-            move.slice(2, 4) as BoardSquare,
-            index === 0 ? BEST_ARROW_COLOR : alternativeArrowColor(loss),
-          ],
-        ];
-      });
-  }, [analysis, arrowCount, enabled, fen, showArrows]);
-
-  useEffect(() => {
-    onArrowsChange(arrows);
-    return () => onArrowsChange([]);
-  }, [arrows, onArrowsChange]);
-
-  const terminal = isTerminal(fen);
-  const analyzableSectionFens = useMemo(
-    () => [...new Set(sectionFens)].filter((position) => !isTerminal(position)),
-    [sectionFens],
-  );
+  const {
+    enabled,
+    setEnabled,
+    capabilities,
+    parameters,
+    setParameters,
+    showArrows,
+    setShowArrows,
+    arrowCount,
+    setArrowCount,
+    analysis,
+    analysisError,
+    analyzing,
+    terminal,
+  } = engine;
 
   return (
     <section className="course-engine-panel" aria-label="课程实时引擎">
@@ -250,15 +82,19 @@ export function CourseEnginePanel({
         <Space size="small">
           <Button
             size="small"
-            aria-label="引擎分析当前小节"
-            title={`预计算并保存 ${analyzableSectionFens.length} 个局面`}
-            disabled={!analyzableSectionFens.length || sectionProgress?.running}
-            loading={sectionProgress?.running}
-            onClick={() =>
-              void onAnalyzeSection(parameters, analyzableSectionFens)
+            aria-label={hasDescendants ? '分析当前章节' : '引擎分析当前小节'}
+            title={
+              hasDescendants
+                ? '分析此章和下属小节'
+                : `预计算并保存 ${sectionPositions} 个局面`
             }
+            disabled={
+              (!sectionPositions && !hasDescendants) || sectionProgress?.running
+            }
+            loading={sectionProgress?.running}
+            onClick={onAnalyzeSection}
           >
-            分析本小节
+            {hasDescendants ? '分析当前章节' : '分析本小节'}
           </Button>
           <Button
             size="small"
@@ -311,9 +147,11 @@ export function CourseEnginePanel({
             {!sectionProgress.running && !sectionProgress.checking ? (
               <div className="text-xs text-stone-600" aria-live="polite">
                 {sectionProgress.lookupFailed
-                  ? '缓存检查失败，未启动分析'
+                  ? '章节或缓存读取失败，未启动分析'
                   : sectionProgress.total === 0
-                    ? `全部 ${sectionProgress.cached} 个局面已有缓存`
+                    ? sectionProgress.cached
+                      ? `全部 ${sectionProgress.cached} 个局面已有缓存`
+                      : '没有可分析的局面'
                     : sectionProgress.failed
                       ? `${sectionProgress.failed} 个局面失败，可再次运行补齐`
                       : '本小节分析已保存'}
@@ -325,9 +163,7 @@ export function CourseEnginePanel({
 
       {enabled ? (
         <div aria-live="polite">
-          {capabilityError ? (
-            <Alert type="error" showIcon title="无法读取本地引擎状态" />
-          ) : analysisError ? (
+          {analysisError ? (
             <Alert type="error" showIcon title={analysisError} />
           ) : analyzing ? (
             <div className="course-engine-loading">
@@ -404,7 +240,7 @@ export function CourseEnginePanel({
           className="mb-6 mt-2 w-full"
           value={parameters.movetime_ms}
           onChange={(movetime_ms) =>
-            setParameters((current) => ({ ...current, movetime_ms }))
+            setParameters({ ...parameters, movetime_ms })
           }
           options={(
             capabilities?.time_presets_ms ?? [500, 800, 2000, 4000, 8000]
@@ -419,9 +255,7 @@ export function CourseEnginePanel({
           min={1}
           max={capabilities?.multipv_max ?? 5}
           value={parameters.multipv}
-          onChange={(multipv) =>
-            setParameters((current) => ({ ...current, multipv }))
-          }
+          onChange={(multipv) => setParameters({ ...parameters, multipv })}
           marks={{ 1: '1', 3: '3', 4: '4', 5: '5' }}
         />
         <div className="mt-6 flex items-center justify-between gap-4">
@@ -458,9 +292,7 @@ export function CourseEnginePanel({
           min={1}
           max={capabilities?.max_threads ?? 4}
           value={parameters.threads}
-          onChange={(threads) =>
-            setParameters((current) => ({ ...current, threads }))
-          }
+          onChange={(threads) => setParameters({ ...parameters, threads })}
           marks={{
             1: '1',
             [capabilities?.max_threads ?? 4]: String(
@@ -473,9 +305,7 @@ export function CourseEnginePanel({
           aria-label="课程引擎内存"
           className="mt-2 w-full"
           value={parameters.hash_mb}
-          onChange={(hash_mb) =>
-            setParameters((current) => ({ ...current, hash_mb }))
-          }
+          onChange={(hash_mb) => setParameters({ ...parameters, hash_mb })}
           options={[16, 32, 64, 128, 256, 512, 1024]
             .filter((value) => value <= (capabilities?.max_hash_mb ?? 1024))
             .map((value) => ({ value, label: `${value} MB` }))}

@@ -1,0 +1,105 @@
+.course-workbench-grid {
+  --course-evaluation-width: 16px;
+  --course-evaluation-gap: 3px;
+}
+
+/* Align the gauge with the squares, between the two optional material rows. */
+.course-board-with-evaluation .workbench-board {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--course-evaluation-width);
+  column-gap: var(--course-evaluation-gap);
+}
+
+.course-board-with-evaluation .board-material {
+  grid-column: 1;
+}
+
+.course-board-with-evaluation .workbench-board-surface {
+  grid-area: 2 / 1;
+  min-width: 0;
+}
+
+.course-evaluation-bar {
+  grid-area: 2 / 2;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid #888681;
+  border-radius: 3px;
+  background: #363432;
+}
+
+.course-evaluation-bar.is-empty {
+  background: #d6d3cf;
+}
+
+.course-evaluation-white {
+  position: absolute;
+  inset: auto 0 0;
+  background: #faf9f6;
+  transition: height 150ms ease;
+}
+
+.course-evaluation-bar[data-orientation='black'] .course-evaluation-white {
+  inset: 0 0 auto;
+}
+
+.course-evaluation-bar:not(.is-empty)::after {
+  content: '';
+  position: absolute;
+  inset: 50% 0 auto;
+  border-top: 1px solid #8e8b85;
+}
+
+.course-evaluation-score {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 1;
+  width: max-content;
+  writing-mode: vertical-rl;
+  pointer-events: none;
+}
+
+.course-evaluation-score[data-edge='bottom'] {
+  bottom: 5px;
+}
+.course-evaluation-score[data-edge='top'] {
+  top: 5px;
+}
+.course-evaluation-score[data-color='white'] {
+  color: #292724;
+}
+.course-evaluation-score[data-color='black'] {
+  color: #fff;
+}
+
+/* The sum includes the bar so a height-limited landscape board stays full size. */
+.mobile-book-reader .course-board-pane > .course-board-with-evaluation.w-full {
+  width: min(
+    100cqw,
+    calc(100cqh + var(--course-evaluation-width) + var(--course-evaluation-gap))
+  );
+}
+
+@media (orientation: landscape) {
+  .mobile-book-reader
+    .course-workbench-grid:has(.course-board-with-evaluation) {
+    grid-template-columns:
+      min(
+        48%,
+        calc(
+          var(--reader-viewport-height) + var(--course-evaluation-width) +
+            var(--course-evaluation-gap)
+        )
+      )
+      minmax(0, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .course-evaluation-white {
+    transition: none;
+  }
+}

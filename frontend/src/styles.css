@@ -642,7 +642,7 @@ body {
   display: flex;
   flex-direction: column;
   height: 100vh;
-  height: 100dvh;
+  height: var(--reader-viewport-height, 100dvh);
   padding: env(safe-area-inset-top) env(safe-area-inset-right)
     env(safe-area-inset-bottom) env(safe-area-inset-left);
   background: #fff;
@@ -654,12 +654,34 @@ body {
     'board heading'
     'board content'
     'board steps';
-  grid-template-columns: min(48%, 100dvh) minmax(0, 1fr);
+  grid-template-columns: min(48%, var(--reader-viewport-height, 100dvh)) minmax(
+      0,
+      1fr
+    );
   grid-template-rows: auto minmax(0, 1fr) auto;
   gap: 0;
   height: auto;
   min-height: 0;
   overflow: hidden;
+}
+
+@media (orientation: landscape) {
+  html:has(.mobile-book-reader) {
+    --reader-viewport-height: 100svh;
+    overflow: hidden;
+    overscroll-behavior-y: none;
+  }
+
+  html:fullscreen:has(.mobile-book-reader) {
+    --reader-viewport-height: 100dvh;
+  }
+
+  body:has(.mobile-book-reader),
+  .ant-layout:has(.mobile-book-reader) {
+    height: var(--reader-viewport-height);
+    min-height: 0;
+    overflow: hidden;
+  }
 }
 
 .mobile-book-reader .course-board-pane {

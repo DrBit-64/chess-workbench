@@ -1,5 +1,11 @@
 # Current agent handoff
 
+## Fullscreen course reading and computer analysis (2026-11-07)
+
+On supported phones the reader toolbar can put the whole document in fullscreen, keeping the score, scans and chapter menu usable. Landscape reading in a normal tab uses the small viewport height and scrolls individual panels. Mobile traditional courses request the active position from the computer's existing engine API by default. Mobile and desktop course boards share MultiPV arrows and a White-perspective evaluation bar that follows board orientation. Desktop analysis remains opt-in. The chapter command includes nested sections, skips prose-only roots, terminal and cached positions, and can be rerun to resume after leaving the page. Keep the reading page open during a batch.
+
+Verified document fullscreen, scroll bounds, flipping, arrows, score alignment, score/scan switches and exit in Chromium at phone and desktop sizes, including ordinary HTTP. Tested the real reader against Vite, Sanic, a disposable SQLite database and native Stockfish 18: current-position recommendations matched its API and all four positions in a small chapter were cached. The operator's Bing phone browser allowed whole-document fullscreen in a separate demo; on-device reading comfort and browser chrome still need checking with this branch.
+
 ## Mobile sources library and PDF review (2026-11-07)
 
 The sources catalog wraps long titles, authors and filenames. The extraction drawer fits the phone viewport; upload, manual and append forms keep their actions accessible even in short landscape. PDF evidence supports a full-size scan link. In the compact review workspace the board stays mounted while the user switches between the score and the scan; source citations open their physical page. Wider review workspaces continue to display both panes together.

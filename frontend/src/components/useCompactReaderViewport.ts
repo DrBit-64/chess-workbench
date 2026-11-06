@@ -6,12 +6,19 @@ const compactViewport =
 function subscribe(notify: () => void) {
   const media = window.matchMedia(compactViewport);
   media.addEventListener('change', notify);
-  return () => media.removeEventListener('change', notify);
+  document.addEventListener('fullscreenchange', notify);
+  return () => {
+    media.removeEventListener('change', notify);
+    document.removeEventListener('fullscreenchange', notify);
+  };
 }
 
 export function useCompactReaderViewport() {
   return useSyncExternalStore(
     subscribe,
-    () => window.matchMedia(compactViewport).matches,
+    // The full-screen reader can gain enough height to cross the compact breakpoint.
+    () =>
+      window.matchMedia(compactViewport).matches ||
+      document.fullscreenElement === document.documentElement,
   );
 }

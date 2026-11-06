@@ -1,6 +1,7 @@
 import {
   type ComponentProps,
   type PointerEvent,
+  type ReactNode,
   useEffect,
   useLayoutEffect,
   useRef,
@@ -29,6 +30,7 @@ import { useBoardPointerMoves } from './useBoardPointerMoves';
 type Props = Omit<ComponentProps<typeof Chessboard>, 'position'> & {
   position: string;
   fitReaderPane?: boolean;
+  evaluationBar?: ReactNode;
 };
 type Drawing = BoardShape & { pointerId: number };
 
@@ -75,6 +77,7 @@ function MaterialRow({
 export function WorkbenchBoard({
   position,
   fitReaderPane = false,
+  evaluationBar,
   boardOrientation = 'white',
   customArrows = [],
   ...props
@@ -316,6 +319,7 @@ export function WorkbenchBoard({
           })}
         </svg>
       </div>
+      {evaluationBar}
       <MaterialRow
         color={boardOrientation}
         side={material[boardOrientation]}

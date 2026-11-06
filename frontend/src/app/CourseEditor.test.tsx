@@ -1,4 +1,5 @@
 import {
+  act,
   fireEvent,
   render,
   screen,
@@ -1694,10 +1695,24 @@ it('keeps the same board and move when browsing the compact directory of a PGN-o
     ...defaultMedia(query),
     matches: query.includes('(max-height: 600px)'),
   }));
+  let returnLateRoot!: (response: Response) => void;
+  const lateRoot = new Promise<Response>((resolve) => {
+    returnLateRoot = resolve;
+  });
+  const requestedPositions: string[] = [];
   const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
-    if (init?.method && init.method !== 'GET')
-      throw new Error('Unexpected write');
     switch (String(input)) {
+      case '/api/engine/capabilities':
+        return json(engineCapabilities);
+      case '/api/engine/analyses': {
+        const { fen } = JSON.parse(String(init?.body)) as { fen: string };
+        requestedPositions.push(fen);
+        return fen === startFen
+          ? lateRoot
+          : json({ ...engineAnalysis(fen), from_cache: true });
+      }
+      case '/api/engine/analyses/cache-lookup':
+        return json({ cached_fens: [startFen, e4Fen], missing_fens: [] });
       case '/api/citable-sources':
         return json([]);
       case '/api/courses/course-1':
@@ -1724,8 +1739,29 @@ it('keeps the same board and move when browsing the compact directory of a PGN-o
     (screen.getByRole('button', { name: '原书' }) as HTMLButtonElement)
       .disabled,
   ).toBe(true);
+  await waitFor(() => expect(requestedPositions).toEqual([startFen]));
   fireEvent.click(screen.getByRole('button', { name: '下一步' }));
   expect(within(board).getByText(e4Fen)).toBeTruthy();
+  const meter = await screen.findByRole('meter', { name: '引擎局面评分' });
+  expect(meter.getAttribute('aria-valuetext')).toContain('+0.20');
+  await act(async () => {
+    returnLateRoot(await json(engineAnalysis(startFen)));
+  });
+  expect(meter.getAttribute('aria-valuetext')).toContain('+0.20');
+  expect(
+    reader.querySelector(
+      '[data-source="engine"][data-from="e7"][data-to="e5"]',
+    ),
+  ).toBeTruthy();
+  expect(
+    reader.querySelector('[data-source="engine"][data-from="e2"]'),
+  ).toBeNull();
+  expect(reader.querySelector('.course-pv-list')).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: '更多阅读选项' }));
+  fireEvent.click(
+    await screen.findByRole('menuitem', { name: '分析当前章节' }),
+  );
+  expect(await screen.findByText('第一章 · 2 个局面已有分析')).toBeTruthy();
   fireEvent.click(screen.getByRole('button', { name: '更多阅读选项' }));
   fireEvent.click(await screen.findByRole('menuitem', { name: '章节目录' }));
   expect(reader.getAttribute('data-reader-panel')).toBe('chapters');
@@ -1736,7 +1772,11 @@ it('keeps the same board and move when browsing the compact directory of a PGN-o
   expect(screen.queryByRole('button', { name: '拖动 第一章' })).toBeNull();
   expect(
     fetchMock.mock.calls.every(
-      ([, init]) => !init?.method || init.method === 'GET',
+      ([url, init]) =>
+        !init?.method ||
+        init.method === 'GET' ||
+        String(url).startsWith('/api/engine/analyses'),
     ),
   ).toBe(true);
+  expect(requestedPositions).toEqual([startFen, e4Fen]);
 });

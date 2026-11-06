@@ -36,13 +36,11 @@ import {
 import useSWR from 'swr';
 
 import { useCompactReaderViewport } from '../components/useCompactReaderViewport';
+import { ReaderFullscreenButton } from '../components/ReaderFullscreenButton';
 import { CourseWorkbenchLayout } from '../components/CourseWorkbenchLayout';
 import { WorkbenchBoard as Chessboard } from '../components/WorkbenchBoard';
 import { fetchJson, requestJson } from '../logic/api/client';
-import type {
-  AnalysisCacheLookup,
-  EngineParameters,
-} from '../logic/api/engineTypes';
+import type { EngineParameters } from '../logic/api/engineTypes';
 import type {
   Course,
   CitableSource,
@@ -58,7 +56,6 @@ import {
 } from './boardInteraction';
 import {
   CourseEnginePanel,
-  type CourseEngineArrow,
   type CourseSectionAnalysisProgress,
 } from './CourseEnginePanel';
 import {
@@ -66,6 +63,14 @@ import {
   CourseScoreControls,
   type CourseMoveAction,
 } from './CourseScore';
+import {
+  findMissingChapterFens,
+  hasBookBoard,
+  isTerminalPosition,
+  loadChapterFens,
+} from './chapterEnginePositions';
+import { CourseEvaluationBar } from './CourseEvaluationBar';
+import { useCourseEngine } from './useCourseEngine';
 import { CourseSourcePreview } from './CourseSourcePreview';
 import {
   captureText,
@@ -116,7 +121,6 @@ function CourseEditorSession({ courseId }: { courseId: string }) {
     'white',
   );
   const [selectedSquare, setSelectedSquare] = useState<string>();
-  const [engineArrows, setEngineArrows] = useState<CourseEngineArrow[]>([]);
   const [sectionAnalysisProgress, setSectionAnalysisProgress] =
     useState<CourseSectionAnalysisProgress>();
   const sectionAnalysisController = useRef<AbortController>();
@@ -333,16 +337,33 @@ function CourseEditorSession({ courseId }: { courseId: string }) {
       return [{ ...occurrence, parent_id: parentId }];
     });
   }, [byId, course?.mode, editor]);
-  const sectionAnalysisFens = useMemo(
-    () =>
-      Array.from(
-        new Set(
-          (editor?.occurrences ?? [])
-            .filter((occurrence) => occurrence.module_id === moduleId)
-            .map((occurrence) => occurrence.full_fen),
-        ),
+  const sectionAnalysisFens = useMemo(() => {
+    const positions = [
+      ...new Set(
+        (editor?.occurrences ?? [])
+          .filter((occurrence) => occurrence.module_id === moduleId)
+          .map((occurrence) => occurrence.full_fen),
       ),
-    [editor, moduleId],
+    ];
+    // Only the desktop precompute button displays the exact playable count.
+    // On phones, defer checking the entire score until a chapter is requested.
+    return compactReader
+      ? positions
+      : positions.filter((fen) => !isTerminalPosition(fen));
+  }, [compactReader, editor, moduleId]);
+
+  const childSectionIds = useMemo(
+    () =>
+      moduleId && course?.mode === 'traditional'
+        ? modules
+            .filter(
+              (item) =>
+                item.id !== moduleId &&
+                isModuleDescendant(modules, item.id, moduleId),
+            )
+            .map((item) => item.id)
+        : [],
+    [course?.mode, moduleId, modules],
   );
 
   useEffect(
@@ -354,38 +375,48 @@ function CourseEditorSession({ courseId }: { courseId: string }) {
 
   async function analyzeCurrentSection(
     parameters: EngineParameters,
-    fens: string[],
+    activeFens: string[],
+    descendantIds: string[],
   ) {
-    if (!moduleId || !fens.length || sectionAnalysisProgress?.running) return;
+    if (
+      !moduleId ||
+      (!activeFens.length && !descendantIds.length) ||
+      sectionAnalysisController.current
+    )
+      return;
     const sectionId = moduleId;
     const sectionTitle =
       modules.find((item) => item.id === sectionId)?.title ?? '当前小节';
     const controller = new AbortController();
-    sectionAnalysisController.current?.abort();
     sectionAnalysisController.current = controller;
     setSectionAnalysisProgress({
       sectionId,
       sectionTitle,
       completed: 0,
       failed: 0,
-      total: fens.length,
+      total: activeFens.length,
       running: true,
       checking: true,
       cached: 0,
       lookupFailed: false,
     });
 
+    let fens: string[];
     let missingFens: string[];
     try {
-      const lookup = await requestJson<AnalysisCacheLookup>(
-        '/api/engine/analyses/cache-lookup',
-        {
-          method: 'POST',
-          signal: controller.signal,
-          body: JSON.stringify({ fens, parameters }),
-        },
+      fens = await loadChapterFens(
+        courseId,
+        activeFens,
+        descendantIds,
+        controller.signal,
       );
-      missingFens = lookup.missing_fens;
+      if (controller.signal.aborted) return;
+      missingFens = await findMissingChapterFens(
+        fens,
+        parameters,
+        controller.signal,
+      );
+      if (controller.signal.aborted) return;
       setSectionAnalysisProgress({
         sectionId,
         sectionTitle,
@@ -394,7 +425,7 @@ function CourseEditorSession({ courseId }: { courseId: string }) {
         total: missingFens.length,
         running: missingFens.length > 0,
         checking: false,
-        cached: lookup.cached_fens.length,
+        cached: fens.length - missingFens.length,
         lookupFailed: false,
       });
     } catch {
@@ -432,6 +463,7 @@ function CourseEditorSession({ courseId }: { courseId: string }) {
         if (controller.signal.aborted) return;
         failed += 1;
       }
+      if (controller.signal.aborted) return;
       completed += 1;
       setSectionAnalysisProgress({
         sectionId,
@@ -463,6 +495,14 @@ function CourseEditorSession({ courseId }: { courseId: string }) {
     return entries;
   }, [editor, modules]);
   const current = occurrenceId ? byId.get(occurrenceId) : undefined;
+  const hasReaderBoard = hasBookBoard(editor, current?.full_fen);
+  const boardFen = compactReader
+    ? current?.full_fen
+    : (pendingFen ?? current?.full_fen);
+  const engine = useCourseEngine(
+    compactReader && !hasReaderBoard ? undefined : boardFen,
+    compactReader,
+  );
   const candidates = useMemo(() => {
     if (!editor || !current) return [];
     const parentIds = new Set(
@@ -1210,14 +1250,31 @@ function CourseEditorSession({ courseId }: { courseId: string }) {
       </div>
     );
 
-  // Text-only introductions can carry a synthetic initial-position root.
-  // A diagram-only chapter with an actual starting position still gets a board.
-  const hasReaderBoard = Boolean(
-    current &&
-    (current.full_fen !== START_FEN ||
-      editor?.occurrences.some((node) => node.parent_id !== null) ||
-      editor?.content_blocks.some((block) => block.kind === 'move_sequence')),
+  const activeAnalysisFens =
+    !hasReaderBoard && course.mode === 'traditional' ? [] : sectionAnalysisFens;
+  const canAnalyzeChapter = Boolean(
+    activeAnalysisFens.length || childSectionIds.length,
   );
+  const startChapterAnalysis = () =>
+    void analyzeCurrentSection(
+      engine.parameters,
+      activeAnalysisFens,
+      childSectionIds,
+    );
+  const progress = sectionAnalysisProgress;
+  let chapterStatus: string | undefined;
+  if (progress) {
+    if (progress.checking) chapterStatus = '正在检查章节和缓存…';
+    else if (progress.lookupFailed)
+      chapterStatus = '章节或缓存读取失败，可重试';
+    else if (progress.running)
+      chapterStatus = `正在分析 ${progress.completed} / ${progress.total}`;
+    else if (progress.failed)
+      chapterStatus = `${progress.failed} 个局面失败，可重试`;
+    else if (progress.total + progress.cached === 0)
+      chapterStatus = '没有可分析的局面';
+    else chapterStatus = `${progress.total + progress.cached} 个局面已有分析`;
+  }
   const panel =
     readerPanel === 'source' && !activePdfPreview ? 'score' : readerPanel;
   return (
@@ -1337,6 +1394,14 @@ function CourseEditorSession({ courseId }: { courseId: string }) {
                 {panel === 'chapters'
                   ? '章节目录'
                   : (editor?.module.title ?? course.title)}
+                {chapterStatus && (
+                  <small
+                    className="block truncate text-xs font-normal"
+                    role="status"
+                  >
+                    {progress?.sectionTitle} · {chapterStatus}
+                  </small>
+                )}
               </h2>
               <div className="reader-floating-bar" aria-label="切换阅读面板">
                 <button
@@ -1350,16 +1415,48 @@ function CourseEditorSession({ courseId }: { courseId: string }) {
                 >
                   {panel === 'score' ? '原书' : '讲解'}
                 </button>
+                <ReaderFullscreenButton />
                 <Dropdown
                   trigger={['click']}
                   menu={{
+                    style: {
+                      maxHeight: 'min(70svh, 24rem)',
+                      overflowY: 'auto',
+                      maxWidth: '85vw',
+                    },
                     items: [
                       { key: 'chapters', label: '章节目录' },
+                      ...(hasReaderBoard
+                        ? [
+                            {
+                              key: 'engine',
+                              label: engine.enabled
+                                ? '关闭局面分析'
+                                : '开启局面分析',
+                            },
+                          ]
+                        : []),
+                      {
+                        key: 'analyze',
+                        label: '分析当前章节',
+                        disabled: !canAnalyzeChapter || progress?.running,
+                      },
+                      ...(engine.enabled && engine.analysisError
+                        ? [
+                            {
+                              key: 'engine-error',
+                              label: engine.analysisError,
+                              disabled: true,
+                            },
+                          ]
+                        : []),
                       { key: 'catalog', label: '返回书架' },
                       { key: 'edit', label: '编辑课程' },
                     ],
                     onClick: ({ key }) => {
                       if (key === 'chapters') showReaderPanel('chapters');
+                      if (key === 'engine') engine.setEnabled(!engine.enabled);
+                      if (key === 'analyze') startChapterAnalysis();
                       if (key === 'catalog') navigate('/learn');
                       if (key === 'edit') setReadingMode(false);
                     },
@@ -1475,16 +1572,26 @@ function CourseEditorSession({ courseId }: { courseId: string }) {
           )}
         </Card>
         <section className="course-board-pane min-w-0">
-          {current ? (
+          {current && boardFen ? (
             <>
-              <div className="w-full">
+              <div
+                className={
+                  engine.enabled
+                    ? 'w-full course-board-with-evaluation'
+                    : 'w-full'
+                }
+              >
                 <Chessboard
                   id="course-editor-board"
                   fitReaderPane={compactReader}
-                  position={
-                    compactReader
-                      ? current.full_fen
-                      : (pendingFen ?? current.full_fen)
+                  position={boardFen}
+                  evaluationBar={
+                    engine.enabled ? (
+                      <CourseEvaluationBar
+                        line={engine.analysis?.lines[0]}
+                        orientation={boardOrientation}
+                      />
+                    ) : undefined
                   }
                   boardOrientation={boardOrientation}
                   animationDuration={FAST_MOVE_ANIMATION_MS}
@@ -1497,7 +1604,7 @@ function CourseEditorSession({ courseId }: { courseId: string }) {
                   customSquareStyles={
                     compactReader ? undefined : boardSquareStyles
                   }
-                  customArrows={compactReader ? undefined : engineArrows}
+                  customArrows={engine.arrows}
                   customBoardStyle={{
                     borderRadius: '8px',
                     boxShadow: '0 12px 30px rgba(28,25,23,.16)',
@@ -1507,11 +1614,11 @@ function CourseEditorSession({ courseId }: { courseId: string }) {
               {!compactReader && (
                 <div className="mt-3 w-full">
                   <CourseEnginePanel
-                    fen={pendingFen ?? current.full_fen}
-                    sectionFens={sectionAnalysisFens}
+                    engine={engine}
+                    sectionPositions={activeAnalysisFens.length}
+                    hasDescendants={childSectionIds.length > 0}
                     sectionProgress={sectionAnalysisProgress}
-                    onAnalyzeSection={analyzeCurrentSection}
-                    onArrowsChange={setEngineArrows}
+                    onAnalyzeSection={startChapterAnalysis}
                   />
                 </div>
               )}
