@@ -4,6 +4,7 @@ import { Link, Route, Routes, useLocation, useParams } from 'react-router-dom';
 
 import { Dashboard } from './Dashboard';
 import { NotFound } from './NotFound';
+import './navigation.css';
 
 const CourseCatalog = lazy(() =>
   import('./CourseCatalog').then((module) => ({
@@ -69,7 +70,7 @@ export function App() {
     )?.key ?? '/';
   return (
     <Layout className="min-h-screen bg-stone-50">
-      <Layout.Header className="flex items-center gap-8 bg-stone-950 px-6">
+      <Layout.Header className="workbench-header flex items-center gap-8 bg-stone-950 px-6">
         <Typography.Title
           className="m-0! whitespace-nowrap text-stone-50!"
           level={3}

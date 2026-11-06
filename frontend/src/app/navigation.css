@@ -1,0 +1,19 @@
+@media (max-width: 640px) {
+  .ant-layout-header.workbench-header {
+    height: auto;
+    padding: 8px 12px 0;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    line-height: normal;
+  }
+
+  .workbench-header .ant-typography {
+    font-size: 1.05rem;
+  }
+
+  .workbench-header .ant-menu-horizontal {
+    flex: none;
+    line-height: 44px;
+  }
+}

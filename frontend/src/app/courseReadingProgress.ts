@@ -141,15 +141,27 @@ export function useReadingScroll(
   courseId: string,
   moduleId: string | undefined,
   linkedMove: string | null,
+  layoutReady: boolean,
 ) {
   const ref = useRef<HTMLDivElement>(null);
+  const pendingScroll = useRef<{ key: string; place: TextPlace }>();
   useLayoutEffect(() => {
     const scroller = ref.current;
     if (!scroller || !moduleId) return;
     const key = `${courseKey(courseId)}.text.${moduleId}`;
-    let place: TextPlace = linkedMove
-      ? { top: 0, anchor: linkedMove }
-      : readTextPlace(key);
+    const previous = pendingScroll.current;
+    pendingScroll.current = undefined;
+    let place: TextPlace =
+      previous?.key === key
+        ? previous.place
+        : linkedMove
+          ? { top: 0, anchor: linkedMove }
+          : readTextPlace(key);
+    let receivedInput = false;
+    let manuallyScrolled = false;
+    function startInput() {
+      receivedInput = true;
+    }
     let width = -1;
     let restoredTop: number | undefined;
     let timer: ReturnType<typeof setTimeout> | undefined;
@@ -158,17 +170,21 @@ export function useReadingScroll(
       if (!scroller || width === scroller.clientWidth) return;
       width = scroller.clientWidth;
       // A hidden tab has no geometry. Restore after it is visible again.
-      if (width > 0) {
+      if (width > 0 && (layoutReady || manuallyScrolled)) {
         restoreText(scroller, place);
         restoredTop = scroller.scrollTop;
       }
     }
     function saveScroll() {
+      // The text is readable while citation metadata is loading. A user who
+      // scrolls during that interval chooses a newer place than the bookmark.
+      if (!layoutReady && !receivedInput) return;
       if (!scroller || width === 0 || scroller.clientWidth !== width) return;
       const top = scroller.scrollTop;
       // Resizing can generate a scroll event even without user input.
       if (top === restoredTop) return;
       restoredTop = undefined;
+      manuallyScrolled = true;
       // Keep scrolling cheap in books with thousands of moves. Find the
       // semantic anchor once the scroll settles, with a pixel fallback meanwhile.
       place = { top };
@@ -186,7 +202,19 @@ export function useReadingScroll(
     }
     function flush() {
       clearTimeout(timer);
+      if (!layoutReady) {
+        if (!manuallyScrolled) return;
+        pendingScroll.current = { key, place };
+      }
       writeObject(key, place);
+    }
+    const intents = ['wheel', 'touchmove', 'pointerdown', 'keydown'];
+    if (!layoutReady) {
+      for (const event of intents)
+        scroller.addEventListener(event, startInput, {
+          passive: true,
+          once: true,
+        });
     }
     resize();
     const observer = new ResizeObserver(resize);
@@ -196,9 +224,11 @@ export function useReadingScroll(
     return () => {
       flush();
       observer.disconnect();
+      for (const event of intents)
+        scroller.removeEventListener(event, startInput);
       scroller.removeEventListener('scroll', saveScroll);
       window.removeEventListener('pagehide', flush);
     };
-  }, [courseId, moduleId, linkedMove]);
+  }, [courseId, moduleId, linkedMove, layoutReady]);
   return ref;
 }

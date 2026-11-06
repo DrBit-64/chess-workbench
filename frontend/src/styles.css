@@ -17,7 +17,6 @@
 
 body {
   margin: 0;
-  min-width: 320px;
   min-height: 100vh;
 }
 
@@ -666,6 +665,7 @@ body {
 .mobile-book-reader .course-board-pane {
   grid-area: board;
   display: grid;
+  grid-template: minmax(0, 1fr) / minmax(0, 1fr);
   place-items: center;
   container-type: size;
   overflow: hidden;
@@ -673,7 +673,7 @@ body {
 }
 
 .mobile-book-reader .course-board-pane > .w-full {
-  width: min(100%, 100cqh);
+  width: min(100cqw, 100cqh);
 }
 
 .mobile-book-reader .course-reading-pane,

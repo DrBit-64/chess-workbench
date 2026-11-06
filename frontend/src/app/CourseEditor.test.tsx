@@ -1688,6 +1688,7 @@ describe('Stage 4B course editor', () => {
 
 it('keeps the same board and move when browsing the compact directory of a PGN-only chapter', async () => {
   localStorage.clear();
+  vi.spyOn(Element.prototype, 'clientWidth', 'get').mockReturnValue(336);
   const defaultMedia = window.matchMedia;
   vi.spyOn(window, 'matchMedia').mockImplementation((query) => ({
     ...defaultMedia(query),

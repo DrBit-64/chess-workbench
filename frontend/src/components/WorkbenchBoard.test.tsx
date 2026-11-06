@@ -7,16 +7,18 @@ vi.mock('react-chessboard', () => ({
   Chessboard: ({
     customArrows,
     animationDuration,
+    boardWidth,
   }: {
     customArrows?: unknown[];
     animationDuration: number;
+    boardWidth?: number;
   }) => (
     <>
       <output data-testid="engine-arrows">
         {JSON.stringify(customArrows)}
       </output>
       <output data-testid="animation-duration">{animationDuration}</output>
-      <div data-square="b1">
+      <div data-square="b1" data-board-width={boardWidth}>
         <div data-piece="wN" />
       </div>
     </>
@@ -248,4 +250,31 @@ describe('WorkbenchBoard', () => {
     ]);
     expect(rows()[1].textContent).toContain('+1');
   });
+});
+
+it('fits the reader board immediately when a portrait viewport becomes shorter', () => {
+  let width = 0;
+  const measure = vi
+    .spyOn(Element.prototype, 'clientWidth', 'get')
+    .mockImplementation(() => width);
+  try {
+    const { container, rerender } = render(
+      <WorkbenchBoard position={fen} fitReaderPane />,
+    );
+    const square = () => container.querySelector('[data-square="b1"]');
+    expect(square()).toBeNull();
+    width = 326;
+    fireEvent.resize(window);
+    const firstSquare = square();
+    expect(firstSquare?.getAttribute('data-board-width')).toBe('326');
+    width = 228;
+    fireEvent.resize(window);
+    expect(square()).toBe(firstSquare);
+    expect(square()?.getAttribute('data-board-width')).toBe('228');
+    rerender(<WorkbenchBoard position={fen} />);
+    expect(square()).not.toBeNull();
+    expect(square()?.hasAttribute('data-board-width')).toBe(false);
+  } finally {
+    measure.mockRestore();
+  }
 });

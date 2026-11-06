@@ -598,12 +598,11 @@ function CourseEditorSession({ courseId }: { courseId: string }) {
   // of the reading flow. Restore against the final layout of this chapter.
   const readingScrollRef = useReadingScroll(
     courseId,
-    sourcesReady && (current || !editor?.occurrences.length)
-      ? readingModuleId
-      : undefined,
+    readingModuleId,
     searchParams.get('module') === moduleId || !searchParams.has('module')
       ? searchParams.get('occurrence')
       : null,
+    sourcesReady && Boolean(current || !editor?.occurrences.length),
   );
   useEffect(() => {
     if (!readingModuleId || !sourcesReady) return;
@@ -1481,6 +1480,7 @@ function CourseEditorSession({ courseId }: { courseId: string }) {
               <div className="w-full">
                 <Chessboard
                   id="course-editor-board"
+                  fitReaderPane={compactReader}
                   position={
                     compactReader
                       ? current.full_fen

@@ -1,5 +1,11 @@
 # Current agent handoff
 
+## Compact reader rotation and narrow shelf (2026-11-06)
+
+A 336×741 → 741×228 rotation could paint the previous board dimensions for a frame. The compact reader now measures the square before mounting the renderer and synchronizes changes before paint. The catalog wraps long titles and descriptions and gives the global navigation its own row on narrow screens. If the user scrolls while citation metadata is arriving, their new reading place takes precedence over a pending restore.
+
+Chromium reproduced the pre-fix catalog at 512 CSS pixels wide in a 336px viewport. The repaired shelf fits at 304 and 336px with visible course settings. In the reader, all four board corners fit on the first landscape frame, including at 4× CPU throttling. Verified desktop dragging after a round trip. With delayed sources, scrolling to 1100px stays at 1100px instead of resetting to zero; an untouched saved paragraph and a magnified PDF still restore. Sustained ten-second flickering was not reproduced in the synthetic chapter during an 11-second capture. Physical handset and the user's original book remain the final visual check.
+
 ## Startup fix synchronized to the mobile branch (2026-11-06)
 
 At the operator's request, the shared web-port fix is committed on `main` as `e78dbc6` and merged into `feature/mobile-book-reader`, preserving the mobile feature commit and both handoff sections. The local checkout now uses the mobile branch; ignored `.env` still selects port 5210. For Android USB forwarding, device port 5173 can remain stable while its desktop target is `127.0.0.1:5210`. README now distinguishes the device port from the actual Vite port. Course data and local credentials are not part of these commits.

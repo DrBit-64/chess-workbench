@@ -1,0 +1,17 @@
+@media (max-width: 767px) {
+  .course-catalog .ant-card-head,
+  .course-catalog .ant-card-body {
+    padding-inline: 14px;
+  }
+
+  .course-catalog .ant-card-head-title,
+  .course-catalog .ant-tag {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .course-catalog .ant-space-item {
+    min-width: 0;
+    max-width: 100%;
+  }
+}

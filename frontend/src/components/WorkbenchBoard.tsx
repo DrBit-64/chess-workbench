@@ -2,9 +2,11 @@ import {
   type ComponentProps,
   type PointerEvent,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
 } from 'react';
+import { flushSync } from 'react-dom';
 import { Chessboard } from 'react-chessboard';
 
 import { FAST_MOVE_ANIMATION_MS } from '../app/boardInteraction';
@@ -26,6 +28,7 @@ import { useBoardPointerMoves } from './useBoardPointerMoves';
 
 type Props = Omit<ComponentProps<typeof Chessboard>, 'position'> & {
   position: string;
+  fitReaderPane?: boolean;
 };
 type Drawing = BoardShape & { pointerId: number };
 
@@ -71,10 +74,35 @@ function MaterialRow({
 
 export function WorkbenchBoard({
   position,
+  fitReaderPane = false,
   boardOrientation = 'white',
   customArrows = [],
   ...props
 }: Props) {
+  const surface = useRef<HTMLDivElement>(null);
+  const [readerWidth, setReaderWidth] = useState(0);
+  useLayoutEffect(() => {
+    const element = surface.current;
+    if (!fitReaderPane || !element) return;
+    // The grid owns this square. Supply its new size before a resize paints
+    // instead of letting the board's async auto-sizing display the old ranks.
+    let width = element.clientWidth;
+    setReaderWidth(width);
+    const resize = () => {
+      const next = element.clientWidth;
+      if (next === width) return;
+      width = next;
+      flushSync(() => setReaderWidth(next));
+    };
+    const observer = new ResizeObserver(resize);
+    observer.observe(element);
+    window.addEventListener('resize', resize);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', resize);
+    };
+  }, [fitReaderPane]);
+
   const pointerMoves = useBoardPointerMoves({
     ...props,
     position,
@@ -171,6 +199,7 @@ export function WorkbenchBoard({
         score={topColor === 'white' ? material.score : -material.score}
       />
       <div
+        ref={surface}
         className="workbench-board-surface"
         role="group"
         tabIndex={0}
@@ -223,18 +252,22 @@ export function WorkbenchBoard({
           }
         }}
       >
-        <Chessboard
-          {...props}
-          position={position}
-          boardOrientation={boardOrientation}
-          animationDuration={
-            pointerMoves.skipSlide
-              ? 0
-              : (props.animationDuration ?? FAST_MOVE_ANIMATION_MS)
-          }
-          arePiecesDraggable={false}
-          areArrowsAllowed={false}
-        />
+        {(!fitReaderPane || readerWidth > 0) && (
+          <Chessboard
+            key={fitReaderPane ? 'reader' : 'workbench'}
+            {...props}
+            {...(fitReaderPane ? { boardWidth: readerWidth } : {})}
+            position={position}
+            boardOrientation={boardOrientation}
+            animationDuration={
+              pointerMoves.skipSlide
+                ? 0
+                : (props.animationDuration ?? FAST_MOVE_ANIMATION_MS)
+            }
+            arePiecesDraggable={false}
+            areArrowsAllowed={false}
+          />
+        )}
         <svg className="board-drawings" viewBox="0 0 8 8" aria-hidden="true">
           {customArrows.map(([from, to, color], index) => (
             <BoardArrow

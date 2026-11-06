@@ -18,6 +18,7 @@ import useSWR from 'swr';
 
 import { fetchJson, requestJson } from '../logic/api/client';
 import type { Course } from '../logic/api/types';
+import './courseCatalog.css';
 
 export function CourseCatalog() {
   const [query, setQuery] = useState('');
@@ -92,7 +93,7 @@ export function CourseCatalog() {
   }
 
   return (
-    <main className="mx-auto max-w-7xl px-6 py-10">
+    <main className="course-catalog mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-10">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div>
           <Typography.Title className="mb-1!" level={2}>
@@ -130,7 +131,7 @@ export function CourseCatalog() {
       {data.length === 0 && !isLoading ? (
         <Empty description="没有匹配的课程" />
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {data.map((course) => (
             <Card
               key={course.id}
@@ -169,7 +170,7 @@ export function CourseCatalog() {
               }
             >
               <Link to={`/learn/${course.id}`} className="block text-inherit">
-                <Typography.Paragraph className="min-h-12 text-stone-600">
+                <Typography.Paragraph className="min-h-12 wrap-anywhere text-stone-600">
                   {course.description || '尚未添加课程说明'}
                 </Typography.Paragraph>
                 <Space wrap>
