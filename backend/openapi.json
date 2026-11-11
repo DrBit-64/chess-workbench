@@ -971,6 +971,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -1032,6 +1033,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -1291,6 +1293,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -1352,6 +1355,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -1413,6 +1417,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -1613,6 +1618,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -1865,6 +1871,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -1926,6 +1933,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -1987,6 +1995,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -2200,6 +2209,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -2261,6 +2271,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -2322,6 +2333,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -2499,6 +2511,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -2560,6 +2573,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -2784,6 +2798,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -2845,6 +2860,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -2906,6 +2922,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -3051,6 +3068,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -3112,6 +3130,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -3173,6 +3192,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -3376,6 +3396,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -3808,6 +3829,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -3869,6 +3891,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -3930,6 +3953,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -4151,6 +4175,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -4382,6 +4407,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -4569,6 +4595,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -4829,6 +4856,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -4890,6 +4918,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -4951,6 +4980,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -5571,6 +5601,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -5632,6 +5663,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -5813,6 +5845,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -5874,6 +5907,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -5935,6 +5969,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -5996,6 +6031,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -6057,6 +6093,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -6246,6 +6283,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -6307,6 +6345,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -6368,6 +6407,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -6557,6 +6597,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -6618,6 +6659,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -6844,6 +6886,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -6905,6 +6948,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -7016,6 +7060,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -7077,6 +7122,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -7138,6 +7184,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -7325,6 +7372,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -7386,6 +7434,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -7447,6 +7496,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -7959,6 +8009,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -9677,6 +9728,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -9738,6 +9790,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -10339,6 +10392,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -10400,6 +10454,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -10461,6 +10516,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -10830,6 +10886,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -10891,6 +10948,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -10952,6 +11010,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -11216,6 +11275,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -11543,6 +11603,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -11604,6 +11665,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -11665,6 +11727,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -11869,6 +11932,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -11930,6 +11994,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -12065,6 +12130,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -12101,6 +12167,2923 @@
         "summary": "Read one global move edge",
         "tags": [
           "position-graph"
+        ]
+      }
+    },
+    "/api/notebook/accounts": {
+      "get": {
+        "operationId": "listNotebookAccounts",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "existing": {
+                        "title": "Existing",
+                        "type": "integer"
+                      },
+                      "failed": {
+                        "title": "Failed",
+                        "type": "integer"
+                      },
+                      "id": {
+                        "format": "uuid",
+                        "title": "Id",
+                        "type": "string"
+                      },
+                      "imported": {
+                        "title": "Imported",
+                        "type": "integer"
+                      },
+                      "last_error": {
+                        "nullable": true,
+                        "title": "Last Error",
+                        "type": "string"
+                      },
+                      "last_synced_ms": {
+                        "nullable": true,
+                        "title": "Last Synced Ms",
+                        "type": "integer"
+                      },
+                      "platform": {
+                        "enum": [
+                          "lichess",
+                          "chess.com"
+                        ],
+                        "title": "Platform",
+                        "type": "string"
+                      },
+                      "queued": {
+                        "title": "Queued",
+                        "type": "integer"
+                      },
+                      "start_date": {
+                        "format": "date",
+                        "title": "Start Date",
+                        "type": "string"
+                      },
+                      "username": {
+                        "title": "Username",
+                        "type": "string"
+                      },
+                      "waiting": {
+                        "title": "Waiting",
+                        "type": "integer"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "platform",
+                      "username",
+                      "start_date",
+                      "last_synced_ms",
+                      "imported",
+                      "existing",
+                      "queued",
+                      "waiting",
+                      "failed",
+                      "last_error"
+                    ],
+                    "title": "NotebookAccountView",
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Default Response"
+          }
+        },
+        "summary": "List Accounts",
+        "tags": [
+          "notebook"
+        ]
+      },
+      "post": {
+        "operationId": "addNotebookAccount",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "platform": {
+                    "enum": [
+                      "lichess",
+                      "chess.com"
+                    ],
+                    "title": "Platform",
+                    "type": "string"
+                  },
+                  "start_date": {
+                    "format": "date",
+                    "title": "Start Date",
+                    "type": "string"
+                  },
+                  "username": {
+                    "pattern": "^[a-zA-Z0-9_-]{1,40}$",
+                    "title": "Username",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "platform",
+                  "username",
+                  "start_date"
+                ],
+                "title": "NotebookAccountCreate",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "existing": {
+                      "title": "Existing",
+                      "type": "integer"
+                    },
+                    "failed": {
+                      "title": "Failed",
+                      "type": "integer"
+                    },
+                    "id": {
+                      "format": "uuid",
+                      "title": "Id",
+                      "type": "string"
+                    },
+                    "imported": {
+                      "title": "Imported",
+                      "type": "integer"
+                    },
+                    "last_error": {
+                      "nullable": true,
+                      "title": "Last Error",
+                      "type": "string"
+                    },
+                    "last_synced_ms": {
+                      "nullable": true,
+                      "title": "Last Synced Ms",
+                      "type": "integer"
+                    },
+                    "platform": {
+                      "enum": [
+                        "lichess",
+                        "chess.com"
+                      ],
+                      "title": "Platform",
+                      "type": "string"
+                    },
+                    "queued": {
+                      "title": "Queued",
+                      "type": "integer"
+                    },
+                    "start_date": {
+                      "format": "date",
+                      "title": "Start Date",
+                      "type": "string"
+                    },
+                    "username": {
+                      "title": "Username",
+                      "type": "string"
+                    },
+                    "waiting": {
+                      "title": "Waiting",
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "platform",
+                    "username",
+                    "start_date",
+                    "last_synced_ms",
+                    "imported",
+                    "existing",
+                    "queued",
+                    "waiting",
+                    "failed",
+                    "last_error"
+                  ],
+                  "title": "NotebookAccountView",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Default Response"
+          }
+        },
+        "summary": "Add Account",
+        "tags": [
+          "notebook"
+        ]
+      }
+    },
+    "/api/notebook/accounts/{account_id}": {
+      "delete": {
+        "operationId": "removeNotebookAccount",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Account removed; previously saved games remain"
+          }
+        },
+        "summary": "Remove Account",
+        "tags": [
+          "notebook"
+        ]
+      }
+    },
+    "/api/notebook/accounts/{account_id}/retry": {
+      "post": {
+        "operationId": "retryNotebookAccountGames",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "existing": {
+                      "title": "Existing",
+                      "type": "integer"
+                    },
+                    "failed": {
+                      "title": "Failed",
+                      "type": "integer"
+                    },
+                    "id": {
+                      "format": "uuid",
+                      "title": "Id",
+                      "type": "string"
+                    },
+                    "imported": {
+                      "title": "Imported",
+                      "type": "integer"
+                    },
+                    "last_error": {
+                      "nullable": true,
+                      "title": "Last Error",
+                      "type": "string"
+                    },
+                    "last_synced_ms": {
+                      "nullable": true,
+                      "title": "Last Synced Ms",
+                      "type": "integer"
+                    },
+                    "platform": {
+                      "enum": [
+                        "lichess",
+                        "chess.com"
+                      ],
+                      "title": "Platform",
+                      "type": "string"
+                    },
+                    "queued": {
+                      "title": "Queued",
+                      "type": "integer"
+                    },
+                    "start_date": {
+                      "format": "date",
+                      "title": "Start Date",
+                      "type": "string"
+                    },
+                    "username": {
+                      "title": "Username",
+                      "type": "string"
+                    },
+                    "waiting": {
+                      "title": "Waiting",
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "platform",
+                    "username",
+                    "start_date",
+                    "last_synced_ms",
+                    "imported",
+                    "existing",
+                    "queued",
+                    "waiting",
+                    "failed",
+                    "last_error"
+                  ],
+                  "title": "NotebookAccountView",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Default Response"
+          }
+        },
+        "summary": "Retry Account",
+        "tags": [
+          "notebook"
+        ]
+      }
+    },
+    "/api/notebook/accounts/{account_id}/sync": {
+      "post": {
+        "operationId": "syncNotebookAccount",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "account": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "existing": {
+                          "title": "Existing",
+                          "type": "integer"
+                        },
+                        "failed": {
+                          "title": "Failed",
+                          "type": "integer"
+                        },
+                        "id": {
+                          "format": "uuid",
+                          "title": "Id",
+                          "type": "string"
+                        },
+                        "imported": {
+                          "title": "Imported",
+                          "type": "integer"
+                        },
+                        "last_error": {
+                          "nullable": true,
+                          "title": "Last Error",
+                          "type": "string"
+                        },
+                        "last_synced_ms": {
+                          "nullable": true,
+                          "title": "Last Synced Ms",
+                          "type": "integer"
+                        },
+                        "platform": {
+                          "enum": [
+                            "lichess",
+                            "chess.com"
+                          ],
+                          "title": "Platform",
+                          "type": "string"
+                        },
+                        "queued": {
+                          "title": "Queued",
+                          "type": "integer"
+                        },
+                        "start_date": {
+                          "format": "date",
+                          "title": "Start Date",
+                          "type": "string"
+                        },
+                        "username": {
+                          "title": "Username",
+                          "type": "string"
+                        },
+                        "waiting": {
+                          "title": "Waiting",
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "platform",
+                        "username",
+                        "start_date",
+                        "last_synced_ms",
+                        "imported",
+                        "existing",
+                        "queued",
+                        "waiting",
+                        "failed",
+                        "last_error"
+                      ],
+                      "title": "NotebookAccountView",
+                      "type": "object"
+                    },
+                    "more": {
+                      "title": "More",
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "account",
+                    "more"
+                  ],
+                  "title": "NotebookSyncResult",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Default Response"
+          }
+        },
+        "summary": "Sync Account",
+        "tags": [
+          "notebook"
+        ]
+      }
+    },
+    "/api/notebook/bookmark-tags": {
+      "get": {
+        "operationId": "listNotebookBookmarkTags",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "tags": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "title": "Tags",
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "tags"
+                  ],
+                  "title": "NotebookBookmarkTags",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Default Response"
+          }
+        },
+        "summary": "Tags",
+        "tags": [
+          "notebook"
+        ]
+      }
+    },
+    "/api/notebook/bookmarks": {
+      "get": {
+        "operationId": "listNotebookBookmarks",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "game_id",
+            "required": false,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "tag",
+            "required": false,
+            "schema": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "items": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "active": {
+                            "title": "Active",
+                            "type": "boolean"
+                          },
+                          "archived": {
+                            "title": "Archived",
+                            "type": "boolean"
+                          },
+                          "black": {
+                            "title": "Black",
+                            "type": "string"
+                          },
+                          "created_at": {
+                            "format": "date-time",
+                            "title": "Created At",
+                            "type": "string"
+                          },
+                          "date": {
+                            "title": "Date",
+                            "type": "string"
+                          },
+                          "fen": {
+                            "title": "Fen",
+                            "type": "string"
+                          },
+                          "game_id": {
+                            "format": "uuid",
+                            "title": "Game Id",
+                            "type": "string"
+                          },
+                          "id": {
+                            "format": "uuid",
+                            "title": "Id",
+                            "type": "string"
+                          },
+                          "is_mainline": {
+                            "title": "Is Mainline",
+                            "type": "boolean"
+                          },
+                          "matches": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "field": {
+                                  "enum": [
+                                    "title",
+                                    "tag",
+                                    "note",
+                                    "move_note"
+                                  ],
+                                  "title": "Field",
+                                  "type": "string"
+                                },
+                                "text": {
+                                  "title": "Text",
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "field",
+                                "text"
+                              ],
+                              "title": "NotebookMatch",
+                              "type": "object"
+                            },
+                            "title": "Matches",
+                            "type": "array"
+                          },
+                          "node_id": {
+                            "format": "uuid",
+                            "title": "Node Id",
+                            "type": "string"
+                          },
+                          "note": {
+                            "title": "Note",
+                            "type": "string"
+                          },
+                          "ply": {
+                            "title": "Ply",
+                            "type": "integer"
+                          },
+                          "related_moves": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "node_id": {
+                                  "format": "uuid",
+                                  "title": "Node Id",
+                                  "type": "string"
+                                },
+                                "note": {
+                                  "title": "Note",
+                                  "type": "string"
+                                },
+                                "san": {
+                                  "title": "San",
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "node_id",
+                                "san",
+                                "note"
+                              ],
+                              "title": "NotebookRelatedMove",
+                              "type": "object"
+                            },
+                            "title": "Related Moves",
+                            "type": "array"
+                          },
+                          "san": {
+                            "nullable": true,
+                            "title": "San",
+                            "type": "string"
+                          },
+                          "tags": {
+                            "items": {
+                              "type": "string"
+                            },
+                            "title": "Tags",
+                            "type": "array"
+                          },
+                          "title": {
+                            "title": "Title",
+                            "type": "string"
+                          },
+                          "version": {
+                            "title": "Version",
+                            "type": "integer"
+                          },
+                          "white": {
+                            "title": "White",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "game_id",
+                          "node_id",
+                          "white",
+                          "black",
+                          "date",
+                          "fen",
+                          "ply",
+                          "san",
+                          "is_mainline",
+                          "archived",
+                          "id",
+                          "title",
+                          "note",
+                          "tags",
+                          "active",
+                          "version",
+                          "created_at",
+                          "related_moves",
+                          "matches"
+                        ],
+                        "title": "NotebookBookmark",
+                        "type": "object"
+                      },
+                      "title": "Items",
+                      "type": "array"
+                    },
+                    "total": {
+                      "title": "Total",
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "total"
+                  ],
+                  "title": "NotebookBookmarkList",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Default Response"
+          }
+        },
+        "summary": "Search",
+        "tags": [
+          "notebook"
+        ]
+      },
+      "post": {
+        "operationId": "starNotebookPosition",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "node_id": {
+                    "format": "uuid",
+                    "title": "Node Id",
+                    "type": "string"
+                  },
+                  "related_node_id": {
+                    "default": null,
+                    "format": "uuid",
+                    "nullable": true,
+                    "title": "Related Node Id",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "node_id"
+                ],
+                "title": "NotebookBookmarkCreate",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "active": {
+                      "title": "Active",
+                      "type": "boolean"
+                    },
+                    "archived": {
+                      "title": "Archived",
+                      "type": "boolean"
+                    },
+                    "black": {
+                      "title": "Black",
+                      "type": "string"
+                    },
+                    "created_at": {
+                      "format": "date-time",
+                      "title": "Created At",
+                      "type": "string"
+                    },
+                    "date": {
+                      "title": "Date",
+                      "type": "string"
+                    },
+                    "fen": {
+                      "title": "Fen",
+                      "type": "string"
+                    },
+                    "game_id": {
+                      "format": "uuid",
+                      "title": "Game Id",
+                      "type": "string"
+                    },
+                    "id": {
+                      "format": "uuid",
+                      "title": "Id",
+                      "type": "string"
+                    },
+                    "is_mainline": {
+                      "title": "Is Mainline",
+                      "type": "boolean"
+                    },
+                    "matches": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "field": {
+                            "enum": [
+                              "title",
+                              "tag",
+                              "note",
+                              "move_note"
+                            ],
+                            "title": "Field",
+                            "type": "string"
+                          },
+                          "text": {
+                            "title": "Text",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "field",
+                          "text"
+                        ],
+                        "title": "NotebookMatch",
+                        "type": "object"
+                      },
+                      "title": "Matches",
+                      "type": "array"
+                    },
+                    "node_id": {
+                      "format": "uuid",
+                      "title": "Node Id",
+                      "type": "string"
+                    },
+                    "note": {
+                      "title": "Note",
+                      "type": "string"
+                    },
+                    "ply": {
+                      "title": "Ply",
+                      "type": "integer"
+                    },
+                    "related_moves": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "node_id": {
+                            "format": "uuid",
+                            "title": "Node Id",
+                            "type": "string"
+                          },
+                          "note": {
+                            "title": "Note",
+                            "type": "string"
+                          },
+                          "san": {
+                            "title": "San",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "node_id",
+                          "san",
+                          "note"
+                        ],
+                        "title": "NotebookRelatedMove",
+                        "type": "object"
+                      },
+                      "title": "Related Moves",
+                      "type": "array"
+                    },
+                    "san": {
+                      "nullable": true,
+                      "title": "San",
+                      "type": "string"
+                    },
+                    "tags": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "title": "Tags",
+                      "type": "array"
+                    },
+                    "title": {
+                      "title": "Title",
+                      "type": "string"
+                    },
+                    "version": {
+                      "title": "Version",
+                      "type": "integer"
+                    },
+                    "white": {
+                      "title": "White",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "game_id",
+                    "node_id",
+                    "white",
+                    "black",
+                    "date",
+                    "fen",
+                    "ply",
+                    "san",
+                    "is_mainline",
+                    "archived",
+                    "id",
+                    "title",
+                    "note",
+                    "tags",
+                    "active",
+                    "version",
+                    "created_at",
+                    "related_moves",
+                    "matches"
+                  ],
+                  "title": "NotebookBookmark",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Default Response"
+          }
+        },
+        "summary": "Star",
+        "tags": [
+          "notebook"
+        ]
+      }
+    },
+    "/api/notebook/bookmarks/{bookmark_id}": {
+      "delete": {
+        "operationId": "deleteNotebookBookmark",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "expected_version",
+            "required": true,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "bookmark_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Permanently removed"
+          }
+        },
+        "summary": "Remove",
+        "tags": [
+          "notebook"
+        ]
+      },
+      "get": {
+        "operationId": "getNotebookBookmark",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "bookmark_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "active": {
+                      "title": "Active",
+                      "type": "boolean"
+                    },
+                    "archived": {
+                      "title": "Archived",
+                      "type": "boolean"
+                    },
+                    "black": {
+                      "title": "Black",
+                      "type": "string"
+                    },
+                    "created_at": {
+                      "format": "date-time",
+                      "title": "Created At",
+                      "type": "string"
+                    },
+                    "date": {
+                      "title": "Date",
+                      "type": "string"
+                    },
+                    "fen": {
+                      "title": "Fen",
+                      "type": "string"
+                    },
+                    "game_id": {
+                      "format": "uuid",
+                      "title": "Game Id",
+                      "type": "string"
+                    },
+                    "id": {
+                      "format": "uuid",
+                      "title": "Id",
+                      "type": "string"
+                    },
+                    "is_mainline": {
+                      "title": "Is Mainline",
+                      "type": "boolean"
+                    },
+                    "matches": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "field": {
+                            "enum": [
+                              "title",
+                              "tag",
+                              "note",
+                              "move_note"
+                            ],
+                            "title": "Field",
+                            "type": "string"
+                          },
+                          "text": {
+                            "title": "Text",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "field",
+                          "text"
+                        ],
+                        "title": "NotebookMatch",
+                        "type": "object"
+                      },
+                      "title": "Matches",
+                      "type": "array"
+                    },
+                    "node_id": {
+                      "format": "uuid",
+                      "title": "Node Id",
+                      "type": "string"
+                    },
+                    "note": {
+                      "title": "Note",
+                      "type": "string"
+                    },
+                    "ply": {
+                      "title": "Ply",
+                      "type": "integer"
+                    },
+                    "related_moves": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "node_id": {
+                            "format": "uuid",
+                            "title": "Node Id",
+                            "type": "string"
+                          },
+                          "note": {
+                            "title": "Note",
+                            "type": "string"
+                          },
+                          "san": {
+                            "title": "San",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "node_id",
+                          "san",
+                          "note"
+                        ],
+                        "title": "NotebookRelatedMove",
+                        "type": "object"
+                      },
+                      "title": "Related Moves",
+                      "type": "array"
+                    },
+                    "san": {
+                      "nullable": true,
+                      "title": "San",
+                      "type": "string"
+                    },
+                    "tags": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "title": "Tags",
+                      "type": "array"
+                    },
+                    "title": {
+                      "title": "Title",
+                      "type": "string"
+                    },
+                    "version": {
+                      "title": "Version",
+                      "type": "integer"
+                    },
+                    "white": {
+                      "title": "White",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "game_id",
+                    "node_id",
+                    "white",
+                    "black",
+                    "date",
+                    "fen",
+                    "ply",
+                    "san",
+                    "is_mainline",
+                    "archived",
+                    "id",
+                    "title",
+                    "note",
+                    "tags",
+                    "active",
+                    "version",
+                    "created_at",
+                    "related_moves",
+                    "matches"
+                  ],
+                  "title": "NotebookBookmark",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Default Response"
+          }
+        },
+        "summary": "Read",
+        "tags": [
+          "notebook"
+        ]
+      },
+      "patch": {
+        "operationId": "updateNotebookBookmark",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "bookmark_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "active": {
+                    "default": null,
+                    "nullable": true,
+                    "title": "Active",
+                    "type": "boolean"
+                  },
+                  "expected_version": {
+                    "minimum": 1,
+                    "title": "Expected Version",
+                    "type": "integer"
+                  },
+                  "note": {
+                    "default": null,
+                    "maxLength": 100000,
+                    "nullable": true,
+                    "title": "Note",
+                    "type": "string"
+                  },
+                  "tags": {
+                    "default": null,
+                    "items": {
+                      "maxLength": 80,
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "maxItems": 64,
+                    "nullable": true,
+                    "title": "Tags",
+                    "type": "array"
+                  },
+                  "title": {
+                    "default": null,
+                    "maxLength": 200,
+                    "nullable": true,
+                    "title": "Title",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "expected_version"
+                ],
+                "title": "NotebookBookmarkUpdate",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "active": {
+                      "title": "Active",
+                      "type": "boolean"
+                    },
+                    "archived": {
+                      "title": "Archived",
+                      "type": "boolean"
+                    },
+                    "black": {
+                      "title": "Black",
+                      "type": "string"
+                    },
+                    "created_at": {
+                      "format": "date-time",
+                      "title": "Created At",
+                      "type": "string"
+                    },
+                    "date": {
+                      "title": "Date",
+                      "type": "string"
+                    },
+                    "fen": {
+                      "title": "Fen",
+                      "type": "string"
+                    },
+                    "game_id": {
+                      "format": "uuid",
+                      "title": "Game Id",
+                      "type": "string"
+                    },
+                    "id": {
+                      "format": "uuid",
+                      "title": "Id",
+                      "type": "string"
+                    },
+                    "is_mainline": {
+                      "title": "Is Mainline",
+                      "type": "boolean"
+                    },
+                    "matches": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "field": {
+                            "enum": [
+                              "title",
+                              "tag",
+                              "note",
+                              "move_note"
+                            ],
+                            "title": "Field",
+                            "type": "string"
+                          },
+                          "text": {
+                            "title": "Text",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "field",
+                          "text"
+                        ],
+                        "title": "NotebookMatch",
+                        "type": "object"
+                      },
+                      "title": "Matches",
+                      "type": "array"
+                    },
+                    "node_id": {
+                      "format": "uuid",
+                      "title": "Node Id",
+                      "type": "string"
+                    },
+                    "note": {
+                      "title": "Note",
+                      "type": "string"
+                    },
+                    "ply": {
+                      "title": "Ply",
+                      "type": "integer"
+                    },
+                    "related_moves": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "node_id": {
+                            "format": "uuid",
+                            "title": "Node Id",
+                            "type": "string"
+                          },
+                          "note": {
+                            "title": "Note",
+                            "type": "string"
+                          },
+                          "san": {
+                            "title": "San",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "node_id",
+                          "san",
+                          "note"
+                        ],
+                        "title": "NotebookRelatedMove",
+                        "type": "object"
+                      },
+                      "title": "Related Moves",
+                      "type": "array"
+                    },
+                    "san": {
+                      "nullable": true,
+                      "title": "San",
+                      "type": "string"
+                    },
+                    "tags": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "title": "Tags",
+                      "type": "array"
+                    },
+                    "title": {
+                      "title": "Title",
+                      "type": "string"
+                    },
+                    "version": {
+                      "title": "Version",
+                      "type": "integer"
+                    },
+                    "white": {
+                      "title": "White",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "game_id",
+                    "node_id",
+                    "white",
+                    "black",
+                    "date",
+                    "fen",
+                    "ply",
+                    "san",
+                    "is_mainline",
+                    "archived",
+                    "id",
+                    "title",
+                    "note",
+                    "tags",
+                    "active",
+                    "version",
+                    "created_at",
+                    "related_moves",
+                    "matches"
+                  ],
+                  "title": "NotebookBookmark",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Default Response"
+          }
+        },
+        "summary": "Edit",
+        "tags": [
+          "notebook"
+        ]
+      }
+    },
+    "/api/notebook/bookmarks/{bookmark_id}/occurrences": {
+      "get": {
+        "operationId": "findOtherNotebookOccurrences",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "include_variations",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "path",
+            "name": "bookmark_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "items": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "archived": {
+                            "title": "Archived",
+                            "type": "boolean"
+                          },
+                          "black": {
+                            "title": "Black",
+                            "type": "string"
+                          },
+                          "date": {
+                            "title": "Date",
+                            "type": "string"
+                          },
+                          "fen": {
+                            "title": "Fen",
+                            "type": "string"
+                          },
+                          "game_id": {
+                            "format": "uuid",
+                            "title": "Game Id",
+                            "type": "string"
+                          },
+                          "is_mainline": {
+                            "title": "Is Mainline",
+                            "type": "boolean"
+                          },
+                          "node_id": {
+                            "format": "uuid",
+                            "title": "Node Id",
+                            "type": "string"
+                          },
+                          "ply": {
+                            "title": "Ply",
+                            "type": "integer"
+                          },
+                          "san": {
+                            "nullable": true,
+                            "title": "San",
+                            "type": "string"
+                          },
+                          "white": {
+                            "title": "White",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "game_id",
+                          "node_id",
+                          "white",
+                          "black",
+                          "date",
+                          "fen",
+                          "ply",
+                          "san",
+                          "is_mainline",
+                          "archived"
+                        ],
+                        "title": "NotebookOccurrence",
+                        "type": "object"
+                      },
+                      "title": "Items",
+                      "type": "array"
+                    },
+                    "total": {
+                      "title": "Total",
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "total"
+                  ],
+                  "title": "NotebookOccurrenceList",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Default Response"
+          }
+        },
+        "summary": "Occurrences",
+        "tags": [
+          "notebook"
+        ]
+      }
+    },
+    "/api/notebook/bookmarks/{bookmark_id}/practice": {
+      "delete": {
+        "operationId": "deleteBookmarkPractice",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "bookmark_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "expected_version": {
+                    "minimum": 1,
+                    "title": "Expected Version",
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "expected_version"
+                ],
+                "title": "PracticeRemove",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Exercise removed"
+          }
+        },
+        "summary": "Remove Practice",
+        "tags": [
+          "notebook"
+        ]
+      },
+      "get": {
+        "operationId": "getBookmarkPractice",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "bookmark_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "lines": {
+                      "items": {
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array"
+                      },
+                      "title": "Lines",
+                      "type": "array"
+                    },
+                    "prompt": {
+                      "title": "Prompt",
+                      "type": "string"
+                    },
+                    "version": {
+                      "title": "Version",
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "version",
+                    "prompt",
+                    "lines"
+                  ],
+                  "title": "PracticeRead",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Default Response"
+          }
+        },
+        "summary": "Get Practice",
+        "tags": [
+          "notebook"
+        ]
+      },
+      "put": {
+        "operationId": "saveBookmarkPractice",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "bookmark_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "expected_version": {
+                    "minimum": 0,
+                    "title": "Expected Version",
+                    "type": "integer"
+                  },
+                  "lines": {
+                    "items": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "maxItems": 128,
+                      "minItems": 1,
+                      "type": "array"
+                    },
+                    "maxItems": 32,
+                    "minItems": 1,
+                    "title": "Lines",
+                    "type": "array"
+                  },
+                  "prompt": {
+                    "maxLength": 4000,
+                    "title": "Prompt",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "expected_version",
+                  "prompt",
+                  "lines"
+                ],
+                "title": "PracticeEdit",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "lines": {
+                      "items": {
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array"
+                      },
+                      "title": "Lines",
+                      "type": "array"
+                    },
+                    "prompt": {
+                      "title": "Prompt",
+                      "type": "string"
+                    },
+                    "version": {
+                      "title": "Version",
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "version",
+                    "prompt",
+                    "lines"
+                  ],
+                  "title": "PracticeRead",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Default Response"
+          }
+        },
+        "summary": "Put Practice",
+        "tags": [
+          "notebook"
+        ]
+      }
+    },
+    "/api/notebook/game-catalog": {
+      "get": {
+        "operationId": "searchNotebookGames",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "archived",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "items": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "archived_at": {
+                            "format": "date-time",
+                            "nullable": true,
+                            "title": "Archived At",
+                            "type": "string"
+                          },
+                          "black": {
+                            "title": "Black",
+                            "type": "string"
+                          },
+                          "created_at": {
+                            "format": "date-time",
+                            "title": "Created At",
+                            "type": "string"
+                          },
+                          "date": {
+                            "title": "Date",
+                            "type": "string"
+                          },
+                          "id": {
+                            "format": "uuid",
+                            "title": "Id",
+                            "type": "string"
+                          },
+                          "platform": {
+                            "nullable": true,
+                            "title": "Platform",
+                            "type": "string"
+                          },
+                          "result": {
+                            "title": "Result",
+                            "type": "string"
+                          },
+                          "source_url": {
+                            "nullable": true,
+                            "title": "Source Url",
+                            "type": "string"
+                          },
+                          "summary": {
+                            "title": "Summary",
+                            "type": "string"
+                          },
+                          "version": {
+                            "title": "Version",
+                            "type": "integer"
+                          },
+                          "white": {
+                            "title": "White",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "white",
+                          "black",
+                          "date",
+                          "result",
+                          "platform",
+                          "source_url",
+                          "summary",
+                          "archived_at",
+                          "created_at",
+                          "version"
+                        ],
+                        "title": "NotebookGame",
+                        "type": "object"
+                      },
+                      "title": "Items",
+                      "type": "array"
+                    },
+                    "total": {
+                      "title": "Total",
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "total"
+                  ],
+                  "title": "NotebookGameCatalog",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Default Response"
+          }
+        },
+        "summary": "Search Notebook Games",
+        "tags": [
+          "personal_games"
+        ]
+      }
+    },
+    "/api/notebook/games": {
+      "get": {
+        "operationId": "listNotebookGames",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "archived",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "archived_at": {
+                        "format": "date-time",
+                        "nullable": true,
+                        "title": "Archived At",
+                        "type": "string"
+                      },
+                      "black": {
+                        "title": "Black",
+                        "type": "string"
+                      },
+                      "created_at": {
+                        "format": "date-time",
+                        "title": "Created At",
+                        "type": "string"
+                      },
+                      "date": {
+                        "title": "Date",
+                        "type": "string"
+                      },
+                      "id": {
+                        "format": "uuid",
+                        "title": "Id",
+                        "type": "string"
+                      },
+                      "platform": {
+                        "nullable": true,
+                        "title": "Platform",
+                        "type": "string"
+                      },
+                      "result": {
+                        "title": "Result",
+                        "type": "string"
+                      },
+                      "source_url": {
+                        "nullable": true,
+                        "title": "Source Url",
+                        "type": "string"
+                      },
+                      "summary": {
+                        "title": "Summary",
+                        "type": "string"
+                      },
+                      "version": {
+                        "title": "Version",
+                        "type": "integer"
+                      },
+                      "white": {
+                        "title": "White",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "white",
+                      "black",
+                      "date",
+                      "result",
+                      "platform",
+                      "source_url",
+                      "summary",
+                      "archived_at",
+                      "created_at",
+                      "version"
+                    ],
+                    "title": "NotebookGame",
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Default Response"
+          }
+        },
+        "summary": "List Notebook Games",
+        "tags": [
+          "personal_games"
+        ]
+      }
+    },
+    "/api/notebook/games/{game_id}": {
+      "delete": {
+        "operationId": "deleteNotebookGame",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "expected_version",
+            "required": true,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "game_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Archived game removed"
+          }
+        },
+        "summary": "Delete Notebook Game",
+        "tags": [
+          "personal_games"
+        ]
+      },
+      "get": {
+        "operationId": "getNotebookGame",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "game_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "archived_at": {
+                      "format": "date-time",
+                      "nullable": true,
+                      "title": "Archived At",
+                      "type": "string"
+                    },
+                    "black": {
+                      "title": "Black",
+                      "type": "string"
+                    },
+                    "created_at": {
+                      "format": "date-time",
+                      "title": "Created At",
+                      "type": "string"
+                    },
+                    "date": {
+                      "title": "Date",
+                      "type": "string"
+                    },
+                    "headers": {
+                      "additionalProperties": {
+                        "type": "string"
+                      },
+                      "title": "Headers",
+                      "type": "object"
+                    },
+                    "id": {
+                      "format": "uuid",
+                      "title": "Id",
+                      "type": "string"
+                    },
+                    "nodes": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "comment": {
+                            "title": "Comment",
+                            "type": "string"
+                          },
+                          "fen": {
+                            "title": "Fen",
+                            "type": "string"
+                          },
+                          "id": {
+                            "format": "uuid",
+                            "title": "Id",
+                            "type": "string"
+                          },
+                          "is_mainline": {
+                            "title": "Is Mainline",
+                            "type": "boolean"
+                          },
+                          "nags": {
+                            "items": {
+                              "type": "integer"
+                            },
+                            "title": "Nags",
+                            "type": "array"
+                          },
+                          "note": {
+                            "title": "Note",
+                            "type": "string"
+                          },
+                          "parent_id": {
+                            "format": "uuid",
+                            "nullable": true,
+                            "title": "Parent Id",
+                            "type": "string"
+                          },
+                          "ply": {
+                            "title": "Ply",
+                            "type": "integer"
+                          },
+                          "san": {
+                            "nullable": true,
+                            "title": "San",
+                            "type": "string"
+                          },
+                          "sort_order": {
+                            "title": "Sort Order",
+                            "type": "integer"
+                          },
+                          "starting_comment": {
+                            "title": "Starting Comment",
+                            "type": "string"
+                          },
+                          "uci": {
+                            "nullable": true,
+                            "title": "Uci",
+                            "type": "string"
+                          },
+                          "version": {
+                            "title": "Version",
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "parent_id",
+                          "ply",
+                          "sort_order",
+                          "is_mainline",
+                          "fen",
+                          "san",
+                          "uci",
+                          "nags",
+                          "starting_comment",
+                          "comment",
+                          "note",
+                          "version"
+                        ],
+                        "title": "NotebookNode",
+                        "type": "object"
+                      },
+                      "title": "Nodes",
+                      "type": "array"
+                    },
+                    "platform": {
+                      "nullable": true,
+                      "title": "Platform",
+                      "type": "string"
+                    },
+                    "result": {
+                      "title": "Result",
+                      "type": "string"
+                    },
+                    "source_url": {
+                      "nullable": true,
+                      "title": "Source Url",
+                      "type": "string"
+                    },
+                    "summary": {
+                      "title": "Summary",
+                      "type": "string"
+                    },
+                    "version": {
+                      "title": "Version",
+                      "type": "integer"
+                    },
+                    "white": {
+                      "title": "White",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "white",
+                    "black",
+                    "date",
+                    "result",
+                    "platform",
+                    "source_url",
+                    "summary",
+                    "archived_at",
+                    "created_at",
+                    "version",
+                    "headers",
+                    "nodes"
+                  ],
+                  "title": "NotebookGameDetail",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Default Response"
+          }
+        },
+        "summary": "Get Notebook Game",
+        "tags": [
+          "personal_games"
+        ]
+      },
+      "patch": {
+        "operationId": "updateNotebookGame",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "game_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "archived": {
+                    "default": null,
+                    "nullable": true,
+                    "title": "Archived",
+                    "type": "boolean"
+                  },
+                  "expected_version": {
+                    "minimum": 1,
+                    "title": "Expected Version",
+                    "type": "integer"
+                  },
+                  "summary": {
+                    "default": null,
+                    "maxLength": 100000,
+                    "nullable": true,
+                    "title": "Summary",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "expected_version"
+                ],
+                "title": "NotebookGameUpdate",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "archived_at": {
+                      "format": "date-time",
+                      "nullable": true,
+                      "title": "Archived At",
+                      "type": "string"
+                    },
+                    "black": {
+                      "title": "Black",
+                      "type": "string"
+                    },
+                    "created_at": {
+                      "format": "date-time",
+                      "title": "Created At",
+                      "type": "string"
+                    },
+                    "date": {
+                      "title": "Date",
+                      "type": "string"
+                    },
+                    "id": {
+                      "format": "uuid",
+                      "title": "Id",
+                      "type": "string"
+                    },
+                    "platform": {
+                      "nullable": true,
+                      "title": "Platform",
+                      "type": "string"
+                    },
+                    "result": {
+                      "title": "Result",
+                      "type": "string"
+                    },
+                    "source_url": {
+                      "nullable": true,
+                      "title": "Source Url",
+                      "type": "string"
+                    },
+                    "summary": {
+                      "title": "Summary",
+                      "type": "string"
+                    },
+                    "version": {
+                      "title": "Version",
+                      "type": "integer"
+                    },
+                    "white": {
+                      "title": "White",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "white",
+                    "black",
+                    "date",
+                    "result",
+                    "platform",
+                    "source_url",
+                    "summary",
+                    "archived_at",
+                    "created_at",
+                    "version"
+                  ],
+                  "title": "NotebookGame",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Default Response"
+          }
+        },
+        "summary": "Update Notebook Game",
+        "tags": [
+          "personal_games"
+        ]
+      }
+    },
+    "/api/notebook/games/{game_id}/nodes/{node_id}": {
+      "patch": {
+        "operationId": "updateNotebookNode",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "game_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "node_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "expected_version": {
+                    "minimum": 1,
+                    "title": "Expected Version",
+                    "type": "integer"
+                  },
+                  "note": {
+                    "maxLength": 100000,
+                    "title": "Note",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "expected_version",
+                  "note"
+                ],
+                "title": "NotebookNodeUpdate",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "comment": {
+                      "title": "Comment",
+                      "type": "string"
+                    },
+                    "fen": {
+                      "title": "Fen",
+                      "type": "string"
+                    },
+                    "id": {
+                      "format": "uuid",
+                      "title": "Id",
+                      "type": "string"
+                    },
+                    "is_mainline": {
+                      "title": "Is Mainline",
+                      "type": "boolean"
+                    },
+                    "nags": {
+                      "items": {
+                        "type": "integer"
+                      },
+                      "title": "Nags",
+                      "type": "array"
+                    },
+                    "note": {
+                      "title": "Note",
+                      "type": "string"
+                    },
+                    "parent_id": {
+                      "format": "uuid",
+                      "nullable": true,
+                      "title": "Parent Id",
+                      "type": "string"
+                    },
+                    "ply": {
+                      "title": "Ply",
+                      "type": "integer"
+                    },
+                    "san": {
+                      "nullable": true,
+                      "title": "San",
+                      "type": "string"
+                    },
+                    "sort_order": {
+                      "title": "Sort Order",
+                      "type": "integer"
+                    },
+                    "starting_comment": {
+                      "title": "Starting Comment",
+                      "type": "string"
+                    },
+                    "uci": {
+                      "nullable": true,
+                      "title": "Uci",
+                      "type": "string"
+                    },
+                    "version": {
+                      "title": "Version",
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "parent_id",
+                    "ply",
+                    "sort_order",
+                    "is_mainline",
+                    "fen",
+                    "san",
+                    "uci",
+                    "nags",
+                    "starting_comment",
+                    "comment",
+                    "note",
+                    "version"
+                  ],
+                  "title": "NotebookNode",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Default Response"
+          }
+        },
+        "summary": "Update Notebook Node",
+        "tags": [
+          "personal_games"
+        ]
+      }
+    },
+    "/api/notebook/games/{game_id}/pgn": {
+      "get": {
+        "operationId": "getNotebookGamePgn",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "game_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/x-chess-pgn": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Default Response"
+          }
+        },
+        "summary": "Get Notebook Game Pgn",
+        "tags": [
+          "personal_games"
+        ]
+      }
+    },
+    "/api/notebook/imports": {
+      "post": {
+        "operationId": "importNotebookGames",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "pgn": {
+                    "title": "Pgn",
+                    "type": "string"
+                  },
+                  "request_id": {
+                    "default": null,
+                    "format": "uuid",
+                    "nullable": true,
+                    "title": "Request Id",
+                    "type": "string"
+                  },
+                  "selections": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "action": {
+                          "default": "save",
+                          "enum": [
+                            "save",
+                            "open",
+                            "copy"
+                          ],
+                          "title": "Action",
+                          "type": "string"
+                        },
+                        "existing_id": {
+                          "default": null,
+                          "format": "uuid",
+                          "nullable": true,
+                          "title": "Existing Id",
+                          "type": "string"
+                        },
+                        "index": {
+                          "minimum": 0,
+                          "title": "Index",
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "index"
+                      ],
+                      "title": "NotebookSelection",
+                      "type": "object"
+                    },
+                    "maxItems": 1000,
+                    "minItems": 1,
+                    "title": "Selections",
+                    "type": "array"
+                  },
+                  "source_url": {
+                    "default": null,
+                    "maxLength": 2048,
+                    "nullable": true,
+                    "title": "Source Url",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "pgn",
+                  "selections"
+                ],
+                "title": "NotebookImportRequest",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "games": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "created": {
+                            "title": "Created",
+                            "type": "boolean"
+                          },
+                          "id": {
+                            "format": "uuid",
+                            "title": "Id",
+                            "type": "string"
+                          },
+                          "index": {
+                            "title": "Index",
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "index",
+                          "created"
+                        ],
+                        "title": "NotebookImportItem",
+                        "type": "object"
+                      },
+                      "title": "Games",
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "games"
+                  ],
+                  "title": "NotebookImportResult",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Default Response"
+          }
+        },
+        "summary": "Import Notebook Games",
+        "tags": [
+          "personal_games"
+        ]
+      }
+    },
+    "/api/notebook/imports/preview": {
+      "post": {
+        "operationId": "previewNotebookGames",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "month": {
+                    "default": null,
+                    "nullable": true,
+                    "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])$",
+                    "title": "Month",
+                    "type": "string"
+                  },
+                  "pgn": {
+                    "default": null,
+                    "nullable": true,
+                    "title": "Pgn",
+                    "type": "string"
+                  },
+                  "url": {
+                    "default": null,
+                    "maxLength": 2048,
+                    "nullable": true,
+                    "title": "Url",
+                    "type": "string"
+                  },
+                  "username": {
+                    "default": null,
+                    "maxLength": 80,
+                    "nullable": true,
+                    "title": "Username",
+                    "type": "string"
+                  }
+                },
+                "title": "NotebookPreviewRequest",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "duplicate_games": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "archived_at": {
+                            "format": "date-time",
+                            "nullable": true,
+                            "title": "Archived At",
+                            "type": "string"
+                          },
+                          "black": {
+                            "title": "Black",
+                            "type": "string"
+                          },
+                          "created_at": {
+                            "format": "date-time",
+                            "title": "Created At",
+                            "type": "string"
+                          },
+                          "date": {
+                            "title": "Date",
+                            "type": "string"
+                          },
+                          "id": {
+                            "format": "uuid",
+                            "title": "Id",
+                            "type": "string"
+                          },
+                          "platform": {
+                            "nullable": true,
+                            "title": "Platform",
+                            "type": "string"
+                          },
+                          "result": {
+                            "title": "Result",
+                            "type": "string"
+                          },
+                          "source_url": {
+                            "nullable": true,
+                            "title": "Source Url",
+                            "type": "string"
+                          },
+                          "summary": {
+                            "title": "Summary",
+                            "type": "string"
+                          },
+                          "version": {
+                            "title": "Version",
+                            "type": "integer"
+                          },
+                          "white": {
+                            "title": "White",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "white",
+                          "black",
+                          "date",
+                          "result",
+                          "platform",
+                          "source_url",
+                          "summary",
+                          "archived_at",
+                          "created_at",
+                          "version"
+                        ],
+                        "title": "NotebookGame",
+                        "type": "object"
+                      },
+                      "title": "Duplicate Games",
+                      "type": "array"
+                    },
+                    "games": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "black": {
+                            "title": "Black",
+                            "type": "string"
+                          },
+                          "date": {
+                            "title": "Date",
+                            "type": "string"
+                          },
+                          "existing_id": {
+                            "format": "uuid",
+                            "nullable": true,
+                            "title": "Existing Id",
+                            "type": "string"
+                          },
+                          "index": {
+                            "title": "Index",
+                            "type": "integer"
+                          },
+                          "platform": {
+                            "nullable": true,
+                            "title": "Platform",
+                            "type": "string"
+                          },
+                          "possible_duplicates": {
+                            "items": {
+                              "format": "uuid",
+                              "type": "string"
+                            },
+                            "title": "Possible Duplicates",
+                            "type": "array"
+                          },
+                          "result": {
+                            "title": "Result",
+                            "type": "string"
+                          },
+                          "source_url": {
+                            "nullable": true,
+                            "title": "Source Url",
+                            "type": "string"
+                          },
+                          "white": {
+                            "title": "White",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "index",
+                          "white",
+                          "black",
+                          "date",
+                          "result",
+                          "platform",
+                          "source_url",
+                          "existing_id",
+                          "possible_duplicates"
+                        ],
+                        "title": "NotebookCandidate",
+                        "type": "object"
+                      },
+                      "title": "Games",
+                      "type": "array"
+                    },
+                    "pgn": {
+                      "title": "Pgn",
+                      "type": "string"
+                    },
+                    "source_url": {
+                      "nullable": true,
+                      "title": "Source Url",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "duplicate_games",
+                    "source_url",
+                    "pgn",
+                    "games"
+                  ],
+                  "title": "NotebookImportPreview",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Default Response"
+          }
+        },
+        "summary": "Preview Notebook Games",
+        "tags": [
+          "personal_games"
         ]
       }
     },
@@ -12360,6 +15343,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -12421,6 +15405,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -12482,6 +15467,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -12679,6 +15665,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -12923,6 +15910,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -12984,6 +15972,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -13045,6 +16034,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -13203,6 +16193,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -13264,6 +16255,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -13325,6 +16317,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -13759,6 +16752,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -13820,6 +16814,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -13881,6 +16876,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -13942,6 +16938,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -14120,6 +17117,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -14223,6 +17221,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -15447,6 +18446,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -15508,6 +18508,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -15569,6 +18570,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -16011,6 +19013,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -17209,6 +20212,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -17270,6 +20274,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -17331,6 +20336,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -17795,6 +20801,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -17856,6 +20863,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -18267,6 +21275,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -19038,6 +22047,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -19099,6 +22109,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -19160,6 +22171,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -19251,6 +22263,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -19639,6 +22652,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -23416,6 +26430,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -23477,6 +26492,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -23538,6 +26554,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -23641,6 +26658,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -23702,6 +26720,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -23763,6 +26782,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -24163,6 +27183,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -24266,6 +27287,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -24737,6 +27759,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -24798,6 +27821,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -24859,6 +27883,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -25121,6 +28146,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -25182,6 +28208,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -29876,6 +32903,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -29937,6 +32965,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -29998,6 +33027,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -30059,6 +33089,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -33836,6 +36867,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -33897,6 +36929,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -33958,6 +36991,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -34465,6 +37499,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -34526,6 +37561,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -34587,6 +37623,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -34648,6 +37685,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -34881,6 +37919,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -34942,6 +37981,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -35003,6 +38043,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -37236,6 +40277,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -37297,6 +40339,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -37358,6 +40401,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -37844,6 +40888,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -37905,6 +40950,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -37966,6 +41012,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -38027,6 +41074,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -38088,6 +41136,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -38292,6 +41341,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -38385,6 +41435,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -38446,6 +41497,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -38682,6 +41734,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -38836,6 +41889,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -39047,6 +42101,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -39108,6 +42163,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -39169,6 +42225,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -39345,6 +42402,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -39539,6 +42597,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -39600,6 +42659,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -39661,6 +42721,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -40196,6 +43257,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -40257,6 +43319,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -40318,6 +43381,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -40656,6 +43720,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -41200,6 +44265,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -41261,6 +44327,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -41322,6 +44389,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -41540,6 +44608,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -41601,6 +44670,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -41662,6 +44732,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -41842,6 +44913,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -42078,6 +45150,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -42139,6 +45212,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -42200,6 +45274,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -42379,6 +45454,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -42440,6 +45516,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -42781,6 +45858,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -42842,6 +45920,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -43034,6 +46113,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -43256,6 +46336,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -43317,6 +46398,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -43499,6 +46581,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -43746,6 +46829,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -43807,6 +46891,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -43868,6 +46953,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -44051,6 +47137,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -44112,6 +47199,7 @@
                         "source_storage_unavailable",
                         "engine_unavailable",
                         "engine_failure",
+                        "game_platform_unavailable",
                         "lichess_unconfigured",
                         "lichess_export_limit",
                         "lichess_request_failed",
@@ -44321,7 +47409,13 @@
       "name": "lichess"
     },
     {
+      "name": "notebook"
+    },
+    {
       "name": "pdf"
+    },
+    {
+      "name": "personal_games"
     },
     {
       "name": "pgn"

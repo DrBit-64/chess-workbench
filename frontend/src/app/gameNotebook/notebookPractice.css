@@ -1,0 +1,85 @@
+.nb-practice {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: clamp(12px, 2vw, 28px);
+  overflow-wrap: anywhere;
+}
+.nb-practice > header,
+.nb-practice-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.nb-practice > header h1 {
+  margin: 0 auto 0 0;
+  font-size: 1.45rem;
+  font-weight: 650;
+}
+.nb-practice > header > button,
+.nb-practice .ant-btn {
+  min-height: 42px;
+  height: auto;
+  white-space: normal;
+}
+.nb-practice > header > button {
+  min-width: 44px;
+}
+.nb-practice-origin {
+  margin: 12px 0;
+}
+.nb-practice-origin a {
+  display: inline-block;
+}
+.nb-practice a {
+  color: #245d46;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.nb-practice-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  align-items: start;
+  gap: clamp(12px, 3vw, 36px);
+}
+.nb-practice-board {
+  min-width: 0;
+  width: 100%;
+  max-width: min(590px, 78svh);
+  margin-inline: auto;
+}
+.nb-practice-panel {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+  border: 1px solid #ddd9cf;
+  border-radius: 8px;
+  background: white;
+  padding: clamp(12px, 2vw, 24px);
+}
+.nb-practice-panel h2 {
+  font-weight: 650;
+  font-size: 1.15rem;
+  line-height: 1.45;
+}
+.nb-practice-panel label {
+  display: grid;
+  gap: 5px;
+}
+.nb-practice-panel li {
+  margin-inline-start: 1.1rem;
+  list-style: disc;
+}
+@media (max-width: 620px) and (orientation: portrait) {
+  .nb-practice-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (orientation: landscape) and (max-height: 600px) {
+  .nb-practice-grid {
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.3fr);
+  }
+  .nb-practice-board {
+    max-width: min(390px, 80svh);
+  }
+}

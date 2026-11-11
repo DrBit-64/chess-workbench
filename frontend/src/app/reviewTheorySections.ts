@@ -1,6 +1,6 @@
 import type { PdfReviewDocument, PdfSourceEvidence } from '../logic/api/types';
 
-type ReviewItem = PdfReviewDocument['package']['items'][number];
+type ReviewItem = NonNullable<PdfReviewDocument['package']['items']>[number];
 type MoveSequenceItem = Extract<ReviewItem, { kind: 'move_sequence' }>;
 type TheorySection = NonNullable<PdfSourceEvidence['theory_sections']>[number];
 type SourcePoint = { page: number; order: number };
@@ -160,7 +160,9 @@ export function reviewTheorySections(
         ...item,
         nodes: item.nodes.filter((node) => visibleIds.has(node.id)),
         annotations: [],
-        reading_flow: (item.reading_flow ?? []).filter(
+        reading_flow: (
+          ('reading_flow' in item ? item.reading_flow : undefined) ?? []
+        ).filter(
           (entry) => entry.kind === 'move' && visibleIds.has(entry.node_id),
         ),
       });

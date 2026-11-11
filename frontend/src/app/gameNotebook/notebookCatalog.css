@@ -1,0 +1,514 @@
+.nb-catalog,
+.nb-dialog {
+  color: #242924;
+  font-size: 0.95rem;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+.nb-catalog {
+  width: min(100%, 75rem);
+  margin-inline: auto;
+  padding: clamp(0.75rem, 3vw, 2.1rem);
+}
+.nb-catalog *,
+.nb-dialog * {
+  box-sizing: border-box;
+  min-width: 0;
+}
+.nb-catalog h1,
+.nb-catalog h2,
+.nb-dialog h2 {
+  margin: 0;
+  color: #212923;
+  line-height: 1.3;
+}
+.nb-page-head h1 {
+  font-size: clamp(1.55rem, 3vw, 2rem);
+  font-weight: 700;
+}
+.nb-page-head,
+.nb-filters,
+.nb-actions,
+.nb-tags,
+.nb-tabs,
+.nb-input-action,
+.nb-dialog-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.nb-tabs {
+  gap: 1.4rem;
+  border-bottom: 1px solid #d9dfd9;
+  margin-bottom: 1.2rem;
+}
+.nb-tabs a {
+  padding: 0.6rem 0.05rem;
+  border-bottom: 3px solid transparent;
+  color: #555f57;
+  font-weight: 600;
+  text-decoration: none;
+}
+.nb-tabs a.active {
+  border-color: #315c45;
+  color: #244a35;
+}
+.nb-page-head {
+  justify-content: space-between;
+  gap: 0.8rem;
+  margin-bottom: 1.1rem;
+}
+.nb-btn,
+.nb-chip,
+.nb-segment button,
+.nb-details summary {
+  background: white;
+  color: #244a35;
+  border: 1px solid #bdc9c0;
+  border-radius: 6px;
+  cursor: pointer;
+  text-decoration: none;
+  font: inherit;
+  font-weight: 550;
+  line-height: 1.3;
+  padding: 0.48rem 0.72rem;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.nb-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.35rem;
+  text-align: center;
+}
+.nb-btn.primary {
+  background: #315c45;
+  color: #fff;
+  border-color: #315c45;
+}
+.nb-btn.danger {
+  color: #9b2525;
+  border-color: #d5adad;
+}
+.nb-btn:disabled,
+.nb-segment button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.nb-catalog :is(a, button, summary, input, select, textarea):focus-visible,
+.nb-dialog :is(button, summary, input, select, textarea):focus-visible {
+  outline: 3px solid #3877a7;
+  outline-offset: 2px;
+}
+@media (hover: hover) {
+  .nb-btn:hover:not(:disabled),
+  .nb-chip:hover,
+  .nb-details summary:hover {
+    background-color: #edf3ed;
+    color: #173a26;
+  }
+  .nb-btn.primary:hover:not(:disabled) {
+    background: #234831;
+    color: white;
+  }
+  .nb-btn.danger:hover:not(:disabled) {
+    background: #fff0f0;
+    color: #821515;
+  }
+}
+.nb-filters {
+  align-items: end;
+  gap: 0.85rem;
+  margin: 1rem 0;
+}
+.nb-segment {
+  display: inline-flex;
+  max-width: 100%;
+  flex-wrap: wrap;
+  gap: 0.2rem;
+}
+.nb-segment button {
+  min-height: 2.35rem;
+  border-color: #cdd5cd;
+}
+.nb-segment button[aria-pressed='true'],
+.nb-chip.selected {
+  border-color: #829e8b;
+  background: #e4eee6;
+  color: #244a35;
+}
+.nb-field {
+  display: grid;
+  gap: 0.3rem;
+  color: #36473e;
+  font-weight: 600;
+}
+.nb-field :is(input, select, textarea),
+.nb-input-action input {
+  width: 100%;
+  min-height: 2.45rem;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid #b8c3ba;
+  border-radius: 6px;
+  background: #fff;
+  color: #202820;
+  font: inherit;
+  font-weight: 400;
+  line-height: 1.45;
+}
+.nb-field textarea {
+  resize: vertical;
+}
+.nb-field input[type='file'] {
+  overflow: hidden;
+}
+.nb-field input[type='file']::file-selector-button {
+  margin-right: 0.5rem;
+  padding: 0.25rem 0.45rem;
+  border: 0;
+  border-radius: 4px;
+  background: #edf2ed;
+  color: #315c45;
+  cursor: pointer;
+}
+.nb-input-action {
+  flex-wrap: nowrap;
+  align-items: stretch;
+}
+.nb-input-action input {
+  flex: 1;
+}
+.nb-input-action button {
+  flex: none;
+}
+.nb-search-field {
+  flex: 1 1 15rem;
+  max-width: 29rem;
+}
+.nb-empty,
+.nb-notice,
+.nb-error {
+  padding: 0.8rem 1rem;
+  border-radius: 6px;
+  margin-block: 0.75rem;
+}
+.nb-empty {
+  background: #f0f2ed;
+  color: #546056;
+}
+.nb-error {
+  color: #882626;
+  background: #fff1f1;
+}
+.nb-notice {
+  color: #29553a;
+  background: #eaf3eb;
+}
+.nb-muted,
+.nb-meta,
+.nb-result-count {
+  color: #586359;
+}
+.nb-meta {
+  font-size: 0.85rem;
+  line-height: 1.5;
+  margin: 0.22rem 0 0;
+}
+.nb-summary,
+.nb-match p {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin: 0.3rem 0;
+}
+.nb-summary {
+  color: #3f4941;
+}
+.nb-game-list,
+.nb-preview-list,
+.nb-related,
+.nb-positions {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.nb-game-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  padding: 1.05rem 0.2rem;
+  border-bottom: 1px solid #daded8;
+}
+.nb-game-copy {
+  flex: 1 1 19rem;
+}
+.nb-game-title,
+.nb-position h2 a,
+.nb-related a {
+  text-decoration: none;
+  color: #254d38;
+  font-weight: 650;
+}
+.nb-game-title,
+.nb-position h2 {
+  font-size: 1.09rem;
+}
+.nb-game-title:hover,
+.nb-position h2 a:hover,
+.nb-related a:hover {
+  text-decoration: underline;
+}
+.nb-details summary {
+  display: list-item;
+  width: fit-content;
+}
+.nb-details[open] summary {
+  margin-bottom: 0.45rem;
+}
+.nb-tag-filter {
+  max-width: 100%;
+}
+.nb-tag-filter[open] {
+  flex-basis: 100%;
+}
+.nb-details p {
+  margin: 0.45rem 0;
+}
+.nb-details .nb-field {
+  margin-top: 0.65rem;
+}
+.nb-tags {
+  gap: 0.35rem;
+}
+.nb-chip {
+  font-size: 0.83rem;
+  border-radius: 0.35rem;
+  min-height: 1.9rem;
+  padding: 0.3rem 0.52rem;
+}
+.nb-applied {
+  margin-bottom: 0.6rem;
+}
+.nb-result-count {
+  font-size: 0.87rem;
+  margin: 0.7rem 0;
+}
+.nb-positions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 25rem), 1fr));
+  gap: 0.85rem;
+}
+.nb-position {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid #d9dfd9;
+  border-radius: 8px;
+  background: #fff;
+}
+.nb-position-top {
+  display: grid;
+  grid-template-columns: clamp(4.75rem, 12vw, 7.5rem) minmax(0, 1fr);
+  align-items: start;
+  gap: 0.8rem;
+}
+.nb-diagram {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid #7c8a7b;
+  border-radius: 2px;
+}
+.nb-card-actions {
+  margin-top: auto;
+  align-items: start;
+}
+.nb-manage[open] {
+  flex-basis: 100%;
+}
+.nb-match {
+  padding: 0.3rem 0.65rem;
+  border-left: 3px solid #a8ba9e;
+  color: #3c473e;
+}
+.nb-match strong {
+  font-size: 0.83rem;
+  color: #49664d;
+}
+.nb-pagination {
+  margin-top: 1rem;
+}
+.nb-dialog {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  padding: 0;
+  background: #fff;
+  border: 1px solid #cdd5ce;
+  border-radius: 9px;
+  box-shadow: 0 12px 50px #0003;
+  width: min(31rem, calc(100% - 1rem));
+  max-width: calc(100% - 1rem);
+  height: fit-content;
+  max-height: calc(100vh - 1rem);
+  max-height: calc(100dvh - 1rem);
+  overflow: hidden;
+}
+.nb-dialog-wide {
+  width: min(41rem, calc(100% - 1rem));
+}
+.nb-dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+.nb-dialog::backdrop {
+  background: #1f282167;
+}
+.nb-dialog-head {
+  flex: none;
+  justify-content: space-between;
+  flex-wrap: nowrap;
+  border-bottom: 1px solid #dce2dc;
+  padding: 0.65rem 1rem;
+}
+.nb-dialog-head h2 {
+  font-size: 1.15rem;
+  font-weight: 650;
+}
+.nb-dialog-head button {
+  flex: none;
+}
+.nb-dialog-body {
+  padding: 1rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.nb-dialog-body p {
+  margin-block: 0 0.8rem;
+}
+.nb-dialog-body input:not([type='checkbox']),
+.nb-dialog-body textarea,
+.nb-dialog-body select {
+  font-size: 1rem;
+}
+.nb-form {
+  display: grid;
+  gap: 0.85rem;
+}
+.nb-check {
+  display: flex;
+  align-items: start;
+  gap: 0.65rem;
+  cursor: pointer;
+  padding: 0.4rem 0;
+}
+.nb-check input {
+  flex: none;
+  align-self: start;
+  margin-top: 0.25rem;
+  width: 1.1rem;
+  height: 1.1rem;
+  accent-color: #315c45;
+}
+.nb-check small,
+.nb-related small {
+  display: block;
+  font-size: 0.85rem;
+  color: #566359;
+}
+.nb-preview-list li,
+.nb-related li {
+  padding-block: 0.5rem;
+  border-block-start: 1px solid #dce3dc;
+}
+.nb-related a {
+  display: block;
+  padding: 0.4rem 0;
+}
+.nb-related {
+  margin: 0.65rem 0;
+}
+@media (max-width: 760px), (max-width: 1180px) and (max-height: 600px) {
+  .nb-catalog {
+    padding: 0.85rem;
+  }
+  .nb-btn,
+  .nb-chip,
+  .nb-segment button,
+  .nb-details summary,
+  .nb-tabs a {
+    min-height: 44px;
+  }
+  .nb-chip,
+  .nb-details summary {
+    align-content: center;
+  }
+  .nb-dialog-head {
+    padding: 0.35rem 0.7rem;
+  }
+  .nb-dialog-body {
+    padding: 0.75rem;
+  }
+  .nb-position {
+    padding: 0.75rem;
+  }
+  .nb-position-top {
+    gap: 0.6rem;
+  }
+}
+
+.nb-latest {
+  margin-bottom: 1rem;
+  padding: 0.6rem;
+  background: #f5f2e9;
+  border-radius: 5px;
+}
+.nb-latest summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.nb-latest p {
+  white-space: pre-wrap;
+  margin: 0.3rem 0;
+}
+
+/* Keep collapsed actions out of layout/hit testing, including Chromium's
+   deferred rendering of the details content. Multiline titles have one target. */
+.nb-details:not([open]) > :not(summary) {
+  display: none;
+}
+.nb-position h2 a,
+.nb-game-title {
+  display: block;
+}
+
+.nb-dialog-foot {
+  flex: none;
+  padding: 0.55rem 1rem;
+  border-top: 1px solid #dce2dc;
+}
+@media (max-height: 400px) {
+  .nb-dialog-foot {
+    padding: 0.25rem 0.7rem;
+  }
+}
+
+.nb-text-button {
+  color: #28573b;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0.25rem 0;
+  font: inherit;
+}
+@media (max-width: 760px), (max-width: 1180px) and (max-height: 600px) {
+  .nb-text-button {
+    min-height: 44px;
+  }
+}

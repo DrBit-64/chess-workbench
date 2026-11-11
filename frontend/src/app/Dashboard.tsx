@@ -39,7 +39,10 @@ export function Dashboard() {
             从来源建立课程，在可识别转置的局面图上整理分支与解释。
           </Typography.Paragraph>
         </Space>
-        <Space>
+        <Space wrap>
+          <Link to="/games">
+            <Button>我的对局</Button>
+          </Link>
           <Link to="/sources">
             <Button>添加资料</Button>
           </Link>

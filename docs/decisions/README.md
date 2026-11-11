@@ -27,3 +27,4 @@ ADR 记录会长期影响数据兼容性、模块边界或运维方式的决定�
 - [0023：退役旧版 PDF 新建入口并保留历史结果](0023-retire-legacy-pdf-entry-preserve-history.md)
 
 - [0024：从课程单向创建 Lichess 研讨](0024-lichess-study-export.md)
+- [0028：个人实战棋谱与局面收藏](0028-personal-game-notebook.md)

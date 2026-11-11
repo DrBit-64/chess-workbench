@@ -2347,7 +2347,7 @@ describe('Stage 8D review page (8D-3A)', () => {
               bbox: {},
               fragment_sha256: headingHash,
               move_mentions: [{ start: 5, end: 7, kind: 'candidate' }],
-              declared_move_spans: [{ start: 5, end: 7 }],
+              declared_move_spans: [{ start: 5, end: 7, token_id: null }],
             },
             {
               order: 1,
@@ -2360,8 +2360,8 @@ describe('Stage 8D review page (8D-3A)', () => {
                 { start: 8, end: 12, kind: 'candidate' },
               ],
               declared_move_spans: [
-                { start: 5, end: 7 },
-                { start: 8, end: 12 },
+                { start: 5, end: 7, token_id: null },
+                { start: 8, end: 12, token_id: null },
               ],
             },
           ],
@@ -2488,7 +2488,7 @@ describe('Stage 8D review page (8D-3A)', () => {
               origin: 'embedded_text',
               bbox: {},
               fragment_sha256: bodyHash,
-              declared_move_spans: [{ start: 0, end: 3 }],
+              declared_move_spans: [{ start: 0, end: 3, token_id: null }],
               move_mentions: [{ start: 0, end: 3, kind: 'candidate' }],
             },
           ],

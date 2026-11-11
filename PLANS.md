@@ -1,5 +1,9 @@
 # Current plan
 
+## Personal game notebook (2026-11-07)
+
+Implemented personal game import and account sync, occurrence-specific notes, tagged position search, source and transposition navigation, and opt-in practice. See the [notebook decision](docs/decisions/0028-personal-game-notebook.md) and the latest handoff for verification.
+
 ## Phone book reader (2026-11-06)
 
 Implemented and browser-verified. The same traditional course supports desktop columns and phone layouts, with a dedicated reading pane, source-page controls and local resume. The remaining acceptance is a short read on the user's own phone with a familiar book. See the current handoff for the trial link and verification details.

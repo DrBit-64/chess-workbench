@@ -13,11 +13,6 @@ from alembic.config import Config
 from alembic.migration import MigrationContext
 from alembic.operations import Operations
 from alembic.script import ScriptDirectory
-from sqlalchemy.dialects import mysql, sqlite
-from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from sqlalchemy.schema import CreateTable
-
 from chess_workbench.domain import PositionState
 from chess_workbench.store.base import Base
 from chess_workbench.store.database import Database
@@ -38,9 +33,33 @@ from chess_workbench.store.models import (
     UUIDPrimaryKeyMixin,
     VersionMixin,
 )
+from sqlalchemy.dialects import mysql, sqlite
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.schema import CreateTable
 
 START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
+
+# Only occurrence-owned notebook data is removed together with a personal game,
+# bookmark or sync account. Shared positions, moves and course content stay protected.
+_NOTEBOOK_OWNERSHIP = {
+    ("personal_game_nodes", "game_id"),
+    ("personal_bookmarks", "node_id"),
+    ("personal_bookmark_tags", "bookmark_id"),
+    ("personal_bookmark_moves", "bookmark_id"),
+    ("personal_bookmark_moves", "node_id"),
+    ("notebook_account_games", "account_id"),
+    ("notebook_practice", "bookmark_id"),
+}
+
+
+def _delete_rule(table: str, columns: tuple[str, ...]) -> str:
+    return (
+        "CASCADE"
+        if len(columns) == 1 and (table, columns[0]) in _NOTEBOOK_OWNERSHIP
+        else "RESTRICT"
+    )
 
 
 class _MixinTestBase(DeclarativeBase):
@@ -180,7 +199,10 @@ def test_content_metadata_has_lifecycle_context_and_restrictive_foreign_keys() -
         for constraint in table.foreign_key_constraints
     ]
     assert foreign_keys
-    assert {constraint.ondelete for constraint in foreign_keys} == {"RESTRICT"}
+    for constraint in foreign_keys:
+        assert constraint.ondelete == _delete_rule(
+            constraint.table.name, tuple(constraint.column_keys)
+        )
 
     constraint_names = {
         str(constraint.name)
@@ -377,7 +399,9 @@ def test_sync_sqlite_migrations_match_metadata_enforce_checks_and_downgrade() ->
             }
             for table_name in Base.metadata.tables:
                 for foreign_key in inspector.get_foreign_keys(table_name):
-                    assert foreign_key["options"].get("ondelete") == "RESTRICT"
+                    assert foreign_key["options"].get("ondelete") == _delete_rule(
+                        table_name, tuple(foreign_key["constrained_columns"])
+                    )
 
             source_id = _inserted_uuid(
                 connection.execute(
@@ -441,7 +465,7 @@ def test_sync_sqlite_migrations_match_metadata_enforce_checks_and_downgrade() ->
 
 
 def test_migrations_render_mysql_specific_ddl() -> None:
-    assert len(_revision_modules()) == 15
+    assert ScriptDirectory.from_config(_alembic_config()).get_heads() == ["20261107_0020"]
     output = StringIO()
     context = MigrationContext.configure(
         dialect=mysql.dialect(),
@@ -462,7 +486,8 @@ def test_migrations_render_mysql_specific_ddl() -> None:
     assert "CHARACTER SET ascii COLLATE ascii_bin" in ddl
     assert "CHARACTER SET utf8mb4 COLLATE utf8mb4_bin" in ddl
     assert "DATETIME(6) NOT NULL" in ddl
-    assert ddl.count("ON DELETE RESTRICT") == foreign_key_count
+    assert ddl.count("ON DELETE RESTRICT") == foreign_key_count - len(_NOTEBOOK_OWNERSHIP)
+    assert ddl.count("ON DELETE CASCADE") == len(_NOTEBOOK_OWNERSHIP)
     assert "ck_courses_ck_courses_status" not in ddl
     assert "fk_course_occurrences_inbound_move_edge_id_move_edges" in ddl
 

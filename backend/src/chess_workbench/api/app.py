@@ -17,7 +17,11 @@ from chess_workbench.api.errors import ApiError, handle_api_error
 from chess_workbench.api.graph import graph_blueprint
 from chess_workbench.api.health import health_blueprint
 from chess_workbench.api.lichess import lichess_blueprint
+from chess_workbench.api.notebook_accounts import notebook_accounts_blueprint
+from chess_workbench.api.notebook_practice import notebook_practice_blueprint
 from chess_workbench.api.pdf import pdf_blueprint
+from chess_workbench.api.personal_bookmarks import personal_bookmarks_bp
+from chess_workbench.api.personal_games import personal_games_blueprint
 from chess_workbench.api.pgn import pgn_blueprint
 from chess_workbench.config import Settings
 from chess_workbench.services import ServiceError
@@ -36,6 +40,7 @@ class AppContext:
     settings: Settings
     database: Database
     pgn_import_lock: asyncio.Lock
+    notebook_sync_lock: asyncio.Lock
     pdf_persistence_lock: asyncio.Lock
     worker_task: asyncio.Task[None] | None = None
     extraction_runtime: ExtractionRuntime | None = None
@@ -54,6 +59,7 @@ def create_app(settings: Settings | None = None) -> ChessWorkbenchApp:
             settings=resolved_settings,
             database=Database(resolved_settings.database_url),
             pgn_import_lock=asyncio.Lock(),
+            notebook_sync_lock=asyncio.Lock(),
             pdf_persistence_lock=asyncio.Lock(),
         ),
         configure_logging=not resolved_settings.debug,
@@ -83,10 +89,14 @@ def create_app(settings: Settings | None = None) -> ChessWorkbenchApp:
             ApiError(error.status, error.code, error.message, error.details),
         )
 
+    app.blueprint(notebook_accounts_blueprint)
+    app.blueprint(notebook_practice_blueprint)
     app.blueprint(health_blueprint)
     app.blueprint(graph_blueprint)
     app.blueprint(content_blueprint)
     app.blueprint(pgn_blueprint)
+    app.blueprint(personal_games_blueprint)
+    app.blueprint(personal_bookmarks_bp)
     app.blueprint(lichess_blueprint)
     app.blueprint(pdf_blueprint)
     app.blueprint(engine_blueprint)

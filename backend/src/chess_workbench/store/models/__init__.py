@@ -39,6 +39,14 @@ from chess_workbench.store.models.mixins import (
     VersionMixin,
     utc_now,
 )
+from chess_workbench.store.models.notebook_accounts import NotebookAccount, NotebookAccountGame
+from chess_workbench.store.models.notebook_practice import NotebookPractice
+from chess_workbench.store.models.personal_bookmarks import (
+    PersonalBookmark,
+    PersonalBookmarkMove,
+    PersonalBookmarkTag,
+)
+from chess_workbench.store.models.personal_games import PersonalGame, PersonalGameNode
 from chess_workbench.store.models.pgn import (
     PgnAsset,
     PgnImport,
@@ -71,6 +79,9 @@ __all__ = [
     "KnowledgeNote",
     "KnowledgeNoteCitation",
     "MoveEdge",
+    "NotebookAccount",
+    "NotebookAccountGame",
+    "NotebookPractice",
     "ModulePublication",
     "PdfAsset",
     "PdfExtractionDocument",
@@ -81,6 +92,11 @@ __all__ = [
     "PdfReviewPublication",
     "PdfReviewRevision",
     "PdfReviewSession",
+    "PersonalBookmark",
+    "PersonalBookmarkMove",
+    "PersonalBookmarkTag",
+    "PersonalGame",
+    "PersonalGameNode",
     "Position",
     "PgnAsset",
     "PgnImport",

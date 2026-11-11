@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { PdfReviewDocument, PdfSourceEvidence } from '../logic/api/types';
 import { reviewTheorySections } from './reviewTheorySections';
 
-type ReviewItem = PdfReviewDocument['package']['items'][number];
+type ReviewItem = NonNullable<PdfReviewDocument['package']['items']>[number];
 
 const hashes = {
   example: 'a'.repeat(64),

@@ -1,6 +1,13 @@
 import { Layout, Menu, Spin, Typography } from 'antd';
 import { lazy, Suspense } from 'react';
-import { Link, Route, Routes, useLocation, useParams } from 'react-router-dom';
+import {
+  Link,
+  Route,
+  Routes,
+  useLocation,
+  useParams,
+  useSearchParams,
+} from 'react-router-dom';
 
 import { Dashboard } from './Dashboard';
 import { NotFound } from './NotFound';
@@ -31,15 +38,41 @@ const PdfReviewPage = lazy(() =>
   })),
 );
 
+const GameCatalog = lazy(() =>
+  import('./gameNotebook/GameCatalog').then((module) => ({
+    default: module.GameCatalog,
+  })),
+);
+const PositionCatalog = lazy(() =>
+  import('./gameNotebook/PositionCatalog').then((module) => ({
+    default: module.PositionCatalog,
+  })),
+);
+const GameReview = lazy(() => import('./gameNotebook/GameReviewPage'));
+const BookmarkPractice = lazy(() => import('./gameNotebook/BookmarkPractice'));
+
 const navigation = [
   { key: '/', label: <Link to="/">首页</Link> },
   { key: '/learn', label: <Link to="/learn">学习</Link> },
   { key: '/sources', label: <Link to="/sources">资料</Link> },
+  { key: '/games', label: <Link to="/games">我的对局</Link> },
   { key: '/analysis', label: <Link to="/analysis">引擎</Link> },
   { key: '/repertoire', label: '个人开局库', disabled: true },
   { key: '/practice', label: '练习', disabled: true },
-  { key: '/games', label: '我的对局', disabled: true },
 ];
+
+function AnalysisRoute() {
+  const [search] = useSearchParams();
+  const fen = search.get('fen') ?? undefined;
+  const mode = search.get('mode') === 'play' ? 'play' : 'analysis';
+  return (
+    <AnalysisPage
+      key={mode + (fen ?? '')}
+      initialFen={fen}
+      initialMode={mode}
+    />
+  );
+}
 
 function PdfReviewPageAdapter() {
   const { runId } = useParams<{ runId: string }>();
@@ -106,7 +139,14 @@ export function App() {
               path="/sources/pdf-extractions/:runId/review"
               element={<PdfReviewPageAdapter />}
             />
-            <Route path="/analysis" element={<AnalysisPage />} />
+            <Route path="/games" element={<GameCatalog />} />
+            <Route path="/games/positions" element={<PositionCatalog />} />
+            <Route
+              path="/games/positions/:bookmarkId/practice"
+              element={<BookmarkPractice />}
+            />
+            <Route path="/games/:gameId" element={<GameReview />} />
+            <Route path="/analysis" element={<AnalysisRoute />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>

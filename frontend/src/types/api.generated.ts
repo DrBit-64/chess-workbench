@@ -657,6 +657,286 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/notebook/accounts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Accounts */
+        get: operations["listNotebookAccounts"];
+        put?: never;
+        /** Add Account */
+        post: operations["addNotebookAccount"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/notebook/accounts/{account_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove Account */
+        delete: operations["removeNotebookAccount"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/notebook/accounts/{account_id}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Retry Account */
+        post: operations["retryNotebookAccountGames"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/notebook/accounts/{account_id}/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Sync Account */
+        post: operations["syncNotebookAccount"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/notebook/bookmark-tags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Tags */
+        get: operations["listNotebookBookmarkTags"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/notebook/bookmarks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Search */
+        get: operations["listNotebookBookmarks"];
+        put?: never;
+        /** Star */
+        post: operations["starNotebookPosition"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/notebook/bookmarks/{bookmark_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read */
+        get: operations["getNotebookBookmark"];
+        put?: never;
+        post?: never;
+        /** Remove */
+        delete: operations["deleteNotebookBookmark"];
+        options?: never;
+        head?: never;
+        /** Edit */
+        patch: operations["updateNotebookBookmark"];
+        trace?: never;
+    };
+    "/api/notebook/bookmarks/{bookmark_id}/occurrences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Occurrences */
+        get: operations["findOtherNotebookOccurrences"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/notebook/bookmarks/{bookmark_id}/practice": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Practice */
+        get: operations["getBookmarkPractice"];
+        /** Put Practice */
+        put: operations["saveBookmarkPractice"];
+        post?: never;
+        /** Remove Practice */
+        delete: operations["deleteBookmarkPractice"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/notebook/game-catalog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Search Notebook Games */
+        get: operations["searchNotebookGames"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/notebook/games": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Notebook Games */
+        get: operations["listNotebookGames"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/notebook/games/{game_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Notebook Game */
+        get: operations["getNotebookGame"];
+        put?: never;
+        post?: never;
+        /** Delete Notebook Game */
+        delete: operations["deleteNotebookGame"];
+        options?: never;
+        head?: never;
+        /** Update Notebook Game */
+        patch: operations["updateNotebookGame"];
+        trace?: never;
+    };
+    "/api/notebook/games/{game_id}/nodes/{node_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Notebook Node */
+        patch: operations["updateNotebookNode"];
+        trace?: never;
+    };
+    "/api/notebook/games/{game_id}/pgn": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Notebook Game Pgn */
+        get: operations["getNotebookGamePgn"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/notebook/imports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Import Notebook Games */
+        post: operations["importNotebookGames"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/notebook/imports/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Preview Notebook Games */
+        post: operations["previewNotebookGames"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/occurrences": {
         parameters: {
             query?: never;
@@ -1891,7 +2171,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -1915,7 +2195,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -2060,7 +2340,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -2084,7 +2364,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -2108,7 +2388,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -2216,7 +2496,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -2354,7 +2634,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -2378,7 +2658,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -2402,7 +2682,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -2526,7 +2806,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -2550,7 +2830,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -2574,7 +2854,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -2669,7 +2949,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -2693,7 +2973,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -2819,7 +3099,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -2843,7 +3123,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -2867,7 +3147,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -2932,7 +3212,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -2956,7 +3236,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -2980,7 +3260,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -3088,7 +3368,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -3310,7 +3590,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -3334,7 +3614,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -3358,7 +3638,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -3454,7 +3734,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -3574,7 +3854,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -3667,7 +3947,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -3802,7 +4082,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -3826,7 +4106,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -3850,7 +4130,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -4193,7 +4473,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -4217,7 +4497,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -4301,7 +4581,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -4325,7 +4605,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -4349,7 +4629,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -4373,7 +4653,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -4397,7 +4677,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -4474,7 +4754,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -4498,7 +4778,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -4522,7 +4802,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -4618,7 +4898,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -4642,7 +4922,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -4758,7 +5038,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -4782,7 +5062,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -4831,7 +5111,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -4855,7 +5135,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -4879,7 +5159,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -4967,7 +5247,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -4991,7 +5271,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -5015,7 +5295,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -5270,7 +5550,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -6149,7 +6429,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -6173,7 +6453,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -6493,7 +6773,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -6517,7 +6797,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -6541,7 +6821,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -6735,7 +7015,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -6759,7 +7039,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -6783,7 +7063,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -6916,7 +7196,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -7081,7 +7361,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -7105,7 +7385,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -7129,7 +7409,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -7244,7 +7524,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -7268,7 +7548,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -7339,7 +7619,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -7349,6 +7629,1446 @@ export interface operations {
                         } | null;
                         /** Message */
                         message: string;
+                    };
+                };
+            };
+        };
+    };
+    listNotebookAccounts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Existing */
+                        existing: number;
+                        /** Failed */
+                        failed: number;
+                        /**
+                         * Id
+                         * Format: uuid
+                         */
+                        id: string;
+                        /** Imported */
+                        imported: number;
+                        /** Last Error */
+                        last_error: string | null;
+                        /** Last Synced Ms */
+                        last_synced_ms: number | null;
+                        /**
+                         * Platform
+                         * @enum {string}
+                         */
+                        platform: "lichess" | "chess.com";
+                        /** Queued */
+                        queued: number;
+                        /**
+                         * Start Date
+                         * Format: date
+                         */
+                        start_date: string;
+                        /** Username */
+                        username: string;
+                        /** Waiting */
+                        waiting: number;
+                    }[];
+                };
+            };
+        };
+    };
+    addNotebookAccount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * Platform
+                     * @enum {string}
+                     */
+                    platform: "lichess" | "chess.com";
+                    /**
+                     * Start Date
+                     * Format: date
+                     */
+                    start_date: string;
+                    /** Username */
+                    username: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Existing */
+                        existing: number;
+                        /** Failed */
+                        failed: number;
+                        /**
+                         * Id
+                         * Format: uuid
+                         */
+                        id: string;
+                        /** Imported */
+                        imported: number;
+                        /** Last Error */
+                        last_error: string | null;
+                        /** Last Synced Ms */
+                        last_synced_ms: number | null;
+                        /**
+                         * Platform
+                         * @enum {string}
+                         */
+                        platform: "lichess" | "chess.com";
+                        /** Queued */
+                        queued: number;
+                        /**
+                         * Start Date
+                         * Format: date
+                         */
+                        start_date: string;
+                        /** Username */
+                        username: string;
+                        /** Waiting */
+                        waiting: number;
+                    };
+                };
+            };
+        };
+    };
+    removeNotebookAccount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                account_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Account removed; previously saved games remain */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": string;
+                };
+            };
+        };
+    };
+    retryNotebookAccountGames: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                account_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Existing */
+                        existing: number;
+                        /** Failed */
+                        failed: number;
+                        /**
+                         * Id
+                         * Format: uuid
+                         */
+                        id: string;
+                        /** Imported */
+                        imported: number;
+                        /** Last Error */
+                        last_error: string | null;
+                        /** Last Synced Ms */
+                        last_synced_ms: number | null;
+                        /**
+                         * Platform
+                         * @enum {string}
+                         */
+                        platform: "lichess" | "chess.com";
+                        /** Queued */
+                        queued: number;
+                        /**
+                         * Start Date
+                         * Format: date
+                         */
+                        start_date: string;
+                        /** Username */
+                        username: string;
+                        /** Waiting */
+                        waiting: number;
+                    };
+                };
+            };
+        };
+    };
+    syncNotebookAccount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                account_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** NotebookAccountView */
+                        account: {
+                            /** Existing */
+                            existing: number;
+                            /** Failed */
+                            failed: number;
+                            /**
+                             * Id
+                             * Format: uuid
+                             */
+                            id: string;
+                            /** Imported */
+                            imported: number;
+                            /** Last Error */
+                            last_error: string | null;
+                            /** Last Synced Ms */
+                            last_synced_ms: number | null;
+                            /**
+                             * Platform
+                             * @enum {string}
+                             */
+                            platform: "lichess" | "chess.com";
+                            /** Queued */
+                            queued: number;
+                            /**
+                             * Start Date
+                             * Format: date
+                             */
+                            start_date: string;
+                            /** Username */
+                            username: string;
+                            /** Waiting */
+                            waiting: number;
+                        };
+                        /** More */
+                        more: boolean;
+                    };
+                };
+            };
+        };
+    };
+    listNotebookBookmarkTags: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Tags */
+                        tags: string[];
+                    };
+                };
+            };
+        };
+    };
+    listNotebookBookmarks: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+                game_id?: string;
+                tag?: string[];
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Items */
+                        items: {
+                            /** Active */
+                            active: boolean;
+                            /** Archived */
+                            archived: boolean;
+                            /** Black */
+                            black: string;
+                            /**
+                             * Created At
+                             * Format: date-time
+                             */
+                            created_at: string;
+                            /** Date */
+                            date: string;
+                            /** Fen */
+                            fen: string;
+                            /**
+                             * Game Id
+                             * Format: uuid
+                             */
+                            game_id: string;
+                            /**
+                             * Id
+                             * Format: uuid
+                             */
+                            id: string;
+                            /** Is Mainline */
+                            is_mainline: boolean;
+                            /** Matches */
+                            matches: {
+                                /**
+                                 * Field
+                                 * @enum {string}
+                                 */
+                                field: "title" | "tag" | "note" | "move_note";
+                                /** Text */
+                                text: string;
+                            }[];
+                            /**
+                             * Node Id
+                             * Format: uuid
+                             */
+                            node_id: string;
+                            /** Note */
+                            note: string;
+                            /** Ply */
+                            ply: number;
+                            /** Related Moves */
+                            related_moves: {
+                                /**
+                                 * Node Id
+                                 * Format: uuid
+                                 */
+                                node_id: string;
+                                /** Note */
+                                note: string;
+                                /** San */
+                                san: string;
+                            }[];
+                            /** San */
+                            san: string | null;
+                            /** Tags */
+                            tags: string[];
+                            /** Title */
+                            title: string;
+                            /** Version */
+                            version: number;
+                            /** White */
+                            white: string;
+                        }[];
+                        /** Total */
+                        total: number;
+                    };
+                };
+            };
+        };
+    };
+    starNotebookPosition: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * Node Id
+                     * Format: uuid
+                     */
+                    node_id: string;
+                    /**
+                     * Related Node Id
+                     * Format: uuid
+                     * @default null
+                     */
+                    related_node_id?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Active */
+                        active: boolean;
+                        /** Archived */
+                        archived: boolean;
+                        /** Black */
+                        black: string;
+                        /**
+                         * Created At
+                         * Format: date-time
+                         */
+                        created_at: string;
+                        /** Date */
+                        date: string;
+                        /** Fen */
+                        fen: string;
+                        /**
+                         * Game Id
+                         * Format: uuid
+                         */
+                        game_id: string;
+                        /**
+                         * Id
+                         * Format: uuid
+                         */
+                        id: string;
+                        /** Is Mainline */
+                        is_mainline: boolean;
+                        /** Matches */
+                        matches: {
+                            /**
+                             * Field
+                             * @enum {string}
+                             */
+                            field: "title" | "tag" | "note" | "move_note";
+                            /** Text */
+                            text: string;
+                        }[];
+                        /**
+                         * Node Id
+                         * Format: uuid
+                         */
+                        node_id: string;
+                        /** Note */
+                        note: string;
+                        /** Ply */
+                        ply: number;
+                        /** Related Moves */
+                        related_moves: {
+                            /**
+                             * Node Id
+                             * Format: uuid
+                             */
+                            node_id: string;
+                            /** Note */
+                            note: string;
+                            /** San */
+                            san: string;
+                        }[];
+                        /** San */
+                        san: string | null;
+                        /** Tags */
+                        tags: string[];
+                        /** Title */
+                        title: string;
+                        /** Version */
+                        version: number;
+                        /** White */
+                        white: string;
+                    };
+                };
+            };
+        };
+    };
+    getNotebookBookmark: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bookmark_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Active */
+                        active: boolean;
+                        /** Archived */
+                        archived: boolean;
+                        /** Black */
+                        black: string;
+                        /**
+                         * Created At
+                         * Format: date-time
+                         */
+                        created_at: string;
+                        /** Date */
+                        date: string;
+                        /** Fen */
+                        fen: string;
+                        /**
+                         * Game Id
+                         * Format: uuid
+                         */
+                        game_id: string;
+                        /**
+                         * Id
+                         * Format: uuid
+                         */
+                        id: string;
+                        /** Is Mainline */
+                        is_mainline: boolean;
+                        /** Matches */
+                        matches: {
+                            /**
+                             * Field
+                             * @enum {string}
+                             */
+                            field: "title" | "tag" | "note" | "move_note";
+                            /** Text */
+                            text: string;
+                        }[];
+                        /**
+                         * Node Id
+                         * Format: uuid
+                         */
+                        node_id: string;
+                        /** Note */
+                        note: string;
+                        /** Ply */
+                        ply: number;
+                        /** Related Moves */
+                        related_moves: {
+                            /**
+                             * Node Id
+                             * Format: uuid
+                             */
+                            node_id: string;
+                            /** Note */
+                            note: string;
+                            /** San */
+                            san: string;
+                        }[];
+                        /** San */
+                        san: string | null;
+                        /** Tags */
+                        tags: string[];
+                        /** Title */
+                        title: string;
+                        /** Version */
+                        version: number;
+                        /** White */
+                        white: string;
+                    };
+                };
+            };
+        };
+    };
+    deleteNotebookBookmark: {
+        parameters: {
+            query: {
+                expected_version: number;
+            };
+            header?: never;
+            path: {
+                bookmark_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Permanently removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": string;
+                };
+            };
+        };
+    };
+    updateNotebookBookmark: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bookmark_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * Active
+                     * @default null
+                     */
+                    active?: boolean | null;
+                    /** Expected Version */
+                    expected_version: number;
+                    /**
+                     * Note
+                     * @default null
+                     */
+                    note?: string | null;
+                    /**
+                     * Tags
+                     * @default null
+                     */
+                    tags?: string[] | null;
+                    /**
+                     * Title
+                     * @default null
+                     */
+                    title?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Active */
+                        active: boolean;
+                        /** Archived */
+                        archived: boolean;
+                        /** Black */
+                        black: string;
+                        /**
+                         * Created At
+                         * Format: date-time
+                         */
+                        created_at: string;
+                        /** Date */
+                        date: string;
+                        /** Fen */
+                        fen: string;
+                        /**
+                         * Game Id
+                         * Format: uuid
+                         */
+                        game_id: string;
+                        /**
+                         * Id
+                         * Format: uuid
+                         */
+                        id: string;
+                        /** Is Mainline */
+                        is_mainline: boolean;
+                        /** Matches */
+                        matches: {
+                            /**
+                             * Field
+                             * @enum {string}
+                             */
+                            field: "title" | "tag" | "note" | "move_note";
+                            /** Text */
+                            text: string;
+                        }[];
+                        /**
+                         * Node Id
+                         * Format: uuid
+                         */
+                        node_id: string;
+                        /** Note */
+                        note: string;
+                        /** Ply */
+                        ply: number;
+                        /** Related Moves */
+                        related_moves: {
+                            /**
+                             * Node Id
+                             * Format: uuid
+                             */
+                            node_id: string;
+                            /** Note */
+                            note: string;
+                            /** San */
+                            san: string;
+                        }[];
+                        /** San */
+                        san: string | null;
+                        /** Tags */
+                        tags: string[];
+                        /** Title */
+                        title: string;
+                        /** Version */
+                        version: number;
+                        /** White */
+                        white: string;
+                    };
+                };
+            };
+        };
+    };
+    findOtherNotebookOccurrences: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+                include_variations?: boolean;
+            };
+            header?: never;
+            path: {
+                bookmark_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Items */
+                        items: {
+                            /** Archived */
+                            archived: boolean;
+                            /** Black */
+                            black: string;
+                            /** Date */
+                            date: string;
+                            /** Fen */
+                            fen: string;
+                            /**
+                             * Game Id
+                             * Format: uuid
+                             */
+                            game_id: string;
+                            /** Is Mainline */
+                            is_mainline: boolean;
+                            /**
+                             * Node Id
+                             * Format: uuid
+                             */
+                            node_id: string;
+                            /** Ply */
+                            ply: number;
+                            /** San */
+                            san: string | null;
+                            /** White */
+                            white: string;
+                        }[];
+                        /** Total */
+                        total: number;
+                    };
+                };
+            };
+        };
+    };
+    getBookmarkPractice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bookmark_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Lines */
+                        lines: string[][];
+                        /** Prompt */
+                        prompt: string;
+                        /** Version */
+                        version: number;
+                    };
+                };
+            };
+        };
+    };
+    saveBookmarkPractice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bookmark_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Expected Version */
+                    expected_version: number;
+                    /** Lines */
+                    lines: string[][];
+                    /** Prompt */
+                    prompt: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Lines */
+                        lines: string[][];
+                        /** Prompt */
+                        prompt: string;
+                        /** Version */
+                        version: number;
+                    };
+                };
+            };
+        };
+    };
+    deleteBookmarkPractice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bookmark_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Expected Version */
+                    expected_version: number;
+                };
+            };
+        };
+        responses: {
+            /** @description Exercise removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": string;
+                };
+            };
+        };
+    };
+    searchNotebookGames: {
+        parameters: {
+            query?: {
+                offset?: number;
+                limit?: number;
+                q?: string;
+                archived?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Items */
+                        items: {
+                            /**
+                             * Archived At
+                             * Format: date-time
+                             */
+                            archived_at: string | null;
+                            /** Black */
+                            black: string;
+                            /**
+                             * Created At
+                             * Format: date-time
+                             */
+                            created_at: string;
+                            /** Date */
+                            date: string;
+                            /**
+                             * Id
+                             * Format: uuid
+                             */
+                            id: string;
+                            /** Platform */
+                            platform: string | null;
+                            /** Result */
+                            result: string;
+                            /** Source Url */
+                            source_url: string | null;
+                            /** Summary */
+                            summary: string;
+                            /** Version */
+                            version: number;
+                            /** White */
+                            white: string;
+                        }[];
+                        /** Total */
+                        total: number;
+                    };
+                };
+            };
+        };
+    };
+    listNotebookGames: {
+        parameters: {
+            query?: {
+                archived?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Archived At
+                         * Format: date-time
+                         */
+                        archived_at: string | null;
+                        /** Black */
+                        black: string;
+                        /**
+                         * Created At
+                         * Format: date-time
+                         */
+                        created_at: string;
+                        /** Date */
+                        date: string;
+                        /**
+                         * Id
+                         * Format: uuid
+                         */
+                        id: string;
+                        /** Platform */
+                        platform: string | null;
+                        /** Result */
+                        result: string;
+                        /** Source Url */
+                        source_url: string | null;
+                        /** Summary */
+                        summary: string;
+                        /** Version */
+                        version: number;
+                        /** White */
+                        white: string;
+                    }[];
+                };
+            };
+        };
+    };
+    getNotebookGame: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                game_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Archived At
+                         * Format: date-time
+                         */
+                        archived_at: string | null;
+                        /** Black */
+                        black: string;
+                        /**
+                         * Created At
+                         * Format: date-time
+                         */
+                        created_at: string;
+                        /** Date */
+                        date: string;
+                        /** Headers */
+                        headers: {
+                            [key: string]: string;
+                        };
+                        /**
+                         * Id
+                         * Format: uuid
+                         */
+                        id: string;
+                        /** Nodes */
+                        nodes: {
+                            /** Comment */
+                            comment: string;
+                            /** Fen */
+                            fen: string;
+                            /**
+                             * Id
+                             * Format: uuid
+                             */
+                            id: string;
+                            /** Is Mainline */
+                            is_mainline: boolean;
+                            /** Nags */
+                            nags: number[];
+                            /** Note */
+                            note: string;
+                            /**
+                             * Parent Id
+                             * Format: uuid
+                             */
+                            parent_id: string | null;
+                            /** Ply */
+                            ply: number;
+                            /** San */
+                            san: string | null;
+                            /** Sort Order */
+                            sort_order: number;
+                            /** Starting Comment */
+                            starting_comment: string;
+                            /** Uci */
+                            uci: string | null;
+                            /** Version */
+                            version: number;
+                        }[];
+                        /** Platform */
+                        platform: string | null;
+                        /** Result */
+                        result: string;
+                        /** Source Url */
+                        source_url: string | null;
+                        /** Summary */
+                        summary: string;
+                        /** Version */
+                        version: number;
+                        /** White */
+                        white: string;
+                    };
+                };
+            };
+        };
+    };
+    deleteNotebookGame: {
+        parameters: {
+            query: {
+                expected_version: number;
+            };
+            header?: never;
+            path: {
+                game_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Archived game removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": string;
+                };
+            };
+        };
+    };
+    updateNotebookGame: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                game_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * Archived
+                     * @default null
+                     */
+                    archived?: boolean | null;
+                    /** Expected Version */
+                    expected_version: number;
+                    /**
+                     * Summary
+                     * @default null
+                     */
+                    summary?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Archived At
+                         * Format: date-time
+                         */
+                        archived_at: string | null;
+                        /** Black */
+                        black: string;
+                        /**
+                         * Created At
+                         * Format: date-time
+                         */
+                        created_at: string;
+                        /** Date */
+                        date: string;
+                        /**
+                         * Id
+                         * Format: uuid
+                         */
+                        id: string;
+                        /** Platform */
+                        platform: string | null;
+                        /** Result */
+                        result: string;
+                        /** Source Url */
+                        source_url: string | null;
+                        /** Summary */
+                        summary: string;
+                        /** Version */
+                        version: number;
+                        /** White */
+                        white: string;
+                    };
+                };
+            };
+        };
+    };
+    updateNotebookNode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                game_id: string;
+                node_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Expected Version */
+                    expected_version: number;
+                    /** Note */
+                    note: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Comment */
+                        comment: string;
+                        /** Fen */
+                        fen: string;
+                        /**
+                         * Id
+                         * Format: uuid
+                         */
+                        id: string;
+                        /** Is Mainline */
+                        is_mainline: boolean;
+                        /** Nags */
+                        nags: number[];
+                        /** Note */
+                        note: string;
+                        /**
+                         * Parent Id
+                         * Format: uuid
+                         */
+                        parent_id: string | null;
+                        /** Ply */
+                        ply: number;
+                        /** San */
+                        san: string | null;
+                        /** Sort Order */
+                        sort_order: number;
+                        /** Starting Comment */
+                        starting_comment: string;
+                        /** Uci */
+                        uci: string | null;
+                        /** Version */
+                        version: number;
+                    };
+                };
+            };
+        };
+    };
+    getNotebookGamePgn: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                game_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/x-chess-pgn": string;
+                };
+            };
+        };
+    };
+    importNotebookGames: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Pgn */
+                    pgn: string;
+                    /**
+                     * Request Id
+                     * Format: uuid
+                     * @default null
+                     */
+                    request_id?: string | null;
+                    /** Selections */
+                    selections: {
+                        /**
+                         * Action
+                         * @default save
+                         * @enum {string}
+                         */
+                        action?: "save" | "open" | "copy";
+                        /**
+                         * Existing Id
+                         * Format: uuid
+                         * @default null
+                         */
+                        existing_id?: string | null;
+                        /** Index */
+                        index: number;
+                    }[];
+                    /**
+                     * Source Url
+                     * @default null
+                     */
+                    source_url?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Games */
+                        games: {
+                            /** Created */
+                            created: boolean;
+                            /**
+                             * Id
+                             * Format: uuid
+                             */
+                            id: string;
+                            /** Index */
+                            index: number;
+                        }[];
+                    };
+                };
+            };
+        };
+    };
+    previewNotebookGames: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * Month
+                     * @default null
+                     */
+                    month?: string | null;
+                    /**
+                     * Pgn
+                     * @default null
+                     */
+                    pgn?: string | null;
+                    /**
+                     * Url
+                     * @default null
+                     */
+                    url?: string | null;
+                    /**
+                     * Username
+                     * @default null
+                     */
+                    username?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Duplicate Games */
+                        duplicate_games: {
+                            /**
+                             * Archived At
+                             * Format: date-time
+                             */
+                            archived_at: string | null;
+                            /** Black */
+                            black: string;
+                            /**
+                             * Created At
+                             * Format: date-time
+                             */
+                            created_at: string;
+                            /** Date */
+                            date: string;
+                            /**
+                             * Id
+                             * Format: uuid
+                             */
+                            id: string;
+                            /** Platform */
+                            platform: string | null;
+                            /** Result */
+                            result: string;
+                            /** Source Url */
+                            source_url: string | null;
+                            /** Summary */
+                            summary: string;
+                            /** Version */
+                            version: number;
+                            /** White */
+                            white: string;
+                        }[];
+                        /** Games */
+                        games: {
+                            /** Black */
+                            black: string;
+                            /** Date */
+                            date: string;
+                            /**
+                             * Existing Id
+                             * Format: uuid
+                             */
+                            existing_id: string | null;
+                            /** Index */
+                            index: number;
+                            /** Platform */
+                            platform: string | null;
+                            /** Possible Duplicates */
+                            possible_duplicates: string[];
+                            /** Result */
+                            result: string;
+                            /** Source Url */
+                            source_url: string | null;
+                            /** White */
+                            white: string;
+                        }[];
+                        /** Pgn */
+                        pgn: string;
+                        /** Source Url */
+                        source_url: string | null;
                     };
                 };
             };
@@ -7514,7 +9234,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -7538,7 +9258,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -7562,7 +9282,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -7675,7 +9395,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -7821,7 +9541,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -7845,7 +9565,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -7869,7 +9589,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -7942,7 +9662,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -7966,7 +9686,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -7990,7 +9710,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -8223,7 +9943,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -8247,7 +9967,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -8271,7 +9991,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -8295,7 +10015,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -8387,7 +10107,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -8434,7 +10154,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -9049,7 +10769,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -9073,7 +10793,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -9097,7 +10817,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -9316,7 +11036,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -9910,7 +11630,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -9934,7 +11654,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -9958,7 +11678,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -10184,7 +11904,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -10208,7 +11928,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -10399,7 +12119,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -10770,7 +12490,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -10794,7 +12514,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -10818,7 +12538,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -11005,7 +12725,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -11051,7 +12771,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -12720,7 +14440,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -12744,7 +14464,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -12768,7 +14488,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -12815,7 +14535,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -12839,7 +14559,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -12863,7 +14583,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -13021,7 +14741,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -13068,7 +14788,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -13309,7 +15029,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -13333,7 +15053,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -13357,7 +15077,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -13491,7 +15211,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -13515,7 +15235,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -15536,7 +17256,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -15560,7 +17280,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -15584,7 +17304,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -15608,7 +17328,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -17277,7 +18997,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -17301,7 +19021,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -17325,7 +19045,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -17559,7 +19279,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -17583,7 +19303,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -17607,7 +19327,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -17631,7 +19351,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -17733,7 +19453,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -17757,7 +19477,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -17781,7 +19501,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -18754,7 +20474,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -18778,7 +20498,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -18802,7 +20522,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -19057,7 +20777,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -19081,7 +20801,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -19105,7 +20825,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -19129,7 +20849,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -19153,7 +20873,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -19268,7 +20988,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -19314,7 +21034,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -19338,7 +21058,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -19454,7 +21174,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -19528,7 +21248,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -19631,7 +21351,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -19655,7 +21375,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -19679,7 +21399,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -19766,7 +21486,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -19863,7 +21583,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -19887,7 +21607,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -19911,7 +21631,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -20174,7 +21894,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -20198,7 +21918,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -20222,7 +21942,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -20389,7 +22109,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -20653,7 +22373,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -20677,7 +22397,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -20701,7 +22421,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -20830,7 +22550,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -20854,7 +22574,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -20878,7 +22598,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -20978,7 +22698,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -21117,7 +22837,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -21141,7 +22861,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -21165,7 +22885,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -21252,7 +22972,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -21276,7 +22996,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -21443,7 +23163,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -21467,7 +23187,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -21559,7 +23279,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -21675,7 +23395,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -21699,7 +23419,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -21791,7 +23511,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -21920,7 +23640,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -21944,7 +23664,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -21968,7 +23688,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -22068,7 +23788,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null
@@ -22092,7 +23812,7 @@ export interface operations {
                          * Code
                          * @enum {string}
                          */
-                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
+                        code: "invalid_fen" | "illegal_position" | "invalid_uci" | "illegal_move" | "invalid_move" | "not_found" | "stale_version" | "resource_referenced" | "ambiguous_context" | "validation_error" | "payload_too_large" | "unsupported_media_type" | "invalid_pgn" | "pgn_limit_exceeded" | "idempotency_conflict" | "course_mode_conflict" | "pgn_not_exportable" | "source_storage_unavailable" | "engine_unavailable" | "engine_failure" | "game_platform_unavailable" | "lichess_unconfigured" | "lichess_export_limit" | "lichess_request_failed" | "lichess_create_uncertain";
                         /**
                          * Details
                          * @default null

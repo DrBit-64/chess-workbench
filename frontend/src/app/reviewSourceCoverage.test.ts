@@ -76,7 +76,9 @@ function sequence(): Sequence {
 describe('current-review source coverage', () => {
   it('separates a model-declared blocked move from an unexamined candidate', () => {
     const declared = structuredClone(source);
-    declared.pages[0].fragments[0].declared_move_spans = [{ start: 7, end: 9 }];
+    declared.pages[0].fragments[0].declared_move_spans = [
+      { start: 7, end: 9, token_id: null },
+    ];
     const coverage = paragraphCoverage(
       text,
       [ref(0, 22)],

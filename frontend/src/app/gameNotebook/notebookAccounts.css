@@ -1,0 +1,42 @@
+.nb-account-row {
+  padding-block: 0.65rem 1rem;
+  border-bottom: 1px solid #dfded8;
+  margin-bottom: 0.75rem;
+  overflow-wrap: anywhere;
+}
+.nb-account-row h3 {
+  margin: 0 0 0.4rem;
+  font-size: 1rem;
+}
+.nb-account-row h3 small {
+  color: #675f55;
+  font-weight: normal;
+}
+.nb-account-row p,
+.nb-account-form p {
+  margin: 0.4rem 0;
+}
+.nb-account-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.65rem;
+}
+.nb-account-confirm {
+  padding: 0.5rem 0.65rem;
+  margin-top: 0.65rem;
+  background: #faf3ec;
+}
+.nb-account-form {
+  display: grid;
+  min-width: 0;
+  gap: 0.65rem;
+  margin-block: 0.85rem;
+}
+.nb-account-form label,
+.nb-account-form input,
+.nb-account-form select {
+  min-width: 0;
+  max-width: 100%;
+}

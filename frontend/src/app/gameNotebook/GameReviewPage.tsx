@@ -1,0 +1,732 @@
+import { Alert, Button, Dropdown, Spin } from 'antd';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import {
+  Link,
+  useLocation,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from 'react-router-dom';
+import useSWR, { useSWRConfig } from 'swr';
+
+import { ReaderFullscreenButton } from '../../components/ReaderFullscreenButton';
+import { WorkbenchBoard } from '../../components/WorkbenchBoard';
+import { useCompactReaderViewport } from '../../components/useCompactReaderViewport';
+import {
+  fetchJson,
+  requestEmpty,
+  requestJson,
+  ApiError,
+} from '../../logic/api/client';
+import { lichessSquareStyles } from '../boardInteraction';
+import { BookmarkEditor, type BookmarkFields } from './BookmarkEditor';
+import { positionLabel } from './positionLabel';
+import { ReviewPositionNotes, ReviewGameInfo } from './ReviewDetails';
+import { GameReviewScore } from './GameReviewScore';
+import { ReviewNoteEditor, type ReviewNoteTarget } from './ReviewNoteEditor';
+import {
+  moveLabel,
+  type ReviewBookmark,
+  type ReviewBookmarks,
+  type ReviewGame,
+  type ReviewGameSummary,
+  type ReviewNode,
+} from './reviewTypes';
+import './gameReview.css';
+
+const base = '/api/notebook';
+type Panel = 'score' | 'notes' | 'game';
+const panels: ReadonlyArray<[Panel, string]> = [
+  ['score', '棋谱'],
+  ['notes', '评语与收藏'],
+  ['game', '对局信息'],
+];
+
+export function GameReviewPage() {
+  const { gameId } = useParams<{ gameId: string }>();
+  const url = gameId ? `${base}/games/${gameId}` : null;
+  const {
+    data: game,
+    error,
+    mutate,
+  } = useSWR<ReviewGame>(url, fetchJson, { revalidateOnFocus: true });
+  if (error && !game)
+    return (
+      <section className="game-review-loading">
+        <Alert
+          type="error"
+          title={
+            error instanceof ApiError && error.status === 404
+              ? '找不到这盘棋，可能已经删除。'
+              : '棋谱读取失败，请重试。'
+          }
+        />
+        <Button onClick={() => void mutate()}>重试</Button>
+        <Link to="/games">返回我的对局</Link>
+      </section>
+    );
+  if (!game || !url)
+    return (
+      <div className="game-review-loading">
+        <Spin />
+        正在读取棋谱…
+      </div>
+    );
+  return (
+    <GameReview
+      key={game.id}
+      game={game}
+      url={url}
+      updateGame={(next) => mutate(next, { revalidate: false })}
+      reload={() => mutate()}
+    />
+  );
+}
+
+function GameReview({
+  game,
+  url,
+  updateGame,
+  reload,
+}: {
+  game: ReviewGame;
+  url: string;
+  updateGame: (
+    next: (previous?: ReviewGame) => ReviewGame | undefined,
+  ) => Promise<ReviewGame | undefined>;
+  reload: () => Promise<ReviewGame | undefined>;
+}) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [search, setSearch] = useSearchParams();
+  const compact = useCompactReaderViewport();
+  const { mutate: refresh } = useSWRConfig();
+  const [panel, setPanel] = useState<Panel>('score');
+  const [orientation, setOrientation] = useState<'white' | 'black'>('white');
+  const [noteEditor, setNoteEditor] = useState<ReviewNoteTarget>();
+  const [bookmarkEditor, setBookmarkEditor] = useState<ReviewBookmark>();
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState<{ text: string; error?: boolean }>();
+  const preferredNext = useRef(new Map<string, string>());
+  const bookmarkUrl = `${base}/bookmarks?game_id=${game.id}`;
+  const {
+    data: bookmarks,
+    error: bookmarkError,
+    mutate: updateBookmarks,
+  } = useSWR<ReviewBookmarks>(bookmarkUrl, fetchJson, {
+    revalidateOnFocus: true,
+  });
+  const { data: suggestions } = useSWR<{ tags: string[] }>(
+    bookmarkEditor ? `${base}/bookmark-tags` : null,
+    fetchJson,
+  );
+  const tree = useMemo(() => {
+    const byId = new Map(game.nodes.map((n) => [n.id, n]));
+    const children = new Map<string, ReviewNode[]>();
+    for (const node of game.nodes) {
+      if (!node.parent_id) continue;
+      const siblings = children.get(node.parent_id) ?? [];
+      siblings.push(node);
+      children.set(node.parent_id, siblings);
+    }
+    for (const siblings of children.values())
+      siblings.sort((a, b) => a.sort_order - b.sort_order);
+    return { byId, children, root: game.nodes.find((n) => !n.parent_id) };
+  }, [game.nodes]);
+  const starred = useMemo(
+    () => new Map((bookmarks?.items ?? []).map((item) => [item.node_id, item])),
+    [bookmarks],
+  );
+  const requested = search.get('node');
+  const node = requested ? tree.byId.get(requested) : tree.root;
+  const bookmark = node && starred.get(node.id);
+  const displayedNode = useRef(node?.id);
+  useLayoutEffect(() => {
+    displayedNode.current = node?.id;
+  }, [node?.id]);
+
+  function select(next: ReviewNode) {
+    setNotice(undefined);
+    if (node?.parent_id === next.id)
+      preferredNext.current.set(next.id, node.id);
+    let descendant: ReviewNode | undefined = next;
+    while (descendant?.parent_id) {
+      preferredNext.current.set(descendant.parent_id, descendant.id);
+      descendant = tree.byId.get(descendant.parent_id);
+    }
+    const params = new URLSearchParams(search);
+    params.set('node', next.id);
+    setSearch(params, {
+      replace: true,
+      state: location.state,
+      preventScrollReset: true,
+    });
+  }
+
+  function nextFor(current: ReviewNode) {
+    const remembered = preferredNext.current.get(current.id);
+    return remembered
+      ? tree.byId.get(remembered)
+      : tree.children.get(current.id)?.[0];
+  }
+
+  function step(direction: 'previous' | 'next' | 'first' | 'last') {
+    if (!node) return;
+    let destination: ReviewNode | undefined;
+    if (direction === 'first') destination = tree.root;
+    if (direction === 'previous' && node.parent_id)
+      destination = tree.byId.get(node.parent_id);
+    if (direction === 'next') destination = nextFor(node);
+    if (direction === 'last') {
+      destination = node;
+      let next = nextFor(destination);
+      while (next) {
+        destination = next;
+        next = nextFor(destination);
+      }
+    }
+    if (destination && destination !== node) select(destination);
+  }
+
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      if (
+        event.defaultPrevented ||
+        event.altKey ||
+        event.ctrlKey ||
+        event.metaKey ||
+        event.shiftKey ||
+        noteEditor ||
+        bookmarkEditor ||
+        document.querySelector(
+          'dialog[open], [role="dialog"], .ant-dropdown:not(.ant-dropdown-hidden), .ant-popover:not(.ant-popover-hidden)',
+        )
+      )
+        return;
+      const el = event.target instanceof HTMLElement ? event.target : null;
+      if (
+        el?.closest(
+          'textarea,input,select,[contenteditable="true"],[role="textbox"]',
+        )
+      )
+        return;
+      switch (event.key) {
+        case 'ArrowLeft':
+          event.preventDefault();
+          step('previous');
+          break;
+        case 'ArrowRight':
+          event.preventDefault();
+          step('next');
+          break;
+        case 'Home':
+          event.preventDefault();
+          step('first');
+          break;
+        case 'End':
+          event.preventDefault();
+          step('last');
+          break;
+      }
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  });
+
+  function backToLibrary() {
+    if (location.state?.notebookBack) void navigate(-1);
+    else void navigate('/games');
+  }
+
+  async function remember(row: ReviewBookmark) {
+    await updateBookmarks(
+      (previous) => {
+        if (!previous) return previous;
+        const items = previous.items.filter((b) => b.id !== row.id);
+        if (row.active) items.unshift(row);
+        return { ...previous, items, total: items.length };
+      },
+      { revalidate: false },
+    );
+    void refresh(
+      (key) =>
+        typeof key === 'string' &&
+        key !== bookmarkUrl &&
+        (key.startsWith(base + '/bookmarks') ||
+          key === base + '/bookmark-tags'),
+    );
+  }
+
+  async function star(action: 'current' | 'before' | 'relate' = 'current') {
+    if (!node || busy) return;
+    if (action === 'current' && bookmark) {
+      setBookmarkEditor(bookmark);
+      return;
+    }
+    const anchor =
+      action === 'before' && node.parent_id
+        ? tree.byId.get(node.parent_id)
+        : node;
+    if (!anchor) return;
+    setBusy(true);
+    try {
+      const row = await requestJson<ReviewBookmark>(base + '/bookmarks', {
+        method: 'POST',
+        body: JSON.stringify({
+          node_id: anchor.id,
+          related_node_id: node.san ? node.id : null,
+        }),
+      });
+      await remember(row);
+      if (action === 'before' && displayedNode.current === node.id) {
+        select(anchor);
+        setPanel('notes');
+      }
+      setNotice({
+        text:
+          action === 'relate'
+            ? `已关联 ${moveLabel(node)} 的棋步评语。`
+            : `已收藏 · ${positionLabel(anchor)}`,
+      });
+    } catch (reason) {
+      setNotice({ text: errorText(reason), error: true });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function unstar(permanent: boolean) {
+    if (!bookmark || busy) return;
+    setBusy(true);
+    try {
+      if (permanent) {
+        await requestEmpty(
+          `${base}/bookmarks/${bookmark.id}?expected_version=${bookmark.version}`,
+          { method: 'DELETE' },
+        );
+        await remember({ ...bookmark, active: false });
+      } else {
+        const row = await requestJson<ReviewBookmark>(
+          `${base}/bookmarks/${bookmark.id}`,
+          {
+            method: 'PATCH',
+            body: JSON.stringify({
+              expected_version: bookmark.version,
+              active: false,
+            }),
+          },
+        );
+        await remember(row);
+      }
+      setNotice({
+        text: permanent
+          ? '已删除局面收藏和收藏笔记。'
+          : '已取消收藏。再次收藏此处可恢复笔记和标签。',
+      });
+    } catch (reason) {
+      setNotice({ text: errorText(reason), error: true });
+      void updateBookmarks();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function editNote(kind: 'move' | 'summary') {
+    if (!node) return;
+    setNoteEditor(
+      kind === 'summary'
+        ? {
+            kind,
+            text: game.summary,
+            version: game.version,
+            position: `${game.white} — ${game.black}`,
+          }
+        : {
+            kind,
+            nodeId: node.id,
+            text: node.note,
+            version: node.version,
+            position: `${moveLabel(node)} · ${node.is_mainline ? '实战主线' : '分析变例'}`,
+          },
+    );
+  }
+
+  async function saveNote(text: string, version: number) {
+    if (!noteEditor) return;
+    if (noteEditor.kind === 'summary') {
+      const summary = await requestJson<ReviewGameSummary>(url, {
+        method: 'PATCH',
+        body: JSON.stringify({ expected_version: version, summary: text }),
+      });
+      await updateGame((previous) => previous && { ...previous, ...summary });
+    } else {
+      const changed = await requestJson<ReviewNode>(
+        `${url}/nodes/${noteEditor.nodeId}`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({ expected_version: version, note: text }),
+        },
+      );
+      await updateGame(
+        (previous) =>
+          previous && {
+            ...previous,
+            nodes: previous.nodes.map((n) =>
+              n.id === changed.id ? changed : n,
+            ),
+          },
+      );
+      void updateBookmarks();
+    }
+    void refresh(
+      (key) =>
+        typeof key === 'string' &&
+        ((key.startsWith(base + '/bookmarks') && key !== bookmarkUrl) ||
+          key.split('?')[0] === base + '/games' ||
+          key.startsWith(base + '/game-catalog')),
+    );
+    setNotice({ text: text.trim() ? '笔记已保存。' : '笔记已删除。' });
+  }
+
+  async function saveBookmark(fields: BookmarkFields) {
+    if (!bookmarkEditor) return;
+    try {
+      const changed = await requestJson<ReviewBookmark>(
+        `${base}/bookmarks/${bookmarkEditor.id}`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({
+            ...fields,
+            expected_version: bookmarkEditor.version,
+          }),
+        },
+      );
+      await remember(changed);
+      setNotice({ text: '局面笔记已保存。' });
+    } catch (reason) {
+      if (reason instanceof ApiError && reason.status === 409) {
+        const latest = (await updateBookmarks())?.items.find(
+          (b) => b.id === bookmarkEditor.id,
+        );
+        if (latest) setBookmarkEditor(latest);
+        throw new Error('局面笔记已在其他设备修改。请核对最新记录后再保存。');
+      }
+      throw reason;
+    }
+  }
+
+  if (!node || !tree.root) {
+    return (
+      <section className="game-review-loading">
+        <Alert
+          type="warning"
+          title={
+            requested ? '这个棋步已不存在。' : '这盘棋没有可显示的起始局面。'
+          }
+        />
+        {tree.root && (
+          <Button onClick={() => select(tree.root!)}>回到起始局面</Button>
+        )}
+        <Button onClick={backToLibrary}>返回我的对局</Button>
+      </section>
+    );
+  }
+  const previousPath = location.state?.notebookBack;
+  const backLabel =
+    typeof previousPath === 'string' &&
+    /^\/games\/[^/?]+\?node=/.test(previousPath)
+      ? '返回原局面'
+      : '返回列表';
+  const selectedNotes = Boolean(
+    node.note || bookmark?.note || node.comment || node.starting_comment,
+  );
+  return (
+    <section
+      className="game-review"
+      data-compact={compact}
+      data-selected-node={node.id}
+      data-panel={panel}
+    >
+      <div className="game-review-board-column">
+        <div className="game-review-board-pane" aria-label="复盘棋盘">
+          <div className="game-review-board-frame">
+            <WorkbenchBoard
+              id="notebook-game-board"
+              fitReaderPane={compact}
+              position={node.fen}
+              boardOrientation={orientation}
+              arePiecesDraggable={false}
+              customSquareStyles={lichessSquareStyles(
+                node.fen,
+                undefined,
+                node.uci,
+              )}
+            />
+          </div>
+        </div>
+        <nav className="game-review-controls" aria-label="棋盘操作">
+          <button
+            type="button"
+            className="game-review-tool"
+            onClick={backToLibrary}
+            title={backLabel}
+            aria-label={backLabel}
+          >
+            <svg
+              aria-hidden="true"
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M10 5 3 12l7 7 M3 12h16" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            className="game-review-tool"
+            disabled={!node.parent_id}
+            onClick={() => step('previous')}
+            title="上一步（←）"
+            aria-label="上一步"
+          >
+            <svg
+              aria-hidden="true"
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="m15 5-7 7 7 7" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            className="game-review-tool"
+            disabled={!nextFor(node)}
+            onClick={() => step('next')}
+            title="下一步（→）"
+            aria-label="下一步"
+          >
+            <svg
+              aria-hidden="true"
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="m9 5 7 7-7 7" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            className="game-review-star"
+            aria-pressed={Boolean(bookmark)}
+            aria-label={bookmark ? '编辑局面收藏' : '收藏当前局面'}
+            title={bookmark ? '编辑局面收藏' : '收藏当前局面'}
+            disabled={busy || !bookmarks}
+            onClick={() => void star()}
+          >
+            <span aria-hidden="true">{bookmark ? '★' : '☆'}</span>{' '}
+            {bookmark ? '已收藏' : '收藏'}
+          </button>
+          <Dropdown
+            trigger={['click']}
+            menu={{
+              items: [
+                {
+                  key: 'note',
+                  label: node.note ? '编辑棋步评语' : '写棋步评语',
+                  disabled: !node.san,
+                  onClick: () => editNote('move'),
+                },
+                {
+                  key: 'before',
+                  label: '收藏走这步之前',
+                  disabled: !node.parent_id || busy || !bookmarks,
+                  onClick: () => void star('before'),
+                },
+                ...(node.san &&
+                bookmark &&
+                !bookmark.related_moves.some((move) => move.node_id === node.id)
+                  ? [
+                      {
+                        key: 'relate',
+                        label: '关联刚走的棋步',
+                        disabled: busy,
+                        onClick: () => void star('relate'),
+                      },
+                    ]
+                  : []),
+                { type: 'divider' },
+                {
+                  key: 'first',
+                  label: '起始局面',
+                  disabled: !node.parent_id,
+                  onClick: () => step('first'),
+                },
+                {
+                  key: 'last',
+                  label: '最后一步',
+                  disabled: !nextFor(node),
+                  onClick: () => step('last'),
+                },
+                {
+                  key: 'flip',
+                  label: '翻转棋盘',
+                  onClick: () =>
+                    setOrientation(orientation === 'white' ? 'black' : 'white'),
+                },
+              ],
+            }}
+          >
+            <button
+              type="button"
+              className="game-review-tool"
+              aria-label="棋步菜单"
+              title="棋步菜单"
+            >
+              •••
+            </button>
+          </Dropdown>
+          <ReaderFullscreenButton />
+        </nav>
+      </div>
+      <div className="game-review-inspector">
+        <header className="game-review-heading">
+          <h1>
+            {game.white} <span>—</span> {game.black}
+          </h1>
+          <p>
+            {[game.result, game.date, game.archived_at ? '已归档' : null]
+              .filter(Boolean)
+              .join(' · ')}
+          </p>
+        </header>
+        <div className="game-review-tabs" aria-label="复盘面板">
+          {panels.map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              aria-label={label}
+              aria-pressed={panel === id}
+              onClick={() => setPanel(id)}
+            >
+              {label}
+              {id === 'notes' && selectedNotes ? ' •' : ''}
+            </button>
+          ))}
+        </div>
+        {bookmarkError && (
+          <Alert
+            type="error"
+            title="无法载入收藏"
+            action={
+              <Button size="small" onClick={() => void updateBookmarks()}>
+                重试
+              </Button>
+            }
+          />
+        )}
+        {notice && (
+          <div
+            role={notice.error ? 'alert' : 'status'}
+            className={'game-review-feedback' + (notice.error ? ' error' : '')}
+          >
+            <span>{notice.text}</span>
+            <button
+              type="button"
+              aria-label="关闭提示"
+              onClick={() => setNotice(undefined)}
+            >
+              ×
+            </button>
+          </div>
+        )}
+        <div className="game-review-sheets">
+          <section
+            className="game-review-sheet game-review-score"
+            data-active={panel === 'score'}
+            aria-label="棋谱面板"
+          >
+            <h2>棋谱</h2>
+            <GameReviewScore
+              nodes={game.nodes}
+              visible={!compact || panel === 'score'}
+              root={tree.root}
+              selectedId={node.id}
+              bookmarks={starred}
+              onSelect={select}
+            />
+          </section>
+          <ReviewPositionNotes
+            key={node.id}
+            active={panel === 'notes'}
+            node={node}
+            byId={tree.byId}
+            bookmark={bookmark}
+            busy={busy || !bookmarks}
+            star={() => void star()}
+            unstar={unstar}
+            editNote={() => editNote('move')}
+            editBookmark={setBookmarkEditor}
+            select={select}
+          />
+          <ReviewGameInfo
+            active={panel === 'game'}
+            game={game}
+            url={url}
+            editSummary={() => editNote('summary')}
+          />
+        </div>
+      </div>
+      {noteEditor && (
+        <ReviewNoteEditor
+          target={noteEditor}
+          onClose={() => setNoteEditor(undefined)}
+          onSave={saveNote}
+          reload={async () => {
+            const latest = await reload();
+            if (!latest) return;
+            if (noteEditor.kind === 'summary')
+              return { text: latest.summary, version: latest.version };
+            const changed = latest.nodes.find(
+              (n) => n.id === noteEditor.nodeId,
+            );
+            return changed && { text: changed.note, version: changed.version };
+          }}
+        />
+      )}
+      {bookmarkEditor && (
+        <BookmarkEditor
+          initial={{
+            title: bookmarkEditor.title,
+            note: bookmarkEditor.note,
+            tags: bookmarkEditor.tags,
+          }}
+          suggestedTags={suggestions?.tags ?? []}
+          onSave={saveBookmark}
+          onClose={() => setBookmarkEditor(undefined)}
+        />
+      )}
+    </section>
+  );
+}
+
+function errorText(reason: unknown) {
+  return reason instanceof Error ? reason.message : '保存失败，请重试。';
+}
+
+export default GameReviewPage;

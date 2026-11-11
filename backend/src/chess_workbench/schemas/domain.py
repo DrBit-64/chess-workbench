@@ -77,6 +77,7 @@ ErrorCode = Literal[
     "source_storage_unavailable",
     "engine_unavailable",
     "engine_failure",
+    "game_platform_unavailable",
     "lichess_unconfigured",
     "lichess_export_limit",
     "lichess_request_failed",

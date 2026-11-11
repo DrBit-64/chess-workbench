@@ -1,5 +1,13 @@
 # Current agent handoff
 
+## Personal games and bookmarked positions (2026-11-07)
+
+Open **我的对局** to save a PGN or public Lichess/Chess.com game, select games from a multi-game PGN, or manage public account sync. Personal move notes and game summaries are independent of imported annotations. Bookmark the current board or the decision before a move, search by note and multiple tags, jump to the exact game node or find other occurrences through the shared position graph. Archiving, un-starring, restoring and permanent deletion are available from the owning views. A bookmark can optionally become a user-authored exercise or the starting point for a game against Stockfish. Architecture and maintenance boundaries are in [ADR 0028](../decisions/0028-personal-game-notebook.md).
+
+Validated the workflow in Chromium against a real Sanic API and disposable SQLite database using independent phone and desktop browser contexts. Checks included Chinese substring/AND-tag filtering, variations and transpositions, before/after positions, restoring search context, archive/restore/deletion and authoring/playing/removing an exercise. Checked 304/336px portrait, short landscape, document fullscreen and desktop, long text, touch hit targets and the last entry in a long import preview. An extra 800px-wide engine check caught a layout that could shrink the chessboard or overflow; after fixing it, an actual touch move and Stockfish 18 reply were verified. There was no physical handset in this run.
+
+Real public Lichess and Chess.com games were verified through links, PGN and account-import identity. Older Chess.com daily games may require a player and the ending month. Migrations 0017–0020 were tested upgrading a populated pre-notebook database and downgrading a disposable copy. Scans of preserved legacy records and SQLite foreign keys passed. The frontend production build and generated contract checks pass; the PDF review typing and its fixtures were updated for the existing nullable fields without changing its workflow.
+
 ## Mainline scan citations (2026-11-07)
 
 The active move's scan button now occupies its own grid row below the white and black moves. Previously it overflowed the move cell, and a tap could select the following variation. The clickable area is at least 44 CSS pixels high. Variation citations can wrap separately from the move number and SAN.

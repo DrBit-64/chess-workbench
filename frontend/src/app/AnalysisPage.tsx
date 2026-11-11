@@ -56,12 +56,30 @@ function compactNodes(nodes: number | null): string {
   return String(nodes);
 }
 
-export function AnalysisPage() {
-  const { data: capabilities, error: capabilityError } =
-    useSWR<EngineCapabilities>('/api/engine/capabilities', fetchJson);
-  const [mode, setMode] = useState<'analysis' | 'play'>('analysis');
-  const [fen, setFen] = useState(START_FEN);
-  const [fenInput, setFenInput] = useState(START_FEN);
+export function AnalysisPage({
+  initialFen,
+  initialMode = 'analysis',
+}: {
+  initialFen?: string;
+  initialMode?: 'analysis' | 'play';
+} = {}) {
+  const [startFen] = useState(() => {
+    if (!initialFen) return START_FEN;
+    try {
+      new Chess(initialFen);
+      return initialFen;
+    } catch {
+      return START_FEN;
+    }
+  });
+  const {
+    data: capabilities,
+    error: capabilityError,
+    mutate: checkEngine,
+  } = useSWR<EngineCapabilities>('/api/engine/capabilities', fetchJson);
+  const [mode, setMode] = useState<'analysis' | 'play'>(initialMode);
+  const [fen, setFen] = useState(startFen);
+  const [fenInput, setFenInput] = useState(startFen);
   const [parameters, setParameters] = useState<EngineParameters>({
     multipv: 4,
     movetime_ms: 800,
@@ -78,7 +96,9 @@ export function AnalysisPage() {
   const [job, setJob] = useState<Job>();
   const [game, setGame] = useState<EngineGame>();
   const [review, setReview] = useState<EngineGameReview>();
-  const [userColor, setUserColor] = useState<'white' | 'black'>('white');
+  const [userColor, setUserColor] = useState<'white' | 'black'>(
+    new Chess(startFen).turn() === 'b' ? 'black' : 'white',
+  );
   const [strength, setStrength] = useState(5);
   const [gameBusy, setGameBusy] = useState(false);
 
@@ -255,6 +275,10 @@ export function AnalysisPage() {
       });
       setGame(created);
       setReview(undefined);
+    } catch (error) {
+      void message.error(
+        error instanceof Error ? error.message : '未能开始对弈',
+      );
     } finally {
       setGameBusy(false);
     }
@@ -386,13 +410,20 @@ export function AnalysisPage() {
           ]}
         />
       </div>
-      {capabilityError ? <Alert type="error" title="无法读取引擎状态" /> : null}
+      {capabilityError ? (
+        <Alert
+          type="error"
+          title="无法读取引擎状态"
+          action={<Button onClick={() => void checkEngine()}>重新检测</Button>}
+        />
+      ) : null}
       {capabilities && !capabilities.available ? (
         <Alert
           className="mb-4"
           type="warning"
           showIcon
           title="尚未安装 Stockfish"
+          action={<Button onClick={() => void checkEngine()}>重新检测</Button>}
           description="在仓库根目录运行 make install-stockfish，然后重启 API。"
         />
       ) : null}
@@ -420,7 +451,7 @@ export function AnalysisPage() {
               position={activeFen}
               animationDuration={FAST_MOVE_ANIMATION_MS}
               boardOrientation={
-                mode === 'play' && game ? game.user_color : 'white'
+                mode === 'play' ? (game?.user_color ?? userColor) : 'white'
               }
               onPieceDrop={(source, target) => {
                 if (mode === 'analysis')

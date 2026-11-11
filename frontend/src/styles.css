@@ -854,3 +854,23 @@ body {
 .mobile-book-reader[data-has-board='false'] .course-score-controls {
   display: none;
 }
+
+/* A short landscape screen has less room than the desktop analysis panel minimums. */
+@media (min-width: 761px) and (max-width: 880px) {
+  .analysis-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (orientation: landscape) and (max-height: 600px) and (min-width: 560px) and (max-width: 1180px) {
+  .analysis-grid {
+    grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+  }
+  .analysis-grid > * {
+    min-width: 0;
+  }
+  .analysis-board-wrap {
+    width: 100%;
+    max-width: min(100%, 83svh);
+    margin-inline: auto;
+  }
+}

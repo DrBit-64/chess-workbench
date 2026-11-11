@@ -5,18 +5,19 @@ As of 2026-10-01, the operator accepted v8 PDF extraction, v9 incremental extrac
 ## Current capabilities
 
 - Local position graph, PGN import/export, course editing and learning.
+- Personal game archive, move notes, tagged position bookmarks, exact-source and transposition lookup, public game-account sync and optional authored exercises. See [ADR 0028](decisions/0028-personal-game-notebook.md).
 - Local engine analysis, tablebase integration points and playable analysis positions.
 - PDF source library; independent v8 and incremental v9 extraction; source-linked review, manual corrections, recovery and course publication.
 - Older extraction results, review histories and published material remain readable.
 
-The personal repertoire, practice/FSRS and Lichess game sections are not implemented. The operator may use Chessbook.com for the move tree. The workbench's more useful potential contribution is study notes around critical positions, pawn structures, plans and move-order conditions. No feature in that direction is yet scheduled.
+The personal repertoire and general spaced-repetition scheduler remain future work. The operator may use Chessbook.com for the move tree. The workbench's more useful potential contribution is study notes around critical positions, pawn structures, plans and move-order conditions. No feature in that direction is yet scheduled.
 
 ## Candidate next work
 
 1. A recoverable local backup of the SQLite database and source files, verified by opening an existing course and review from a copy.
 2. A small study workflow that lets the user save plans, critical positions and source explanations from a course, with explicit source links.
 3. A small practice loop only after the user has enough study material to identify what needs repetition.
-4. Lichess game review, video import and multi-source conflict handling only if actual use calls for them.
+4. Video import and multi-source conflict handling only if actual use calls for them.
 5. Deployment and collaboration remain optional, not prerequisites for a single-user local website.
 
 These are candidate directions, not an obligation to build the entire original plan. Preserve the Source → Knowledge → Repertoire → Exercise boundary, legal persisted moves and human approval of AI extraction.

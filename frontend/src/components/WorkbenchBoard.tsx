@@ -54,6 +54,7 @@ function MaterialRow({
   return (
     <div
       className="board-material"
+      role="group"
       data-color={color}
       aria-label={`${label}子力差：${description || '无多出棋子'}${score > 0 ? `，净多${score}分` : ''}`}
       title={`${label}${description ? `多出：${description}` : '无多出棋子'}；按双方同类棋子相抵计算`}
