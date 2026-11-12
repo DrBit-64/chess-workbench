@@ -12,7 +12,7 @@ from chess_workbench.config import Settings
 from chess_workbench.schemas.personal_games import NotebookImportRequest, NotebookSelection
 from chess_workbench.services.content import ServiceError
 from chess_workbench.services.personal_games import (
-    fetch_notebook_pgn,
+    fetch_notebook_export,
     game_source,
     parse_notebook_pgn,
     preview_games,
@@ -182,11 +182,14 @@ async def test_lichess_download_uses_canonical_id_and_rejects_untrusted_hosts(
     monkeypatch.setattr(
         httpx, "AsyncClient", lambda **kw: client_type(transport=httpx.MockTransport(serve), **kw)
     )
-    assert await fetch_notebook_pgn("https://lichess.org/AbCd1234abcd/black#12", None, None) == PGN
+    assert await fetch_notebook_export("https://lichess.org/AbCd1234abcd/black#12", None, None) == (
+        PGN,
+        None,
+    )
     assert seen == [("lichess.org", "/game/export/AbCd1234")]
     assert game_source("https://lichess.org/game/AbCd1234").url == "https://lichess.org/AbCd1234"
     with pytest.raises(ServiceError, match="单局链接"):
-        await fetch_notebook_pgn("https://lichess.org.example/AbCd1234", None, None)
+        await fetch_notebook_export("https://lichess.org.example/AbCd1234", None, None)
     assert len(seen) == 1
     assert (
         game_source("https://www.chess.com/analysis/game/live/1234/analysis").external_id

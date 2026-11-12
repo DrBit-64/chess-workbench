@@ -28,6 +28,16 @@ class RemoteGame:
     url: str
     pgn: str | None  # Never import moves from an unfinished game.
     abandoned: bool = False
+    started_at: datetime | None = None
+
+
+def platform_timestamp(value: object, divisor: int) -> datetime | None:
+    if type(value) is not int or value < 0:
+        return None
+    try:
+        return datetime.fromtimestamp(value / divisor, UTC)
+    except (ValueError, OverflowError, OSError):
+        return None
 
 
 def client() -> httpx.AsyncClient:
@@ -160,9 +170,9 @@ def game_hints(html: str) -> tuple[str | None, str | None]:
     return (player[1] if player else None, f"{month[1]}/{month[2]}" if month else None)
 
 
-async def fetch_chesscom_pgn(
+async def fetch_chesscom_export(
     url: str, username: str | None = None, month: str | None = None
-) -> str:
+) -> tuple[str, datetime | None]:
     try:
         async with asyncio.timeout(40):
             return await _resolve_chesscom_game(url, username, month)
@@ -172,7 +182,9 @@ async def fetch_chesscom_pgn(
         ) from exc
 
 
-async def _resolve_chesscom_game(url: str, username: str | None, month: str | None) -> str:
+async def _resolve_chesscom_game(
+    url: str, username: str | None, month: str | None
+) -> tuple[str, datetime | None]:
     identity = chesscom_id(url)
     if identity is None:
         raise ServiceError("validation_error", 422, "请粘贴 Chess.com 的 live 或 daily 对局链接。")
@@ -226,7 +238,7 @@ async def _resolve_chesscom_game(url: str, username: str | None, month: str | No
                         "invalid_pgn", 422, "这盘棋是变体，本工作台收录标准国际象棋。"
                     )
                 if isinstance(pgn, str) and pgn.strip():
-                    return pgn
+                    return pgn, platform_timestamp(game.get("start_time"), 1)
                 raise platform_error("Chess.com 尚未提供这盘棋的完整 PGN，可稍后重试。")
             halves = [(low, index - 1), (index + 1, high)]
             if numbers and int(game_id) < sorted(numbers)[len(numbers) // 2]:
@@ -279,7 +291,12 @@ async def chesscom_page(
             raise platform_error("Chess.com 的已结束对局缺少标识或 PGN，同步进度已保留。")
         kind, number = key
         result.append(
-            RemoteGame(f"{kind}:{number}", f"https://www.chess.com/game/{kind}/{number}", pgn)
+            RemoteGame(
+                f"{kind}:{number}",
+                f"https://www.chess.com/game/{kind}/{number}",
+                pgn,
+                started_at=platform_timestamp(game.get("start_time"), 1),
+            )
         )
     return result, boundary
 
@@ -315,6 +332,7 @@ def lichess_game(item: dict[str, object]) -> RemoteGame | None:
         external_id,
         f"{LICHESS}/{external_id}",
         pgn if isinstance(pgn, str) and not unfinished else None,
+        started_at=platform_timestamp(item.get("createdAt"), 1000),
     )
 
 

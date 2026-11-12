@@ -23,7 +23,18 @@ import { lichessSquareStyles } from '../boardInteraction';
 import { BookmarkEditor, type BookmarkFields } from './BookmarkEditor';
 import { positionLabel } from './positionLabel';
 import { ReviewPositionNotes, ReviewGameInfo } from './ReviewDetails';
-import { GameReviewScore } from './GameReviewScore';
+import { GameReviewScore, type NotebookMoveAction } from './GameReviewScore';
+import {
+  useReviewBoardMoves,
+  type ReviewDirection,
+} from './useReviewBoardMoves';
+import { PromotionDialog } from './PromotionDialog';
+import { useGameClocks } from './GameClocks';
+import {
+  indexReviewTree,
+  mergeTreeUpdate,
+  type MoveUpdate,
+} from './reviewTree';
 import { ReviewNoteEditor, type ReviewNoteTarget } from './ReviewNoteEditor';
 import {
   moveLabel,
@@ -111,6 +122,8 @@ function GameReview({
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<{ text: string; error?: boolean }>();
   const preferredNext = useRef(new Map<string, string>());
+  const selectionToken = useRef<symbol>();
+  const editingLock = useRef(false);
   const bookmarkUrl = `${base}/bookmarks?game_id=${game.id}`;
   const {
     data: bookmarks,
@@ -123,19 +136,7 @@ function GameReview({
     bookmarkEditor ? `${base}/bookmark-tags` : null,
     fetchJson,
   );
-  const tree = useMemo(() => {
-    const byId = new Map(game.nodes.map((n) => [n.id, n]));
-    const children = new Map<string, ReviewNode[]>();
-    for (const node of game.nodes) {
-      if (!node.parent_id) continue;
-      const siblings = children.get(node.parent_id) ?? [];
-      siblings.push(node);
-      children.set(node.parent_id, siblings);
-    }
-    for (const siblings of children.values())
-      siblings.sort((a, b) => a.sort_order - b.sort_order);
-    return { byId, children, root: game.nodes.find((n) => !n.parent_id) };
-  }, [game.nodes]);
+  const tree = useMemo(() => indexReviewTree(game.nodes), [game.nodes]);
   const starred = useMemo(
     () => new Map((bookmarks?.items ?? []).map((item) => [item.node_id, item])),
     [bookmarks],
@@ -143,13 +144,27 @@ function GameReview({
   const requested = search.get('node');
   const node = requested ? tree.byId.get(requested) : tree.root;
   const bookmark = node && starred.get(node.id);
-  const analysis = useGameReviewEngine(game, node);
+  const board = useReviewBoardMoves(
+    node,
+    tree.children,
+    busy,
+    select,
+    (parent, uci) => editTree('move', parent, uci),
+  );
+  const analysis = useGameReviewEngine(game, node, board.fen);
+  const clocks = useGameClocks(game, board.temporary ? undefined : node);
   const displayedNode = useRef(node?.id);
   useLayoutEffect(() => {
     displayedNode.current = node?.id;
+    return () => {
+      displayedNode.current = undefined;
+      selectionToken.current = Symbol();
+    };
   }, [node?.id]);
 
   function select(next: ReviewNode) {
+    selectionToken.current = Symbol();
+    board.reset();
     setNotice(undefined);
     if (node?.parent_id === next.id)
       preferredNext.current.set(next.id, node.id);
@@ -169,13 +184,12 @@ function GameReview({
 
   function nextFor(current: ReviewNode) {
     const remembered = preferredNext.current.get(current.id);
-    return remembered
-      ? tree.byId.get(remembered)
-      : tree.children.get(current.id)?.[0];
+    const children = tree.children.get(current.id);
+    return children?.find((child) => child.id === remembered) ?? children?.[0];
   }
 
-  function step(direction: 'previous' | 'next' | 'first' | 'last') {
-    if (!node) return;
+  function step(direction: ReviewDirection) {
+    if (!node || board.step(direction)) return;
     let destination: ReviewNode | undefined;
     if (direction === 'first') destination = tree.root;
     if (direction === 'previous' && node.parent_id)
@@ -189,7 +203,8 @@ function GameReview({
         next = nextFor(destination);
       }
     }
-    if (destination && destination !== node) select(destination);
+    if (destination && (destination !== node || board.temporary))
+      select(destination);
   }
 
   useEffect(() => {
@@ -203,7 +218,7 @@ function GameReview({
         noteEditor ||
         bookmarkEditor ||
         document.querySelector(
-          'dialog[open], [role="dialog"], .ant-dropdown:not(.ant-dropdown-hidden), .ant-popover:not(.ant-popover-hidden)',
+          'dialog[open], [role="dialog"], .nb-move-menu, .ant-dropdown:not(.ant-dropdown-hidden), .ant-popover:not(.ant-popover-hidden)',
         )
       )
         return;
@@ -242,6 +257,70 @@ function GameReview({
     else void navigate('/games');
   }
 
+  async function editTree(
+    action: NotebookMoveAction | 'move',
+    target: ReviewNode,
+    uci?: string,
+  ) {
+    if (busy || editingLock.current) return;
+    const startedAt = selectionToken.current;
+    editingLock.current = true;
+    setBusy(true);
+    setNotice(undefined);
+    try {
+      const change = await requestJson<MoveUpdate>(
+        action === 'move' ? url + '/moves' : `${url}/nodes/${target.id}/branch`,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            expected_version: game.version,
+            ...(action === 'move'
+              ? { parent_id: target.id, uci }
+              : { kind: action }),
+          }),
+        },
+      );
+      const updated = await updateGame((previous) =>
+        mergeTreeUpdate(previous, change),
+      );
+      const next = updated?.nodes.find((n) => n.id === change.selected_id);
+      if (action !== 'move') {
+        for (const changed of change.nodes) {
+          if (changed.parent_id)
+            preferredNext.current.delete(changed.parent_id);
+        }
+      }
+      const removedCurrent =
+        action === 'delete_subtree' &&
+        change.nodes.some((n) => n.id === displayedNode.current && n.hidden);
+      if (
+        next &&
+        (removedCurrent ||
+          (action !== 'delete_subtree' && startedAt === selectionToken.current))
+      ) {
+        select(next);
+      }
+      if (action === 'delete_subtree') {
+        setNotice({ text: '已从复盘棋谱中移除这条变化。' });
+      } else if (action === 'restore_path') {
+        setNotice({ text: '已恢复这条线路。' });
+      }
+    } catch (reason) {
+      if (reason instanceof ApiError && reason.status === 409) {
+        await reload().catch(() => undefined);
+        setNotice({
+          text: '棋谱已在其他窗口修改。请核对最新棋谱后重试。',
+          error: true,
+        });
+      } else {
+        setNotice({ text: errorText(reason), error: true });
+      }
+    } finally {
+      editingLock.current = false;
+      setBusy(false);
+    }
+  }
+
   async function manageGame(action: 'archive' | 'restore' | 'delete') {
     if (busy) return;
     setBusy(true);
@@ -259,7 +338,11 @@ function GameReview({
             archived: action === 'archive',
           }),
         });
-        await updateGame((previous) => previous && { ...previous, ...row });
+        await updateGame((previous) =>
+          previous && previous.version <= row.version
+            ? { ...previous, ...row }
+            : previous,
+        );
         setNotice({
           text:
             action === 'archive' ? '棋谱已归档，可在此恢复。' : '棋谱已恢复。',
@@ -301,7 +384,7 @@ function GameReview({
   }
 
   async function star(action: 'current' | 'before' | 'relate' = 'current') {
-    if (!node || busy) return;
+    if (!node || board.temporary || busy) return;
     if (action === 'current' && bookmark) {
       setBookmarkEditor(bookmark);
       return;
@@ -375,7 +458,7 @@ function GameReview({
   }
 
   function editNote(kind: 'move' | 'summary') {
-    if (!node) return;
+    if (!node || (kind === 'move' && board.temporary)) return;
     setNoteEditor(
       kind === 'summary'
         ? {
@@ -401,7 +484,11 @@ function GameReview({
         method: 'PATCH',
         body: JSON.stringify({ expected_version: version, summary: text }),
       });
-      await updateGame((previous) => previous && { ...previous, ...summary });
+      await updateGame((previous) =>
+        previous && previous.version <= summary.version
+          ? { ...previous, ...summary }
+          : previous,
+      );
     } else {
       const changed = await requestJson<ReviewNode>(
         `${url}/nodes/${noteEditor.nodeId}`,
@@ -415,7 +502,9 @@ function GameReview({
           previous && {
             ...previous,
             nodes: previous.nodes.map((n) =>
-              n.id === changed.id ? changed : n,
+              n.id === changed.id && n.version <= changed.version
+                ? { ...n, note: changed.note, version: changed.version }
+                : n,
             ),
           },
       );
@@ -480,9 +569,15 @@ function GameReview({
     /^\/games\/[^/?]+\?node=/.test(previousPath)
       ? '返回原局面'
       : '返回列表';
-  const selectedNotes = Boolean(
-    node.note || bookmark?.note || node.comment || node.starting_comment,
-  );
+  const selectedNotes =
+    !board.temporary &&
+    Boolean(
+      node.note || bookmark?.note || node.comment || node.starting_comment,
+    );
+  const canStepBack = Boolean(board.temporary || node.parent_id);
+  const canStepForward = board.trial
+    ? board.trial.cursor < board.trial.moves.length
+    : Boolean(nextFor(node));
   const feedback = (
     <>
       {bookmarkError && (
@@ -526,7 +621,8 @@ function GameReview({
             <WorkbenchBoard
               id="notebook-game-board"
               fitReaderPane={compact}
-              position={node.fen}
+              position={board.fen ?? node.fen}
+              playerClocks={clocks}
               boardOrientation={orientation}
               customArrows={analysis.live.arrows}
               evaluationBar={
@@ -536,11 +632,13 @@ function GameReview({
                   orientation={orientation}
                 />
               }
-              arePiecesDraggable={false}
+              arePiecesDraggable={board.enabled}
+              onSquareClick={board.click}
+              onPieceDrop={(from, to) => board.play(from, to)}
               customSquareStyles={lichessSquareStyles(
-                node.fen,
-                undefined,
-                node.uci,
+                board.fen ?? node.fen,
+                board.selected,
+                board.lastMove,
               )}
             />
           </div>
@@ -570,7 +668,7 @@ function GameReview({
           <button
             type="button"
             className="game-review-tool"
-            disabled={!node.parent_id}
+            disabled={!canStepBack}
             onClick={() => step('previous')}
             title="上一步（←）"
             aria-label="上一步"
@@ -592,7 +690,7 @@ function GameReview({
           <button
             type="button"
             className="game-review-tool"
-            disabled={!nextFor(node)}
+            disabled={!canStepForward}
             onClick={() => step('next')}
             title="下一步（→）"
             aria-label="下一步"
@@ -611,18 +709,32 @@ function GameReview({
               <path d="m9 5 7 7-7 7" />
             </svg>
           </button>
-          <button
-            type="button"
-            className="game-review-star"
-            aria-pressed={Boolean(bookmark)}
-            aria-label={bookmark ? '编辑局面收藏' : '收藏当前局面'}
-            title={bookmark ? '编辑局面收藏' : '收藏当前局面'}
-            disabled={busy || !bookmarks}
-            onClick={() => void star()}
-          >
-            <span aria-hidden="true">{bookmark ? '★' : '☆'}</span>{' '}
-            {bookmark ? '已收藏' : '收藏'}
-          </button>
+          {board.temporary ? (
+            <button
+              type="button"
+              className="game-review-star"
+              onClick={() => select(node)}
+              disabled={board.pending}
+              title={
+                board.pending ? '正在保存棋步' : '结束试走并回到棋谱所选局面'
+              }
+            >
+              {board.pending ? '保存中…' : '结束试走'}
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="game-review-star"
+              aria-pressed={Boolean(bookmark)}
+              aria-label={bookmark ? '编辑局面收藏' : '收藏当前局面'}
+              title={bookmark ? '编辑局面收藏' : '收藏当前局面'}
+              disabled={busy || !bookmarks}
+              onClick={() => void star()}
+            >
+              <span aria-hidden="true">{bookmark ? '★' : '☆'}</span>{' '}
+              {bookmark ? '已收藏' : '收藏'}
+            </button>
+          )}
           <Dropdown
             trigger={['click']}
             menu={{
@@ -630,16 +742,18 @@ function GameReview({
                 {
                   key: 'note',
                   label: node.note ? '编辑棋步评语' : '写棋步评语',
-                  disabled: !node.san,
+                  disabled: !node.san || board.temporary,
                   onClick: () => editNote('move'),
                 },
                 {
                   key: 'before',
                   label: '收藏走这步之前',
-                  disabled: !node.parent_id || busy || !bookmarks,
+                  disabled:
+                    !node.parent_id || board.temporary || busy || !bookmarks,
                   onClick: () => void star('before'),
                 },
-                ...(node.san &&
+                ...(!board.temporary &&
+                node.san &&
                 bookmark &&
                 !bookmark.related_moves.some((move) => move.node_id === node.id)
                   ? [
@@ -655,13 +769,13 @@ function GameReview({
                 {
                   key: 'first',
                   label: '起始局面',
-                  disabled: !node.parent_id,
+                  disabled: !canStepBack,
                   onClick: () => step('first'),
                 },
                 {
                   key: 'last',
                   label: '最后一步',
-                  disabled: !nextFor(node),
+                  disabled: !canStepForward,
                   onClick: () => step('last'),
                 },
                 {
@@ -706,7 +820,12 @@ function GameReview({
           data-active={panel === 'score'}
           aria-label="棋谱面板"
         >
-          <GameReviewEnginePanel analysis={analysis} />
+          <GameReviewEnginePanel
+            analysis={analysis}
+            recording={board.recording}
+            onRecordingChange={board.setRecordingMode}
+            editingBusy={busy}
+          />
           <GameReviewScore
             nodes={game.nodes}
             visible={!compact || panel === 'score'}
@@ -714,6 +833,8 @@ function GameReview({
             selectedId={node.id}
             bookmarks={starred}
             evaluations={analysis.scores}
+            editingBusy={busy}
+            onMoveAction={editTree}
             onSelect={select}
           />
         </section>
@@ -733,19 +854,34 @@ function GameReview({
             </p>
           </header>
           {!compact && feedback}
-          <ReviewPositionNotes
-            key={node.id}
-            active={panel === 'notes'}
-            node={node}
-            byId={tree.byId}
-            bookmark={bookmark}
-            busy={busy || !bookmarks}
-            star={() => void star()}
-            unstar={unstar}
-            editNote={() => editNote('move')}
-            editBookmark={setBookmarkEditor}
-            select={select}
-          />
+          {board.temporary ? (
+            <section
+              className="game-review-sheet game-review-notes"
+              data-active={panel === 'notes'}
+              aria-label="评语与收藏面板"
+            >
+              <h2>{board.pending ? '正在记录棋步' : '试走局面'}</h2>
+              {!board.pending && (
+                <p>
+                  回到棋谱并开启“记录走棋”，即可保存变化、添加评语或收藏局面。
+                </p>
+              )}
+            </section>
+          ) : (
+            <ReviewPositionNotes
+              key={node.id}
+              active={panel === 'notes'}
+              node={node}
+              byId={tree.byId}
+              bookmark={bookmark}
+              busy={busy || !bookmarks}
+              star={() => void star()}
+              unstar={unstar}
+              editNote={() => editNote('move')}
+              editBookmark={setBookmarkEditor}
+              select={select}
+            />
+          )}
           <ReviewGameInfo
             active={panel === 'game'}
             game={game}
@@ -756,6 +892,15 @@ function GameReview({
           />
         </aside>
       </div>
+      {board.promotion && (
+        <PromotionDialog
+          onClose={board.cancelPromotion}
+          onChoose={(piece) => {
+            if (board.promotion)
+              board.play(board.promotion.from, board.promotion.to, piece);
+          }}
+        />
+      )}
       {noteEditor && (
         <ReviewNoteEditor
           target={noteEditor}

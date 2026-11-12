@@ -19,6 +19,7 @@ from chess_workbench.api.health import health_blueprint
 from chess_workbench.api.lichess import lichess_blueprint
 from chess_workbench.api.notebook_accounts import notebook_accounts_blueprint
 from chess_workbench.api.notebook_practice import notebook_practice_blueprint
+from chess_workbench.api.notebook_tree import notebook_tree_blueprint
 from chess_workbench.api.pdf import pdf_blueprint
 from chess_workbench.api.personal_bookmarks import personal_bookmarks_bp
 from chess_workbench.api.personal_games import personal_games_blueprint
@@ -91,6 +92,7 @@ def create_app(settings: Settings | None = None) -> ChessWorkbenchApp:
 
     app.blueprint(notebook_accounts_blueprint)
     app.blueprint(notebook_practice_blueprint)
+    app.blueprint(notebook_tree_blueprint)
     app.blueprint(health_blueprint)
     app.blueprint(graph_blueprint)
     app.blueprint(content_blueprint)

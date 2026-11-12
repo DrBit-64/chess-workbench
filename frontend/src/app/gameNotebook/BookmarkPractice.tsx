@@ -17,9 +17,11 @@ import {
   lichessSquareStyles,
 } from '../boardInteraction';
 import { NotebookDialog } from './NotebookDialog';
+import { PromotionDialog } from './PromotionDialog';
 import { notebookApi, type SavedBookmark } from './catalogApi';
 import {
   advanceAnswer,
+  bookmarkContinuation,
   lineNotation,
   parseAnswerLines,
   positionAfter,
@@ -183,27 +185,9 @@ function Exercise({
       [previous.trimEnd(), line].filter(Boolean).join('\n'),
     );
   }
-  function sourceLine() {
-    if (!game) return [];
-    const nodes = new Map(
-      game.nodes
-        .filter((n) => n.parent_id && n.sort_order === 0)
-        .map((n) => [n.parent_id, n]),
-    );
-    const result: string[] = [];
-    // When a decision was collected from a variation, use that selected
-    // outgoing move before following its continuation.
-    const linked = new Set(bookmark.related_moves.map((move) => move.node_id));
-    let current =
-      game.nodes.find(
-        (node) => node.parent_id === bookmark.node_id && linked.has(node.id),
-      ) ?? nodes.get(bookmark.node_id);
-    while (current?.uci && result.length < 5) {
-      result.push(current.uci);
-      current = nodes.get(current.id);
-    }
-    return result;
-  }
+  const continuation = game
+    ? bookmarkContinuation(game.nodes, bookmark.node_id, bookmark.related_moves)
+    : [];
   async function save() {
     setError('');
     try {
@@ -326,10 +310,10 @@ function Exercise({
                     在棋盘上录入
                   </Button>
                 )}
-                {!recording && sourceLine().length > 0 && (
+                {!recording && continuation.length > 0 && (
                   <Button
                     title="从原谱填入最多 5 个半回合，可继续编辑"
-                    onClick={() => appendLine(lineNotation(fen, sourceLine()))}
+                    onClick={() => appendLine(lineNotation(fen, continuation))}
                   >
                     填入原谱续着
                   </Button>
@@ -458,25 +442,10 @@ function Exercise({
         </section>
       </div>
       {promotion && (
-        <NotebookDialog
-          title="选择升变棋子"
+        <PromotionDialog
           onClose={() => setPromotion(undefined)}
-        >
-          <div className="nb-practice-actions">
-            {Object.entries({ q: '后', r: '车', b: '象', n: '马' }).map(
-              ([piece, label]) => (
-                <Button
-                  key={piece}
-                  onClick={() =>
-                    submitMove(promotion.from, promotion.to, piece)
-                  }
-                >
-                  {label}
-                </Button>
-              ),
-            )}
-          </div>
-        </NotebookDialog>
+          onChoose={(piece) => submitMove(promotion.from, promotion.to, piece)}
+        />
       )}
       {confirmRemove !== undefined && (
         <NotebookDialog

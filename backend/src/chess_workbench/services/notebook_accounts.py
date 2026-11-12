@@ -140,6 +140,8 @@ async def stage(
                 item.state = "ignored"
             else:
                 item.state = "queued" if game.pgn else "waiting"
+            if game.started_at is not None:
+                item.started_at = game.started_at
             item.pending_pgn = game.pgn
             item.checked_ms = target
 
@@ -179,7 +181,10 @@ async def sync_step(db: Database, account_id: UUID) -> NotebookSyncResult:
             # while preserving its upstream PGN for an explicit retry.
             async with session.begin_nested():
                 result = await import_online_game(
-                    session, item.pending_pgn, source_url=item.source_url
+                    session,
+                    item.pending_pgn,
+                    source_url=item.source_url,
+                    source_started_at=item.started_at,
                 )
         except ServiceError as exc:
             if exc.status >= 500:

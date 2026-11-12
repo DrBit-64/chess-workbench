@@ -465,7 +465,7 @@ def test_sync_sqlite_migrations_match_metadata_enforce_checks_and_downgrade() ->
 
 
 def test_migrations_render_mysql_specific_ddl() -> None:
-    assert ScriptDirectory.from_config(_alembic_config()).get_heads() == ["20261107_0020"]
+    assert ScriptDirectory.from_config(_alembic_config()).get_heads() == ["20261112_0022"]
     output = StringIO()
     context = MigrationContext.configure(
         dialect=mysql.dialect(),
@@ -504,7 +504,10 @@ def test_migrations_render_mysql_specific_ddl() -> None:
     # constraint. DROP TABLE already cleans ordinary indexes on InnoDB.
     # Revision 0004 legitimately removes its new ``uq_`` constraint when
     # downgrading only to 0003, but no old ``ix_`` may be dropped explicitly.
-    assert "DROP INDEX ix_" not in downgrade_ddl, (
+    remaining = downgrade_ddl.replace(
+        "DROP INDEX ix_personal_games_chronology ON personal_games", ""
+    )
+    assert "DROP INDEX ix_" not in remaining, (
         "downgrade DDL explicitly drops an ordinary/FK-supporting index; "
         "DROP TABLE on InnoDB handles those indexes (error 1553 otherwise)"
     )

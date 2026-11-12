@@ -21,7 +21,13 @@ function formatPrincipalVariation(fen: string, san: string[]) {
 
 export function GameReviewEnginePanel({
   analysis,
+  recording,
+  onRecordingChange,
+  editingBusy = false,
 }: {
+  recording?: boolean;
+  onRecordingChange?: (on: boolean) => void;
+  editingBusy?: boolean;
   analysis: ReturnType<typeof useGameReviewEngine>;
 }) {
   const {
@@ -62,6 +68,35 @@ export function GameReviewEnginePanel({
           </span>
         </div>
         <div className="game-review-engine-actions">
+          {onRecordingChange && (
+            <button
+              className="game-review-record"
+              type="button"
+              aria-label="记录走棋"
+              aria-pressed={Boolean(recording)}
+              title={recording ? '关闭记录走棋' : '开启记录走棋'}
+              disabled={editingBusy}
+              onClick={() => onRecordingChange(!recording)}
+            >
+              <svg
+                aria-hidden="true"
+                width="17"
+                height="17"
+                viewBox="0 0 20 20"
+              >
+                <circle
+                  cx="10"
+                  cy="10"
+                  r="8"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                />
+                <circle cx="10" cy="10" r="4.2" fill="currentColor" />
+              </svg>
+            </button>
+          )}
+
           <button
             type="button"
             onClick={running ? pause : () => void analyzeGame()}

@@ -64,6 +64,9 @@
   font-size: 0.79em;
   font-weight: 400;
 }
+.nb-notation-variation .nb-notation-eval {
+  margin-inline-start: 0.28em;
+}
 .nb-notation-eval {
   margin-inline-start: auto;
   white-space: nowrap;
@@ -127,5 +130,96 @@
   .nb-notation-variation .nb-notation-move {
     min-width: 30px;
     min-height: 32px;
+  }
+}
+.nb-notation-toolbar {
+  display: flex;
+  align-items: stretch;
+}
+.nb-notation-toolbar .nb-notation-start {
+  flex: 1 1 auto;
+  width: auto;
+}
+.nb-notation-menu-button {
+  flex: none;
+  min-width: 42px;
+  padding-inline: 0.45rem;
+  border-bottom: 1px solid #e5e7e0;
+  color: #39543f;
+  cursor: pointer;
+}
+.nb-notation-menu-button:hover:not(:disabled) {
+  background: #e9eee6;
+}
+.nb-notation-menu-button:disabled {
+  color: #8b908a;
+  cursor: default;
+}
+.nb-hidden-move {
+  display: flex;
+  gap: 0.4em;
+  flex-wrap: wrap;
+  align-items: baseline;
+  padding: 0.35em 0.5em;
+  color: #555e52;
+  font-size: 0.85rem;
+  background: #f4f4ed;
+}
+.nb-hidden-move button {
+  padding: 0.2em 0.4em;
+}
+.nb-hidden-move button:last-child {
+  color: #315c43;
+  text-decoration: underline;
+}
+.nb-move-menu {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1100;
+  box-sizing: border-box;
+  width: min(13rem, calc(100vw - 12px));
+  max-height: calc(100dvh - 12px);
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 0.2rem 0;
+  border: 1px solid #cccfc7;
+  border-radius: 6px;
+  box-shadow: 0 5px 20px #282c2333;
+  color: #272c27;
+  background: white;
+  font-size: 0.875rem;
+}
+.nb-move-menu button,
+.nb-move-menu-title {
+  display: block;
+  width: 100%;
+  padding: 0.4rem 0.65rem;
+  text-align: start;
+}
+.nb-move-menu-title {
+  font-weight: 650;
+  border-bottom: 1px solid #e4e6df;
+}
+.nb-move-menu button {
+  min-height: 32px;
+  cursor: pointer;
+}
+.nb-move-menu button:hover:not(:disabled),
+.nb-move-menu button:focus-visible {
+  background: #e9eee6;
+  outline: 2px solid #34614b;
+  outline-offset: -2px;
+}
+.nb-move-menu button:disabled {
+  color: #777;
+  cursor: default;
+}
+.nb-move-menu-danger {
+  color: #942d26;
+}
+@media (pointer: coarse) {
+  .nb-move-menu button {
+    min-height: 40px;
   }
 }

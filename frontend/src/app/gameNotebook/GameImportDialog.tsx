@@ -145,6 +145,7 @@ export function GameImportDialog({
         body: JSON.stringify({
           pgn: preview.pgn,
           source_url: preview.source_url,
+          source_started_at: preview.source_started_at,
           selections,
           request_id: submission.current.id,
         }),

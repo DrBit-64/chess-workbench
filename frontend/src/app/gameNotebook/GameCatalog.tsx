@@ -9,6 +9,7 @@ import {
 } from '../../logic/api/client';
 import { CatalogShell } from './CatalogShell';
 import { GameImportDialog } from './GameImportDialog';
+import { gameTimeControl } from './gameTimeControl';
 import { NotebookAccounts } from './NotebookAccounts';
 import { GameCard } from './GameCard';
 import { NotebookDialog } from './NotebookDialog';
@@ -21,14 +22,18 @@ export function GameCatalog() {
   const [params, setParams] = useSearchParams();
   const archived = params.get('archived') === '1';
   const query = params.get('q') ?? '';
+  const order = params.get('order') === 'asc' ? 'asc' : 'desc';
+  const timeControl = params.get('time_control') ?? '';
   const navigate = useNavigate();
   const page = Math.max(1, parseInt(params.get('page') || '1', 10) || 1);
   const values = new URLSearchParams({
     archived: String(archived),
+    order,
     limit: String(pageSize),
     offset: String((page - 1) * pageSize),
   });
   if (query.trim()) values.set('q', query.trim());
+  if (timeControl) values.set('time_control', timeControl);
   const key = `${notebookApi}/game-catalog?${values}`;
   const { data, error, isLoading, mutate } = useSWR<GameResults>(
     key,
@@ -42,6 +47,11 @@ export function GameCatalog() {
   const [actionError, setActionError] = useState('');
   const back = useCatalogReturn(data !== undefined);
   const games = data?.items ?? [];
+  // Keep the selected control visible while loading or when a search yields no games.
+  const clockOptions = new Set(
+    (data?.time_controls ?? []).map((value) => value ?? '?'),
+  );
+  if (timeControl) clockOptions.add(timeControl);
   useEffect(() => {
     if (!data || page <= 1 || (page - 1) * pageSize < data.total) return;
     const next = new URLSearchParams(params);
@@ -129,7 +139,7 @@ export function GameCatalog() {
         </>
       }
     >
-      <div className="nb-filters">
+      <div className="nb-filters nb-game-filters">
         <div className="nb-segment">
           <button
             aria-pressed={!archived}
@@ -160,6 +170,34 @@ export function GameCatalog() {
             onChange={(e) => updateParams('q', e.target.value)}
           />
         </label>
+        <div className="nb-game-selects">
+          <label className="nb-field">
+            对局时间排序
+            <select
+              value={order}
+              onChange={(e) =>
+                updateParams('order', e.target.value === 'asc' ? 'asc' : '')
+              }
+            >
+              <option value="desc">最新在前</option>
+              <option value="asc">最早在前</option>
+            </select>
+          </label>
+          <label className="nb-field">
+            对局时限
+            <select
+              value={timeControl}
+              onChange={(e) => updateParams('time_control', e.target.value)}
+            >
+              <option value="">全部时限</option>
+              {[...clockOptions].map((value) => (
+                <option key={value} value={value}>
+                  {gameTimeControl(value)}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
       </div>
       {notice && (
         <p role="status" className="nb-notice">
@@ -182,7 +220,7 @@ export function GameCatalog() {
         <p role="status">正在读取棋谱…</p>
       ) : games.length === 0 ? (
         <p className="nb-empty">
-          {query
+          {query || timeControl
             ? '没有符合条件的棋谱。'
             : archived
               ? '没有归档的棋谱。'

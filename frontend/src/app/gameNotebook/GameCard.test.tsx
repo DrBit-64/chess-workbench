@@ -5,27 +5,29 @@ import type { GameResults } from './catalogApi';
 import { GameCard } from './GameCard';
 import { gameTimeControl } from './gameTimeControl';
 
+const game: GameResults['items'][number] = {
+  id: 'game-12',
+  white: 'White player',
+  black: 'Black player',
+  white_rating: 1863,
+  black_rating: 1746,
+  time_control: '300+3',
+  final_fen: '7k/8/8/8/8/8/8/K7 w - - 12 43',
+  opening_eco: 'D37',
+  opening_name: 'Queen’s Gambit Declined',
+  date: '2026.11.12',
+  started_at: '2026-11-12T12:30:00Z',
+  result: '1/2-1/2',
+  platform: 'lichess',
+  source_url: null,
+  archived_at: null,
+  created_at: '2026-11-13T00:00:00Z',
+  version: 1,
+  summary: '残局复盘',
+};
+
 describe('game catalog card', () => {
   it('shows both original ratings, the recorded terminal board, the opening and time control', () => {
-    const game: GameResults['items'][number] = {
-      id: 'game-12',
-      white: 'White player',
-      black: 'Black player',
-      white_rating: 1863,
-      black_rating: 1746,
-      time_control: '300+3',
-      final_fen: '7k/8/8/8/8/8/8/K7 w - - 12 43',
-      opening_eco: 'D37',
-      opening_name: 'Queen’s Gambit Declined',
-      date: '2026.11.12',
-      result: '1/2-1/2',
-      platform: 'lichess',
-      source_url: null,
-      archived_at: null,
-      created_at: '2026-11-13T00:00:00Z',
-      version: 1,
-      summary: '残局复盘',
-    };
     render(
       <MemoryRouter>
         <ul>
@@ -43,6 +45,7 @@ describe('game catalog card', () => {
     expect(card.textContent).toContain('白方 White player (1863)');
     expect(card.textContent).toContain('黑方 Black player (1746)');
     expect(card.textContent).toContain('时限 5+3');
+    expect(card.querySelector('time')?.dateTime).toBe(game.started_at);
     expect(card.textContent).toContain('Queen’s Gambit Declined');
     expect(card.textContent).toContain('D37');
     const diagram = within(card).getByRole('img', {
@@ -53,6 +56,40 @@ describe('game catalog card', () => {
     expect(
       within(card).getByRole('link', { name: '打开棋谱' }).getAttribute('href'),
     ).toBe('/games/game-12');
+  });
+
+  it('labels import fallback while retaining the actual precision of PGN dates', () => {
+    const dates = ['2022.??.??', '2022.04.??', '2022.04.09', '????.??.??'];
+    render(
+      <MemoryRouter>
+        <ul>
+          {dates.map((date) => (
+            <GameCard
+              key={date}
+              game={{ ...game, date, started_at: null }}
+              returnState={{ notebookBack: '/games' }}
+              onOpen={vi.fn()}
+            >
+              {null}
+            </GameCard>
+          ))}
+        </ul>
+      </MemoryRouter>,
+    );
+    const [year, month, day, missing] = screen.getAllByRole('listitem');
+    for (const [card, text] of [
+      [year, '2022'],
+      [month, '2022.04'],
+      [day, '2022.04.09'],
+    ] as const) {
+      expect(card.querySelector('.nb-meta')?.textContent).toBe(
+        text + ' · Lichess',
+      );
+      expect(card.querySelector('time')).toBeNull();
+    }
+    const fallback = within(missing).getByTitle('导入时间（本地时间）');
+    expect(fallback.getAttribute('datetime')).toBe(game.created_at);
+    expect(fallback.textContent).toMatch(/^导入于 .+\d{2}:\d{2}$/);
   });
 
   it('handles fixed time, correspondence and multiple PGN time periods', () => {

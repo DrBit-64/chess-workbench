@@ -12,6 +12,7 @@ type SourceNode = {
   fen: string;
   san: string | null;
   is_mainline: boolean;
+  parent_id: string | null;
 };
 type CachedScore = {
   fen: string;
@@ -48,7 +49,7 @@ const test = base.extend<{ game: SavedGame }>({
 [Result "1-0"]
 [Opening "Misleading imported tag"]
 
-1. e4 {[%eval 0.37]} d5 2. exd5 Nf6 (2... Qxd5 3. Nc3 (3. d4) Qa5) 3. d4 (3. c4 c6) 1-0`;
+1. e4 {[%eval 0.37] [%clk 0:04:59]} d5 {[%clk 0:04:57]} 2. exd5 {[%clk 0:04:55]} Nf6 (2... Qxd5 3. Nc3 (3. d4) Qa5) 3. d4 (3. c4 c6) 1-0`;
     const imported = await request.post('/api/notebook/imports', {
       data: { pgn, selections: [{ index: 0 }] },
     });
@@ -165,6 +166,118 @@ test('saved game cards link to aligned move pairs, nested variations and mobile 
     /分析变例/,
   );
   await page.getByRole('button', { name: '退出全屏' }).click();
+});
+
+test.describe('playing moves on the review board', () => {
+  test.use({ hasTouch: true });
+
+  test('follows played moves and their clocks, records analysis separately and edits saved branches on desktop and phone', async ({
+    page,
+    request,
+    game,
+  }) => {
+    const path = '/games/' + game.gameId;
+    const score = page.getByRole('navigation', { name: '对局棋谱' });
+    const toggle = page.getByRole('button', { name: '记录走棋' });
+    const selected = score.locator('[aria-current="step"]');
+    const white = page.getByLabel('白方剩余时间');
+    const black = page.getByLabel('黑方剩余时间');
+    const square = (cell: string) => page.locator(`[data-square="${cell}"]`);
+    const move = async (from: string, to: string) => {
+      await square(from).click();
+      await square(to).click();
+    };
+    const readNodes = async (): Promise<SourceNode[]> =>
+      (await (await request.get('/api/notebook/games/' + game.gameId)).json())
+        .nodes;
+    const savedUnderE4 = async () =>
+      (await readNodes()).filter((node) => node.parent_id === game.main[0].id);
+    const goTo = (node: SourceNode) =>
+      score.locator(`[data-notebook-node="${node.id}"]`).click();
+
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(path);
+    await expect(toggle).toHaveAttribute('aria-pressed', 'true');
+    const original = await readNodes();
+    await move('e2', 'e4');
+    await expect(selected).toHaveAttribute(
+      'data-notebook-node',
+      game.main[0].id,
+    );
+    await move('d7', 'd5');
+    await expect(selected).toHaveAttribute(
+      'data-notebook-node',
+      game.main[1].id,
+    );
+    await expect(white).toContainText('04:59');
+    await expect(black).toContainText('04:57');
+    expect((await bounds(white)).y).toBeGreaterThan((await bounds(black)).y);
+    await page.getByRole('button', { name: '棋步菜单' }).click();
+    await page.getByText('翻转棋盘', { exact: true }).click();
+    expect((await bounds(black)).y).toBeGreaterThan((await bounds(white)).y);
+    await goTo(game.main[0]);
+    await toggle.click();
+    await expect(toggle).toHaveAttribute('aria-pressed', 'false');
+    await move('c7', 'c5');
+    await expect(square('c5').locator('[data-piece="bP"]')).toBeVisible();
+    expect(await readNodes()).toHaveLength(original.length);
+    await toggle.click();
+
+    await square('g8').dragTo(square('f6'));
+    await expect(selected).toHaveAccessibleName(/1\.\.\. Nf6/);
+    await expect(white.filter({ hasText: /\d+:\d{2}/ })).toHaveCount(0);
+    await expect(black.filter({ hasText: /\d+:\d{2}/ })).toHaveCount(0);
+    await move('d2', 'd4');
+    await expect(selected).toHaveAccessibleName(/2\. d4/);
+    const continuationId = await selected.getAttribute('data-notebook-node');
+    await goTo(game.main[0]);
+    await move('c7', 'c5');
+    await expect(selected).toHaveAccessibleName(/1\.\.\. c5/);
+    const alternatives = await savedUnderE4();
+    const knight = alternatives.find((n) => n.san === 'Nf6')!;
+    const sicilian = alternatives.find((n) => n.san === 'c5')!;
+    expect(alternatives).toHaveLength(3);
+    await page.reload();
+    await expect(selected).toHaveAttribute('data-notebook-node', sicilian.id);
+    await selected.click({ button: 'right' });
+    await page.getByRole('menuitem', { name: '提升变招' }).click();
+    await page.reload();
+    await expect(
+      score.locator(`[data-notebook-node="${sicilian.id}"]`),
+    ).toBeVisible();
+    const line = score.locator('[data-notebook-node]');
+    const siblings = (
+      await line.evaluateAll((buttons) =>
+        buttons.map((button) => button.getAttribute('data-notebook-node')),
+      )
+    ).filter((id) => id === knight.id || id === sicilian.id);
+    expect(siblings).toEqual([sicilian.id, knight.id]);
+    await page.setViewportSize({ width: 336, height: 741 });
+    await goTo(knight);
+    await page.getByRole('button', { name: '编辑当前棋步' }).tap();
+    await page.getByRole('menuitem', { name: '从此处开始删除' }).tap();
+    await page
+      .getByRole('dialog')
+      .getByRole('button', { name: '确认删除' })
+      .tap();
+    await expect(
+      score.locator(`[data-notebook-node="${knight.id}"]`),
+    ).toHaveCount(0);
+    await page.reload();
+    await expect(
+      score.locator(`[data-notebook-node="${sicilian.id}"]`),
+    ).toBeVisible();
+    await expect(
+      score.locator(`[data-notebook-node="${knight.id}"]`),
+    ).toHaveCount(0);
+    await expect(
+      score.locator(`[data-notebook-node="${continuationId}"]`),
+    ).toHaveCount(0);
+    await goTo(game.main[1]);
+    await expect(white).toContainText('04:59');
+    await expect(black).toContainText('04:57');
+    await fits(page);
+  });
 });
 
 // Opt in when the test API is running a local Stockfish with MultiPV support.

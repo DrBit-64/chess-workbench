@@ -869,6 +869,23 @@ export interface paths {
         patch: operations["updateNotebookGame"];
         trace?: never;
     };
+    "/api/notebook/games/{game_id}/moves": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Record Notebook Move */
+        post: operations["recordNotebookMove"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/notebook/games/{game_id}/nodes/{node_id}": {
         parameters: {
             query?: never;
@@ -884,6 +901,23 @@ export interface paths {
         head?: never;
         /** Update Notebook Node */
         patch: operations["updateNotebookNode"];
+        trace?: never;
+    };
+    "/api/notebook/games/{game_id}/nodes/{node_id}/branch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Edit Notebook Branch */
+        post: operations["editNotebookBranch"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/notebook/games/{game_id}/pgn": {
@@ -8534,6 +8568,8 @@ export interface operations {
                 limit?: number;
                 q?: string;
                 archived?: boolean;
+                time_control?: string;
+                order?: string;
             };
             header?: never;
             path?: never;
@@ -8583,6 +8619,11 @@ export interface operations {
                             result: string;
                             /** Source Url */
                             source_url: string | null;
+                            /**
+                             * Started At
+                             * Format: date-time
+                             */
+                            started_at: string | null;
                             /** Summary */
                             summary: string;
                             /** Time Control */
@@ -8594,6 +8635,8 @@ export interface operations {
                             /** White Rating */
                             white_rating: number | null;
                         }[];
+                        /** Time Controls */
+                        time_controls: (string | null)[];
                         /** Total */
                         total: number;
                     };
@@ -8702,6 +8745,11 @@ export interface operations {
                             comment: string;
                             /** Fen */
                             fen: string;
+                            /**
+                             * Hidden
+                             * @default false
+                             */
+                            hidden: boolean;
                             /**
                              * Id
                              * Format: uuid
@@ -8843,6 +8891,90 @@ export interface operations {
             };
         };
     };
+    recordNotebookMove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                game_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Expected Version */
+                    expected_version: number;
+                    /**
+                     * Parent Id
+                     * Format: uuid
+                     */
+                    parent_id: string;
+                    /** Uci */
+                    uci: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Game Version */
+                        game_version: number;
+                        /** Nodes */
+                        nodes: {
+                            /** Comment */
+                            comment: string;
+                            /** Fen */
+                            fen: string;
+                            /**
+                             * Hidden
+                             * @default false
+                             */
+                            hidden: boolean;
+                            /**
+                             * Id
+                             * Format: uuid
+                             */
+                            id: string;
+                            /** Is Mainline */
+                            is_mainline: boolean;
+                            /** Nags */
+                            nags: number[];
+                            /** Note */
+                            note: string;
+                            /**
+                             * Parent Id
+                             * Format: uuid
+                             */
+                            parent_id: string | null;
+                            /** Ply */
+                            ply: number;
+                            /** San */
+                            san: string | null;
+                            /** Sort Order */
+                            sort_order: number;
+                            /** Starting Comment */
+                            starting_comment: string;
+                            /** Uci */
+                            uci: string | null;
+                            /** Version */
+                            version: number;
+                        }[];
+                        /**
+                         * Selected Id
+                         * Format: uuid
+                         */
+                        selected_id: string;
+                    };
+                };
+            };
+        };
+    };
     updateNotebookNode: {
         parameters: {
             query?: never;
@@ -8876,6 +9008,11 @@ export interface operations {
                         /** Fen */
                         fen: string;
                         /**
+                         * Hidden
+                         * @default false
+                         */
+                        hidden: boolean;
+                        /**
                          * Id
                          * Format: uuid
                          */
@@ -8903,6 +9040,89 @@ export interface operations {
                         uci: string | null;
                         /** Version */
                         version: number;
+                    };
+                };
+            };
+        };
+    };
+    editNotebookBranch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                game_id: string;
+                node_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Expected Version */
+                    expected_version: number;
+                    /**
+                     * Kind
+                     * @enum {string}
+                     */
+                    kind: "promote_variation" | "demote_variation" | "make_mainline" | "delete_subtree" | "restore_path";
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Game Version */
+                        game_version: number;
+                        /** Nodes */
+                        nodes: {
+                            /** Comment */
+                            comment: string;
+                            /** Fen */
+                            fen: string;
+                            /**
+                             * Hidden
+                             * @default false
+                             */
+                            hidden: boolean;
+                            /**
+                             * Id
+                             * Format: uuid
+                             */
+                            id: string;
+                            /** Is Mainline */
+                            is_mainline: boolean;
+                            /** Nags */
+                            nags: number[];
+                            /** Note */
+                            note: string;
+                            /**
+                             * Parent Id
+                             * Format: uuid
+                             */
+                            parent_id: string | null;
+                            /** Ply */
+                            ply: number;
+                            /** San */
+                            san: string | null;
+                            /** Sort Order */
+                            sort_order: number;
+                            /** Starting Comment */
+                            starting_comment: string;
+                            /** Uci */
+                            uci: string | null;
+                            /** Version */
+                            version: number;
+                        }[];
+                        /**
+                         * Selected Id
+                         * Format: uuid
+                         */
+                        selected_id: string;
                     };
                 };
             };
@@ -8965,6 +9185,12 @@ export interface operations {
                         /** Index */
                         index: number;
                     }[];
+                    /**
+                     * Source Started At
+                     * Format: date-time
+                     * @default null
+                     */
+                    source_started_at?: string | null;
                     /**
                      * Source Url
                      * @default null
@@ -9099,6 +9325,12 @@ export interface operations {
                         }[];
                         /** Pgn */
                         pgn: string;
+                        /**
+                         * Source Started At
+                         * Format: date-time
+                         * @default null
+                         */
+                        source_started_at: string | null;
                         /** Source Url */
                         source_url: string | null;
                     };

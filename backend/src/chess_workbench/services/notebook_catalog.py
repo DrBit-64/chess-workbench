@@ -6,6 +6,7 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from chess_workbench.domain.game_chronology import catalog_date
 from chess_workbench.domain.openings import OPENING_MAX_PLIES, lichess_openings
 from chess_workbench.schemas.personal_games import NotebookGame, NotebookGameCard
 from chess_workbench.store.models.graph import Position
@@ -69,13 +70,16 @@ async def catalog_cards(
                 and published_name not in {"", "?", "-"}
             ):
                 eco, name = published_eco, published_name
-        clock = headers.get("timecontrol", "")
         cards.append(
             NotebookGameCard(
-                **NotebookGame.model_validate(game, from_attributes=True).model_dump(),
+                **NotebookGame.model_validate(game, from_attributes=True).model_dump(
+                    exclude={"date"}
+                ),
+                date=catalog_date(headers),
                 white_rating=_rating(headers.get("whiteelo", "")),
                 black_rating=_rating(headers.get("blackelo", "")),
-                time_control=clock if clock and clock != "?" else None,
+                time_control=game.time_control,
+                started_at=game.started_at,
                 final_fen=finals[game.id],
                 opening_eco=eco,
                 opening_name=name,

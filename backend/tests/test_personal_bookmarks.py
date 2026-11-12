@@ -156,3 +156,18 @@ async def test_position_lookup_includes_unstarred_games_repetitions_and_variatio
     assert archive.status == 200
     _, preserved = await client.get(f"{BASE}/bookmarks/{bookmark['id']}")
     assert preserved.json["node_id"] == source["id"] and preserved.json["archived"]
+
+    # Removing this subtree hides its analysis occurrence from reverse lookup, but
+    # still lists the actual later repetition and preserves the bookmarked variation.
+    _, removed = await client.post(
+        f"{BASE}/games/{game['id']}/nodes/{source['id']}/branch",
+        json={"expected_version": archive.json["version"], "kind": "delete_subtree"},
+    )
+    assert removed.status == 200
+    _, remaining = await client.get(url, params={"include_variations": "true"})
+    assert remaining.json["total"] == 2
+    assert {h["node_id"] for h in remaining.json["items"]} == {
+        h["node_id"] for h in hits.json["items"]
+    }
+    _, saved_branch = await client.get(f"{BASE}/bookmarks/{branch_hit.json['id']}")
+    assert saved_branch.status == 200 and saved_branch.json["node_id"] == branch["id"]

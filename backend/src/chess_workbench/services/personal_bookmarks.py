@@ -319,7 +319,13 @@ async def other_occurrences(
         .join(PersonalGame, PersonalGame.id == PersonalGameNode.game_id)
         .where(PersonalGameNode.position_id == position_id, PersonalGameNode.id != node_id)
     )
-    if not include_variations:
+    if include_variations:
+        # The original game still reached its played positions after review edits.
+        # Removed analysis variations remain accessible from their exact bookmarks.
+        stmt = stmt.where(
+            or_(PersonalGameNode.is_mainline.is_(True), PersonalGameNode.hidden.is_(False))
+        )
+    else:
         stmt = stmt.where(PersonalGameNode.is_mainline.is_(True))
     total = (
         await session.scalar(stmt.with_only_columns(func.count(), maintain_column_froms=True)) or 0

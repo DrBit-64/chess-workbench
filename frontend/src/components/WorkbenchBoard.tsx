@@ -31,6 +31,7 @@ type Props = Omit<ComponentProps<typeof Chessboard>, 'position'> & {
   position: string;
   fitReaderPane?: boolean;
   evaluationBar?: ReactNode;
+  playerClocks?: Record<'white' | 'black', ReactNode>;
 };
 type Drawing = BoardShape & { pointerId: number };
 
@@ -79,6 +80,7 @@ export function WorkbenchBoard({
   position,
   fitReaderPane = false,
   evaluationBar,
+  playerClocks,
   boardOrientation = 'white',
   customArrows = [],
   ...props
@@ -191,17 +193,32 @@ export function WorkbenchBoard({
     cancelDrawing();
   }
 
+  function playerRow(color: 'white' | 'black', edge: 'top' | 'bottom') {
+    const row = (
+      <MaterialRow
+        color={color}
+        side={material[color]}
+        score={color === 'white' ? material.score : -material.score}
+      />
+    );
+    return playerClocks ? (
+      <div className="board-player-row" data-edge={edge}>
+        {row}
+        {playerClocks[color]}
+      </div>
+    ) : (
+      row
+    );
+  }
+
   return (
     <div
       className="workbench-board"
       data-workbench-board={props.id ?? ''}
       data-can-drag={props.arePiecesDraggable !== false}
+      data-has-clocks={playerClocks ? true : undefined}
     >
-      <MaterialRow
-        color={topColor}
-        side={material[topColor]}
-        score={topColor === 'white' ? material.score : -material.score}
-      />
+      {playerRow(topColor, 'top')}
       <div
         ref={surface}
         className="workbench-board-surface"
@@ -321,11 +338,7 @@ export function WorkbenchBoard({
         </svg>
       </div>
       {evaluationBar}
-      <MaterialRow
-        color={boardOrientation}
-        side={material[boardOrientation]}
-        score={boardOrientation === 'white' ? material.score : -material.score}
-      />
+      {playerRow(boardOrientation, 'bottom')}
     </div>
   );
 }

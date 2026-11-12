@@ -25,6 +25,7 @@ class NotebookGame(StrictContract):
 
 
 class NotebookGameCard(NotebookGame):
+    started_at: UtcDateTime | None
     white_rating: int | None
     black_rating: int | None
     time_control: str | None
@@ -36,6 +37,7 @@ class NotebookGameCard(NotebookGame):
 class NotebookGameCatalog(StrictContract):
     items: list[NotebookGameCard]
     total: int
+    time_controls: list[str | None]
 
 
 class NotebookNode(StrictContract):
@@ -44,6 +46,7 @@ class NotebookNode(StrictContract):
     ply: int
     sort_order: int
     is_mainline: bool
+    hidden: bool = False
     fen: str
     san: str | None
     uci: str | None
@@ -103,6 +106,7 @@ class NotebookCandidate(StrictContract):
 
 
 class NotebookImportPreview(StrictContract):
+    source_started_at: UtcDateTime | None = None
     duplicate_games: list[NotebookGame]
     source_url: str | None
     pgn: str
@@ -116,10 +120,17 @@ class NotebookSelection(StrictContract):
 
 
 class NotebookImportRequest(StrictContract):
+    source_started_at: UtcDateTime | None = None
     source_url: Annotated[str, StringConstraints(max_length=2048)] | None = None
     pgn: str
     selections: Annotated[list[NotebookSelection], Field(min_length=1, max_length=1000)]
     request_id: UUID | None = None
+
+    @model_validator(mode="after")
+    def timestamp_requires_link(self) -> Self:
+        if self.source_started_at is not None and not self.source_url:
+            raise ValueError("a platform start time requires a game link")
+        return self
 
 
 class NotebookImportItem(StrictContract):

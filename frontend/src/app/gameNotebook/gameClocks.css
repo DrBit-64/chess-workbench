@@ -1,0 +1,98 @@
+.game-review .board-player-row {
+  grid-column: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-width: 0;
+  min-height: 1.8rem;
+}
+.game-review .board-player-row[data-edge='top'] {
+  grid-row: 1;
+}
+.game-review .board-player-row[data-edge='bottom'] {
+  grid-row: 3;
+}
+.game-player-clock {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35em;
+  margin-inline-start: auto;
+  padding: 0.1em 0.55em;
+  min-width: 5.15em;
+  border-radius: 3px;
+  background: #e6e6e2;
+  color: #464940;
+  font-size: clamp(0.82rem, 1.2vw, 1.07rem);
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+  line-height: 1.35;
+  white-space: nowrap;
+}
+.game-player-clock[hidden] {
+  visibility: hidden;
+}
+.game-player-clock[data-turn='true'] {
+  color: #294c37;
+  background: #dce8dc;
+}
+.game-player-clock-disc {
+  flex: none;
+  width: 0.64em;
+  height: 0.64em;
+  border: 1px solid #62645c;
+  border-radius: 50%;
+  background: #fff;
+}
+.game-player-clock[data-side='black'] .game-player-clock-disc {
+  background: #373936;
+}
+.game-review[data-compact='true'] .board-player-row {
+  min-height: 1.35rem;
+}
+@media (orientation: landscape) and (max-width: 1180px) {
+  /* Place the clocks alongside the corners on height-limited phones to keep all eight ranks playable. */
+  .game-review[data-compact='true']:has(.workbench-board[data-has-clocks]) {
+    --review-clock-rail: 4.7rem;
+    grid-template-columns:
+      min(
+        49%,
+        calc(
+          var(--game-review-height) + var(--course-evaluation-width) +
+            var(--course-evaluation-gap) + var(--review-clock-rail)
+        )
+      )
+      minmax(0, 1fr);
+  }
+  .game-review[data-compact='true']
+    .game-review-board-frame:has([data-has-clocks]) {
+    width: min(
+      100cqw,
+      calc(
+        100cqh + var(--course-evaluation-width) + var(--course-evaluation-gap) +
+          var(--review-clock-rail)
+      )
+    );
+  }
+  .game-review[data-compact='true'] .workbench-board[data-has-clocks] {
+    grid-template-columns: minmax(0, 1fr) var(--course-evaluation-width) calc(
+        var(--review-clock-rail) - var(--course-evaluation-gap)
+      );
+  }
+  .game-review[data-compact='true'] .workbench-board .board-player-row {
+    grid-area: 2 / 3;
+    justify-content: center;
+  }
+  .game-review[data-compact='true'] .board-player-row[data-edge='top'] {
+    align-self: start;
+  }
+  .game-review[data-compact='true'] .board-player-row[data-edge='bottom'] {
+    align-self: end;
+  }
+  .game-review[data-compact='true'] .game-player-clock {
+    margin-inline-start: 0;
+    font-size: 0.76rem;
+    padding-inline: 0.22em;
+    min-width: 0;
+  }
+}

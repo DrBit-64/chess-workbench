@@ -14038,6 +14038,22 @@
             "schema": {
               "type": "boolean"
             }
+          },
+          {
+            "in": "query",
+            "name": "time_control",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "order",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -14108,6 +14124,12 @@
                             "title": "Source Url",
                             "type": "string"
                           },
+                          "started_at": {
+                            "format": "date-time",
+                            "nullable": true,
+                            "title": "Started At",
+                            "type": "string"
+                          },
                           "summary": {
                             "title": "Summary",
                             "type": "string"
@@ -14143,6 +14165,7 @@
                           "archived_at",
                           "created_at",
                           "version",
+                          "started_at",
                           "white_rating",
                           "black_rating",
                           "time_control",
@@ -14156,6 +14179,14 @@
                       "title": "Items",
                       "type": "array"
                     },
+                    "time_controls": {
+                      "items": {
+                        "nullable": true,
+                        "type": "string"
+                      },
+                      "title": "Time Controls",
+                      "type": "array"
+                    },
                     "total": {
                       "title": "Total",
                       "type": "integer"
@@ -14163,7 +14194,8 @@
                   },
                   "required": [
                     "items",
-                    "total"
+                    "total",
+                    "time_controls"
                   ],
                   "title": "NotebookGameCatalog",
                   "type": "object"
@@ -14382,6 +14414,11 @@
                           "fen": {
                             "title": "Fen",
                             "type": "string"
+                          },
+                          "hidden": {
+                            "default": false,
+                            "title": "Hidden",
+                            "type": "boolean"
                           },
                           "id": {
                             "format": "uuid",
@@ -14645,6 +14682,182 @@
         ]
       }
     },
+    "/api/notebook/games/{game_id}/moves": {
+      "post": {
+        "operationId": "recordNotebookMove",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "game_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "expected_version": {
+                    "minimum": 1,
+                    "title": "Expected Version",
+                    "type": "integer"
+                  },
+                  "parent_id": {
+                    "format": "uuid",
+                    "title": "Parent Id",
+                    "type": "string"
+                  },
+                  "uci": {
+                    "pattern": "^[a-h][1-8][a-h][1-8][qrbn]?$",
+                    "title": "Uci",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "parent_id",
+                  "uci",
+                  "expected_version"
+                ],
+                "title": "NotebookRecordMove",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "game_version": {
+                      "minimum": 1,
+                      "title": "Game Version",
+                      "type": "integer"
+                    },
+                    "nodes": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "comment": {
+                            "title": "Comment",
+                            "type": "string"
+                          },
+                          "fen": {
+                            "title": "Fen",
+                            "type": "string"
+                          },
+                          "hidden": {
+                            "default": false,
+                            "title": "Hidden",
+                            "type": "boolean"
+                          },
+                          "id": {
+                            "format": "uuid",
+                            "title": "Id",
+                            "type": "string"
+                          },
+                          "is_mainline": {
+                            "title": "Is Mainline",
+                            "type": "boolean"
+                          },
+                          "nags": {
+                            "items": {
+                              "type": "integer"
+                            },
+                            "title": "Nags",
+                            "type": "array"
+                          },
+                          "note": {
+                            "title": "Note",
+                            "type": "string"
+                          },
+                          "parent_id": {
+                            "format": "uuid",
+                            "nullable": true,
+                            "title": "Parent Id",
+                            "type": "string"
+                          },
+                          "ply": {
+                            "title": "Ply",
+                            "type": "integer"
+                          },
+                          "san": {
+                            "nullable": true,
+                            "title": "San",
+                            "type": "string"
+                          },
+                          "sort_order": {
+                            "title": "Sort Order",
+                            "type": "integer"
+                          },
+                          "starting_comment": {
+                            "title": "Starting Comment",
+                            "type": "string"
+                          },
+                          "uci": {
+                            "nullable": true,
+                            "title": "Uci",
+                            "type": "string"
+                          },
+                          "version": {
+                            "title": "Version",
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "parent_id",
+                          "ply",
+                          "sort_order",
+                          "is_mainline",
+                          "fen",
+                          "san",
+                          "uci",
+                          "nags",
+                          "starting_comment",
+                          "comment",
+                          "note",
+                          "version"
+                        ],
+                        "title": "NotebookNode",
+                        "type": "object"
+                      },
+                      "title": "Nodes",
+                      "type": "array"
+                    },
+                    "selected_id": {
+                      "format": "uuid",
+                      "title": "Selected Id",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "game_version",
+                    "selected_id",
+                    "nodes"
+                  ],
+                  "title": "NotebookTreeResult",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Default Response"
+          }
+        },
+        "summary": "Record Notebook Move",
+        "tags": [
+          "notebook_tree"
+        ]
+      }
+    },
     "/api/notebook/games/{game_id}/nodes/{node_id}": {
       "patch": {
         "operationId": "updateNotebookNode",
@@ -14710,6 +14923,11 @@
                     "fen": {
                       "title": "Fen",
                       "type": "string"
+                    },
+                    "hidden": {
+                      "default": false,
+                      "title": "Hidden",
+                      "type": "boolean"
                     },
                     "id": {
                       "format": "uuid",
@@ -14790,6 +15008,191 @@
         "summary": "Update Notebook Node",
         "tags": [
           "personal_games"
+        ]
+      }
+    },
+    "/api/notebook/games/{game_id}/nodes/{node_id}/branch": {
+      "post": {
+        "operationId": "editNotebookBranch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "game_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "node_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "expected_version": {
+                    "minimum": 1,
+                    "title": "Expected Version",
+                    "type": "integer"
+                  },
+                  "kind": {
+                    "enum": [
+                      "promote_variation",
+                      "demote_variation",
+                      "make_mainline",
+                      "delete_subtree",
+                      "restore_path"
+                    ],
+                    "title": "Kind",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "expected_version"
+                ],
+                "title": "NotebookBranchEdit",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "game_version": {
+                      "minimum": 1,
+                      "title": "Game Version",
+                      "type": "integer"
+                    },
+                    "nodes": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "comment": {
+                            "title": "Comment",
+                            "type": "string"
+                          },
+                          "fen": {
+                            "title": "Fen",
+                            "type": "string"
+                          },
+                          "hidden": {
+                            "default": false,
+                            "title": "Hidden",
+                            "type": "boolean"
+                          },
+                          "id": {
+                            "format": "uuid",
+                            "title": "Id",
+                            "type": "string"
+                          },
+                          "is_mainline": {
+                            "title": "Is Mainline",
+                            "type": "boolean"
+                          },
+                          "nags": {
+                            "items": {
+                              "type": "integer"
+                            },
+                            "title": "Nags",
+                            "type": "array"
+                          },
+                          "note": {
+                            "title": "Note",
+                            "type": "string"
+                          },
+                          "parent_id": {
+                            "format": "uuid",
+                            "nullable": true,
+                            "title": "Parent Id",
+                            "type": "string"
+                          },
+                          "ply": {
+                            "title": "Ply",
+                            "type": "integer"
+                          },
+                          "san": {
+                            "nullable": true,
+                            "title": "San",
+                            "type": "string"
+                          },
+                          "sort_order": {
+                            "title": "Sort Order",
+                            "type": "integer"
+                          },
+                          "starting_comment": {
+                            "title": "Starting Comment",
+                            "type": "string"
+                          },
+                          "uci": {
+                            "nullable": true,
+                            "title": "Uci",
+                            "type": "string"
+                          },
+                          "version": {
+                            "title": "Version",
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "parent_id",
+                          "ply",
+                          "sort_order",
+                          "is_mainline",
+                          "fen",
+                          "san",
+                          "uci",
+                          "nags",
+                          "starting_comment",
+                          "comment",
+                          "note",
+                          "version"
+                        ],
+                        "title": "NotebookNode",
+                        "type": "object"
+                      },
+                      "title": "Nodes",
+                      "type": "array"
+                    },
+                    "selected_id": {
+                      "format": "uuid",
+                      "title": "Selected Id",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "game_version",
+                    "selected_id",
+                    "nodes"
+                  ],
+                  "title": "NotebookTreeResult",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Default Response"
+          }
+        },
+        "summary": "Edit Notebook Branch",
+        "tags": [
+          "notebook_tree"
         ]
       }
     },
@@ -14882,6 +15285,13 @@
                     "minItems": 1,
                     "title": "Selections",
                     "type": "array"
+                  },
+                  "source_started_at": {
+                    "default": null,
+                    "format": "date-time",
+                    "nullable": true,
+                    "title": "Source Started At",
+                    "type": "string"
                   },
                   "source_url": {
                     "default": null,
@@ -15149,6 +15559,13 @@
                     },
                     "pgn": {
                       "title": "Pgn",
+                      "type": "string"
+                    },
+                    "source_started_at": {
+                      "default": null,
+                      "format": "date-time",
+                      "nullable": true,
+                      "title": "Source Started At",
                       "type": "string"
                     },
                     "source_url": {
@@ -47500,6 +47917,9 @@
     },
     {
       "name": "notebook"
+    },
+    {
+      "name": "notebook_tree"
     },
     {
       "name": "pdf"

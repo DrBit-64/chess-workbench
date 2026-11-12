@@ -47,11 +47,11 @@ async def test_chesscom_link_uses_verified_archive_and_preserves_original_pgn(
         return httpx.Response(200, json={"games": [{"url": LINK, "pgn": PGN, "rules": "chess"}]})
 
     mock_provider(monkeypatch, provider)
-    assert await upstream.fetch_chesscom_pgn(LINK) == PGN
-    assert await upstream.fetch_chesscom_pgn(LINK, "Example", "2024-11") == PGN
+    assert await upstream.fetch_chesscom_export(LINK) == (PGN, None)
+    assert await upstream.fetch_chesscom_export(LINK, "Example", "2024-11") == (PGN, None)
     assert calls.count("/game/daily/12345") == 1
     with pytest.raises(ServiceError) as bad:
-        await upstream.fetch_chesscom_pgn("https://www.chess.com.evil.invalid/game/live/1")
+        await upstream.fetch_chesscom_export("https://www.chess.com.evil.invalid/game/live/1")
     assert bad.value.status == 422
 
 
@@ -71,7 +71,13 @@ async def test_incremental_sync_does_not_resurrect_deleted_game_and_can_resume(
             200,
             json={
                 "games": [
-                    {"url": LINK, "rules": "chess", "end_time": end_time, "pgn": PGN},
+                    {
+                        "url": LINK,
+                        "rules": "chess",
+                        "start_time": end_time - 7200,
+                        "end_time": end_time,
+                        "pgn": PGN,
+                    },
                     {
                         "url": LINK + "6",
                         "rules": "chess",
@@ -114,6 +120,11 @@ async def test_incremental_sync_does_not_resurrect_deleted_game_and_can_resume(
         assert not sync.json["more"] and sync.json["account"]["imported"] == 2
         _, games = await client.get(f"{BASE}/games")
         assert len(games.json) == 2
+        _, catalog = await client.get(f"{BASE}/game-catalog")
+        started = next(
+            row["started_at"] for row in catalog.json["items"] if row["source_url"] == LINK
+        )
+        assert datetime.fromisoformat(started) == datetime.fromtimestamp(end_time - 7200, UTC)
         game = games.json[0]
         game_url = f"{BASE}/games/{game['id']}"
         _, archived = await client.patch(
@@ -175,7 +186,14 @@ async def test_lichess_page_keeps_ongoing_ids_and_rechecks_after_completion(
     mock_provider(monkeypatch, provider)
     async with upstream.client() as http:
         games, boundary = await upstream.lichess_page(http, "example", 10, 100)
-        assert games == [upstream.RemoteGame("abcd1234", "https://lichess.org/abcd1234", None)]
+        assert games == [
+            upstream.RemoteGame(
+                "abcd1234",
+                "https://lichess.org/abcd1234",
+                None,
+                started_at=datetime.fromtimestamp(0.020, UTC),
+            )
+        ]
         assert boundary == 100
         [ended] = await upstream.refresh_waiting(http, ["abcd1234"])
         assert ended.external_id == "abcd1234" and ended.pgn and "1-0" in ended.pgn

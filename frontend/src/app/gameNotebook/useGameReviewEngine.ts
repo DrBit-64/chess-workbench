@@ -11,6 +11,7 @@ import type {
 import { boardOutcome, type BoardOutcome } from '../chapterEnginePositions';
 import { scoreLabel, type EvaluationScore } from '../courseEvaluation';
 import { useCourseEngine } from '../useCourseEngine';
+import { indexReviewTree } from './reviewTree';
 import type { ReviewGame, ReviewNode } from './reviewTypes';
 
 type ScoresByFen = Map<string, EvaluationScore>;
@@ -72,34 +73,51 @@ type BatchState = {
   message?: string;
 };
 
-export function useGameReviewEngine(game: ReviewGame, node?: ReviewNode) {
-  const live = useCourseEngine(node?.fen, true);
+export function reviewAnalysisPositions(nodes: ReviewNode[]) {
+  const { root, children } = indexReviewTree(nodes);
+  const preferred = new Set<string>();
+  for (let move = root; move; move = children.get(move.id)?.[0])
+    preferred.add(move.id);
+  const terminal = new Map<string, string>();
+  const fens = new Set<string>();
+  const imported = new Map<string, EvaluationScore>();
+  const hasContinuation = new Set(nodes.map((n) => n.parent_id));
+  for (const n of nodes) {
+    const annotation = pgnEvaluation(n.comment);
+    if (annotation) imported.set(n.id, annotation);
+    if (n.hidden || (!n.is_mainline && !preferred.has(n.id))) continue;
+    // A recorded legal continuation excludes mate/stalemate, even if that move was hidden.
+    const outcome =
+      !hasContinuation.has(n.id) ||
+      !/[prq]/i.test(n.fen.split(' ')[0]) ||
+      Number(n.fen.split(' ')[4]) >= 150
+        ? boardOutcome(n.fen)
+        : undefined;
+    if (outcome) terminal.set(n.id, outcomeLabels[outcome]);
+    else fens.add(n.fen);
+  }
+  return { fens: [...fens], terminal, imported };
+}
+
+export function useGameReviewEngine(
+  game: ReviewGame,
+  node?: ReviewNode,
+  fen = node?.fen,
+) {
+  const live = useCourseEngine(fen, true);
   const { parameters } = live;
-  const scope = game.id + JSON.stringify(parameters);
   const controller = useRef<AbortController>();
   const [batchState, setBatch] = useState<BatchState>();
   const [fresh, setFresh] = useState<{ scope: string; scores: ScoresByFen }>();
-  const positions = useMemo(() => {
-    const terminal = new Map<string, string>();
-    const fens = new Set<string>();
-    const imported = new Map<string, EvaluationScore>();
-    // A position with a recorded legal continuation cannot be a checkmate or stalemate.
-    const hasContinuation = new Set(game.nodes.map((n) => n.parent_id));
-    for (const n of game.nodes) {
-      const annotation = pgnEvaluation(n.comment);
-      if (annotation) imported.set(n.id, annotation);
-      if (!n.is_mainline) continue;
-      const outcome =
-        !hasContinuation.has(n.id) ||
-        !/[prq]/i.test(n.fen.split(' ')[0]) ||
-        Number(n.fen.split(' ')[4]) >= 150
-          ? boardOutcome(n.fen)
-          : undefined;
-      if (outcome) terminal.set(n.id, outcomeLabels[outcome]);
-      else fens.add(n.fen);
-    }
-    return { fens: [...fens], terminal, imported };
-  }, [game.nodes]);
+  const positions = useMemo(
+    () => reviewAnalysisPositions(game.nodes),
+    [game.nodes],
+  );
+  // A tree edit can change which positions a completed or running batch covers.
+  const scope = useMemo(
+    () => JSON.stringify([game.id, parameters, positions.fens]),
+    [game.id, parameters, positions],
+  );
   const cached = useSWR(
     ['notebook-engine-scores', scope],
     () => readGameScores(positions.fens, parameters),
@@ -146,14 +164,15 @@ export function useGameReviewEngine(game: ReviewGame, node?: ReviewNode) {
   const scores = useMemo(() => {
     const result = new Map(positions.terminal);
     for (const n of game.nodes) {
-      if (!n.is_mainline || result.has(n.id)) continue;
+      if (n.hidden || result.has(n.id)) continue;
       const value = localScores.get(n.fen) ?? positions.imported.get(n.id);
       if (value) result.set(n.id, scoreLabel(value));
     }
     return result;
   }, [game.nodes, positions, localScores]);
-  const cachedCurrent = node && localScores.get(node.fen);
-  const importedCurrent = node && positions.imported.get(node.id);
+  const cachedCurrent = fen ? localScores.get(fen) : undefined;
+  const importedCurrent =
+    node && node.fen === fen ? positions.imported.get(node.id) : undefined;
   const currentLine =
     live.analysis?.lines[0] ?? cachedCurrent ?? importedCurrent;
   const scoreSource = live.analysis

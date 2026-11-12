@@ -1,5 +1,13 @@
 # Current agent handoff
 
+## Editing a saved game and replaying its clocks (2026-11-12)
+
+Notebook boards record legal moves by default. Turning off the score toolbar's recording icon allows a temporary line. The move menu changes sibling priority, makes a line primary or removes its subtree. Revision 0021 retains removed occurrences so a bookmark or a replayed move can recover them. Imported mainline identity continues to drive the historical clocks and final board even after promoting a personal line.
+
+Revision 0022 backfills the catalog's chronological sort fields from existing headers. New link imports and account sync also carry the platform start timestamp when available. The list applies ordering and exact time-control filters before pagination, and returns clock choices for the whole current search.
+
+Verified 0020 → 0022 → 0020 → 0022 on a populated SQLite database. Chromium and Stockfish 18 exercised recording versus trial moves, underpromotion, reorder/delete/reload, bookmarked source recovery and board flipping. A 32-game catalog covered ordering across page boundaries, unknown dates and clock filtering. At 741×228 the clocks sit outside the squares and the board retains the full viewport height.
+
 ## Personal game cards and analysis board (2026-11-12)
 
 The notebook catalog projects a mainline final board, historical ratings, time control and opening from existing stored games. Lichess exports keep their published classification. Other games match canonical positions against the bundled CC0 Lichess opening table, including transpositions. The snapshot and regeneration command are in `domain/openings.py`. No database migration or reimport is required.

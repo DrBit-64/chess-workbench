@@ -1,4 +1,5 @@
 import { Chess } from 'chess.js';
+import type { ReviewNode } from './reviewTypes';
 
 function playUci(board: Chess, uci: string) {
   return board.move({
@@ -75,4 +76,38 @@ export function advanceAnswer(
       (line) => line.length === moves.length && line[next.length] === reply,
     ),
   };
+}
+
+/** A training answer follows the played game even after its review variations are reordered. */
+export function bookmarkContinuation(
+  nodes: ReviewNode[],
+  anchorId: string,
+  related: { node_id: string }[],
+) {
+  const byParent = new Map<string, ReviewNode[]>();
+  for (const node of nodes) {
+    if (!node.parent_id) continue;
+    const children = byParent.get(node.parent_id) ?? [];
+    children.push(node);
+    byParent.set(node.parent_id, children);
+  }
+  const linked = new Set(related.map((item) => item.node_id));
+  let parent = nodes.find((node) => node.id === anchorId);
+  const moves: string[] = [];
+  while (parent && moves.length < 5) {
+    const children = byParent.get(parent.id) ?? [];
+    const explicit =
+      !moves.length && children.find((node) => linked.has(node.id));
+    const next: ReviewNode | undefined =
+      explicit ||
+      (parent.is_mainline
+        ? children.find((node) => node.is_mainline)
+        : children
+            .filter((node) => !node.hidden)
+            .sort((a, b) => a.sort_order - b.sort_order)[0]);
+    if (!next?.uci) break;
+    moves.push(next.uci);
+    parent = next;
+  }
+  return moves;
 }

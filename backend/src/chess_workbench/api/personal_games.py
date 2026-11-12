@@ -29,7 +29,7 @@ from chess_workbench.schemas.personal_games import (
 from chess_workbench.services.notebook_catalog import catalog_cards
 from chess_workbench.services.personal_games import (
     delete_game,
-    fetch_notebook_pgn,
+    fetch_notebook_export,
     game_detail,
     game_source,
     get_game,
@@ -39,6 +39,7 @@ from chess_workbench.services.personal_games import (
     update_game,
     update_node,
 )
+from chess_workbench.store.catalog_backfill import backfill_catalog
 from chess_workbench.store.database import Database
 from chess_workbench.store.models.personal_games import PersonalGame
 
@@ -61,9 +62,10 @@ async def preview_notebook_games(request: Request) -> HTTPResponse:
     body = parse_body(request, NotebookPreviewRequest)
     pgn = body.pgn
     source_url = None
+    source_started_at = None
     if pgn is None:
         assert body.url is not None
-        pgn = await fetch_notebook_pgn(body.url, body.username, body.month)
+        pgn, source_started_at = await fetch_notebook_export(body.url, body.username, body.month)
         source_url = game_source(body.url.strip()).url
     document = await asyncio.to_thread(parse_notebook_pgn, pgn)
     async with _database(request).session() as session:
@@ -82,7 +84,11 @@ async def preview_notebook_games(request: Request) -> HTTPResponse:
             )
     return json(
         NotebookImportPreview(
-            pgn=pgn, games=candidates, source_url=source_url, duplicate_games=duplicates
+            pgn=pgn,
+            games=candidates,
+            source_url=source_url,
+            source_started_at=source_started_at,
+            duplicate_games=duplicates,
         ).model_dump(mode="json")
     )
 
@@ -146,6 +152,8 @@ def _page_number(request: Request, name: str, default: int, minimum: int, maximu
 
 @personal_games_blueprint.get("/game-catalog")
 @openapi.operation("searchNotebookGames")
+@openapi.parameter("order", str, "query", required=False)
+@openapi.parameter("time_control", str, "query", required=False)
 @openapi.parameter("archived", bool, "query", required=False)
 @openapi.parameter("q", str, "query", required=False)
 @openapi.parameter("limit", int, "query", required=False)
@@ -153,6 +161,10 @@ def _page_number(request: Request, name: str, default: int, minimum: int, maximu
 @openapi.response(200, _media(NotebookGameCatalog))
 async def search_notebook_games(request: Request) -> HTTPResponse:
     archived = _archived(request)
+    order = request.args.get("order", "desc")
+    if order not in {"asc", "desc"}:
+        raise ApiError(422, "validation_error", "排序参数应为 asc 或 desc。")
+    clock = request.args.get("time_control")
     term = request.args.get("q", "").strip()
     if len(term) > 500:
         raise ApiError(422, "validation_error", "搜索词过长。")
@@ -171,20 +183,48 @@ async def search_notebook_games(request: Request) -> HTTPResponse:
             PersonalGame.summary,
         )
         conditions.append(or_(*(field.icontains(term, autoescape=True) for field in fields)))
-    async with _database(request).session() as session:
+    db = _database(request)
+    # Normally the online migration fills these columns. A database upgraded
+    # via offline-generated DDL can resolve its old rows on the first visit.
+    async with db.session() as session:
+        missing = await session.scalar(
+            select(PersonalGame.id).where(PersonalGame.order_at.is_(None)).limit(1)
+        )
+    if missing:
+        await db.run_write(
+            lambda session: session.run_sync(lambda sync: backfill_catalog(sync.connection()))
+        )
+    async with db.session() as session:
+        time_controls = list(
+            await session.scalars(
+                select(PersonalGame.time_control)
+                .where(*conditions)
+                .distinct()
+                .order_by(PersonalGame.time_control)
+            )
+        )
+        if clock is not None:
+            conditions.append(
+                PersonalGame.time_control.is_(None)
+                if clock == "?"
+                else PersonalGame.time_control == clock
+            )
         total = await session.scalar(
             select(func.count()).select_from(PersonalGame).where(*conditions)
         )
+        sort_fields = (PersonalGame.order_at, PersonalGame.created_at, PersonalGame.id)
+        ordering = [field.asc() if order == "asc" else field.desc() for field in sort_fields]
         games = await session.scalars(
             select(PersonalGame)
             .options(defer(PersonalGame.original_pgn))
             .where(*conditions)
-            .order_by(PersonalGame.created_at.desc(), PersonalGame.id)
+            .order_by(*ordering)
             .limit(limit)
             .offset(offset)
         )
         page = NotebookGameCatalog(
             total=total or 0,
+            time_controls=time_controls,
             items=await catalog_cards(session, games.all()),
         )
         return json(page.model_dump(mode="json"))

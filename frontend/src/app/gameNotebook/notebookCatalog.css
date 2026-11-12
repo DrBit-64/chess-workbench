@@ -124,6 +124,24 @@
   gap: 0.85rem;
   margin: 1rem 0;
 }
+.nb-game-selects {
+  display: grid;
+  grid-template-columns: minmax(7.25rem, 0.8fr) minmax(0, 1.2fr);
+  gap: 0.65rem;
+  width: min(100%, 19rem);
+  max-width: 100%;
+}
+@media (max-width: 620px) {
+  .nb-game-filters .nb-search-field {
+    max-width: none;
+  }
+  .nb-game-selects {
+    width: 100%;
+  }
+  .nb-game-selects select {
+    min-height: 44px;
+  }
+}
 .nb-segment {
   display: inline-flex;
   max-width: 100%;

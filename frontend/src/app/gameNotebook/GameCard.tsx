@@ -5,7 +5,32 @@ import { gameTimeControl } from './gameTimeControl';
 import { NoteExcerpt } from './NoteExcerpt';
 import { PositionThumbnail } from './PositionThumbnail';
 
+const startDateTime = new Intl.DateTimeFormat('zh-CN', {
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  hourCycle: 'h23',
+});
+
 type CatalogGame = GameResults['items'][number];
+
+function GameDate({ game }: { game: CatalogGame }) {
+  if (!game.started_at && /^\d{4}/.test(game.date)) {
+    return <>{game.date.replace(/(?:[.-]\?\?)+$/, '')}</>;
+  }
+  const imported = !game.started_at;
+  const timestamp = game.started_at ?? game.created_at;
+  const local = startDateTime.format(new Date(timestamp));
+  const label = imported ? '导入时间（本地时间）' : '对局开始时间（本地时间）';
+  return (
+    <time dateTime={timestamp} title={label} aria-label={`${label} ${local}`}>
+      {imported ? '导入于 ' : ''}
+      {local}
+    </time>
+  );
+}
 
 function Player({
   name,
@@ -44,7 +69,6 @@ export function GameCard({
   const href = '/games/' + game.id;
   const result = game.result === '1/2-1/2' ? '½–½' : game.result;
   const clock = gameTimeControl(game.time_control);
-  const date = game.date === '????.??.??' ? '日期未记录' : game.date;
   const source =
     game.platform === 'lichess'
       ? 'Lichess'
@@ -85,7 +109,10 @@ export function GameCard({
         )}
         <span>{game.opening_name ?? '未识别开局'}</span>
       </div>
-      <p className="nb-meta">{[date, source].filter(Boolean).join(' · ')}</p>
+      <p className="nb-meta">
+        <GameDate game={game} />
+        {source && ` · ${source}`}
+      </p>
       {game.summary && <NoteExcerpt text={game.summary} previewLength={64} />}
       <div className="nb-actions nb-card-actions">
         <Link to={href} className="nb-btn" state={returnState} onClick={onOpen}>

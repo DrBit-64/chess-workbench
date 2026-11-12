@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import json
 import re
 from dataclasses import dataclass
+from datetime import datetime
 from hashlib import sha256
 from typing import cast
 from urllib.parse import SplitResult, urlsplit
@@ -16,6 +18,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.exc import StaleDataError
 
+from chess_workbench.domain.game_chronology import game_chronology
 from chess_workbench.domain.position_identity import PositionError, PositionState
 from chess_workbench.logic.pgn import PgnDocument, PgnError, PgnGame, parse_pgn_document
 from chess_workbench.schemas.personal_games import (
@@ -97,11 +100,13 @@ def _source(game: PgnGame, source_url: str | None = None) -> GameSource:
     )
 
 
-async def fetch_notebook_pgn(url: str, username: str | None, month: str | None) -> str:
+async def fetch_notebook_export(
+    url: str, username: str | None, month: str | None
+) -> tuple[str, datetime | None]:
     source = game_source(url.strip())
     if source.platform == "chess.com":
         assert source.url is not None
-        return await notebook_platforms.fetch_chesscom_pgn(source.url, username, month)
+        return await notebook_platforms.fetch_chesscom_export(source.url, username, month)
     if source.platform != "lichess":
         raise ServiceError(
             "validation_error", 422, "请粘贴 Lichess 或 Chess.com 的单局链接，也可以导入 PGN。"
@@ -113,8 +118,8 @@ async def fetch_notebook_pgn(url: str, username: str | None, month: str | None) 
             client.stream(
                 "GET",
                 endpoint,
-                headers={"Accept": "application/x-chess-pgn"},
-                params={"clocks": "true", "opening": "true", "evals": "true"},
+                headers={"Accept": "application/json"},
+                params={"pgnInJson": "true", "clocks": "true", "opening": "true", "evals": "true"},
             ) as response,
         ):
             response.raise_for_status()
@@ -125,14 +130,20 @@ async def fetch_notebook_pgn(url: str, username: str | None, month: str | None) 
                     raise ServiceError(
                         "payload_too_large", 413, "棋谱超过大小限制，请导入较小的 PGN。"
                     )
-        pgn = content.decode("utf-8")
-    except (httpx.HTTPError, UnicodeError) as exc:
+        payload = content.decode("utf-8")
+        if "application/json" in response.headers.get("content-type", ""):
+            game = json.loads(payload)
+            if not isinstance(game, dict) or not isinstance(game.get("pgn"), str):
+                raise ValueError("missing Lichess PGN")
+            return game["pgn"], notebook_platforms.platform_timestamp(game.get("createdAt"), 1000)
+        # PGN responses already carry UTCDate and UTCTime where available.
+        return payload, None
+    except (httpx.HTTPError, ValueError) as exc:
         raise ServiceError(
             "lichess_request_failed",
             502,
             "无法读取这盘公开对局。请检查链接，或从平台导出 PGN 再导入。",
         ) from exc
-    return pgn
 
 
 def parse_notebook_pgn(pgn: str) -> PgnDocument:
@@ -243,7 +254,14 @@ async def save_games(
                 f"{request.request_id}:{selection.index}:{raw}".encode()
             ).hexdigest()
         item = await _save_game(
-            session, game, raw, selection, import_key, request.source_url, created_here
+            session,
+            game,
+            raw,
+            selection,
+            import_key,
+            request.source_url,
+            created_here,
+            request.source_started_at,
         )
         result.append(item)
         if item.created:
@@ -259,6 +277,7 @@ async def _save_game(
     import_key: str | None,
     source_url: str | None = None,
     created_here: set[UUID] | None = None,
+    source_started_at: datetime | None = None,
 ) -> NotebookImportItem:
     candidate = await _candidate(session, game, selection.index, source_url)
     existing = candidate.existing_id
@@ -267,6 +286,17 @@ async def _save_game(
             select(PersonalGame.id).where(PersonalGame.import_key == import_key)
         )
     if existing is not None:
+        if source_started_at is not None and candidate.existing_id == existing:
+            # A later public export can supply a start time missing from an earlier PGN.
+            await session.execute(
+                update(PersonalGame)
+                .where(PersonalGame.id == existing, PersonalGame.started_at.is_(None))
+                .values(
+                    started_at=source_started_at,
+                    order_at=source_started_at,
+                    updated_at=PersonalGame.updated_at,
+                )
+            )
         return NotebookImportItem(index=selection.index, id=existing, created=False)
     if selection.action == "open":
         if (
@@ -298,6 +328,9 @@ async def _save_game(
         fingerprint=_fingerprint(game),
         import_key=import_key,
     )
+    row.order_at, row.started_at, row.time_control = game_chronology(
+        row.headers, row.created_at, source_started_at
+    )
     try:
         async with session.begin_nested():
             session.add(row)
@@ -317,13 +350,23 @@ async def _save_game(
 
 
 async def import_online_game(
-    session: AsyncSession, pgn: str, *, source_url: str | None = None
+    session: AsyncSession,
+    pgn: str,
+    *,
+    source_url: str | None = None,
+    source_started_at: datetime | None = None,
 ) -> NotebookImportItem:
     document = parse_notebook_pgn(pgn)
     if len(document.games) != 1 or not _source(document.games[0], source_url).external_id:
         raise ServiceError("invalid_pgn", 422, "同步的棋谱缺少可核验的单局编号。")
     return await _save_game(
-        session, document.games[0], pgn, NotebookSelection(index=0), None, source_url
+        session,
+        document.games[0],
+        pgn,
+        NotebookSelection(index=0),
+        None,
+        source_url,
+        source_started_at=source_started_at,
     )
 
 
@@ -348,12 +391,12 @@ async def game_detail(session: AsyncSession, game_id: UUID) -> NotebookGameDetai
     )
 
 
-def _check_version(version: int, expected: int) -> None:
+def check_notebook_version(version: int, expected: int) -> None:
     if version != expected:
         raise ServiceError("stale_version", 409, "记录已在其他设备更新，请重新载入后保存。")
 
 
-async def _flush(session: AsyncSession) -> None:
+async def flush_notebook_edits(session: AsyncSession) -> None:
     try:
         await session.flush()
     except StaleDataError as error:
@@ -366,12 +409,12 @@ async def update_game(
     session: AsyncSession, game_id: UUID, changes: NotebookGameUpdate
 ) -> NotebookGame:
     row = await get_game(session, game_id)
-    _check_version(row.version, changes.expected_version)
+    check_notebook_version(row.version, changes.expected_version)
     if changes.summary is not None:
         row.summary = changes.summary
     if changes.archived is not None and changes.archived != (row.archived_at is not None):
         row.archived_at = utc_now() if changes.archived else None
-    await _flush(session)
+    await flush_notebook_edits(session)
     return NotebookGame.model_validate(row, from_attributes=True)
 
 
@@ -381,15 +424,15 @@ async def update_node(
     row = await session.get(PersonalGameNode, node_id)
     if row is None or row.game_id != game_id:
         raise ServiceError("not_found", 404, "未找到此棋步。")
-    _check_version(row.version, changes.expected_version)
+    check_notebook_version(row.version, changes.expected_version)
     row.note = changes.note
-    await _flush(session)
+    await flush_notebook_edits(session)
     return NotebookNode.model_validate(row, from_attributes=True)
 
 
 async def delete_game(session: AsyncSession, game_id: UUID, expected_version: int) -> None:
     row = await get_game(session, game_id)
-    _check_version(row.version, expected_version)
+    check_notebook_version(row.version, expected_version)
     if row.archived_at is None:
         raise ServiceError("resource_referenced", 409, "请先归档此对局，再从归档列表永久删除。")
     # Unlink internal self-references in the same transaction so very long games
@@ -398,4 +441,4 @@ async def delete_game(session: AsyncSession, game_id: UUID, expected_version: in
         update(PersonalGameNode).where(PersonalGameNode.game_id == game_id).values(parent_id=None)
     )
     await session.delete(row)
-    await _flush(session)
+    await flush_notebook_edits(session)

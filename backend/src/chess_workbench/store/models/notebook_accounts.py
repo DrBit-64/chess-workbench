@@ -1,6 +1,6 @@
 """External account sync state, independent of the lifetime of saved games."""
 
-from datetime import date
+from datetime import date, datetime
 from uuid import UUID
 
 from sqlalchemy import BigInteger, Date, ForeignKey, Index, String, Text, UniqueConstraint
@@ -8,7 +8,7 @@ from sqlalchemy.dialects import mysql
 from sqlalchemy.orm import Mapped, mapped_column
 
 from chess_workbench.store.base import Base
-from chess_workbench.store.models.mixins import UTCCreatedAtMixin, UUIDPrimaryKeyMixin
+from chess_workbench.store.models.mixins import UTCCreatedAtMixin, UTCDateTime, UUIDPrimaryKeyMixin
 
 
 class NotebookAccount(UUIDPrimaryKeyMixin, UTCCreatedAtMixin, Base):
@@ -45,6 +45,7 @@ class NotebookAccountGame(Base):
     state: Mapped[str] = mapped_column(String(16))
     checked_ms: Mapped[int] = mapped_column(BigInteger)
     source_url: Mapped[str] = mapped_column(String(256))
+    started_at: Mapped[datetime | None] = mapped_column(UTCDateTime())
     pending_pgn: Mapped[str | None] = mapped_column(
         Text().with_variant(mysql.MEDIUMTEXT(), "mysql")
     )

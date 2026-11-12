@@ -3,7 +3,10 @@ import { Chess } from 'chess.js';
 import { SWRConfig } from 'swr';
 import { afterEach, expect, it, vi } from 'vitest';
 import { GameReviewEnginePanel } from './GameReviewEnginePanel';
-import { useGameReviewEngine } from './useGameReviewEngine';
+import {
+  reviewAnalysisPositions,
+  useGameReviewEngine,
+} from './useGameReviewEngine';
 import type { ReviewGame } from './reviewTypes';
 
 const chess = new Chess();
@@ -43,6 +46,30 @@ function json(value: unknown) {
   });
 }
 afterEach(() => vi.unstubAllGlobals());
+
+it('includes the promoted continuation alongside the played game and removes deleted continuations from the batch', () => {
+  const board = new Chess(fens[1]);
+  board.move('c5');
+  const promoted = {
+    ...game.nodes[2],
+    id: 'c5',
+    fen: board.fen(),
+    sort_order: 0,
+    is_mainline: false,
+  };
+  const movedDown = { ...game.nodes[2], sort_order: 1 };
+  const hidden = { ...game.nodes[3], hidden: true };
+  const plan = reviewAnalysisPositions([
+    game.nodes[0],
+    game.nodes[1],
+    movedDown,
+    hidden,
+    promoted,
+  ]);
+  expect(plan.fens).toContain(promoted.fen);
+  expect(plan.fens).toContain(movedDown.fen);
+  expect(plan.fens).not.toContain(hidden.fen);
+});
 
 it('restores White scores, numbers Black PVs, and resumes an interrupted game using the saved analyses', async () => {
   const stored = new Set(fens.slice(0, 1));
