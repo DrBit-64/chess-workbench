@@ -4,12 +4,9 @@ import asyncio
 from logging.config import fileConfig
 
 from alembic import context
-from sqlalchemy import pool
-from sqlalchemy.engine import Connection
-from sqlalchemy.ext.asyncio import async_engine_from_config
-
 from chess_workbench.config import Settings
 from chess_workbench.store.base import Base
+from chess_workbench.store.database import prepare_sqlite_directory
 from chess_workbench.store.models import (
     Course,
     CourseModule,
@@ -39,6 +36,9 @@ from chess_workbench.store.models import (
     SourceSpan,
     SourceVersion,
 )
+from sqlalchemy import pool
+from sqlalchemy.engine import Connection
+from sqlalchemy.ext.asyncio import async_engine_from_config
 
 _REGISTERED_MODELS = (
     Course,
@@ -106,6 +106,7 @@ async def run_async_migrations() -> None:
         poolclass=pool.NullPool,
     )
 
+    prepare_sqlite_directory(connectable.url)
     async with connectable.connect() as connection:
         await connection.run_sync(do_run_migrations)
 

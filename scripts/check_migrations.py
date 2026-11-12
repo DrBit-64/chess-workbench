@@ -15,7 +15,7 @@ def main() -> int:
     """Prove that the complete migration chain upgrades, matches metadata, and downgrades."""
 
     with tempfile.TemporaryDirectory(prefix="chess-workbench-migrations-") as directory:
-        database_path = Path(directory) / "migration-check.db"
+        database_path = Path(directory) / "data" / "database" / "migration-check.db"
         os.environ["CHESS_WORKBENCH_DATABASE_URL"] = (
             f"sqlite+aiosqlite:///{database_path.as_posix()}"
         )

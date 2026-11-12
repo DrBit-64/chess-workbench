@@ -79,6 +79,9 @@ engineering. These rules govern new work and the interpretation of historical ta
 
 - Deliver a visible behavior or inspectable artifact before expanding infrastructure or coverage.
   Fix observed problems; non-critical gaps may be recorded for later work.
+- Before committing a user-facing change, exercise the affected feature through its normal entry
+  point and report the observed result. For a dependency or startup change, try the normal
+  launcher after updating an existing installation with the previous dependencies still in place.
 - Validate at external-input, chess-authority and persistence/publication boundaries. Do not repeat
   full schema, hash or graph validation between internal functions that already receive validated
   values, unless a relevant transformation or trust-boundary crossing requires it.

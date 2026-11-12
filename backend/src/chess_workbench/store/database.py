@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Any, TypeVar
 
 from sqlalchemy import event, text
-from sqlalchemy.engine import make_url
+from sqlalchemy.engine import URL, make_url
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
@@ -16,6 +16,12 @@ from sqlalchemy.ext.asyncio import (
 _SQLITE_BUSY_TIMEOUT_MS = 5_000
 _SQLITE_WRITE_ATTEMPTS = 3
 _T = TypeVar("_T")
+
+
+def prepare_sqlite_directory(url: URL) -> None:
+    """Create the parent of a file-backed SQLite database before its first connection."""
+    if url.get_backend_name() == "sqlite" and url.database and url.database != ":memory:":
+        Path(url.database).parent.mkdir(parents=True, exist_ok=True)
 
 
 def _enable_sqlite_foreign_keys(dbapi_connection: Any, _: Any) -> None:
@@ -64,8 +70,8 @@ class Database:
                 engine_options.update(pool_size=1, max_overflow=0)
         self._engine = create_async_engine(url, **engine_options)
         self._sqlite_write_lock = asyncio.Lock()
-        if self._engine.url.get_backend_name() == "sqlite":
-            self._prepare_sqlite_directory(self._engine.url)
+        if self._is_sqlite:
+            prepare_sqlite_directory(url)
             event.listen(self._engine.sync_engine, "connect", _enable_sqlite_foreign_keys)
             event.listen(self._engine.sync_engine, "begin", _begin_sqlite_transaction)
         self._sessions = async_sessionmaker(self._engine, expire_on_commit=False)
@@ -122,16 +128,6 @@ class Database:
 
     def is_transient_write_error(self, error: BaseException) -> bool:
         return self._is_sqlite and isinstance(error, OperationalError) and _is_sqlite_busy(error)
-
-    @staticmethod
-    def _prepare_sqlite_directory(engine_url: Any) -> None:
-        database_name = engine_url.database
-        if not database_name or database_name == ":memory:":
-            return
-        database_path = Path(database_name)
-        if not database_path.is_absolute():
-            database_path = Path.cwd() / database_path
-        database_path.parent.mkdir(parents=True, exist_ok=True)
 
     async def ping(self) -> None:
         async with self._engine.connect() as connection:

@@ -43,7 +43,7 @@ dev:
 dev-api: migrate
 	uv run --project backend --locked python -m chess_workbench
 
-dev-web: check-pnpm
+dev-web: bootstrap-frontend
 	$(PNPM) --dir frontend dev $(DEV_WEB_ARGS)
 
 backend-format:
