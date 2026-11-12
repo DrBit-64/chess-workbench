@@ -19,6 +19,7 @@
     "generate:api": "openapi-typescript ../backend/openapi.json -o src/types/api.generated.ts"
   },
   "dependencies": {
+    "@lichess-org/chessground": "10.1.1",
     "@tailwindcss/vite": "^4.1.0",
     "antd": "^6.0.0",
     "chess.js": "1.4.0",

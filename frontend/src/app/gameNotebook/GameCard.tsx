@@ -83,14 +83,7 @@ export function GameCard({
         onClick={onOpen}
         className="nb-game-card-main"
       >
-        <div
-          className="nb-game-diagram"
-          data-fen={game.final_fen}
-          role="img"
-          aria-label="实战主线的最终局面"
-        >
-          <PositionThumbnail fen={game.final_fen} />
-        </div>
+        <PositionThumbnail fen={game.final_fen} label="实战主线的最终局面" />
         <div className="nb-game-players">
           <Player side="white" name={game.white} rating={game.white_rating} />
           <Player side="black" name={game.black} rating={game.black_rating} />

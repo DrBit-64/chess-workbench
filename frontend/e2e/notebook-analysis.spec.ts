@@ -100,9 +100,19 @@ test('saved game cards link to aligned move pairs, nested variations and mobile 
   await expect(card).toContainText('Scandinavian Defense');
   await expect(card).not.toContainText('Misleading imported tag');
   await expect(card).toContainText('5+3');
-  await expect(
-    card.getByRole('img', { name: '实战主线的最终局面' }),
-  ).toHaveAttribute('data-fen', end.fen);
+  const diagram = card.getByRole('img', { name: '实战主线的最终局面' });
+  await expect(diagram).toHaveAttribute('data-fen', end.fen);
+  const [whitePawn, blackPawn] = await Promise.all(
+    ['white', 'black'].map((side) =>
+      diagram
+        .locator(`piece.${side}.pawn`)
+        .first()
+        .evaluate((el) => getComputedStyle(el).backgroundImage),
+    ),
+  );
+  expect(whitePawn).toMatch(/^url\(/);
+  expect(blackPawn).toMatch(/^url\(/);
+  expect(whitePawn).not.toBe(blackPawn);
   await card.getByRole('link', { name: '打开棋谱' }).click();
   const board = page.locator('.game-review-board-column');
   const score = page.locator('.game-review-score-column');

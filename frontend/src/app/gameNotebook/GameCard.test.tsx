@@ -12,7 +12,7 @@ const game: GameResults['items'][number] = {
   white_rating: 1863,
   black_rating: 1746,
   time_control: '300+3',
-  final_fen: '7k/8/8/8/8/8/8/K7 w - - 12 43',
+  final_fen: '7k/pp6/8/8/8/8/PP6/K7 w - - 0 43',
   opening_eco: 'D37',
   opening_name: 'Queen’s Gambit Declined',
   date: '2026.11.12',
@@ -52,7 +52,9 @@ describe('game catalog card', () => {
       name: '实战主线的最终局面',
     });
     expect(diagram.getAttribute('data-fen')).toBe(game.final_fen);
-    expect(diagram.querySelectorAll('text')).toHaveLength(2);
+    expect(diagram.querySelectorAll('cg-board piece')).toHaveLength(6);
+    expect(diagram.querySelectorAll('piece.white.pawn')).toHaveLength(2);
+    expect(diagram.querySelectorAll('piece.black.pawn')).toHaveLength(2);
     expect(
       within(card).getByRole('link', { name: '打开棋谱' }).getAttribute('href'),
     ).toBe('/games/game-12');

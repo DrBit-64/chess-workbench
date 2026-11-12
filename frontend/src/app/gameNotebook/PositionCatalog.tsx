@@ -286,7 +286,7 @@ export function PositionCatalog() {
               return (
                 <li className="nb-position" key={item.id}>
                   <div className="nb-position-top">
-                    <PositionThumbnail fen={item.fen} />
+                    <PositionThumbnail fen={item.fen} label="收藏的局面" />
                     <div>
                       <h2>
                         <Link

@@ -6,6 +6,7 @@
   overflow-wrap: anywhere;
 }
 .nb-catalog {
+  --nb-thumbnail-width: clamp(6.5rem, 14vw, 9rem);
   width: min(100%, 75rem);
   margin-inline: auto;
   padding: clamp(0.75rem, 3vw, 2.1rem);
@@ -268,15 +269,12 @@
 }
 .nb-game-card-main {
   display: grid;
-  grid-template-columns: clamp(5.75rem, 9.5vw, 7.25rem) minmax(0, 1fr);
+  grid-template-columns: var(--nb-thumbnail-width) minmax(0, 1fr);
   gap: 0.85rem;
   align-items: center;
   color: inherit;
   text-decoration: none;
   border-radius: 3px;
-}
-.nb-game-diagram {
-  align-self: start;
 }
 .nb-game-card-main:hover .nb-game-player strong {
   color: #285c3f;
@@ -413,16 +411,28 @@
 }
 .nb-position-top {
   display: grid;
-  grid-template-columns: clamp(4.75rem, 12vw, 7.5rem) minmax(0, 1fr);
+  grid-template-columns: var(--nb-thumbnail-width) minmax(0, 1fr);
   align-items: start;
   gap: 0.8rem;
 }
 .nb-diagram {
-  display: block;
+  align-self: start;
   width: 100%;
-  height: auto;
-  border: 1px solid #7c8a7b;
-  border-radius: 2px;
+  aspect-ratio: 1;
+  pointer-events: none;
+}
+.nb-diagram cg-container {
+  /* Chessground rounds the board to eight equal device-pixel squares. */
+  inset: 0;
+  margin: auto;
+}
+.nb-diagram cg-board {
+  overflow: hidden;
+  border-radius: 3px;
+  box-shadow: 0 0 0 1px rgb(83 61 41 / 24%);
+}
+.nb-diagram piece {
+  will-change: auto;
 }
 .nb-card-actions {
   margin-top: auto;
