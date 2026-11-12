@@ -8068,6 +8068,11 @@
                     "title": "Fens",
                     "type": "array"
                   },
+                  "include_scores": {
+                    "default": false,
+                    "title": "Include Scores",
+                    "type": "boolean"
+                  },
                   "parameters": {
                     "additionalProperties": false,
                     "properties": {
@@ -8143,6 +8148,56 @@
                         "type": "string"
                       },
                       "title": "Cached Fens",
+                      "type": "array"
+                    },
+                    "cached_scores": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "fen": {
+                            "minLength": 1,
+                            "title": "Fen",
+                            "type": "string"
+                          },
+                          "mate": {
+                            "nullable": true,
+                            "title": "Mate",
+                            "type": "integer"
+                          },
+                          "score_cp": {
+                            "nullable": true,
+                            "title": "Score Cp",
+                            "type": "integer"
+                          },
+                          "wdl": {
+                            "maxItems": 3,
+                            "minItems": 3,
+                            "nullable": true,
+                            "prefixItems": [
+                              {
+                                "type": "integer"
+                              },
+                              {
+                                "type": "integer"
+                              },
+                              {
+                                "type": "integer"
+                              }
+                            ],
+                            "title": "Wdl",
+                            "type": "array"
+                          }
+                        },
+                        "required": [
+                          "fen",
+                          "score_cp",
+                          "mate",
+                          "wdl"
+                        ],
+                        "title": "CachedPositionScore",
+                        "type": "object"
+                      },
+                      "title": "Cached Scores",
                       "type": "array"
                     },
                     "missing_fens": {
@@ -14006,6 +14061,11 @@
                             "title": "Black",
                             "type": "string"
                           },
+                          "black_rating": {
+                            "nullable": true,
+                            "title": "Black Rating",
+                            "type": "integer"
+                          },
                           "created_at": {
                             "format": "date-time",
                             "title": "Created At",
@@ -14015,9 +14075,23 @@
                             "title": "Date",
                             "type": "string"
                           },
+                          "final_fen": {
+                            "title": "Final Fen",
+                            "type": "string"
+                          },
                           "id": {
                             "format": "uuid",
                             "title": "Id",
+                            "type": "string"
+                          },
+                          "opening_eco": {
+                            "nullable": true,
+                            "title": "Opening Eco",
+                            "type": "string"
+                          },
+                          "opening_name": {
+                            "nullable": true,
+                            "title": "Opening Name",
                             "type": "string"
                           },
                           "platform": {
@@ -14038,6 +14112,11 @@
                             "title": "Summary",
                             "type": "string"
                           },
+                          "time_control": {
+                            "nullable": true,
+                            "title": "Time Control",
+                            "type": "string"
+                          },
                           "version": {
                             "title": "Version",
                             "type": "integer"
@@ -14045,6 +14124,11 @@
                           "white": {
                             "title": "White",
                             "type": "string"
+                          },
+                          "white_rating": {
+                            "nullable": true,
+                            "title": "White Rating",
+                            "type": "integer"
                           }
                         },
                         "required": [
@@ -14058,9 +14142,15 @@
                           "summary",
                           "archived_at",
                           "created_at",
-                          "version"
+                          "version",
+                          "white_rating",
+                          "black_rating",
+                          "time_control",
+                          "final_fen",
+                          "opening_eco",
+                          "opening_name"
                         ],
-                        "title": "NotebookGame",
+                        "title": "NotebookGameCard",
                         "type": "object"
                       },
                       "title": "Items",

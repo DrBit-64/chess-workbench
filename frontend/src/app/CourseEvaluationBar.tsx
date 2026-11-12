@@ -1,4 +1,4 @@
-import type { AnalysisLine } from '../logic/api/engineTypes';
+import type { EvaluationScore } from './courseEvaluation';
 import type { BoardOutcome } from './chapterEnginePositions';
 import { scoreLabel, whiteEvaluationPercent } from './courseEvaluation';
 import './courseEvaluationBar.css';
@@ -14,7 +14,7 @@ export function CourseEvaluationBar({
   outcome,
   orientation,
 }: {
-  line?: AnalysisLine;
+  line?: EvaluationScore;
   outcome?: BoardOutcome;
   orientation: 'white' | 'black';
 }) {

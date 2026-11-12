@@ -11,7 +11,6 @@ from uuid import UUID
 import chess
 import pytest
 import uvloop
-
 from chess_workbench.config import Settings
 from chess_workbench.schemas.engine import (
     AnalysisCacheLookupRequest,
@@ -180,6 +179,32 @@ async def test_cache_lookup_returns_only_current_engine_and_parameter_matches(
 
     assert result.cached_fens == [chess.STARTING_FEN]
     assert result.missing_fens == [second_fen.fen(en_passant="fen")]
+
+    for row in rows:
+        row.lines = [
+            {
+                "rank": 1,
+                "uci": [],
+                "san": [],
+                "mate": -2,
+                "score_cp": None,
+                "wdl": [0, 0, 1000],
+            }
+        ]
+    request = AnalysisCacheLookupRequest(
+        fens=result.cached_fens + result.missing_fens, parameters=parameters, include_scores=True
+    )
+    scored = await service.lookup_cached_fens(request)
+    assert [(item.fen, item.mate) for item in scored.cached_scores] == [(chess.STARTING_FEN, -2)]
+    executable.unlink()
+    offline = await service.lookup_cached_fens(request)
+    assert offline.cached_fens == []
+    assert [score.fen for score in offline.cached_scores] == request.fens
+    assert not (
+        await service.lookup_cached_fens(
+            request.model_copy(update={"parameters": EngineParameters(multipv=1)})
+        )
+    ).cached_scores
 
 
 async def test_fake_uci_play_returns_a_legal_move() -> None:

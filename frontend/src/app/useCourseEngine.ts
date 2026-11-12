@@ -57,11 +57,15 @@ export function useCourseEngine(
   const [preferredArrowCount, setArrowCount] = useState(3);
   const [customParameters, setParameters] = useState<EngineParameters>();
   const [response, setResponse] = useState<PositionResponse>();
-  const { data: capabilities, error: capabilityError } =
-    useSWR<EngineCapabilities>(
-      enabled && fen ? '/api/engine/capabilities' : null,
-      fetchJson,
-    );
+  const [attempt, setAttempt] = useState(0);
+  const {
+    data: capabilities,
+    error: capabilityError,
+    mutate: checkEngine,
+  } = useSWR<EngineCapabilities>(
+    enabled && fen ? '/api/engine/capabilities' : null,
+    fetchJson,
+  );
   const defaults = capabilities?.default_parameters;
   const parameters = useMemo<EngineParameters>(
     () =>
@@ -103,7 +107,7 @@ export function useCourseEngine(
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [fen, parameters, shouldAnalyze]);
+  }, [fen, parameters, shouldAnalyze, attempt]);
 
   // Navigation changes the board during render, before the previous effect cleans up.
   const current =
@@ -152,6 +156,11 @@ export function useCourseEngine(
   return {
     enabled,
     setEnabled,
+    retry: () => {
+      setResponse(undefined);
+      setAttempt((a) => a + 1);
+      void checkEngine();
+    },
     capabilities,
     parameters,
     setParameters,

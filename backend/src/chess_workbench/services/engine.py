@@ -26,6 +26,7 @@ from chess_workbench.schemas.engine import (
     AnalysisLine,
     AnalysisRead,
     AnalysisRequest,
+    CachedPositionScore,
     EngineCapabilities,
     EngineGameCreate,
     EngineGameMoveCreate,
@@ -183,35 +184,49 @@ class EngineService:
     ) -> AnalysisCacheLookupRead:
         rows = list(
             await self.session.scalars(
-                select(EngineAnalysis).where(EngineAnalysis.fen.in_(request.fens))
+                select(EngineAnalysis)
+                .where(EngineAnalysis.fen.in_(request.fens))
+                .order_by(EngineAnalysis.created_at.desc(), EngineAnalysis.id)
             )
         )
+        if not rows:
+            return AnalysisCacheLookupRead(cached_fens=[], missing_fens=request.fens)
         identity: EngineIdentity | None = None
         if self.settings.stockfish_path.is_file():
             with suppress(EngineError):
                 identity = await self.uci.probe_cached()
         parameters = request.parameters.model_dump(mode="json")
-        cached = {
-            row.fen
-            for row in rows
-            if row.parameters == parameters
-            and (
-                (
-                    row.source == "tablebase"
-                    and row.engine_name == "Syzygy"
-                    and row.engine_version == SYZYGY_ANALYSIS_VERSION
-                )
-                or (
-                    identity is not None
-                    and row.source == "engine"
-                    and row.engine_name == identity.name
-                    and row.engine_version == identity.version
-                )
+        cached: set[str] = set()
+        scored: dict[str, CachedPositionScore] = {}
+        for row in rows:
+            if row.parameters != parameters:
+                continue
+            tablebase = (
+                row.source == "tablebase"
+                and row.engine_name == "Syzygy"
+                and row.engine_version == SYZYGY_ANALYSIS_VERSION
             )
-        }
+            current_engine = (
+                row.source == "engine"
+                and identity is not None
+                and row.engine_name == identity.name
+                and row.engine_version == identity.version
+            )
+            if tablebase or current_engine:
+                cached.add(row.fen)
+            elif row.source != "engine" or identity is not None:
+                continue
+            # Offline readers can still see an earlier result, but only a matching
+            # engine/version counts as complete for a new calculation. Prefer Syzygy.
+            if request.include_scores and row.lines and (tablebase or row.fen not in scored):
+                line = AnalysisLine.model_validate(row.lines[0])
+                scored[row.fen] = CachedPositionScore(
+                    fen=row.fen, score_cp=line.score_cp, mate=line.mate, wdl=line.wdl
+                )
         return AnalysisCacheLookupRead(
             cached_fens=[fen for fen in request.fens if fen in cached],
             missing_fens=[fen for fen in request.fens if fen not in cached],
+            cached_scores=[scored[fen] for fen in request.fens if fen in scored],
         )
 
     async def get_analysis(self, analysis_id: UUID) -> AnalysisRead:

@@ -26,6 +26,7 @@ from chess_workbench.schemas.personal_games import (
     NotebookNodeUpdate,
     NotebookPreviewRequest,
 )
+from chess_workbench.services.notebook_catalog import catalog_cards
 from chess_workbench.services.personal_games import (
     delete_game,
     fetch_notebook_pgn,
@@ -176,7 +177,7 @@ async def search_notebook_games(request: Request) -> HTTPResponse:
         )
         games = await session.scalars(
             select(PersonalGame)
-            .options(defer(PersonalGame.original_pgn), defer(PersonalGame.headers))
+            .options(defer(PersonalGame.original_pgn))
             .where(*conditions)
             .order_by(PersonalGame.created_at.desc(), PersonalGame.id)
             .limit(limit)
@@ -184,7 +185,7 @@ async def search_notebook_games(request: Request) -> HTTPResponse:
         )
         page = NotebookGameCatalog(
             total=total or 0,
-            items=[NotebookGame.model_validate(g, from_attributes=True) for g in games],
+            items=await catalog_cards(session, games.all()),
         )
         return json(page.model_dump(mode="json"))
 

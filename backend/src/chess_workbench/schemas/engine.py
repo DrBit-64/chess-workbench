@@ -44,6 +44,7 @@ class AnalysisJobRequest(AnalysisRequest):
 
 
 class AnalysisCacheLookupRequest(StrictContract):
+    include_scores: bool = False
     fens: list[NonEmptyText] = Field(min_length=1, max_length=10_000)
     parameters: EngineParameters = Field(default_factory=EngineParameters)
 
@@ -56,9 +57,17 @@ class AnalysisCacheLookupRequest(StrictContract):
         return canonical
 
 
+class CachedPositionScore(StrictContract):
+    fen: NonEmptyText
+    score_cp: int | None
+    mate: int | None
+    wdl: tuple[int, int, int] | None
+
+
 class AnalysisCacheLookupRead(StrictContract):
     cached_fens: list[NonEmptyText]
     missing_fens: list[NonEmptyText]
+    cached_scores: list[CachedPositionScore] = Field(default_factory=list)
 
 
 class AnalysisLine(StrictContract):

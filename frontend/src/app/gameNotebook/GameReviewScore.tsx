@@ -1,8 +1,35 @@
 import { Fragment, useEffect, useMemo, useRef, type ReactNode } from 'react';
 
 import { MoveNotation } from '../MoveNotation';
-import { buildScoreTreeLayout } from '../scoreTreeLayout';
+import {
+  buildScoreTreeLayout,
+  type ScoreTreeVariation,
+} from '../scoreTreeLayout';
 import { moveLabel, type ReviewNode } from './reviewTypes';
+import './gameReviewNotation.css';
+
+interface MainlineRow {
+  number: number;
+  white?: ReviewNode;
+  black?: ReviewNode;
+}
+
+function pairMainline(moves: ReviewNode[], rootFen: string) {
+  const fields = rootFen.split(' ');
+  let number = Number(fields[5]);
+  let index = 0;
+  const rows: MainlineRow[] = [];
+  if (fields[1] === 'b' && moves.length) {
+    rows.push({ number, black: moves[0] });
+    number++;
+    index = 1;
+  }
+  for (; index < moves.length; index += 2) {
+    rows.push({ number, white: moves[index], black: moves[index + 1] });
+    number++;
+  }
+  return rows;
+}
 
 export function GameReviewScore({
   visible,
@@ -10,6 +37,7 @@ export function GameReviewScore({
   root,
   selectedId,
   bookmarks,
+  evaluations,
   onSelect,
 }: {
   visible: boolean;
@@ -17,6 +45,7 @@ export function GameReviewScore({
   root: ReviewNode;
   selectedId: string;
   bookmarks: ReadonlyMap<string, unknown>;
+  evaluations?: ReadonlyMap<string, string>;
   onSelect: (node: ReviewNode) => void;
 }) {
   const score = useMemo(
@@ -28,41 +57,62 @@ export function GameReviewScore({
       })),
     [nodes, root.id],
   );
+  const rows = useMemo(
+    () => pairMainline(score.mainline, root.fen),
+    [score, root.fen],
+  );
   const list = useRef<HTMLElement>(null);
 
   useEffect(() => {
-    if (!visible || !list.current) return;
-    const scroller =
-      getComputedStyle(list.current).overflowY === 'visible'
-        ? list.current.closest<HTMLElement>('.game-review-inspector')
-        : list.current;
-    const active = scroller?.querySelector<HTMLElement>(
-      '[aria-current="step"]',
-    );
-    // Keep the score in sync on long games without scrolling the document or board.
-    if (!scroller || !active || !scroller.clientHeight) return;
-    const bounds = scroller.getBoundingClientRect();
-    const item = active.getBoundingClientRect();
-    const tabs =
-      scroller !== list.current &&
-      scroller.querySelector<HTMLElement>('.game-review-tabs');
-    const inset =
-      tabs && getComputedStyle(tabs).position === 'sticky'
-        ? tabs.offsetHeight
-        : 0;
-    if (item.top < bounds.top + inset || item.bottom > bounds.bottom)
-      scroller.scrollTop += item.top - bounds.top - scroller.clientHeight / 3;
+    const nav = list.current;
+    if (!visible || !nav) return;
+    const column = nav.closest<HTMLElement>('.game-review-score-column');
+    const active = nav.querySelector<HTMLElement>('[aria-current="step"]');
+    if (!active) return;
+
+    const reveal = () => {
+      // Rotation can transfer scrolling from the entire engine/score column to
+      // the score alone. An overflow:hidden column still retains its old offset.
+      const scroller =
+        getComputedStyle(nav).overflowY === 'visible' ? (column ?? nav) : nav;
+      if (!scroller.clientHeight) return;
+      if (
+        column &&
+        scroller === nav &&
+        getComputedStyle(column).overflowY === 'hidden'
+      )
+        column.scrollTop = 0;
+      const bounds = scroller.getBoundingClientRect();
+      const item = active.getBoundingClientRect();
+      if (item.top < bounds.top || item.bottom > bounds.bottom)
+        scroller.scrollTop += item.top - bounds.top - scroller.clientHeight / 3;
+    };
+    reveal();
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(reveal);
+    observer.observe(nav);
+    if (column) observer.observe(column);
+    return () => observer.disconnect();
   }, [selectedId, visible]);
 
-  function moveButton(node: ReviewNode) {
+  function moveButton(node: ReviewNode, prefix = '') {
     const starred = bookmarks.has(node.id);
     const current = selectedId === node.id;
     const label = moveLabel(node);
+    const scoreText =
+      node.san && node.is_mainline ? evaluations?.get(node.id) : undefined;
     return (
       <button
         type="button"
-        className="game-review-move"
+        className={node.san ? 'nb-notation-move' : 'nb-notation-start'}
         data-notebook-node={node.id}
+        data-side={
+          node.san
+            ? node.fen.split(' ')[1] === 'w'
+              ? 'black'
+              : 'white'
+            : undefined
+        }
         aria-current={current ? 'step' : undefined}
         aria-label={
           label +
@@ -70,64 +120,111 @@ export function GameReviewScore({
           (node.note ? '，有棋步评语' : '') +
           (starred ? '，已收藏' : '')
         }
+        aria-description={
+          scoreText ? `走后评分（白方视角）${scoreText}` : undefined
+        }
         onClick={() => onSelect(node)}
       >
-        {node.san ? (
-          <>
-            <span className="game-review-move-number">
-              {label.split(' ')[0]}
-            </span>
+        <span className="nb-notation-san">
+          {prefix && (
+            <span className="nb-notation-inline-number">{prefix} </span>
+          )}
+          {node.san ? (
             <MoveNotation san={node.san} nags={node.nags} active={current} />
-          </>
-        ) : (
-          '起始局面'
-        )}
-        {node.note && (
+          ) : (
+            '起始局面'
+          )}
+          {node.note && (
+            <span
+              className="nb-notation-mark"
+              aria-hidden="true"
+              title="有棋步评语"
+            >
+              ✎
+            </span>
+          )}
+          {starred && (
+            <span
+              className="nb-notation-mark"
+              aria-hidden="true"
+              title="已收藏此局面"
+            >
+              ★
+            </span>
+          )}
+        </span>
+        {scoreText && (
           <span
-            className="game-review-note-mark"
-            aria-hidden="true"
-            title="有棋步评语"
+            className="nb-notation-eval"
+            title={`走后评分（白方视角）${scoreText}`}
           >
-            ✎
-          </span>
-        )}
-        {starred && (
-          <span aria-hidden="true" title="已收藏此局面">
-            ★
+            {scoreText}
           </span>
         )}
       </button>
     );
   }
 
-  function renderLine(line: ReviewNode[], variation: boolean): ReactNode {
-    return line.map((node, index) => {
-      // The first move of an alternative shares its parent with the main move:
-      // the sibling variations have already been shown by that parent.
-      const alternatives =
-        variation && index === 0
-          ? undefined
-          : score.variationsByParent.get(node.parent_id ?? null);
-      return (
-        <Fragment key={node.id}>
-          {moveButton(node)}
-          {alternatives?.map((alternative) => (
-            <div key={alternative.key} className="game-review-variation">
-              <span className="game-review-variation-label">变例</span>
-              {renderLine(alternative.moves, true)}
-            </div>
-          ))}
-        </Fragment>
-      );
-    });
+  function variation(line: ScoreTreeVariation<ReviewNode>): ReactNode {
+    let needsNumber = true;
+    return (
+      <span
+        className="nb-notation-variation"
+        data-depth={line.depth}
+        data-inline={line.presentation === 'parenthetical'}
+        key={line.key}
+      >
+        <span aria-hidden="true">(</span>
+        {line.moves.map((node, index) => {
+          // Siblings of the first move are already being rendered by the parent line.
+          const alternatives =
+            index > 0
+              ? score.variationsByParent.get(node.parent_id)
+              : undefined;
+          const number = moveLabel(node).split(' ')[0];
+          const prefix = needsNumber || !number.endsWith('...') ? number : '';
+          needsNumber = Boolean(alternatives?.length);
+          return (
+            <Fragment key={node.id}>
+              {index > 0 && ' '}
+              {moveButton(node, prefix)}
+              {alternatives?.map(variation)}
+            </Fragment>
+          );
+        })}
+        <span aria-hidden="true">)</span>
+      </span>
+    );
   }
 
   return (
-    <nav ref={list} className="game-review-score-list" aria-label="对局棋谱">
-      <div className="game-review-score-flow">
-        {moveButton(root)}
-        {renderLine(score.mainline, false)}
-      </div>
+    <nav
+      ref={list}
+      className="game-review-score-list nb-notation"
+      aria-label="对局棋谱"
+    >
+      {moveButton(root)}
+      {rows.map(({ number, white, black }) => (
+        <Fragment key={number}>
+          <div className="nb-notation-row" data-move-number={number}>
+            <span className="nb-notation-number" aria-hidden="true">
+              {number}
+            </span>
+            {white ? (
+              moveButton(white)
+            ) : (
+              <span className="nb-notation-empty" aria-hidden="true">
+                …
+              </span>
+            )}
+            {black && moveButton(black)}
+          </div>
+          {white &&
+            score.variationsByParent.get(white.parent_id)?.map(variation)}
+          {black &&
+            score.variationsByParent.get(black.parent_id)?.map(variation)}
+        </Fragment>
+      ))}
     </nav>
   );
 }

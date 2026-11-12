@@ -5577,6 +5577,11 @@ export interface operations {
                 "application/json": {
                     /** Fens */
                     fens: string[];
+                    /**
+                     * Include Scores
+                     * @default false
+                     */
+                    include_scores?: boolean;
                     /** EngineParameters */
                     parameters?: {
                         /**
@@ -5624,6 +5629,21 @@ export interface operations {
                     "application/json": {
                         /** Cached Fens */
                         cached_fens: string[];
+                        /** Cached Scores */
+                        cached_scores?: {
+                            /** Fen */
+                            fen: string;
+                            /** Mate */
+                            mate: number | null;
+                            /** Score Cp */
+                            score_cp: number | null;
+                            /** Wdl */
+                            wdl: [
+                                number,
+                                number,
+                                number
+                            ] | null;
+                        }[];
                         /** Missing Fens */
                         missing_fens: string[];
                     };
@@ -8537,6 +8557,8 @@ export interface operations {
                             archived_at: string | null;
                             /** Black */
                             black: string;
+                            /** Black Rating */
+                            black_rating: number | null;
                             /**
                              * Created At
                              * Format: date-time
@@ -8544,11 +8566,17 @@ export interface operations {
                             created_at: string;
                             /** Date */
                             date: string;
+                            /** Final Fen */
+                            final_fen: string;
                             /**
                              * Id
                              * Format: uuid
                              */
                             id: string;
+                            /** Opening Eco */
+                            opening_eco: string | null;
+                            /** Opening Name */
+                            opening_name: string | null;
                             /** Platform */
                             platform: string | null;
                             /** Result */
@@ -8557,10 +8585,14 @@ export interface operations {
                             source_url: string | null;
                             /** Summary */
                             summary: string;
+                            /** Time Control */
+                            time_control: string | null;
                             /** Version */
                             version: number;
                             /** White */
                             white: string;
+                            /** White Rating */
+                            white_rating: number | null;
                         }[];
                         /** Total */
                         total: number;

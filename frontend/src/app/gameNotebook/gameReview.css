@@ -1,15 +1,26 @@
 .game-review {
+  --review-gap: clamp(8px, 1.1vw, 18px);
+  --review-inset: clamp(8px, 1.25vw, 22px);
+  --course-evaluation-width: 16px;
+  --course-evaluation-gap: 3px;
+  --review-pane-height: max(
+    23rem,
+    calc(100svh - 64px - 2 * var(--review-inset))
+  );
   display: grid;
-  grid-template:
-    'left side' auto / minmax(260px, 0.78fr)
-    minmax(0, 1.22fr);
-  align-content: start;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1.05fr) minmax(0, 0.78fr);
   align-items: start;
-  gap: 0 1.25rem;
-  max-width: 1620px;
+  gap: var(--review-gap);
+  max-width: 1820px;
   margin: auto;
-  padding: clamp(0.75rem, 2vw, 2rem);
+  padding: var(--review-inset);
   color: #272722;
+}
+html:fullscreen .game-review {
+  --review-pane-height: calc(100dvh - 2 * var(--review-inset));
+}
+html:fullscreen:has(.game-review) .ant-layout > .ant-layout-header {
+  display: none;
 }
 .game-review-loading {
   display: grid;
@@ -18,12 +29,10 @@
   padding: 2rem;
 }
 .game-review-board-column {
-  grid-area: left;
-  position: sticky;
-  top: 0.6rem;
   display: flex;
   flex-direction: column;
   align-items: stretch;
+  width: 100%;
   min-width: 0;
 }
 .game-review-board-pane {
@@ -32,7 +41,11 @@
   min-width: 0;
 }
 .game-review-board-frame {
-  width: min(100%, 70vh);
+  /* Leave space for both material rows, the evaluation gauge, and navigation. */
+  width: min(
+    100%,
+    calc(var(--review-pane-height) - 7rem + var(--course-evaluation-width))
+  );
   margin-inline: auto;
 }
 .game-review-controls {
@@ -86,15 +99,48 @@
   border-color: #97b59e;
 }
 .game-review-inspector {
-  grid-area: side;
+  display: contents;
+}
+.game-review-score-column {
+  display: flex;
+  flex-direction: column;
+  height: var(--review-pane-height);
+  min-height: 0;
   min-width: 0;
+  border: 1px solid #deddd6;
+  border-radius: 8px;
+  background: #fff;
+}
+.game-review-score-column > :first-child {
+  flex: 0 1 auto;
+  min-height: 0;
+  max-height: 60%;
+  overflow: auto;
+}
+.game-review-score-list {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  scrollbar-width: thin;
+}
+.game-review-sidebar {
+  min-width: 0;
+  max-height: var(--review-pane-height);
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  scrollbar-width: thin;
   overflow-wrap: anywhere;
 }
 .game-review-heading {
-  margin: 0 0 1.1rem;
+  padding: 0.65rem 0.85rem;
+  background: #f0f2ec;
+  border: 1px solid #deddd6;
+  border-bottom: 0;
+  border-radius: 8px 8px 0 0;
 }
 .game-review-heading h1 {
-  font-size: clamp(1.25rem, 2.2vw, 1.9rem);
+  font-size: clamp(1.05rem, 1.3vw, 1.45rem);
   line-height: 1.23;
   font-weight: 680;
 }
@@ -111,18 +157,17 @@
 .game-review-tabs {
   display: none;
 }
-.game-review-sheets {
-  display: grid;
-  align-items: start;
-  grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr);
-  gap: 0.9rem;
-}
 .game-review-sheet {
   min-width: 0;
   background: #fff;
   border: 1px solid #deddd6;
-  border-radius: 8px;
-  padding: 0.95rem;
+  padding: clamp(0.65rem, 1.2vw, 1rem);
+}
+.game-review-notes {
+  border-bottom: 0;
+}
+.game-review-info {
+  border-radius: 0 0 8px 8px;
 }
 .game-review-sheet h2 {
   margin: 0 0 0.5rem;
@@ -153,9 +198,6 @@
 }
 .game-review-prose {
   margin: 0.4rem 0 0.7rem;
-}
-.game-review-info {
-  grid-column: 1 / -1;
 }
 .game-review-info-links,
 .game-review-actions {
@@ -200,69 +242,6 @@
 }
 .game-review-headers dd {
   margin: 0;
-}
-.game-review-score-list {
-  max-height: 62vh;
-  overflow-y: auto;
-  overscroll-behavior-y: contain;
-  scrollbar-width: thin;
-}
-.game-review-score-flow,
-.game-review-variation {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0.15rem;
-}
-.game-review-variation {
-  flex: 1 0 100%;
-  min-width: 0;
-  background: #f4f5f1;
-  padding: 0.19rem 0.25rem;
-  border-inline-start: 2px solid #c4cfbf;
-  box-sizing: border-box;
-}
-.game-review-variation .game-review-variation {
-  padding-inline-start: 0.3rem;
-}
-.game-review-variation-label {
-  padding: 0 0.2rem;
-  color: #696e62;
-  font-size: 0.73rem;
-  white-space: nowrap;
-}
-.game-review-move {
-  display: inline-flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  column-gap: 0.18rem;
-  min-width: 0;
-  max-width: 100%;
-  min-height: 31px;
-  border-radius: 4px;
-  color: #292d26;
-  padding: 0.22rem 0.35rem;
-  font-weight: 570;
-  line-height: 1.45;
-  cursor: pointer;
-}
-.game-review-move:hover {
-  background: #e7ece4;
-}
-.game-review-move[aria-current='step'] {
-  background: #38634b;
-  color: #fff;
-}
-.game-review-move-number {
-  color: #60645c;
-  font-size: 0.77rem;
-  font-weight: 400;
-}
-.game-review-move[aria-current='step'] .game-review-move-number {
-  color: #e4f0e4;
-}
-.game-review-note-mark {
-  font-size: 0.8rem;
 }
 .game-review button:focus-visible,
 .game-review a:focus-visible,
@@ -317,6 +296,13 @@
   margin: 0 0 0.25rem;
   font-weight: 600;
 }
+.game-review-linked-note {
+  margin-inline-start: 0.6em;
+}
+.game-review-game-actions,
+.game-review-note-footer {
+  margin-top: 0.85rem;
+}
 .game-review-note-footer {
   display: flex;
   flex-wrap: wrap;
@@ -327,19 +313,20 @@
 .game-review-note-footer button:first-child:not(:nth-last-child(2)) {
   margin-right: auto;
 }
-@media (min-width: 761px) and (max-width: 1160px) {
-  .game-review:not([data-compact='true']) .game-review-sheets {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .game-review:not([data-compact='true']) .game-review-score-list {
-    max-height: 38vh;
+
+/* Keep all three desktop columns readable on narrower laptop windows. */
+@media (min-width: 761px) and (max-width: 1050px) {
+  .game-review {
+    grid-template-columns: minmax(0, 1.22fr) minmax(0, 1fr) minmax(0, 0.75fr);
   }
 }
+
 @media (max-width: 1180px) {
   .ant-layout:has(.game-review[data-compact='true']) > .ant-layout-header {
     display: none;
   }
   .game-review[data-compact='true'] {
+    --course-evaluation-width: 13px;
     max-width: 100%;
     padding: 0;
     gap: 0;
@@ -350,7 +337,12 @@
     display: contents;
   }
   .game-review[data-compact='true'] .game-review-board-frame {
-    width: min(100%, 52svh);
+    width: min(
+      100%,
+      calc(
+        51svh + var(--course-evaluation-width) + var(--course-evaluation-gap)
+      )
+    );
   }
   .game-review[data-compact='true'] .board-material {
     display: none;
@@ -366,28 +358,32 @@
     padding: 0.28rem 0.5rem;
   }
   .game-review[data-compact='true'] .game-review-inspector {
-    padding: 0.55rem;
-  }
-  .game-review[data-compact='true'] .game-review-heading {
-    margin-bottom: 0.35rem;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    grid-area: side;
+    min-width: 0;
+    min-height: 0;
+    padding: 0 0.45rem 0.45rem;
   }
   .game-review[data-compact='true'] .game-review-heading h1 {
-    font-size: 1.12rem;
+    font-size: 1.06rem;
   }
   .game-review[data-compact='true'] .game-review-heading p {
     margin: 0.12rem 0;
-    font-size: 0.78rem;
+    font-size: 0.8rem;
   }
   .game-review[data-compact='true'] .game-review-tabs {
     display: flex;
     flex-wrap: wrap;
+    flex-shrink: 0;
     gap: 0.25rem;
-    padding: 0.25rem 0;
+    padding: 0.2rem 0;
   }
   .game-review-tabs button {
     border-radius: 5px;
     background: transparent;
-    padding: 0.3rem 0.55rem;
+    padding: 0.25rem 0.55rem;
     min-height: 44px;
   }
   .game-review-tabs button[aria-pressed='true'] {
@@ -395,26 +391,39 @@
     border-color: #a4b6a0;
     color: #274f38;
   }
-  .game-review[data-compact='true'] .game-review-sheets {
-    display: block;
-  }
   .game-review[data-compact='true'] .game-review-sheet {
-    padding: 0.6rem;
+    padding: 0.65rem;
+    border-radius: 0 0 8px 8px;
+    border-bottom: 1px solid #deddd6;
   }
-  .game-review[data-compact='true'] .game-review-sheet[data-active='false'] {
+  .game-review[data-compact='true'] [data-active='false'] {
     display: none;
   }
-  .game-review[data-compact='true'] .game-review-score h2 {
+  .game-review[data-compact='true'] .game-review-score-column {
+    height: auto;
+    min-height: 0;
+    max-height: max(18rem, 66svh);
+    display: block;
+    overflow: auto;
+    overscroll-behavior-y: contain;
+  }
+  .game-review[data-compact='true']
+    .game-review-score-column[data-active='false'] {
     display: none;
   }
-  .game-review[data-compact='true'] .game-review-score-list {
-    max-height: 55svh;
+  .game-review[data-compact='true'] .game-review-score-column > :first-child,
+  .game-review[data-compact='true'] .game-review-score-list,
+  .game-review[data-compact='true'] .game-review-sidebar {
+    max-height: none;
+    overflow: visible;
   }
-  .game-review[data-compact='true'] .game-review-move {
-    min-height: 44px;
-    align-items: center;
+  .game-review[data-compact='true'] .game-review-feedback {
+    margin: 0 0 0.25rem;
+    flex-shrink: 0;
+    overflow-wrap: anywhere;
   }
 }
+
 @media (orientation: landscape) and (max-width: 1180px) {
   html:has(.game-review[data-compact='true']) {
     --game-review-height: 100svh;
@@ -437,7 +446,10 @@
     grid-template:
       'board side' minmax(0, 1fr) 'board controls' auto / min(
         45%,
-        var(--game-review-height)
+        calc(
+          var(--game-review-height) + var(--course-evaluation-width) +
+            var(--course-evaluation-gap)
+        )
       )
       minmax(0, 1fr);
   }
@@ -450,38 +462,89 @@
     background: #f4f4ef;
   }
   .game-review[data-compact='true'] .game-review-board-frame {
-    width: min(100cqw, 100cqh);
+    width: min(
+      100cqw,
+      calc(
+        100cqh + var(--course-evaluation-width) + var(--course-evaluation-gap)
+      )
+    );
   }
   .game-review[data-compact='true'] .game-review-inspector {
     align-self: stretch;
-    overflow: auto;
-    padding: 0.4rem 0.6rem;
-    overscroll-behavior: contain;
+    overflow: hidden;
   }
-  .game-review[data-compact='true'] .game-review-score-list {
+  .game-review[data-compact='true'] .game-review-score-column,
+  .game-review[data-compact='true'] .game-review-sidebar {
+    flex: 1 1 0;
+    min-height: 0;
     max-height: none;
-    overflow: visible;
+    overflow: auto;
+    overscroll-behavior-y: contain;
   }
-  .game-review[data-compact='true'] .game-review-heading {
-    margin: 0;
+  .game-review[data-compact='true'] .game-review-feedback {
+    max-height: 28%;
+    overflow-y: auto;
   }
-}
-.game-review-linked-note {
-  margin-inline-start: 0.6em;
-}
-.game-review-note-footer {
-  margin-top: 0.85rem;
 }
 
-@media (orientation: landscape) and (max-width: 1180px) and (max-height: 400px) {
-  .game-review[data-compact='true']:not([data-panel='game'])
-    .game-review-heading {
-    display: none;
+/* Short landscape: keep an engine line above the independently scrollable score. */
+@media (orientation: landscape) and (max-width: 1180px) and (max-height: 320px) {
+  .game-review[data-compact='true']
+    .game-review-score-column[data-active='true'] {
+    display: flex;
+    overflow: hidden;
   }
-  .game-review[data-compact='true'] .game-review-tabs {
-    position: sticky;
-    top: -0.4rem;
-    background: #fafaf9;
-    z-index: 1;
+  .game-review[data-compact='true']
+    .game-review-score-column
+    > .game-review-engine {
+    flex: 0 1 auto;
+    max-height: max(32px, calc(100% - 64px));
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+  .game-review[data-compact='true'] .game-review-score-list {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow-y: auto;
+  }
+  .game-review .game-review-engine-head {
+    flex-wrap: nowrap;
+    gap: 3px;
+    padding: 0 4px;
+  }
+  .game-review .game-review-engine-identity {
+    flex-wrap: nowrap;
+  }
+  .game-review .game-review-engine-identity > span {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .game-review .game-review-engine-actions {
+    flex-wrap: nowrap;
+    flex: none;
+  }
+  .game-review .game-review-engine-actions > button {
+    min-height: 26px;
+    padding: 2px 5px;
+  }
+  .game-review .game-review-pvs {
+    max-height: 25px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+  .game-review .game-review-pvs summary {
+    min-height: 24px;
+    padding-block: 1px;
+  }
+  .game-review .nb-notation-start {
+    min-height: 24px;
+    padding-block: 2px;
+    font-size: 0.78rem;
+  }
+  .game-review .nb-notation-row .nb-notation-move {
+    min-height: 32px;
+    padding-block: 0.18rem;
+    align-items: center;
   }
 }

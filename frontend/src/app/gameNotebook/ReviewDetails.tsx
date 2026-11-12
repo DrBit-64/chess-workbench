@@ -183,11 +183,15 @@ export function ReviewGameInfo({
   game,
   url,
   editSummary,
+  busy,
+  manageGame,
 }: {
   active: boolean;
   game: ReviewGame;
   url: string;
   editSummary: () => void;
+  busy: boolean;
+  manageGame: (action: 'archive' | 'restore' | 'delete') => Promise<void>;
 }) {
   const sourceLink = /^https?:\/\//i.test(game.source_url ?? '')
     ? game.source_url
@@ -198,7 +202,7 @@ export function ReviewGameInfo({
       data-active={active}
       aria-label="对局信息面板"
     >
-      <h2>对局信息</h2>
+      <h2>棋谱收藏</h2>
       <div className="game-review-info-links">
         <a href={`${url}/pgn`} download>
           下载原始 PGN
@@ -219,6 +223,36 @@ export function ReviewGameInfo({
         >
           {game.summary ? '编辑整盘总结' : '写整盘总结'}
         </button>
+      </div>
+      <div className="game-review-actions game-review-game-actions">
+        <button
+          type="button"
+          className="game-review-action"
+          disabled={busy}
+          onClick={() =>
+            void manageGame(game.archived_at ? 'restore' : 'archive')
+          }
+        >
+          {game.archived_at ? '恢复棋谱' : '归档棋谱'}
+        </button>
+        {game.archived_at && (
+          <Popconfirm
+            title="永久删除这盘棋？"
+            description="本盘棋谱、评语、局面收藏和关联练习将一并删除。"
+            styles={{ root: { maxWidth: 'calc(100vw - 16px)' } }}
+            okText="确认永久删除"
+            cancelText="取消"
+            onConfirm={() => manageGame('delete')}
+          >
+            <button
+              type="button"
+              className="game-review-action danger"
+              disabled={busy}
+            >
+              永久删除棋谱
+            </button>
+          </Popconfirm>
+        )}
       </div>
       <details className="game-review-headers">
         <summary>棋谱信息</summary>

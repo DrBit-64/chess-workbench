@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import useSWR from 'swr';
 import {
   ApiError,
@@ -10,7 +10,7 @@ import {
 import { CatalogShell } from './CatalogShell';
 import { GameImportDialog } from './GameImportDialog';
 import { NotebookAccounts } from './NotebookAccounts';
-import { NoteExcerpt } from './NoteExcerpt';
+import { GameCard } from './GameCard';
 import { NotebookDialog } from './NotebookDialog';
 import { notebookApi, type GameResults, type SavedGame } from './catalogApi';
 import { useCatalogReturn } from './catalogNavigation';
@@ -189,65 +189,44 @@ export function GameCatalog() {
               : '还没有收藏棋谱。可以从 PGN 或对局链接开始。'}
         </p>
       ) : (
-        <ul className="nb-game-list">
+        <ul className="nb-game-grid">
           {games.map((game) => (
-            <li key={game.id} className="nb-game-row">
-              <div className="nb-game-copy">
-                <Link
-                  to={'/games/' + game.id}
-                  state={back.state}
-                  onClick={back.remember}
-                  className="nb-game-title"
-                >
-                  {game.white} <span className="nb-muted">—</span> {game.black}
-                </Link>
-                <p className="nb-meta">
-                  {[game.date, game.result, game.platform]
-                    .filter(Boolean)
-                    .join(' · ')}
-                </p>
-                {game.summary && <NoteExcerpt text={game.summary} />}
-              </div>
-              <div className="nb-actions">
-                <Link
-                  to={'/games/' + game.id}
-                  className="nb-btn"
-                  state={back.state}
-                  onClick={back.remember}
-                >
-                  打开棋谱
-                </Link>
-                {archived ? (
-                  <>
-                    <button
-                      className="nb-btn"
-                      disabled={!!busy}
-                      onClick={() => void changeGame(game, 'restore')}
-                    >
-                      恢复
-                    </button>
-                    <button
-                      className="nb-btn danger"
-                      disabled={!!busy}
-                      onClick={() => {
-                        setActionError('');
-                        setDeleting(game);
-                      }}
-                    >
-                      永久删除
-                    </button>
-                  </>
-                ) : (
+            <GameCard
+              key={game.id}
+              game={game}
+              returnState={back.state}
+              onOpen={back.remember}
+            >
+              {archived ? (
+                <>
                   <button
                     className="nb-btn"
                     disabled={!!busy}
-                    onClick={() => void changeGame(game, 'archive')}
+                    onClick={() => void changeGame(game, 'restore')}
                   >
-                    归档
+                    恢复
                   </button>
-                )}
-              </div>
-            </li>
+                  <button
+                    className="nb-btn danger"
+                    disabled={!!busy}
+                    onClick={() => {
+                      setActionError('');
+                      setDeleting(game);
+                    }}
+                  >
+                    永久删除
+                  </button>
+                </>
+              ) : (
+                <button
+                  className="nb-btn"
+                  disabled={!!busy}
+                  onClick={() => void changeGame(game, 'archive')}
+                >
+                  归档
+                </button>
+              )}
+            </GameCard>
           ))}
         </ul>
       )}

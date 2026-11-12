@@ -18,6 +18,7 @@ import {
   requestJson,
   ApiError,
 } from '../../logic/api/client';
+import { CourseEvaluationBar } from '../CourseEvaluationBar';
 import { lichessSquareStyles } from '../boardInteraction';
 import { BookmarkEditor, type BookmarkFields } from './BookmarkEditor';
 import { positionLabel } from './positionLabel';
@@ -32,6 +33,8 @@ import {
   type ReviewGameSummary,
   type ReviewNode,
 } from './reviewTypes';
+import { useGameReviewEngine } from './useGameReviewEngine';
+import { GameReviewEnginePanel } from './GameReviewEnginePanel';
 import './gameReview.css';
 
 const base = '/api/notebook';
@@ -99,7 +102,7 @@ function GameReview({
   const navigate = useNavigate();
   const location = useLocation();
   const [search, setSearch] = useSearchParams();
-  const compact = useCompactReaderViewport();
+  const compact = useCompactReaderViewport({ compactInWideFullscreen: false });
   const { mutate: refresh } = useSWRConfig();
   const [panel, setPanel] = useState<Panel>('score');
   const [orientation, setOrientation] = useState<'white' | 'black'>('white');
@@ -140,6 +143,7 @@ function GameReview({
   const requested = search.get('node');
   const node = requested ? tree.byId.get(requested) : tree.root;
   const bookmark = node && starred.get(node.id);
+  const analysis = useGameReviewEngine(game, node);
   const displayedNode = useRef(node?.id);
   useLayoutEffect(() => {
     displayedNode.current = node?.id;
@@ -236,6 +240,45 @@ function GameReview({
   function backToLibrary() {
     if (location.state?.notebookBack) void navigate(-1);
     else void navigate('/games');
+  }
+
+  async function manageGame(action: 'archive' | 'restore' | 'delete') {
+    if (busy) return;
+    setBusy(true);
+    try {
+      if (action === 'delete') {
+        await requestEmpty(`${url}?expected_version=${game.version}`, {
+          method: 'DELETE',
+        });
+        void navigate('/games?archived=1', { replace: true });
+      } else {
+        const row = await requestJson<ReviewGameSummary>(url, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            expected_version: game.version,
+            archived: action === 'archive',
+          }),
+        });
+        await updateGame((previous) => previous && { ...previous, ...row });
+        setNotice({
+          text:
+            action === 'archive' ? '棋谱已归档，可在此恢复。' : '棋谱已恢复。',
+        });
+      }
+      void refresh(
+        (key) =>
+          typeof key === 'string' &&
+          (key.startsWith(base + '/game-catalog') ||
+            key.split('?')[0] === base + '/games' ||
+            key.startsWith(base + '/bookmarks') ||
+            key === base + '/bookmark-tags'),
+      );
+    } catch (reason) {
+      setNotice({ text: errorText(reason), error: true });
+      void reload();
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function remember(row: ReviewBookmark) {
@@ -440,6 +483,36 @@ function GameReview({
   const selectedNotes = Boolean(
     node.note || bookmark?.note || node.comment || node.starting_comment,
   );
+  const feedback = (
+    <>
+      {bookmarkError && (
+        <Alert
+          type="error"
+          title="无法载入收藏"
+          action={
+            <Button size="small" onClick={() => void updateBookmarks()}>
+              重试
+            </Button>
+          }
+        />
+      )}
+      {notice && (
+        <div
+          role={notice.error ? 'alert' : 'status'}
+          className={'game-review-feedback' + (notice.error ? ' error' : '')}
+        >
+          <span>{notice.text}</span>
+          <button
+            type="button"
+            aria-label="关闭提示"
+            onClick={() => setNotice(undefined)}
+          >
+            ×
+          </button>
+        </div>
+      )}
+    </>
+  );
   return (
     <section
       className="game-review"
@@ -449,12 +522,20 @@ function GameReview({
     >
       <div className="game-review-board-column">
         <div className="game-review-board-pane" aria-label="复盘棋盘">
-          <div className="game-review-board-frame">
+          <div className="game-review-board-frame course-board-with-evaluation">
             <WorkbenchBoard
               id="notebook-game-board"
               fitReaderPane={compact}
               position={node.fen}
               boardOrientation={orientation}
+              customArrows={analysis.live.arrows}
+              evaluationBar={
+                <CourseEvaluationBar
+                  line={analysis.currentLine}
+                  outcome={analysis.live.outcome}
+                  orientation={orientation}
+                />
+              }
               arePiecesDraggable={false}
               customSquareStyles={lichessSquareStyles(
                 node.fen,
@@ -605,16 +686,6 @@ function GameReview({
         </nav>
       </div>
       <div className="game-review-inspector">
-        <header className="game-review-heading">
-          <h1>
-            {game.white} <span>—</span> {game.black}
-          </h1>
-          <p>
-            {[game.result, game.date, game.archived_at ? '已归档' : null]
-              .filter(Boolean)
-              .join(' · ')}
-          </p>
-        </header>
         <div className="game-review-tabs" aria-label="复盘面板">
           {panels.map(([id, label]) => (
             <button
@@ -629,48 +700,39 @@ function GameReview({
             </button>
           ))}
         </div>
-        {bookmarkError && (
-          <Alert
-            type="error"
-            title="无法载入收藏"
-            action={
-              <Button size="small" onClick={() => void updateBookmarks()}>
-                重试
-              </Button>
-            }
+        {compact && feedback}
+        <section
+          className="game-review-score-column"
+          data-active={panel === 'score'}
+          aria-label="棋谱面板"
+        >
+          <GameReviewEnginePanel analysis={analysis} />
+          <GameReviewScore
+            nodes={game.nodes}
+            visible={!compact || panel === 'score'}
+            root={tree.root}
+            selectedId={node.id}
+            bookmarks={starred}
+            evaluations={analysis.scores}
+            onSelect={select}
           />
-        )}
-        {notice && (
-          <div
-            role={notice.error ? 'alert' : 'status'}
-            className={'game-review-feedback' + (notice.error ? ' error' : '')}
-          >
-            <span>{notice.text}</span>
-            <button
-              type="button"
-              aria-label="关闭提示"
-              onClick={() => setNotice(undefined)}
-            >
-              ×
-            </button>
-          </div>
-        )}
-        <div className="game-review-sheets">
-          <section
-            className="game-review-sheet game-review-score"
-            data-active={panel === 'score'}
-            aria-label="棋谱面板"
-          >
-            <h2>棋谱</h2>
-            <GameReviewScore
-              nodes={game.nodes}
-              visible={!compact || panel === 'score'}
-              root={tree.root}
-              selectedId={node.id}
-              bookmarks={starred}
-              onSelect={select}
-            />
-          </section>
+        </section>
+        <aside
+          className="game-review-sidebar"
+          aria-label="收藏与笔记"
+          data-active={panel !== 'score'}
+        >
+          <header className="game-review-heading">
+            <h1>
+              {game.white} <span>—</span> {game.black}
+            </h1>
+            <p>
+              {[game.result, game.date, game.archived_at ? '已归档' : null]
+                .filter(Boolean)
+                .join(' · ')}
+            </p>
+          </header>
+          {!compact && feedback}
           <ReviewPositionNotes
             key={node.id}
             active={panel === 'notes'}
@@ -689,8 +751,10 @@ function GameReview({
             game={game}
             url={url}
             editSummary={() => editNote('summary')}
+            busy={busy}
+            manageGame={manageGame}
           />
-        </div>
+        </aside>
       </div>
       {noteEditor && (
         <ReviewNoteEditor

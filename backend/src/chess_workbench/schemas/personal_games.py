@@ -24,8 +24,17 @@ class NotebookGame(StrictContract):
     version: int
 
 
+class NotebookGameCard(NotebookGame):
+    white_rating: int | None
+    black_rating: int | None
+    time_control: str | None
+    final_fen: str
+    opening_eco: str | None
+    opening_name: str | None
+
+
 class NotebookGameCatalog(StrictContract):
-    items: list[NotebookGame]
+    items: list[NotebookGameCard]
     total: int
 
 

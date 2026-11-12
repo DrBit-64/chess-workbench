@@ -192,3 +192,75 @@ async def test_lichess_download_uses_canonical_id_and_rejects_untrusted_hosts(
         game_source("https://www.chess.com/analysis/game/live/1234/analysis").external_id
         == "live/1234"
     )
+
+
+async def test_catalog_cards_use_mainline_final_fen_and_lichess_openings(tmp_path: Any) -> None:
+    app = create_app(
+        Settings(
+            service_name=f"notebook-cards-{uuid4().hex}",
+            database_url=f"sqlite+aiosqlite:///{tmp_path / 'cards.db'}",
+            engine_worker_enabled=False,
+        )
+    )
+    async with app.ctx.database.engine.begin() as connection:
+        await connection.run_sync(Base.metadata.create_all)
+
+    # The variation is longer than the actual game, and this non-Lichess PGN's
+    # provider opening label differs from the verified Lichess classification.
+    pgn = """[White "First"]
+[WhiteElo "2000"]
+[BlackElo "1994"]
+[TimeControl "300+3"]
+[ECO "D10"]
+[Opening "Slav Defense"]
+
+1. c4 Nf6 (1... c6 2. d4 d5 3. Nc3) 2. d4 *
+
+[White "Second"]
+[WhiteElo "?"]
+[TimeControl "1/259200"]
+
+1. d4 Nf6 2. c4 *
+
+[White "Study"]
+[SetUp "1"]
+[FEN "8/8/5k2/8/3K4/8/7P/8 b - - 67 24"]
+
+*
+
+[White "Native"]
+[Site "https://lichess.org/ZYXwv123"]
+[Opening "Indian Defense"]
+[ECO "A45"]
+[TimeControl "-"]
+
+1. d4 Nf6 2. c4 *
+"""
+    client = cast(Any, app.asgi_client)
+    _, saved = await client.post(
+        "/api/notebook/imports",
+        json={"pgn": pgn, "selections": [{"index": index} for index in range(4)]},
+    )
+    assert saved.status == 200, saved.json
+    _, result = await client.get("/api/notebook/game-catalog")
+    assert result.status == 200, result.json
+    cards = {row["white"]: row for row in result.json["items"]}
+    a, b, setup, native = (cards[key] for key in ("First", "Second", "Study", "Native"))
+    assert (a["white_rating"], a["black_rating"], a["time_control"]) == (2000, 1994, "300+3")
+    assert (b["white_rating"], b["black_rating"], b["time_control"]) == (None, None, "1/259200")
+    assert (a["opening_eco"], a["opening_name"]) == ("A50", "Indian Defense: Normal Variation")
+    assert (b["opening_eco"], b["opening_name"]) == (a["opening_eco"], a["opening_name"])
+    assert a["final_fen"] == "rnbqkb1r/pppppppp/5n2/8/2PP4/8/PP2PPPP/RNBQKBNR b KQkq d3 0 2"
+    assert b["final_fen"].endswith(" b KQkq c3 0 2")
+    assert setup["final_fen"] == "8/8/5k2/8/3K4/8/7P/8 b - - 67 24"
+    assert (setup["opening_eco"], setup["opening_name"], setup["time_control"]) == (
+        None,
+        None,
+        None,
+    )
+    assert (native["opening_eco"], native["opening_name"], native["time_control"]) == (
+        "A45",
+        "Indian Defense",
+        "-",
+    )
+    await app.ctx.database.close()

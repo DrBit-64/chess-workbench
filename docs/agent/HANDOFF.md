@@ -1,5 +1,13 @@
 # Current agent handoff
 
+## Personal game cards and analysis board (2026-11-12)
+
+The notebook catalog projects a mainline final board, historical ratings, time control and opening from existing stored games. Lichess exports keep their published classification. Other games match canonical positions against the bundled CC0 Lichess opening table, including transpositions. The snapshot and regeneration command are in `domain/openings.py`. No database migration or reimport is required.
+
+The desktop game reader places the board and evaluation bar on the left, candidate lines and paired mainline notation in the middle, and bookmarks, notes and game management on the right. Phone readers use tabs. The game reader shares the course engine, arrows, settings, evaluation and variation layout. Batch analysis checks the cache for the current parameters, persists each calculated position and resumes from the cache after an interruption. Mainline values are from the resulting position, in White's perspective. PGN evaluation annotations supply values until a local analysis is available.
+
+Chromium checks against Sanic, SQLite and native Stockfish covered the final board versus a longer variation, opening classification, ratings and clocks, PV arrows, cached and fresh move scores, nested variations, bookmark editing, archive/restore and deletion. Layout checks included desktop fullscreen, 304px portrait and 741×228 landscape. The workflow tests are in `frontend/e2e/notebook-analysis.spec.ts` and `personal-notebook.spec.ts`.
+
 ## Personal games and bookmarked positions (2026-11-07)
 
 Open **我的对局** to save a PGN or public Lichess/Chess.com game, select games from a multi-game PGN, or manage public account sync. Personal move notes and game summaries are independent of imported annotations. Bookmark the current board or the decision before a move, search by note and multiple tags, jump to the exact game node or find other occurrences through the shared position graph. Archiving, un-starring, restoring and permanent deletion are available from the owning views. A bookmark can optionally become a user-authored exercise or the starting point for a game against Stockfish. Architecture and maintenance boundaries are in [ADR 0028](../decisions/0028-personal-game-notebook.md).
