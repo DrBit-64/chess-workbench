@@ -2,14 +2,14 @@ import { type ComponentProps, useEffect, useMemo, useState } from 'react';
 import type { Chessboard } from 'react-chessboard';
 import useSWR from 'swr';
 
-import { fetchJson, requestJson } from '../logic/api/client';
+import { fetchJson } from '../logic/api/client';
+import { analyzePosition } from '../logic/api/engineAnalysis';
 import type {
   Analysis,
   EngineCapabilities,
   EngineParameters,
 } from '../logic/api/engineTypes';
-import { boardOutcome } from './chapterEnginePositions';
-import { winningChances } from './courseEvaluation';
+import { boardOutcome, winningChances } from './courseEvaluation';
 
 const DEFAULT_PARAMETERS: EngineParameters = {
   multipv: 4,
@@ -23,10 +23,10 @@ const DEFAULT_PARAMETERS: EngineParameters = {
 const BEST_ARROW_COLOR = 'rgba(31, 90, 165, 0.86)';
 const MAX_VISIBLE_WINNING_CHANCE_LOSS = 0.2;
 
-export type CourseEngineArrow = NonNullable<
+type EngineArrow = NonNullable<
   ComponentProps<typeof Chessboard>['customArrows']
 >[number];
-type BoardSquare = CourseEngineArrow[0];
+type BoardSquare = EngineArrow[0];
 
 function alternativeArrowColor(loss: number): string {
   const ratio = Math.min(
@@ -47,7 +47,7 @@ type PositionResponse = {
   error?: string;
 };
 
-export function useCourseEngine(
+export function usePositionEngine(
   fen: string | undefined,
   defaultEnabled: boolean,
 ) {
@@ -84,11 +84,7 @@ export function useCourseEngine(
     if (!shouldAnalyze || !fen) return;
     const controller = new AbortController();
     const timer = window.setTimeout(() => {
-      void requestJson<Analysis>('/api/engine/analyses', {
-        method: 'POST',
-        signal: controller.signal,
-        body: JSON.stringify({ fen, parameters }),
-      }).then(
+      void analyzePosition(fen, parameters, controller.signal).then(
         (analysis) => {
           if (!controller.signal.aborted)
             setResponse({ fen, parameters, analysis });
@@ -127,7 +123,7 @@ export function useCourseEngine(
       : undefined;
   const analyzing = Boolean(shouldAnalyze && fen && !current);
 
-  const arrows = useMemo<CourseEngineArrow[]>(() => {
+  const arrows = useMemo<EngineArrow[]>(() => {
     if (!showArrows || !analysis || !fen) return [];
     const bestLine = analysis.lines[0];
     if (!bestLine) return [];
@@ -175,3 +171,5 @@ export function useCourseEngine(
     arrows,
   };
 }
+
+export type PositionEngine = ReturnType<typeof usePositionEngine>;

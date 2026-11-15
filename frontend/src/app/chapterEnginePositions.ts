@@ -1,11 +1,8 @@
-import { Chess, DEFAULT_POSITION } from 'chess.js';
+import { DEFAULT_POSITION } from 'chess.js';
 
 import { requestJson } from '../logic/api/client';
-import type {
-  AnalysisCacheLookup,
-  EngineParameters,
-} from '../logic/api/engineTypes';
 import type { ModuleEditor } from '../logic/api/types';
+import { indexScorePositions } from './scoreEvaluations';
 
 // A prose-only introduction can carry a synthetic initial-position root.
 export function hasBookBoard(
@@ -20,24 +17,21 @@ export function hasBookBoard(
   );
 }
 
-export type BoardOutcome = 'white-wins' | 'black-wins' | 'draw';
-
-export function boardOutcome(fen: string): BoardOutcome | undefined {
-  try {
-    const board = new Chess(fen);
-    if (board.isCheckmate())
-      return board.turn() === 'w' ? 'black-wins' : 'white-wins';
-    // The FEN clock can establish the automatic 75-move draw, but a 50-move
-    // draw needs a player's claim, which the position alone cannot establish.
-    if (
-      board.isStalemate() ||
-      board.isInsufficientMaterial() ||
-      Number(fen.split(' ')[4]) >= 150
-    )
-      return 'draw';
-  } catch {
-    return;
-  }
+export function courseScorePositions(
+  editor: ModuleEditor | undefined,
+  includeStart: boolean,
+) {
+  const nodes = editor?.occurrences ?? [];
+  const parents = new Set(nodes.map((node) => node.parent_id));
+  return indexScorePositions(
+    nodes.map((node) => ({
+      id: node.id,
+      fen: node.full_fen,
+      comment: node.context?.pgn_comment,
+      hasContinuation: parents.has(node.id),
+      analyze: includeStart || node.full_fen !== DEFAULT_POSITION,
+    })),
+  );
 }
 
 export async function loadChapterFens(
@@ -52,37 +46,11 @@ export async function loadChapterFens(
       `/api/courses/${courseId}/editor/${id}`,
       { method: 'GET', signal },
     );
-    const includeStartingPosition = hasBookBoard(editor, DEFAULT_POSITION);
-    for (const node of editor.occurrences) {
-      if (node.full_fen !== DEFAULT_POSITION || includeStartingPosition) {
-        positions.add(node.full_fen);
-      }
-    }
-  }
-  return [...positions].filter((fen) => !boardOutcome(fen));
-}
-
-export async function findMissingChapterFens(
-  fens: string[],
-  parameters: EngineParameters,
-  signal: AbortSignal,
-): Promise<string[]> {
-  // A parent chapter may combine many games in a single analysis request.
-  const batchSize = 500;
-  const missing: string[] = [];
-  for (let i = 0; i < fens.length; i += batchSize) {
-    const result = await requestJson<AnalysisCacheLookup>(
-      '/api/engine/analyses/cache-lookup',
-      {
-        method: 'POST',
-        signal,
-        body: JSON.stringify({
-          fens: fens.slice(i, i + batchSize),
-          parameters,
-        }),
-      },
+    const chapter = courseScorePositions(
+      editor,
+      hasBookBoard(editor, DEFAULT_POSITION),
     );
-    missing.push(...result.missing_fens);
+    for (const fen of chapter.fens) positions.add(fen);
   }
-  return missing;
+  return [...positions];
 }

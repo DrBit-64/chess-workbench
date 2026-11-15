@@ -1,5 +1,5 @@
 import { Alert, Drawer, Select, Slider, Switch, Typography } from 'antd';
-import type { useCourseEngine } from './useCourseEngine';
+import type { PositionEngine } from './usePositionEngine';
 
 export function EngineSettingsDrawer({
   context,
@@ -8,7 +8,7 @@ export function EngineSettingsDrawer({
   onClose,
 }: {
   context: '课程' | '复盘';
-  engine: ReturnType<typeof useCourseEngine>;
+  engine: PositionEngine;
   open: boolean;
   onClose: () => void;
 }) {

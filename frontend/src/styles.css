@@ -223,90 +223,6 @@ body {
   color: #245c38 !important;
 }
 
-.course-engine-panel {
-  overflow: hidden;
-  border: 1px solid #d6d3d1;
-  border-radius: 8px;
-  background: #fff;
-  box-shadow: 0 5px 18px rgb(28 25 23 / 8%);
-}
-
-.course-engine-header {
-  display: flex;
-  flex-wrap: wrap;
-  min-height: 2.75rem;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  padding: 0.45rem 0.65rem;
-  background: #f7f7f5;
-}
-
-.course-engine-header > .ant-space {
-  max-width: 100%;
-  flex-wrap: wrap;
-}
-
-.course-engine-bulk {
-  display: flex;
-  min-height: 3.25rem;
-  align-items: center;
-  gap: 0.75rem;
-  border-top: 1px solid #e7e5e4;
-  padding: 0.45rem 0.65rem;
-}
-
-.course-engine-loading,
-.course-engine-empty {
-  display: flex;
-  min-height: 3.5rem;
-  align-items: center;
-  justify-content: center;
-  gap: 0.55rem;
-  color: #57534e;
-  font-size: 0.82rem;
-}
-
-.course-pv-list {
-  display: grid;
-}
-
-.course-pv-row {
-  display: grid;
-  grid-template-columns: 1.3rem 3.8rem minmax(0, 1fr);
-  gap: 0.45rem;
-  align-items: center;
-  border-top: 1px solid #e7e5e4;
-  padding: 0.42rem 0.65rem;
-  font-size: 0.8rem;
-}
-
-.course-pv-rank {
-  color: #78716c;
-  text-align: center;
-}
-
-.course-pv-score {
-  color: #334155;
-  font-variant-numeric: tabular-nums;
-  font-weight: 700;
-}
-
-.course-pv-moves {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-}
-
-.course-engine-meta {
-  border-top: 1px solid #e7e5e4;
-  padding: 0.35rem 0.65rem;
-  color: #57534e;
-  font-size: 0.72rem;
-  text-align: right;
-}
-
 /* Ant Design's default secondary gray misses WCAG AA at normal text sizes. */
 .ant-typography-secondary {
   color: #595959 !important;
@@ -396,6 +312,35 @@ body {
   flex-direction: column;
   overflow: hidden;
   padding-bottom: 0;
+}
+
+.course-score-pane-content {
+  display: flex;
+  /* The tablet card has intrinsic height. Its score must contribute to that height. */
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+
+.course-score-pane-content > .score-engine {
+  flex: 0 1 auto;
+  max-height: 50%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+
+.move-evaluation {
+  margin-inline-start: auto;
+  color: #5c655d;
+  font-size: 0.79em;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+button[aria-current='step'] .move-evaluation {
+  color: #edf5e9;
 }
 
 .course-reading-scroll {
@@ -623,6 +568,10 @@ body {
     padding-bottom: 0;
   }
 
+  .course-score-pane-content {
+    display: block;
+  }
+
   .course-reading-scroll {
     overflow: visible;
   }
@@ -708,7 +657,7 @@ body {
   display: none;
 }
 
-.mobile-book-reader .course-reading-scroll,
+.mobile-book-reader .course-score-pane-content,
 .mobile-book-reader .course-left-pane {
   grid-area: content;
   min-width: 0;
@@ -716,6 +665,10 @@ body {
   max-height: none;
   border: 0;
   border-radius: 0;
+}
+.mobile-book-reader .course-score-pane-content {
+  display: flex;
+  overflow: hidden;
 }
 .mobile-book-reader .course-reading-scroll {
   overflow: auto;
@@ -735,7 +688,8 @@ body {
 }
 
 .mobile-book-reader[data-reader-panel='score'] .course-left-pane,
-.mobile-book-reader:not([data-reader-panel='score']) .course-reading-scroll {
+.mobile-book-reader:not([data-reader-panel='score'])
+  .course-score-pane-content {
   visibility: hidden;
   pointer-events: none;
 }
@@ -765,7 +719,7 @@ body {
 .mobile-book-reader .course-score-controls button:disabled {
   opacity: 0.45;
 }
-.mobile-book-reader .course-reading-flow button[aria-current='step'] {
+.course-reading-flow button[aria-current='step'] {
   color: #fff;
   background: #065f46;
 }

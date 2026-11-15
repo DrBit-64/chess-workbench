@@ -1,10 +1,8 @@
 import { Chess, DEFAULT_POSITION } from 'chess.js';
 import { expect, it, vi } from 'vitest';
 
-import {
-  findMissingChapterFens,
-  loadChapterFens,
-} from './chapterEnginePositions';
+import { loadChapterFens } from './chapterEnginePositions';
+import { readPositionEvaluations } from '../logic/api/engineAnalysis';
 
 it('collects distinct playable positions from diagrams and games below a chapter', async () => {
   const game = new Chess();
@@ -59,7 +57,7 @@ it('combines cache misses across a large chapter before running its analyses', a
       });
     });
   try {
-    const misses = await findMissingChapterFens(
+    const { missing } = await readPositionEvaluations(
       fens,
       {
         multipv: 4,
@@ -71,7 +69,7 @@ it('combines cache misses across a large chapter before running its analyses', a
       },
       new AbortController().signal,
     );
-    expect(misses).toEqual([fens[0], fens[500]]);
+    expect(missing).toEqual([fens[0], fens[500]]);
     expect(fetch).toHaveBeenCalledTimes(2);
   } finally {
     fetch.mockRestore();

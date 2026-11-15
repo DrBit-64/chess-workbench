@@ -129,7 +129,7 @@ test('saved game cards link to aligned move pairs, nested variations and mobile 
   const d5 = row.locator('[data-side="black"]');
   await expect(e4).toContainText('e4');
   await expect(d5).toContainText('d5');
-  await expect(e4.locator('.nb-notation-eval')).not.toHaveText('');
+  await expect(e4.locator('.move-evaluation')).not.toHaveText('');
   const whiteBox = await bounds(e4),
     blackBox = await bounds(d5);
   expect(whiteBox.x + whiteBox.width).toBeLessThanOrEqual(blackBox.x + 1);
@@ -343,7 +343,7 @@ nativeEngineTest(
     });
     const batch = engine.getByRole('button', { name: '分析整盘棋谱' });
     await batch.click();
-    const scores = score.locator('.nb-notation-row .nb-notation-eval');
+    const scores = score.locator('.nb-notation-row .move-evaluation');
     await expect(scores).toHaveCount(main.length, { timeout: 60_000 });
     expect(requestedFens).not.toContain(main[0].fen);
     const response = await request.post('/api/engine/analyses/cache-lookup', {
@@ -368,7 +368,7 @@ nativeEngineTest(
           : (saved!.score_cp! >= 0 ? '+' : '') +
             (saved!.score_cp! / 100).toFixed(2);
       await expect(
-        score.locator(`[data-notebook-node="${n.id}"] .nb-notation-eval`),
+        score.locator(`[data-notebook-node="${n.id}"] .move-evaluation`),
       ).toHaveText(label);
     }
     await page.reload();

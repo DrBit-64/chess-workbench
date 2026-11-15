@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { expect, it } from 'vitest';
 
 import type { AnalysisLine } from '../logic/api/engineTypes';
-import { boardOutcome } from './chapterEnginePositions';
+import { boardOutcome } from './courseEvaluation';
 import { CourseEvaluationBar } from './CourseEvaluationBar';
 
 const line: AnalysisLine = {

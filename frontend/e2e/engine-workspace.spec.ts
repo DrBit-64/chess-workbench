@@ -60,11 +60,15 @@ test('engine workspace analyzes, queues, plays, reviews, and saves a draft', asy
       item.url().endsWith('/api/engine/analyses') &&
       item.request().method() === 'POST',
   );
-  await page.getByRole('switch', { name: '课程实时引擎分析' }).click();
+  const courseEngine = page
+    .locator('.course-reading-pane')
+    .getByRole('region', { name: '课程实时引擎' });
+  await courseEngine.getByRole('switch', { name: '课程实时引擎分析' }).click();
   expect((await courseAnalysisResponse).status()).toBe(200);
-  await expect(page.locator('.course-pv-row')).toHaveCount(4);
-  await expect(page.locator('.course-pv-row').first()).toContainText('+0.34');
-  await page.getByRole('button', { name: '课程引擎设置' }).click();
+  const courseLines = courseEngine.locator('summary');
+  await expect(courseLines).toHaveCount(4);
+  await expect(courseLines.first()).toContainText('+0.34');
+  await courseEngine.getByRole('button', { name: '课程引擎设置' }).click();
   await expect(page.getByText('分析线路：4')).toBeVisible();
   await expect(page.getByText('推荐箭头：3')).toBeVisible();
   await page.keyboard.press('Escape');
@@ -80,6 +84,12 @@ test('engine workspace analyzes, queues, plays, reviews, and saves a draft', asy
       ['serious', 'critical'].includes(item.impact ?? ''),
     ),
   ).toEqual([]);
+  await page.setViewportSize({ width: 1024, height: 768 });
+  const courseSwitch = courseEngine.getByRole('switch', {
+    name: '课程实时引擎分析',
+  });
+  await courseSwitch.click();
+  await expect(courseSwitch).toHaveAttribute('aria-checked', 'false');
   for (const viewport of [
     { width: 1280, height: 720 },
     { width: 1440, height: 900 },

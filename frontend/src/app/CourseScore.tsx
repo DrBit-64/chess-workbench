@@ -12,8 +12,8 @@ import ReactMarkdown from 'react-markdown';
 import rehypeSanitize from 'rehype-sanitize';
 
 import type { ModuleEditor } from '../logic/api/types';
-import { MoveNotation } from './MoveNotation';
-import { formatMoveNotation } from './moveNotation';
+import { MoveEvaluation, MoveNotation } from './MoveNotation';
+import { formatMoveNotation, moveEvaluationDescription } from './moveNotation';
 import {
   buildCourseScoreLayout,
   type CourseMoveRow,
@@ -61,6 +61,7 @@ export type CourseMoveAction =
 
 export function CourseScore({
   occurrences,
+  evaluations,
   notes,
   rootId,
   currentId,
@@ -74,6 +75,7 @@ export function CourseScore({
   onEnterVariation?: (first: CourseOccurrence) => void;
   readOnly?: boolean;
   occurrences: CourseOccurrence[];
+  evaluations?: ReadonlyMap<string, string>;
   notes: CourseNote[];
   rootId: string;
   currentId?: string;
@@ -196,6 +198,7 @@ export function CourseScore({
           return (
             <div key={row.key}>
               <MainlineRow
+                evaluations={evaluations}
                 row={splitPair ? { ...row, black: null } : row}
                 currentId={currentId}
                 onSelectOccurrence={onSelectOccurrence}
@@ -215,6 +218,7 @@ export function CourseScore({
               ) : null}
               {splitPair ? (
                 <MainlineRow
+                  evaluations={evaluations}
                   row={{ ...row, white: null }}
                   currentId={currentId}
                   onSelectOccurrence={onSelectOccurrence}
@@ -435,11 +439,13 @@ export function CourseScoreControls({
 
 function MainlineRow({
   row,
+  evaluations,
   currentId,
   onSelectOccurrence,
   onMoveContextMenu,
 }: {
   row: CourseMoveRow;
+  evaluations?: ReadonlyMap<string, string>;
   currentId?: string;
   onSelectOccurrence: (id: string) => void;
   onMoveContextMenu: (
@@ -459,6 +465,7 @@ function MainlineRow({
         {row.white ? (
           <CourseMove
             move={row.white}
+            score={evaluations?.get(row.white.occurrence.id)}
             active={row.white.occurrence.id === currentId}
             onSelectOccurrence={onSelectOccurrence}
             onContextMenu={onMoveContextMenu}
@@ -470,6 +477,7 @@ function MainlineRow({
         {row.black ? (
           <CourseMove
             move={row.black}
+            score={evaluations?.get(row.black.occurrence.id)}
             active={row.black.occurrence.id === currentId}
             onSelectOccurrence={onSelectOccurrence}
             onContextMenu={onMoveContextMenu}
@@ -601,12 +609,14 @@ function CourseMove({
   onSelectOccurrence,
   onContextMenu,
   fullWidth = false,
+  score,
 }: {
   move: CourseMoveView;
   active: boolean;
   onSelectOccurrence: (id: string) => void;
   onContextMenu: (event: ReactMouseEvent, occurrence: CourseOccurrence) => void;
   fullWidth?: boolean;
+  score?: string;
 }) {
   const occurrence = move.occurrence;
   const label = occurrence.inbound_san ?? occurrence.inbound_uci ?? '着法';
@@ -621,18 +631,22 @@ function CourseMove({
       data-reader-occurrence={occurrence.id}
       aria-label={`${displayLabel} ${occurrence.inbound_uci ?? ''}`.trim()}
       aria-current={active ? 'step' : undefined}
+      aria-description={moveEvaluationDescription(score)}
       title={occurrence.inbound_uci ?? undefined}
       onClick={() => onSelectOccurrence(occurrence.id)}
       onContextMenu={(event) => onContextMenu(event, occurrence)}
-      className={`${fullWidth ? 'flex min-h-9 w-full' : 'inline-flex'} min-w-0 items-center rounded-sm px-2 py-1 text-left text-sm font-medium hover:bg-emerald-100 ${
+      className={`${fullWidth ? 'flex min-h-9 w-full flex-wrap justify-between gap-x-1' : 'inline-flex'} min-w-0 items-center rounded-sm px-2 py-1 text-left text-sm font-medium hover:bg-emerald-100 ${
         active ? 'bg-emerald-800 text-white hover:bg-emerald-800' : ''
       }`}
     >
-      <MoveNotation
-        san={label}
-        nags={occurrence.nag === null ? [] : [occurrence.nag]}
-        active={active}
-      />
+      <span>
+        <MoveNotation
+          san={label}
+          nags={occurrence.nag === null ? [] : [occurrence.nag]}
+          active={active}
+        />
+      </span>
+      <MoveEvaluation score={score} />
     </button>
   );
 }

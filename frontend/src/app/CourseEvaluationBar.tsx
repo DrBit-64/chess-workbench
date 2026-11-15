@@ -1,12 +1,16 @@
-import type { EvaluationScore } from './courseEvaluation';
-import type { BoardOutcome } from './chapterEnginePositions';
-import { scoreLabel, whiteEvaluationPercent } from './courseEvaluation';
+import {
+  type BoardOutcome,
+  type EvaluationScore,
+  outcomeLabels,
+  scoreLabel,
+  whiteEvaluationPercent,
+} from './courseEvaluation';
 import './courseEvaluationBar.css';
 
 const terminalScores = {
-  'white-wins': { percent: 100, label: '1–0', description: '白方将杀获胜' },
-  'black-wins': { percent: 0, label: '0–1', description: '黑方将杀获胜' },
-  draw: { percent: 50, label: '½–½', description: '和棋' },
+  'white-wins': { percent: 100, description: '白方将杀获胜' },
+  'black-wins': { percent: 0, description: '黑方将杀获胜' },
+  draw: { percent: 50, description: '和棋' },
 } as const;
 
 export function CourseEvaluationBar({
@@ -30,7 +34,7 @@ export function CourseEvaluationBar({
       />
     );
 
-  const label = result?.label ?? (line ? scoreLabel(line) : '');
+  const label = outcome ? outcomeLabels[outcome] : line ? scoreLabel(line) : '';
   const percent = Math.round(whitePercent);
   const description =
     result?.description ?? `白方视角 ${label}，白方胜势 ${percent}%`;

@@ -494,9 +494,7 @@ html:fullscreen:has(.game-review) .ant-layout > .ant-layout-header {
     display: flex;
     overflow: hidden;
   }
-  .game-review[data-compact='true']
-    .game-review-score-column
-    > .game-review-engine {
+  .game-review[data-compact='true'] .game-review-score-column > .score-engine {
     flex: 0 1 auto;
     max-height: max(32px, calc(100% - 64px));
     overflow-y: auto;
@@ -507,33 +505,33 @@ html:fullscreen:has(.game-review) .ant-layout > .ant-layout-header {
     min-height: 0;
     overflow-y: auto;
   }
-  .game-review .game-review-engine-head {
+  .game-review .score-engine-head {
     flex-wrap: nowrap;
     gap: 3px;
     padding: 0 4px;
   }
-  .game-review .game-review-engine-identity {
+  .game-review .score-engine-identity {
     flex-wrap: nowrap;
   }
-  .game-review .game-review-engine-identity > span {
+  .game-review .score-engine-identity > span {
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
   }
-  .game-review .game-review-engine-actions {
+  .game-review .score-engine-actions {
     flex-wrap: nowrap;
     flex: none;
   }
-  .game-review .game-review-engine-actions > button {
+  .game-review .score-engine-actions > button {
     min-height: 26px;
     padding: 2px 5px;
   }
-  .game-review .game-review-pvs {
+  .game-review .score-pvs {
     max-height: 25px;
     overflow-y: auto;
     scrollbar-width: thin;
   }
-  .game-review .game-review-pvs summary {
+  .game-review .score-pvs summary {
     min-height: 24px;
     padding-block: 1px;
   }
@@ -547,4 +545,19 @@ html:fullscreen:has(.game-review) .ant-layout > .ant-layout-header {
     padding-block: 0.18rem;
     align-items: center;
   }
+}
+
+.score-engine-actions .game-review-record {
+  display: inline-grid;
+  place-items: center;
+  min-width: 32px;
+}
+.score-engine-actions .game-review-record[aria-pressed='true'] {
+  color: #a12d26;
+  background: #f7e1dc;
+  box-shadow: inset 0 0 0 1px #bd776a;
+}
+.score-engine-actions .game-review-record:disabled {
+  opacity: 0.6;
+  cursor: wait;
 }

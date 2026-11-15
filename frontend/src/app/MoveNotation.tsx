@@ -1,4 +1,4 @@
-import { formatMoveNotation } from './moveNotation';
+import { formatMoveNotation, moveEvaluationDescription } from './moveNotation';
 
 export function MoveNotation({
   san,
@@ -24,4 +24,12 @@ export function MoveNotation({
       ))}
     </>
   );
+}
+
+export function MoveEvaluation({ score }: { score?: string }) {
+  return score ? (
+    <span className="move-evaluation" title={moveEvaluationDescription(score)}>
+      {score}
+    </span>
+  ) : null;
 }

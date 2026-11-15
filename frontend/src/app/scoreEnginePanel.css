@@ -1,35 +1,37 @@
-.game-review-engine {
+.score-engine {
   min-width: 0;
   color: #293630;
   border-block-start: 3px solid #63865b;
   background: #f5f6f1;
   font-variant-numeric: tabular-nums;
 }
-.game-review-engine-head,
-.game-review-engine-identity,
-.game-review-engine-actions {
+.score-engine-head,
+.score-engine-identity,
+.score-engine-actions {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 4px 7px;
   min-width: 0;
 }
-.game-review-engine-head {
+.score-engine-head {
   justify-content: space-between;
   padding: 5px 8px;
 }
-.game-review-engine-identity strong {
+.score-engine-identity strong {
   font-size: 1.16rem;
   line-height: 1.25;
 }
-.game-review-engine-identity > span {
+.score-engine-identity > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
   font-size: 0.78rem;
   color: #4f5e52;
 }
-.game-review-engine-actions {
+.score-engine-actions {
   gap: 2px;
 }
-.game-review-engine-actions button {
+.score-engine-actions button {
   padding: 3px 6px;
   min-height: 30px;
   color: #39543f;
@@ -37,29 +39,29 @@
   cursor: pointer;
   border-radius: 3px;
 }
-.game-review-engine-actions button:hover,
-.game-review-engine-actions button:focus-visible,
-.game-review-pvs summary:hover {
+.score-engine-actions button:hover,
+.score-engine-actions button:focus-visible,
+.score-pvs summary:hover {
   background: #e2e9de;
 }
-.game-review-engine-actions .game-review-engine-fold {
+.score-engine-actions .score-engine-fold {
   min-width: 28px;
 }
-.game-review-engine-progress,
-.game-review-engine-hint {
+.score-engine-progress,
+.score-engine-hint {
   margin: 0;
   padding: 3px 9px 5px;
   color: #4c594f;
   font-size: 0.78rem;
   overflow-wrap: anywhere;
 }
-.game-review-pvs {
+.score-pvs {
   border-block-end: 1px solid #d6dcd2;
 }
-.game-review-pvs details {
+.score-pvs details {
   border-block-start: 1px solid #d6dcd2;
 }
-.game-review-pvs summary {
+.score-pvs summary {
   display: grid;
   grid-template-columns: 4.05em minmax(0, 1fr) 1em;
   align-items: baseline;
@@ -70,53 +72,53 @@
   cursor: pointer;
   list-style: none;
 }
-.game-review-pvs summary::-webkit-details-marker {
+.score-pvs summary::-webkit-details-marker {
   display: none;
 }
-.game-review-pv-score {
+.score-pv-score {
   font-weight: 650;
   text-align: center;
 }
-.game-review-pv-moves {
+.score-pv-moves {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.game-review-pvs details[open] .game-review-pv-moves {
+.score-pvs details[open] .score-pv-moves {
   white-space: normal;
   overflow-wrap: anywhere;
 }
-.game-review-pvs details[open] .game-review-pv-marker {
+.score-pvs details[open] .score-pv-marker {
   transform: rotate(180deg);
 }
-.game-review-pv-marker {
+.score-pv-marker {
   align-self: start;
   text-align: center;
   color: #596a60;
 }
 @media (pointer: coarse) {
-  .game-review-engine-actions button,
-  .game-review-pvs summary {
+  .score-engine-actions button,
+  .score-pvs summary {
     min-height: 36px;
   }
-  .game-review-engine-identity .ant-switch::after {
+  .score-engine-identity .ant-switch::after {
     content: '';
     position: absolute;
     inset: -10px -6px;
   }
 }
 @media (max-height: 460px) and (orientation: landscape) {
-  .game-review-engine-head {
+  .score-engine-head {
     padding-block: 2px;
   }
-  .game-review-pvs {
+  .score-pvs {
     max-height: 25svh;
     overflow: auto;
     overscroll-behavior: contain;
   }
 }
 
-.game-review-engine-retry {
+.score-engine-retry {
   margin-inline-start: 6px;
   min-height: 30px;
   padding-inline: 4px;
@@ -124,17 +126,12 @@
   text-decoration: underline;
   cursor: pointer;
 }
-.game-review-engine-actions .game-review-record {
-  display: inline-grid;
-  place-items: center;
-  min-width: 32px;
-}
-.game-review-engine-actions .game-review-record[aria-pressed='true'] {
-  color: #a12d26;
-  background: #f7e1dc;
-  box-shadow: inset 0 0 0 1px #bd776a;
-}
-.game-review-engine-actions .game-review-record:disabled {
+
+.score-engine-actions button:disabled {
   opacity: 0.6;
-  cursor: wait;
+  cursor: default;
+}
+.score-pv-empty {
+  min-height: 1.5rem;
+  border-block-start: 1px solid #d6dcd2;
 }

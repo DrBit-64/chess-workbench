@@ -407,15 +407,27 @@ describe('Stage 4B course editor', () => {
     );
 
     expect(
-      await screen.findByText('电脑端引擎不可用，请检查 Stockfish 后重试'),
+      await screen.findByText(
+        '第一章 · 电脑端引擎不可用，请检查 Stockfish 后重试',
+      ),
     ).toBeTruthy();
     expect(analyzedFens).toEqual([]);
     available = true;
     fireEvent.click(screen.getByRole('button', { name: '引擎分析当前小节' }));
-    expect(await screen.findByText('本小节分析已保存')).toBeTruthy();
-    expect(screen.getByText('1 / 1')).toBeTruthy();
-    expect(screen.getByText('已跳过 1 个缓存局面')).toBeTruthy();
+    expect(
+      await screen.findByText(
+        '第一章 · 已保存 2 个局面的评分（其中 1 个已有缓存）',
+      ),
+    ).toBeTruthy();
     expect(analyzedFens).toEqual([e4Fen]);
+    expect(
+      screen.getByRole('button', { name: 'e4 e2e4' }).textContent,
+    ).toContain('+0.20');
+    expect(
+      screen
+        .getByRole('switch', { name: '课程实时引擎分析' })
+        .getAttribute('aria-checked'),
+    ).toBe('false');
   });
 
   it('keeps a subsection analysis running and visible after switching subsections', async () => {
@@ -480,16 +492,20 @@ describe('Stage 4B course editor', () => {
     fireEvent.click(
       await screen.findByRole('button', { name: '引擎分析当前小节' }),
     );
-    expect(await screen.findByText('正在分析「第一章」')).toBeTruthy();
+    expect(await screen.findByText('第一章 · 正在分析 0 / 2')).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: '第二章' }));
-    expect(await screen.findByText('正在分析「第一章」')).toBeTruthy();
+    expect(await screen.findByText('第一章 · 正在分析 0 / 2')).toBeTruthy();
 
     resolveFirstAnalysis(await json(engineAnalysis(startFen)));
-    expect(await screen.findByText('本小节分析已保存')).toBeTruthy();
-    expect(screen.getByText('已完成「第一章」')).toBeTruthy();
-    expect(screen.getByText('2 / 2')).toBeTruthy();
+    expect(
+      await screen.findByText('第一章 · 已保存 2 个局面的评分'),
+    ).toBeTruthy();
     expect(analyzedFens).toEqual([startFen, e4Fen]);
+    fireEvent.click(screen.getByRole('button', { name: '第一章' }));
+    expect(
+      (await screen.findByRole('button', { name: 'e4 e2e4' })).textContent,
+    ).toContain('+0.20');
   });
 
   it('auto-analyzes every selected course position and draws configurable MultiPV arrows', async () => {
@@ -521,7 +537,7 @@ describe('Stage 4B course editor', () => {
     fireEvent.click(
       await screen.findByRole('switch', { name: '课程实时引擎分析' }),
     );
-    expect(await screen.findByText('e4 e5 Nf3')).toBeTruthy();
+    expect(await screen.findByText('1. e4 e5 2. Nf3')).toBeTruthy();
     await waitFor(() => expect(analyzedFens).toContain(startFen));
     const renderedArrows = () =>
       [
@@ -569,7 +585,7 @@ describe('Stage 4B course editor', () => {
     fireEvent.click(screen.getByLabelText('Close'));
 
     fireEvent.click(screen.getByRole('button', { name: /e4 e2e4/ }));
-    expect(await screen.findByText('e5 Nf3')).toBeTruthy();
+    expect(await screen.findByText('1... e5 2. Nf3')).toBeTruthy();
     await waitFor(() => expect(analyzedFens).toContain(e4Fen));
     await waitFor(() => {
       expect(renderedArrows().flat()).toContain('e7');
@@ -1795,12 +1811,14 @@ it('keeps the same board and move when browsing the compact directory of a PGN-o
   expect(
     reader.querySelector('[data-source="engine"][data-from="e2"]'),
   ).toBeNull();
-  expect(reader.querySelector('.course-pv-list')).toBeNull();
+  expect(within(reader).getByText('1... e5 2. Nf3')).toBeTruthy();
   fireEvent.click(screen.getByRole('button', { name: '更多阅读选项' }));
   fireEvent.click(
     await screen.findByRole('menuitem', { name: '分析当前章节' }),
   );
-  expect(await screen.findByText('第一章 · 2 个局面已有分析')).toBeTruthy();
+  expect(
+    await screen.findByText('第一章 · 全部 2 个局面已有缓存'),
+  ).toBeTruthy();
   fireEvent.click(screen.getByRole('button', { name: '更多阅读选项' }));
   fireEvent.click(await screen.findByRole('menuitem', { name: '章节目录' }));
   expect(reader.getAttribute('data-reader-panel')).toBe('chapters');

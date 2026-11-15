@@ -39,11 +39,7 @@ import { useCompactReaderViewport } from '../components/useCompactReaderViewport
 import { ReaderFullscreenButton } from '../components/ReaderFullscreenButton';
 import { CourseWorkbenchLayout } from '../components/CourseWorkbenchLayout';
 import { WorkbenchBoard as Chessboard } from '../components/WorkbenchBoard';
-import { ApiError, fetchJson, requestJson } from '../logic/api/client';
-import type {
-  EngineCapabilities,
-  EngineParameters,
-} from '../logic/api/engineTypes';
+import { fetchJson, requestJson } from '../logic/api/client';
 import type {
   Course,
   CitableSource,
@@ -57,23 +53,17 @@ import {
   FAST_MOVE_ANIMATION_MS,
   lichessSquareStyles,
 } from './boardInteraction';
-import {
-  CourseEnginePanel,
-  type CourseSectionAnalysisProgress,
-} from './CourseEnginePanel';
+import { CourseEnginePanel } from './CourseEnginePanel';
+import { useChapterAnalysis } from './useChapterAnalysis';
+import { useScoreEvaluations } from './useScoreEvaluations';
 import {
   CourseScore,
   CourseScoreControls,
   type CourseMoveAction,
 } from './CourseScore';
-import {
-  findMissingChapterFens,
-  hasBookBoard,
-  boardOutcome,
-  loadChapterFens,
-} from './chapterEnginePositions';
+import { courseScorePositions, hasBookBoard } from './chapterEnginePositions';
 import { CourseEvaluationBar } from './CourseEvaluationBar';
-import { useCourseEngine } from './useCourseEngine';
+import { usePositionEngine } from './usePositionEngine';
 import { CourseSourcePreview } from './CourseSourcePreview';
 import {
   captureText,
@@ -124,9 +114,6 @@ function CourseEditorSession({ courseId }: { courseId: string }) {
     'white',
   );
   const [selectedSquare, setSelectedSquare] = useState<string>();
-  const [sectionAnalysisProgress, setSectionAnalysisProgress] =
-    useState<CourseSectionAnalysisProgress>();
-  const sectionAnalysisController = useRef<AbortController>();
   const [moduleModal, setModuleModal] = useState(false);
   const [publishModal, setPublishModal] = useState(false);
   const [courseLichessOpen, setCourseLichessOpen] = useState(false);
@@ -343,26 +330,26 @@ function CourseEditorSession({ courseId }: { courseId: string }) {
       return [{ ...occurrence, parent_id: parentId }];
     });
   }, [byId, course?.mode, editor]);
-  const sectionAnalysisFens = useMemo(() => {
-    const includeStart =
-      course?.mode !== 'traditional' || hasBookBoard(editor, START_FEN);
-    const positions = [
-      ...new Set(
-        (editor?.occurrences ?? [])
-          .filter(
-            (occurrence) =>
-              occurrence.module_id === moduleId &&
-              (includeStart || occurrence.full_fen !== START_FEN),
-          )
-          .map((occurrence) => occurrence.full_fen),
+  const scorePositions = useMemo(
+    () =>
+      courseScorePositions(
+        editor,
+        course?.mode !== 'traditional' || hasBookBoard(editor, START_FEN),
       ),
-    ];
-    // Only the desktop precompute button displays the exact playable count.
-    // On phones, defer checking the entire score until a chapter is requested.
-    return compactReader
-      ? positions
-      : positions.filter((fen) => !boardOutcome(fen));
-  }, [compactReader, course?.mode, editor, moduleId]);
+    [course?.mode, editor],
+  );
+
+  // The explorer displays positions from several source modules. Restore their
+  // available scores together, but keep explicit subsection analysis scoped.
+  const sectionFens = useMemo(() => {
+    if (course?.mode !== 'opening_explorer') return scorePositions.fens;
+    const inSection = new Set(
+      editor?.occurrences
+        .filter((node) => node.module_id === moduleId)
+        .map((node) => node.full_fen),
+    );
+    return scorePositions.fens.filter((fen) => inSection.has(fen));
+  }, [course?.mode, editor, moduleId, scorePositions]);
 
   const childSectionIds = useMemo(
     () =>
@@ -377,108 +364,6 @@ function CourseEditorSession({ courseId }: { courseId: string }) {
         : [],
     [course?.mode, moduleId, modules],
   );
-
-  useEffect(
-    () => () => {
-      sectionAnalysisController.current?.abort();
-    },
-    [],
-  );
-
-  async function analyzeCurrentSection(
-    parameters: EngineParameters,
-    activeFens: string[],
-    descendantIds: string[],
-  ) {
-    if (
-      !moduleId ||
-      (!activeFens.length && !descendantIds.length) ||
-      sectionAnalysisController.current
-    )
-      return;
-    const sectionId = moduleId;
-    const sectionTitle =
-      modules.find((item) => item.id === sectionId)?.title ?? '当前小节';
-    const controller = new AbortController();
-    sectionAnalysisController.current = controller;
-    const progress: CourseSectionAnalysisProgress = {
-      sectionId,
-      sectionTitle,
-      completed: 0,
-      failed: 0,
-      total: 0,
-      cached: 0,
-      running: true,
-      checking: true,
-    };
-    function showProgress() {
-      if (!controller.signal.aborted)
-        setSectionAnalysisProgress({ ...progress });
-    }
-    showProgress();
-
-    const signal = controller.signal;
-    const unavailable = '电脑端引擎不可用，请检查 Stockfish 后重试';
-    try {
-      const fens = await loadChapterFens(
-        courseId,
-        activeFens,
-        descendantIds,
-        signal,
-      );
-      const missing = await findMissingChapterFens(fens, parameters, signal);
-      progress.cached = fens.length - missing.length;
-      progress.total = missing.length;
-      if (!missing.length) return;
-
-      // Check on each explicit run, including retries after an engine was installed.
-      const capabilities = await requestJson<EngineCapabilities>(
-        '/api/engine/capabilities',
-        { method: 'GET', signal },
-      );
-      if (!capabilities.available && !capabilities.syzygy_available) {
-        progress.error = unavailable;
-        return;
-      }
-      progress.checking = false;
-      showProgress();
-
-      for (const fen of missing) {
-        if (signal.aborted) return;
-        try {
-          await requestJson('/api/engine/analyses', {
-            method: 'POST',
-            signal,
-            body: JSON.stringify({ fen, parameters }),
-          });
-        } catch (error) {
-          if (signal.aborted) return;
-          if (
-            error instanceof ApiError &&
-            error.status === 503 &&
-            !capabilities.syzygy_available
-          ) {
-            progress.error = unavailable;
-            return;
-          }
-          if (error instanceof TypeError) {
-            progress.error = '已与工作台断开连接，请重新连接后重试';
-            return;
-          }
-          progress.failed += 1;
-        }
-        progress.completed += 1;
-        showProgress();
-      }
-    } catch {
-      progress.error = '无法读取章节、缓存或引擎状态，请重试';
-    } finally {
-      progress.running = false;
-      progress.checking = false;
-      showProgress();
-      sectionAnalysisController.current = undefined;
-    }
-  }
 
   const explorerEntries = useMemo(() => {
     const entries: Array<{ module: CourseModule; occurrence: Occurrence }> = [];
@@ -499,9 +384,23 @@ function CourseEditorSession({ courseId }: { courseId: string }) {
   const boardFen = compactReader
     ? current?.full_fen
     : (pendingFen ?? current?.full_fen);
-  const engine = useCourseEngine(
+  const engine = usePositionEngine(
     compactReader && !hasReaderBoard ? undefined : boardFen,
     compactReader,
+  );
+  const evaluations = useScoreEvaluations(
+    scorePositions,
+    engine,
+    boardFen,
+    current?.full_fen === boardFen ? current?.id : undefined,
+  );
+  const chapterAnalysis = useChapterAnalysis(
+    courseId,
+    editor?.module.id === moduleId ? editor?.module : undefined,
+    sectionFens,
+    childSectionIds,
+    engine.parameters,
+    evaluations,
   );
   const candidates = useMemo(() => {
     if (!editor || !current) return [];
@@ -1252,31 +1151,6 @@ function CourseEditorSession({ courseId }: { courseId: string }) {
       </div>
     );
 
-  const canAnalyzeChapter = Boolean(
-    editor?.module.id === moduleId &&
-    (sectionAnalysisFens.length || childSectionIds.length),
-  );
-  const startChapterAnalysis = () => {
-    if (canAnalyzeChapter)
-      void analyzeCurrentSection(
-        engine.parameters,
-        sectionAnalysisFens,
-        childSectionIds,
-      );
-  };
-  const progress = sectionAnalysisProgress;
-  let chapterStatus: string | undefined;
-  if (progress) {
-    if (progress.checking) chapterStatus = '正在检查章节和缓存…';
-    else if (progress.error) chapterStatus = progress.error;
-    else if (progress.running)
-      chapterStatus = `正在分析 ${progress.completed} / ${progress.total}`;
-    else if (progress.failed)
-      chapterStatus = `${progress.failed} 个局面失败，可重试`;
-    else if (progress.total + progress.cached === 0)
-      chapterStatus = '没有可分析的局面';
-    else chapterStatus = `${progress.total + progress.cached} 个局面已有分析`;
-  }
   const panel =
     readerPanel === 'source' && !activePdfPreview ? 'score' : readerPanel;
   return (
@@ -1396,14 +1270,15 @@ function CourseEditorSession({ courseId }: { courseId: string }) {
                 {panel === 'chapters'
                   ? '章节目录'
                   : (editor?.module.title ?? course.title)}
-                {chapterStatus && (
-                  <small
-                    className="block truncate text-xs font-normal"
-                    role="status"
-                  >
-                    {progress?.sectionTitle} · {chapterStatus}
-                  </small>
-                )}
+                {chapterAnalysis.status &&
+                  (panel !== 'score' || !hasReaderBoard) && (
+                    <small
+                      className="block truncate text-xs font-normal"
+                      role="status"
+                    >
+                      {chapterAnalysis.status}
+                    </small>
+                  )}
               </h2>
               <div className="reader-floating-bar" aria-label="切换阅读面板">
                 <button
@@ -1441,7 +1316,9 @@ function CourseEditorSession({ courseId }: { courseId: string }) {
                       {
                         key: 'analyze',
                         label: '分析当前章节',
-                        disabled: !canAnalyzeChapter || progress?.running,
+                        disabled:
+                          !chapterAnalysis.canAnalyze ||
+                          chapterAnalysis.running,
                       },
                       ...(engine.enabled && engine.analysisError
                         ? [
@@ -1458,7 +1335,7 @@ function CourseEditorSession({ courseId }: { courseId: string }) {
                     onClick: ({ key }) => {
                       if (key === 'chapters') showReaderPanel('chapters');
                       if (key === 'engine') engine.setEnabled(!engine.enabled);
-                      if (key === 'analyze') startChapterAnalysis();
+                      if (key === 'analyze') void chapterAnalysis.start();
                       if (key === 'catalog') navigate('/learn');
                       if (key === 'edit') setReadingMode(false);
                     },
@@ -1575,57 +1452,44 @@ function CourseEditorSession({ courseId }: { courseId: string }) {
         </Card>
         <section className="course-board-pane min-w-0">
           {current && boardFen ? (
-            <>
-              <div
-                className={
-                  engine.enabled
-                    ? 'w-full course-board-with-evaluation'
-                    : 'w-full'
+            <div
+              className={
+                engine.enabled
+                  ? 'w-full course-board-with-evaluation'
+                  : 'w-full'
+              }
+            >
+              <Chessboard
+                id="course-editor-board"
+                fitReaderPane={compactReader}
+                position={boardFen}
+                evaluationBar={
+                  engine.enabled ? (
+                    <CourseEvaluationBar
+                      line={evaluations.currentLine}
+                      outcome={engine.outcome}
+                      orientation={boardOrientation}
+                    />
+                  ) : undefined
                 }
-              >
-                <Chessboard
-                  id="course-editor-board"
-                  fitReaderPane={compactReader}
-                  position={boardFen}
-                  evaluationBar={
-                    engine.enabled ? (
-                      <CourseEvaluationBar
-                        line={engine.analysis?.lines[0]}
-                        outcome={engine.outcome}
-                        orientation={boardOrientation}
-                      />
-                    ) : undefined
-                  }
-                  boardOrientation={boardOrientation}
-                  animationDuration={FAST_MOVE_ANIMATION_MS}
-                  arePiecesDraggable={!compactReader}
-                  onPieceDrop={compactReader ? undefined : onPieceDrop}
-                  onPieceDragBegin={(_, source) => selectOwnPiece(source)}
-                  onPieceDragEnd={() => setSelectedSquare(undefined)}
-                  onSquareClick={compactReader ? undefined : onSquareClick}
-                  autoPromoteToQueen
-                  customSquareStyles={
-                    compactReader ? undefined : boardSquareStyles
-                  }
-                  customArrows={engine.arrows}
-                  customBoardStyle={{
-                    borderRadius: '8px',
-                    boxShadow: '0 12px 30px rgba(28,25,23,.16)',
-                  }}
-                />
-              </div>
-              {!compactReader && (
-                <div className="mt-3 w-full">
-                  <CourseEnginePanel
-                    engine={engine}
-                    sectionPositions={sectionAnalysisFens.length}
-                    hasDescendants={childSectionIds.length > 0}
-                    sectionProgress={sectionAnalysisProgress}
-                    onAnalyzeSection={startChapterAnalysis}
-                  />
-                </div>
-              )}
-            </>
+                boardOrientation={boardOrientation}
+                animationDuration={FAST_MOVE_ANIMATION_MS}
+                arePiecesDraggable={!compactReader}
+                onPieceDrop={compactReader ? undefined : onPieceDrop}
+                onPieceDragBegin={(_, source) => selectOwnPiece(source)}
+                onPieceDragEnd={() => setSelectedSquare(undefined)}
+                onSquareClick={compactReader ? undefined : onSquareClick}
+                autoPromoteToQueen
+                customSquareStyles={
+                  compactReader ? undefined : boardSquareStyles
+                }
+                customArrows={engine.arrows}
+                customBoardStyle={{
+                  borderRadius: '8px',
+                  boxShadow: '0 12px 30px rgba(28,25,23,.16)',
+                }}
+              />
+            </div>
           ) : (
             <Empty description="选择带起始局面的章节" />
           )}
@@ -1662,35 +1526,116 @@ function CourseEditorSession({ courseId }: { courseId: string }) {
             ) : null
           }
         >
-          <div
-            className="course-reading-scroll"
-            ref={readingScrollRef}
-            aria-label="课程内容滚动区"
-          >
-            <article
-              className="course-reading-flow"
-              aria-label="课程正文与棋谱"
+          <div className="course-score-pane-content">
+            {current && boardFen && (!compactReader || hasReaderBoard) && (
+              <CourseEnginePanel
+                engine={engine}
+                evaluations={evaluations}
+                sectionPositions={sectionFens.length}
+                hasDescendants={childSectionIds.length > 0}
+                chapter={chapterAnalysis}
+              />
+            )}
+            <div
+              className="course-reading-scroll"
+              ref={readingScrollRef}
+              aria-label="课程内容滚动区"
             >
-              {!readingMode && course.mode === 'traditional' ? (
-                <div className="mb-3 flex justify-end">
-                  <Button size="small" onClick={() => setNarrativeModal(true)}>
-                    添加叙述正文
-                  </Button>
-                </div>
-              ) : null}
-              {editor?.content_blocks.map((block) => {
-                if (block.kind === 'knowledge_note') return null;
-                if (block.kind === 'move_sequence') {
-                  return block.root_occurrence_id ? (
+              <article
+                className="course-reading-flow"
+                aria-label="课程正文与棋谱"
+              >
+                {!readingMode && course.mode === 'traditional' ? (
+                  <div className="mb-3 flex justify-end">
+                    <Button
+                      size="small"
+                      onClick={() => setNarrativeModal(true)}
+                    >
+                      添加叙述正文
+                    </Button>
+                  </div>
+                ) : null}
+                {editor?.content_blocks.map((block) => {
+                  if (block.kind === 'knowledge_note') return null;
+                  if (block.kind === 'move_sequence') {
+                    return block.root_occurrence_id ? (
+                      <CourseScore
+                        readOnly={compactReader}
+                        onEnterVariation={rememberFork}
+                        key={block.id}
+                        occurrences={scoreOccurrences}
+                        evaluations={evaluations.scores}
+                        notes={(editor.notes ?? []).filter(
+                          (note) => note.source_note_id === null,
+                        )}
+                        rootId={block.root_occurrence_id}
+                        currentId={current?.id}
+                        sourcePageBySpanId={sourcePageBySpanId}
+                        onSelectOccurrence={selectOccurrence}
+                        onSelectSource={selectSourcePreview}
+                        onMoveAction={(action, occurrence) =>
+                          void applyMoveAction(action, occurrence)
+                        }
+                      />
+                    ) : null;
+                  }
+                  const sourceSpan = block.source_span_ids.find((id) =>
+                    sourcePageBySpanId.has(id),
+                  );
+                  return (
+                    <section
+                      key={block.id}
+                      data-reader-anchor={block.id}
+                      className="course-reading-prose"
+                    >
+                      {block.kind === 'section_header' ? (
+                        <Typography.Title level={4}>
+                          {block.heading}
+                        </Typography.Title>
+                      ) : null}
+                      {block.kind === 'narrative' && block.markdown ? (
+                        <div
+                          onContextMenu={(event) => {
+                            if (!sourceSpan) return;
+                            event.preventDefault();
+                            selectSourcePreview(sourceSpan);
+                          }}
+                        >
+                          <ReactMarkdown rehypePlugins={[rehypeSanitize]}>
+                            {block.markdown}
+                          </ReactMarkdown>
+                        </div>
+                      ) : null}
+                      {compactReader && sourceSpan ? (
+                        <button
+                          type="button"
+                          className="reader-source-link"
+                          onClick={() => selectSourcePreview(sourceSpan)}
+                        >
+                          原书第 {sourcePageBySpanId.get(sourceSpan)} 页
+                        </button>
+                      ) : null}
+                    </section>
+                  );
+                })}
+                {editor &&
+                !editor.content_blocks.some(
+                  (block) => block.kind === 'move_sequence',
+                ) ? (
+                  editor.occurrences.find((item) => item.parent_id === null) ? (
                     <CourseScore
                       readOnly={compactReader}
                       onEnterVariation={rememberFork}
-                      key={block.id}
                       occurrences={scoreOccurrences}
+                      evaluations={evaluations.scores}
                       notes={(editor.notes ?? []).filter(
                         (note) => note.source_note_id === null,
                       )}
-                      rootId={block.root_occurrence_id}
+                      rootId={
+                        editor.occurrences.find(
+                          (item) => item.parent_id === null,
+                        )!.id
+                      }
                       currentId={current?.id}
                       sourcePageBySpanId={sourcePageBySpanId}
                       onSelectOccurrence={selectOccurrence}
@@ -1699,209 +1644,147 @@ function CourseEditorSession({ courseId }: { courseId: string }) {
                         void applyMoveAction(action, occurrence)
                       }
                     />
-                  ) : null;
-                }
-                const sourceSpan = block.source_span_ids.find((id) =>
-                  sourcePageBySpanId.has(id),
-                );
-                return (
-                  <section
-                    key={block.id}
-                    data-reader-anchor={block.id}
-                    className="course-reading-prose"
-                  >
-                    {block.kind === 'section_header' ? (
-                      <Typography.Title level={4}>
-                        {block.heading}
-                      </Typography.Title>
-                    ) : null}
-                    {block.kind === 'narrative' && block.markdown ? (
-                      <div
-                        onContextMenu={(event) => {
-                          if (!sourceSpan) return;
-                          event.preventDefault();
-                          selectSourcePreview(sourceSpan);
-                        }}
-                      >
-                        <ReactMarkdown rehypePlugins={[rehypeSanitize]}>
-                          {block.markdown}
-                        </ReactMarkdown>
-                      </div>
-                    ) : null}
-                    {compactReader && sourceSpan ? (
-                      <button
-                        type="button"
-                        className="reader-source-link"
-                        onClick={() => selectSourcePreview(sourceSpan)}
-                      >
-                        原书第 {sourcePageBySpanId.get(sourceSpan)} 页
-                      </button>
-                    ) : null}
-                  </section>
-                );
-              })}
-              {editor &&
-              !editor.content_blocks.some(
-                (block) => block.kind === 'move_sequence',
-              ) ? (
-                editor.occurrences.find((item) => item.parent_id === null) ? (
-                  <CourseScore
-                    readOnly={compactReader}
-                    onEnterVariation={rememberFork}
-                    occurrences={scoreOccurrences}
-                    notes={(editor.notes ?? []).filter(
-                      (note) => note.source_note_id === null,
-                    )}
-                    rootId={
-                      editor.occurrences.find(
-                        (item) => item.parent_id === null,
-                      )!.id
-                    }
-                    currentId={current?.id}
-                    sourcePageBySpanId={sourcePageBySpanId}
-                    onSelectOccurrence={selectOccurrence}
-                    onSelectSource={selectSourcePreview}
-                    onMoveAction={(action, occurrence) =>
-                      void applyMoveAction(action, occurrence)
-                    }
-                  />
-                ) : (
-                  <Empty description="本章还没有内容" />
-                )
-              ) : null}
-            </article>
-            {current ? (
-              <>
-                {referenceNotes.length ? (
-                  <div className="mt-4">
-                    <Typography.Text strong>来源观点</Typography.Text>
-                    {referenceNotes.map((note) => (
-                      <Card key={note.id} size="small" className="mt-2">
-                        <ReactMarkdown rehypePlugins={[rehypeSanitize]}>
-                          {note.rendered_markdown}
-                        </ReactMarkdown>
-                        <Link
-                          to={`/learn/${note.source_course_id}?module=${note.source_module_id ?? ''}&occurrence=${note.source_occurrence_id}`}
-                        >
-                          跳转到原始条目
-                        </Link>
-                        <Button
-                          className="ml-2"
-                          type="link"
-                          disabled={!note.source_module_id}
-                          onClick={() => setContextNoteId(note.id)}
-                        >
-                          查看原文上下文
-                        </Button>
-                      </Card>
-                    ))}
-                  </div>
+                  ) : (
+                    <Empty description="本章还没有内容" />
+                  )
                 ) : null}
-                {!readingMode || course.mode === 'opening_explorer' ? (
-                  <>
-                    <Divider />
-                    <div className="mb-2 flex items-center justify-between gap-2">
-                      <Typography.Text strong>
-                        {current.parent_id ? '着法与局面说明' : '局面说明'}
-                      </Typography.Text>
-                      <Space size="small">
-                        <Button
-                          size="small"
-                          disabled={draft.past.length === 0}
-                          onClick={() => dispatchDraft({ type: 'undo' })}
-                        >
-                          撤销
-                        </Button>
-                        <Button
-                          size="small"
-                          disabled={draft.future.length === 0}
-                          onClick={() => dispatchDraft({ type: 'redo' })}
-                        >
-                          重做
-                        </Button>
-                        <Button
-                          size="small"
-                          disabled={!editableNote}
-                          onClick={() => setHistoryOpen(true)}
-                        >
-                          历史
-                        </Button>
-                      </Space>
-                    </div>
-                    {saveError ? (
-                      <Alert
-                        className="mb-3"
-                        type="error"
-                        showIcon
-                        title="说明尚未保存"
-                        description={saveError}
-                        action={
-                          <Button size="small" onClick={() => void saveNote()}>
-                            重试
+              </article>
+              {current ? (
+                <>
+                  {referenceNotes.length ? (
+                    <div className="mt-4">
+                      <Typography.Text strong>来源观点</Typography.Text>
+                      {referenceNotes.map((note) => (
+                        <Card key={note.id} size="small" className="mt-2">
+                          <ReactMarkdown rehypePlugins={[rehypeSanitize]}>
+                            {note.rendered_markdown}
+                          </ReactMarkdown>
+                          <Link
+                            to={`/learn/${note.source_course_id}?module=${note.source_module_id ?? ''}&occurrence=${note.source_occurrence_id}`}
+                          >
+                            跳转到原始条目
+                          </Link>
+                          <Button
+                            className="ml-2"
+                            type="link"
+                            disabled={!note.source_module_id}
+                            onClick={() => setContextNoteId(note.id)}
+                          >
+                            查看原文上下文
                           </Button>
+                        </Card>
+                      ))}
+                    </div>
+                  ) : null}
+                  {!readingMode || course.mode === 'opening_explorer' ? (
+                    <>
+                      <Divider />
+                      <div className="mb-2 flex items-center justify-between gap-2">
+                        <Typography.Text strong>
+                          {current.parent_id ? '着法与局面说明' : '局面说明'}
+                        </Typography.Text>
+                        <Space size="small">
+                          <Button
+                            size="small"
+                            disabled={draft.past.length === 0}
+                            onClick={() => dispatchDraft({ type: 'undo' })}
+                          >
+                            撤销
+                          </Button>
+                          <Button
+                            size="small"
+                            disabled={draft.future.length === 0}
+                            onClick={() => dispatchDraft({ type: 'redo' })}
+                          >
+                            重做
+                          </Button>
+                          <Button
+                            size="small"
+                            disabled={!editableNote}
+                            onClick={() => setHistoryOpen(true)}
+                          >
+                            历史
+                          </Button>
+                        </Space>
+                      </div>
+                      {saveError ? (
+                        <Alert
+                          className="mb-3"
+                          type="error"
+                          showIcon
+                          title="说明尚未保存"
+                          description={saveError}
+                          action={
+                            <Button
+                              size="small"
+                              onClick={() => void saveNote()}
+                            >
+                              重试
+                            </Button>
+                          }
+                        />
+                      ) : null}
+                      <Input.TextArea
+                        aria-label="Markdown 说明"
+                        value={draft.present.markdown}
+                        autoSize={{ minRows: 5, maxRows: 12 }}
+                        placeholder="用 Markdown 写下计划、解释或记忆提示"
+                        onChange={(event) =>
+                          dispatchDraft({
+                            type: 'markdown',
+                            markdown: event.target.value,
+                          })
                         }
                       />
-                    ) : null}
-                    <Input.TextArea
-                      aria-label="Markdown 说明"
-                      value={draft.present.markdown}
-                      autoSize={{ minRows: 5, maxRows: 12 }}
-                      placeholder="用 Markdown 写下计划、解释或记忆提示"
-                      onChange={(event) =>
-                        dispatchDraft({
-                          type: 'markdown',
-                          markdown: event.target.value,
-                        })
-                      }
-                    />
-                    <Select
-                      aria-label="关联来源"
-                      className="mt-3 w-full"
-                      mode="multiple"
-                      placeholder="关联一个或多个手工来源"
-                      value={draft.present.sourceSpanIds}
-                      onChange={(sourceSpanIds) =>
-                        dispatchDraft({ type: 'sources', sourceSpanIds })
-                      }
-                      options={citableSources.map((item) => ({
-                        value: item.source_span.id,
-                        label: item.source.title,
-                      }))}
-                    />
-                    <div className="mt-3 rounded-md bg-stone-50 p-3">
-                      <Typography.Text type="secondary">
-                        安全预览
-                      </Typography.Text>
-                      {draft.present.markdown ? (
-                        <ReactMarkdown rehypePlugins={[rehypeSanitize]}>
-                          {draft.present.markdown}
-                        </ReactMarkdown>
-                      ) : (
-                        <Typography.Paragraph
-                          type="secondary"
-                          className="mb-0!"
+                      <Select
+                        aria-label="关联来源"
+                        className="mt-3 w-full"
+                        mode="multiple"
+                        placeholder="关联一个或多个手工来源"
+                        value={draft.present.sourceSpanIds}
+                        onChange={(sourceSpanIds) =>
+                          dispatchDraft({ type: 'sources', sourceSpanIds })
+                        }
+                        options={citableSources.map((item) => ({
+                          value: item.source_span.id,
+                          label: item.source.title,
+                        }))}
+                      />
+                      <div className="mt-3 rounded-md bg-stone-50 p-3">
+                        <Typography.Text type="secondary">
+                          安全预览
+                        </Typography.Text>
+                        {draft.present.markdown ? (
+                          <ReactMarkdown rehypePlugins={[rehypeSanitize]}>
+                            {draft.present.markdown}
+                          </ReactMarkdown>
+                        ) : (
+                          <Typography.Paragraph
+                            type="secondary"
+                            className="mb-0!"
+                          >
+                            还没有说明
+                          </Typography.Paragraph>
+                        )}
+                      </div>
+                      <div className="mt-3 flex items-center justify-between">
+                        <Typography.Text type={dirty ? 'warning' : 'secondary'}>
+                          {dirty ? '有未保存修改' : '已与服务器同步'}
+                        </Typography.Text>
+                        <Button
+                          type="primary"
+                          loading={saving}
+                          disabled={!dirty || !draft.present.markdown.trim()}
+                          onClick={() => void saveNote()}
                         >
-                          还没有说明
-                        </Typography.Paragraph>
-                      )}
-                    </div>
-                    <div className="mt-3 flex items-center justify-between">
-                      <Typography.Text type={dirty ? 'warning' : 'secondary'}>
-                        {dirty ? '有未保存修改' : '已与服务器同步'}
-                      </Typography.Text>
-                      <Button
-                        type="primary"
-                        loading={saving}
-                        disabled={!dirty || !draft.present.markdown.trim()}
-                        onClick={() => void saveNote()}
-                      >
-                        保存说明
-                      </Button>
-                    </div>
-                  </>
-                ) : null}
-              </>
-            ) : null}
+                          保存说明
+                        </Button>
+                      </div>
+                    </>
+                  ) : null}
+                </>
+              ) : null}
+            </div>
           </div>
           {scoreRootId ? (
             <CourseScoreControls

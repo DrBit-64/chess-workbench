@@ -69,6 +69,13 @@ describe('CourseScore PGN comments', () => {
     const { container } = render(
       <CourseScore
         occurrences={[root, e4, e5, d4]}
+        evaluations={
+          new Map([
+            [e4.id, '+0.21'],
+            [e5.id, '-0.08'],
+            [d4.id, '+0.12'],
+          ])
+        }
         notes={[]}
         rootId="root"
         sourcePageBySpanId={new Map()}
@@ -86,6 +93,17 @@ describe('CourseScore PGN comments', () => {
     ]) {
       expect(screen.getByText(text)).toBeTruthy();
     }
+    expect(
+      screen
+        .getByRole('button', { name: 'e4 e4' })
+        .getAttribute('aria-description'),
+    ).toContain('+0.21');
+    expect(screen.getByRole('button', { name: 'e5 e5' }).textContent).toContain(
+      '-0.08',
+    );
+    expect(
+      screen.getByRole('button', { name: 'd4 d4' }).textContent,
+    ).not.toContain('+0.12');
     const displayed = container.textContent ?? '';
     expect(displayed.indexOf('Why White advances the pawn')).toBeLessThan(
       displayed.indexOf('Black challenges the centre'),

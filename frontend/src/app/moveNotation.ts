@@ -65,3 +65,7 @@ export function moveNotationText(
   const { move, annotations } = formatMoveNotation(san, nags);
   return move + annotations.map(({ symbol }) => symbol).join('');
 }
+
+export function moveEvaluationDescription(score?: string) {
+  return score ? `走后评分（白方视角）${score}` : undefined;
+}

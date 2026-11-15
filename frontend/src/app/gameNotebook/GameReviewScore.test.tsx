@@ -73,15 +73,15 @@ it('pairs a Black-starting score and preserves the exact selectable positions in
       .getByRole('button', { name: '24... Kf7' })
       .getAttribute('data-side'),
   ).toBe('black');
-  expect(row24.querySelector('.nb-notation-eval')?.textContent).toBe('0.0');
+  expect(row24.querySelector('.move-evaluation')?.textContent).toBe('0.0');
   const row25 = container.querySelector<HTMLElement>(
     '[data-move-number="25"]',
   )!;
   const [white, black] = within(row25).getAllByRole('button');
   expect(white.getAttribute('aria-label')).toBe('25. Kf2');
-  expect(white.querySelector('.nb-notation-eval')).toBeNull();
+  expect(white.querySelector('.move-evaluation')).toBeNull();
   expect(black.textContent).toContain('Kf6?');
-  expect(black.querySelector('.nb-notation-eval')?.textContent).toBe('#3');
+  expect(black.querySelector('.move-evaluation')?.textContent).toBe('#3');
   expect(black.getAttribute('aria-description')).toContain('白方视角');
 
   const button = screen.getByRole('button', {
@@ -201,10 +201,10 @@ it('shows the backed evaluation when an analysis variation is promoted into the 
     />,
   );
   expect(
-    container.querySelector('.nb-notation-row .nb-notation-eval')?.textContent,
+    container.querySelector('.nb-notation-row .move-evaluation')?.textContent,
   ).toBe('+0.37');
   expect(
-    container.querySelector('.nb-notation-variation .nb-notation-eval')
+    container.querySelector('.nb-notation-variation .move-evaluation')
       ?.textContent,
   ).toBe('#2');
 });

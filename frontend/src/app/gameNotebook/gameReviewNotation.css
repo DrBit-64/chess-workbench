@@ -58,18 +58,13 @@
   margin-inline-start: 0.2em;
   font-size: 0.76em;
 }
-.nb-notation-eval,
 .nb-notation-inline-number {
   color: #5c655d;
   font-size: 0.79em;
   font-weight: 400;
 }
-.nb-notation-variation .nb-notation-eval {
+.nb-notation-variation .move-evaluation {
   margin-inline-start: 0.28em;
-}
-.nb-notation-eval {
-  margin-inline-start: auto;
-  white-space: nowrap;
 }
 .nb-notation-variation {
   font-size: 0.89rem;
@@ -117,9 +112,7 @@
   color: #fff;
   background: #38634b;
 }
-.nb-notation
-  button[aria-current='step']
-  :is(.nb-notation-eval, .nb-notation-inline-number) {
+.nb-notation button[aria-current='step'] .nb-notation-inline-number {
   color: #edf5e9;
 }
 @media (pointer: coarse) {

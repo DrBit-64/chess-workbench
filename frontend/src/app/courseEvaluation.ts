@@ -1,3 +1,4 @@
+import { Chess } from 'chess.js';
 import type { AnalysisLine } from '../logic/api/engineTypes';
 
 export type EvaluationScore = Pick<AnalysisLine, 'score_cp' | 'mate' | 'wdl'>;
@@ -40,3 +41,29 @@ export function scoreLabel(line: EvaluationScore): string {
   if (share === 0.5 && line.wdl?.[0] === 0) return '和棋';
   return share != null ? `${Math.round(100 * share)}%` : '—';
 }
+
+export type BoardOutcome = 'white-wins' | 'black-wins' | 'draw';
+
+export function boardOutcome(fen: string): BoardOutcome | undefined {
+  try {
+    const board = new Chess(fen);
+    if (board.isCheckmate())
+      return board.turn() === 'w' ? 'black-wins' : 'white-wins';
+    // The FEN clock can establish the automatic 75-move draw, but a 50-move
+    // draw needs a player's claim, which the position alone cannot establish.
+    if (
+      board.isStalemate() ||
+      board.isInsufficientMaterial() ||
+      Number(fen.split(' ')[4]) >= 150
+    )
+      return 'draw';
+  } catch {
+    return;
+  }
+}
+
+export const outcomeLabels: Record<BoardOutcome, string> = {
+  'white-wins': '1–0',
+  'black-wins': '0–1',
+  draw: '½–½',
+};

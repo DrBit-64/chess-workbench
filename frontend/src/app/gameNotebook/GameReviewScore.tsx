@@ -8,7 +8,8 @@ import {
   type ReactNode,
 } from 'react';
 
-import { MoveNotation } from '../MoveNotation';
+import { moveEvaluationDescription } from '../moveNotation';
+import { MoveEvaluation, MoveNotation } from '../MoveNotation';
 import {
   buildScoreTreeLayout,
   type ScoreTreeVariation,
@@ -164,7 +165,8 @@ export function GameReviewScore({
     const starred = bookmarks.has(node.id);
     const current = selectedId === node.id;
     const label = moveLabel(node);
-    const scoreText = node.san ? evaluations?.get(node.id) : undefined;
+    const scoreText =
+      node.san && !node.hidden ? evaluations?.get(node.id) : undefined;
     return (
       <button
         type="button"
@@ -184,9 +186,7 @@ export function GameReviewScore({
           (node.note ? '，有棋步评语' : '') +
           (starred ? '，已收藏' : '')
         }
-        aria-description={
-          scoreText ? `走后评分（白方视角）${scoreText}` : undefined
-        }
+        aria-description={moveEvaluationDescription(scoreText)}
         onClick={() => onSelect(node)}
         onContextMenu={(event) => {
           if (!onMoveAction || !node.san || editingBusy) return;
@@ -233,14 +233,7 @@ export function GameReviewScore({
             </span>
           )}
         </span>
-        {scoreText && (
-          <span
-            className="nb-notation-eval"
-            title={`走后评分（白方视角）${scoreText}`}
-          >
-            {scoreText}
-          </span>
-        )}
+        <MoveEvaluation score={scoreText} />
       </button>
     );
   }
