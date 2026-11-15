@@ -19,6 +19,7 @@ import {
 import { Chess } from 'chess.js';
 import {
   type DragEvent as ReactDragEvent,
+  type ReactNode,
   useEffect,
   useMemo,
   useReducer,
@@ -76,6 +77,7 @@ import { createDraftState, editorDraftReducer } from './editorDraft';
 import { LichessStudyExport } from './LichessStudyExport';
 
 const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+const NO_MODULES: CourseModule[] = [];
 
 export function CourseEditor() {
   const { courseId = '' } = useParams();
@@ -102,11 +104,18 @@ function CourseEditorSession({ courseId }: { courseId: string }) {
     error: courseError,
     mutate: mutateCourse,
   } = useSWR<Course>(courseId ? `/api/courses/${courseId}` : null, fetchJson);
-  const { data: modules = [], mutate: mutateModules } = useSWR<CourseModule[]>(
+  const {
+    data: listedModules,
+    error: modulesError,
+    mutate: mutateModules,
+  } = useSWR<CourseModule[]>(
     courseId ? `/api/courses/${courseId}/modules` : null,
     fetchJson,
   );
-  const [moduleId, setModuleId] = useState<string>();
+  const modules = listedModules ?? NO_MODULES;
+  const [moduleId, setModuleId] = useState<string | undefined>(
+    () => searchParams.get('module') || resume?.moduleId,
+  );
   const [occurrenceId, setOccurrenceId] = useState<string>();
   const [pendingFen, setPendingFen] = useState<string>();
   const [recordBoardMoves, setRecordBoardMoves] = useState(true);
@@ -175,20 +184,21 @@ function CourseEditorSession({ courseId }: { courseId: string }) {
   );
 
   useEffect(() => {
-    if (!moduleId && modules[0]) {
-      const requested = searchParams.get('module') ?? resume?.moduleId;
-      if (resume && !modules.some((item) => item.id === resume.moduleId)) {
-        setReaderPanel('score');
-        setLeftPaneMode('chapters');
-        setActiveSourceSpanId(undefined);
-      }
-      setModuleId(
-        modules.find((item) => item.id === requested)?.id ??
-          modules.find((item) => item.parent_id === null)?.id ??
-          modules[0].id,
-      );
+    // A bookmark can open while the directory loads. Reconcile with the
+    // returned list in case the selected chapter has since been archived.
+    if (!listedModules || listedModules.some((item) => item.id === moduleId))
+      return;
+    if (moduleId) {
+      setReaderPanel('score');
+      setLeftPaneMode('chapters');
+      setActiveSourceSpanId(undefined);
+      setOccurrenceId(undefined);
     }
-  }, [moduleId, modules, resume, searchParams]);
+    setModuleId(
+      listedModules.find((item) => item.parent_id === null)?.id ??
+        listedModules[0]?.id,
+    );
+  }, [moduleId, listedModules]);
   useEffect(() => {
     setExpandedModuleIds((current) => {
       const next = new Set(current);
@@ -203,7 +213,7 @@ function CourseEditorSession({ courseId }: { courseId: string }) {
     });
   }, [modules]);
   const editorKey =
-    course?.mode !== 'opening_explorer' && courseId && moduleId
+    course && course.mode !== 'opening_explorer' && courseId && moduleId
       ? `/api/courses/${courseId}/editor/${moduleId}`
       : null;
   const {
@@ -393,6 +403,7 @@ function CourseEditorSession({ courseId }: { courseId: string }) {
     engine,
     boardFen,
     current?.full_fen === boardFen ? current?.id : undefined,
+    !compactReader,
   );
   const chapterAnalysis = useChapterAnalysis(
     courseId,
@@ -1143,7 +1154,16 @@ function CourseEditorSession({ courseId }: { courseId: string }) {
     }
   }
 
-  if (courseError) return <Alert type="error" title="课程不存在或无法读取" />;
+  if (courseError && !course)
+    return (
+      <Alert
+        type="error"
+        title="课程不存在或无法读取"
+        action={
+          <Button onClick={() => void mutateCourse()}>重新加载课程</Button>
+        }
+      />
+    );
   if (!course)
     return (
       <div className="grid min-h-[70vh] place-items-center">
@@ -1153,6 +1173,51 @@ function CourseEditorSession({ courseId }: { courseId: string }) {
 
   const panel =
     readerPanel === 'source' && !activePdfPreview ? 'score' : readerPanel;
+  const directoryStatus = !listedModules ? (
+    <CourseLoadStatus
+      label="章节目录"
+      failed={Boolean(modulesError)}
+      onRetry={() => void mutateModules()}
+    />
+  ) : null;
+  let contentStatus: ReactNode;
+  if (editorError || (!editor && (moduleId || modules.length))) {
+    contentStatus = (
+      <CourseLoadStatus
+        label="章节内容"
+        failed={Boolean(editorError)}
+        onRetry={() =>
+          void (course.mode === 'opening_explorer'
+            ? mutateExplorerEditors()
+            : mutateModuleEditor())
+        }
+      />
+    );
+  } else if (!editor) {
+    contentStatus = directoryStatus ?? <Empty description="本课程还没有章节" />;
+  }
+  const scoreControls = scoreRootId ? (
+    <CourseScoreControls
+      readerOnly={compactReader}
+      onRestoreFork={restoreFork}
+      occurrences={scoreOccurrences}
+      rootId={scoreRootId}
+      currentId={current?.id}
+      onSelectOccurrence={selectOccurrence}
+      recordMoves={recordBoardMoves}
+      onRecordMovesChange={(enabled) => {
+        setRecordBoardMoves(enabled);
+        setPendingFen(undefined);
+        setSelectedSquare(undefined);
+      }}
+      boardOrientation={boardOrientation}
+      onFlipBoard={() =>
+        setBoardOrientation((current) =>
+          current === 'white' ? 'black' : 'white',
+        )
+      }
+    />
+  ) : null;
   return (
     <main
       className={compactReader ? 'mobile-book-reader' : 'px-4 py-5 xl:px-6'}
@@ -1254,15 +1319,8 @@ function CourseEditorSession({ courseId }: { courseId: string }) {
           </Button>
         </Space>
       </div>
-      {editorError ? (
-        <Alert
-          className="mb-4"
-          type="error"
-          showIcon
-          title="编辑器数据加载失败"
-        />
-      ) : null}
       <CourseWorkbenchLayout
+        readerControls={compactReader ? scoreControls : undefined}
         readerToolbar={
           compactReader ? (
             <header className="reader-panel-heading">
@@ -1270,15 +1328,14 @@ function CourseEditorSession({ courseId }: { courseId: string }) {
                 {panel === 'chapters'
                   ? '章节目录'
                   : (editor?.module.title ?? course.title)}
-                {chapterAnalysis.status &&
-                  (panel !== 'score' || !hasReaderBoard) && (
-                    <small
-                      className="block truncate text-xs font-normal"
-                      role="status"
-                    >
-                      {chapterAnalysis.status}
-                    </small>
-                  )}
+                {chapterAnalysis.status && (
+                  <small
+                    className="block truncate text-xs font-normal"
+                    role="status"
+                  >
+                    {chapterAnalysis.status}
+                  </small>
+                )}
               </h2>
               <div className="reader-floating-bar" aria-label="切换阅读面板">
                 <button
@@ -1355,6 +1412,7 @@ function CourseEditorSession({ courseId }: { courseId: string }) {
         }
       >
         <Card
+          hidden={compactReader && panel === 'score'}
           title={leftPaneMode === 'chapters' ? '章节' : '原书页面'}
           size="small"
           className={`course-workbench-pane course-left-pane${leftPaneMode === 'source' ? ' course-source-pane' : ''}`}
@@ -1388,6 +1446,8 @@ function CourseEditorSession({ courseId }: { courseId: string }) {
               pageCount={activePdfPages.length}
               onPage={stepSourcePage}
             />
+          ) : directoryStatus ? (
+            directoryStatus
           ) : course.mode === 'opening_explorer' ? (
             <>
               <Alert
@@ -1495,6 +1555,7 @@ function CourseEditorSession({ courseId }: { courseId: string }) {
           )}
         </section>
         <Card
+          hidden={compactReader && panel !== 'score'}
           title={course.mode === 'traditional' ? '课程内容' : '探索棋谱'}
           size="small"
           className="course-workbench-pane course-reading-pane"
@@ -1527,7 +1588,7 @@ function CourseEditorSession({ courseId }: { courseId: string }) {
           }
         >
           <div className="course-score-pane-content">
-            {current && boardFen && (!compactReader || hasReaderBoard) && (
+            {!compactReader && current && boardFen && (
               <CourseEnginePanel
                 engine={engine}
                 evaluations={evaluations}
@@ -1541,6 +1602,7 @@ function CourseEditorSession({ courseId }: { courseId: string }) {
               ref={readingScrollRef}
               aria-label="课程内容滚动区"
             >
+              {contentStatus}
               <article
                 className="course-reading-flow"
                 aria-label="课程正文与棋谱"
@@ -1786,28 +1848,7 @@ function CourseEditorSession({ courseId }: { courseId: string }) {
               ) : null}
             </div>
           </div>
-          {scoreRootId ? (
-            <CourseScoreControls
-              readerOnly={compactReader}
-              onRestoreFork={restoreFork}
-              occurrences={scoreOccurrences}
-              rootId={scoreRootId}
-              currentId={current?.id}
-              onSelectOccurrence={selectOccurrence}
-              recordMoves={recordBoardMoves}
-              onRecordMovesChange={(enabled) => {
-                setRecordBoardMoves(enabled);
-                setPendingFen(undefined);
-                setSelectedSquare(undefined);
-              }}
-              boardOrientation={boardOrientation}
-              onFlipBoard={() =>
-                setBoardOrientation((current) =>
-                  current === 'white' ? 'black' : 'white',
-                )
-              }
-            />
-          ) : null}
+          {!compactReader && scoreControls}
         </Card>
       </CourseWorkbenchLayout>
       <Modal
@@ -2041,6 +2082,33 @@ function CourseEditorSession({ courseId }: { courseId: string }) {
         ))}
       </Modal>
     </main>
+  );
+}
+
+function CourseLoadStatus({
+  label,
+  failed,
+  onRetry,
+}: {
+  label: string;
+  failed: boolean;
+  onRetry: () => void;
+}) {
+  return failed ? (
+    <Alert
+      type="error"
+      showIcon
+      title={label + '加载失败'}
+      action={
+        <Button aria-label={`重新加载${label}`} onClick={onRetry}>
+          重新加载
+        </Button>
+      }
+    />
+  ) : (
+    <p className="p-2 text-sm text-stone-600" role="status">
+      正在加载{label}…
+    </p>
   );
 }
 

@@ -41,7 +41,7 @@ test('a long book title and its settings fit on the portrait shelf', async ({
   await expect(page.getByText('重命名课程', { exact: true })).toBeVisible();
 });
 
-test('a prose chapter uses the entire landscape reading area', async ({
+test('a linked prose chapter fills the landscape reader while its directory is retried', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 844, height: 390 });
@@ -72,18 +72,30 @@ test('a prose chapter uses the entire landscape reading area', async ({
     '/api/courses/book/modules': [chapter],
     '/api/courses/book/editor/intro': editor,
   };
+  let directoryOffline = true;
   await page.route(
     (url) => url.pathname.startsWith('/api/'),
-    (route) =>
-      route.fulfill({
-        json: responses[new URL(route.request().url()).pathname],
-      }),
+    (route) => {
+      const path = new URL(route.request().url()).pathname;
+      if (path.endsWith('/modules') && directoryOffline)
+        return route.fulfill({ status: 503, json: {} });
+      return route.fulfill({ json: responses[path] });
+    },
   );
-  await page.goto('/learn/book');
-  await expect(page.getByText('阅读本书的方法', { exact: true })).toBeVisible();
-  await page.getByRole('button', { name: '更多阅读选项' }).click();
-  await page.getByRole('menuitem', { name: '章节目录' }).click();
-  await page.getByRole('button', { name: '讲解' }).click();
+  await page.goto('/learn/book?module=intro');
+  const prose = page.getByText('阅读本书的方法', { exact: true });
+  await expect(prose).toBeInViewport();
+  await page.getByRole('button', { name: '更多阅读选项' }).tap();
+  await page.getByRole('menuitem', { name: '章节目录' }).tap();
+  await expect(prose).toBeHidden();
+  const retry = page.getByRole('button', { name: '重新加载章节目录' });
+  await expect(retry).toBeInViewport();
+  directoryOffline = false;
+  await retry.tap();
+  const entry = page.getByRole('button', { name: '前言', exact: true });
+  await expect(entry).toBeInViewport();
+  await entry.tap();
+  await expect(prose).toBeInViewport();
   const readingArea = page.locator('.course-reading-scroll');
   const width = () => readingArea.evaluate((element) => element.clientWidth);
   expect(await width()).toBe(844);
@@ -92,7 +104,7 @@ test('a prose chapter uses the entire landscape reading area', async ({
   expect(await width()).toBe(844);
 });
 
-test('a mainline page link can be tapped without selecting the next move', async ({
+test('a retried mobile score opens its scan without selecting the next move', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 741, height: 320 });
@@ -145,10 +157,13 @@ test('a mainline page link can be tapped without selecting the next move', async
       items: [{ id: 'scan', ...sourceFile, page_count: 20 }],
     },
   };
+  let chapterOffline = true;
   await page.route(
     (url) => url.pathname.startsWith('/api/'),
     (route) => {
       const path = new URL(route.request().url()).pathname;
+      if (path.endsWith('/editor/line') && chapterOffline)
+        return route.fulfill({ status: 503, json: {} });
       if (path.startsWith('/api/pdf-assets/scan/pages/'))
         return route.fulfill({
           contentType: 'image/svg+xml',
@@ -159,6 +174,16 @@ test('a mainline page link can be tapped without selecting the next move', async
   );
 
   await page.goto('/learn/book');
+  const retry = page.getByRole('button', { name: '重新加载章节内容' });
+  await expect(retry).toBeInViewport();
+  chapterOffline = false;
+  await retry.tap();
+  await expect(
+    page.getByRole('navigation', { name: '课程棋谱' }),
+  ).toBeInViewport();
+  await expect(page.getByRole('region', { name: '课程实时引擎' })).toHaveCount(
+    0,
+  );
   for (const [label, number] of [
     ['e4 e2e4', 12],
     ['e5 e7e5', 13],

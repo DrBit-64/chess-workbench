@@ -14,10 +14,13 @@ export function useScoreEvaluations(
   live: PositionEngine,
   fen?: string,
   occurrenceId?: string,
+  includeMoveScores = true,
 ) {
   const { parameters, analysis } = live;
   const saved = useSWR(
-    plan.fens.length ? ['engine-position-scores', parameters, plan.fens] : null,
+    includeMoveScores && plan.fens.length
+      ? ['engine-position-scores', parameters, plan.fens]
+      : null,
     () => readPositionEvaluations(plan.fens, parameters),
     { dedupingInterval: 0 },
   );
@@ -55,6 +58,7 @@ export function useScoreEvaluations(
     return merged;
   }, [saved.data, recent, settings]);
   const scores = useMemo(() => {
+    if (!includeMoveScores) return new Map<string, string>();
     const labels = new Map(plan.terminal);
     for (const { id, fen } of plan.positions) {
       if (labels.has(id)) continue;
@@ -62,7 +66,7 @@ export function useScoreEvaluations(
       if (line) labels.set(id, scoreLabel(line));
     }
     return labels;
-  }, [byFen, plan]);
+  }, [byFen, plan, includeMoveScores]);
   const cached = fen ? byFen.get(fen) : undefined;
   const annotation = occurrenceId ? plan.imported.get(occurrenceId) : undefined;
   return {

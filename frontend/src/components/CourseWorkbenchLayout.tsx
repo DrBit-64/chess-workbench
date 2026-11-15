@@ -61,9 +61,11 @@ function resizeAdjacent(
 export function CourseWorkbenchLayout({
   children,
   readerToolbar,
+  readerControls,
 }: {
   children: [ReactNode, ReactNode, ReactNode];
   readerToolbar?: ReactNode;
+  readerControls?: ReactNode;
 }) {
   const grid = useRef<HTMLDivElement>(null);
   const [widths, setWidths] = useState<Widths>(loadWidths);
@@ -185,6 +187,7 @@ export function CourseWorkbenchLayout({
       {separator(1)}
       {children[2]}
       {readerToolbar}
+      {readerControls}
     </div>
   );
 }

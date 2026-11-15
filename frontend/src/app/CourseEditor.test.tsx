@@ -1811,7 +1811,10 @@ it('keeps the same board and move when browsing the compact directory of a PGN-o
   expect(
     reader.querySelector('[data-source="engine"][data-from="e2"]'),
   ).toBeNull();
-  expect(within(reader).getByText('1... e5 2. Nf3')).toBeTruthy();
+  expect(
+    within(reader).queryByRole('region', { name: '课程实时引擎' }),
+  ).toBeNull();
+  expect(reader.querySelector('.move-evaluation')).toBeNull();
   fireEvent.click(screen.getByRole('button', { name: '更多阅读选项' }));
   fireEvent.click(
     await screen.findByRole('menuitem', { name: '分析当前章节' }),

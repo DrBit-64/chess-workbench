@@ -648,16 +648,6 @@ button[aria-current='step'] .move-evaluation {
 }
 
 .mobile-book-reader .course-reading-pane,
-.mobile-book-reader .course-reading-pane > .ant-card-body {
-  display: contents;
-}
-
-.mobile-book-reader .course-reading-pane > .ant-card-body::before,
-.mobile-book-reader .course-reading-pane > .ant-card-body::after {
-  display: none;
-}
-
-.mobile-book-reader .course-score-pane-content,
 .mobile-book-reader .course-left-pane {
   grid-area: content;
   min-width: 0;
@@ -666,8 +656,19 @@ button[aria-current='step'] .move-evaluation {
   border: 0;
   border-radius: 0;
 }
+.mobile-book-reader .course-workbench-pane[hidden] {
+  display: none;
+}
+.mobile-book-reader .course-reading-pane > .ant-card-body {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 0;
+  overflow: hidden;
+}
 .mobile-book-reader .course-score-pane-content {
   display: flex;
+  flex: 1 1 0;
   overflow: hidden;
 }
 .mobile-book-reader .course-reading-scroll {
@@ -685,13 +686,6 @@ button[aria-current='step'] .move-evaluation {
   padding: 0.35rem;
   overflow: auto;
   overscroll-behavior: contain;
-}
-
-.mobile-book-reader[data-reader-panel='score'] .course-left-pane,
-.mobile-book-reader:not([data-reader-panel='score'])
-  .course-score-pane-content {
-  visibility: hidden;
-  pointer-events: none;
 }
 
 .mobile-book-reader .course-score-controls {
