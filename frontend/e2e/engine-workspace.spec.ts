@@ -130,3 +130,49 @@ test('engine workspace analyzes, queues, plays, reviews, and saves a draft', asy
     expect(overflow).toBeLessThanOrEqual(1);
   }
 });
+
+test('the course notation stays in place while the next position is analyzed', async ({
+  page,
+  request,
+}) => {
+  const imported = await request.post('/api/pgn/imports', {
+    data: {
+      pgn: '[Event "Analysis layout"]\n[Result "*"]\n\n1. a3 a6 *',
+      destination: { kind: 'new_course', title: 'Engine layout' },
+    },
+  });
+  expect(imported.ok(), await imported.text()).toBeTruthy();
+  const { import_receipt } = await imported.json();
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/learn/' + import_receipt.course_id);
+  const courseEngine = page.getByRole('region', { name: '课程实时引擎' });
+  await courseEngine.getByRole('switch').click();
+  const courseLines = courseEngine.locator('summary');
+  await expect(courseLines).toHaveCount(4);
+
+  // Hold the next analysis so a fast response cannot hide a one-frame layout shift.
+  const notation = page.locator('.course-reading-scroll');
+  const notationTop = () =>
+    notation.evaluate((el) => el.getBoundingClientRect().top);
+  const previousTop = await notationTop();
+  const nextAnalysis = Promise.withResolvers<void>();
+  await page.route(
+    '**/api/engine/analyses',
+    async (route) => {
+      await nextAnalysis.promise;
+      await route.continue();
+    },
+    { times: 1 },
+  );
+  try {
+    await page.getByRole('button', { name: 'a6 a7a6', exact: true }).click();
+    await expect(courseEngine.getByText('正在计算当前局面…')).toBeVisible();
+    await expect(courseLines).toHaveCount(0);
+    expect(Math.abs((await notationTop()) - previousTop)).toBeLessThan(1);
+  } finally {
+    nextAnalysis.resolve();
+  }
+  await expect(courseLines).toHaveCount(4);
+  await expect(courseLines.first()).toContainText('2. ');
+  expect(Math.abs((await notationTop()) - previousTop)).toBeLessThan(1);
+});

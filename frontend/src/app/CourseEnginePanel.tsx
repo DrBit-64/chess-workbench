@@ -22,7 +22,6 @@ export function CourseEnginePanel({
       live={engine}
       currentLine={evaluations.currentLine}
       scoreSource={evaluations.scoreSource}
-      reserveLines
       onRetryScores={
         evaluations.cacheError ? evaluations.reloadScores : undefined
       }

@@ -527,13 +527,11 @@ html:fullscreen:has(.game-review) .ant-layout > .ant-layout-header {
     padding: 2px 5px;
   }
   .game-review .score-pvs {
+    --pv-row-min-height: 25px;
+    --pv-row-padding: 1px;
     max-height: 25px;
     overflow-y: auto;
     scrollbar-width: thin;
-  }
-  .game-review .score-pvs summary {
-    min-height: 24px;
-    padding-block: 1px;
   }
   .game-review .nb-notation-start {
     min-height: 24px;

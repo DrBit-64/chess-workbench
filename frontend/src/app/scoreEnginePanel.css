@@ -18,6 +18,10 @@
   justify-content: space-between;
   padding: 5px 8px;
 }
+.score-engine-identity {
+  /* Keep the actions on the same row when the score and depth briefly clear. */
+  flex: 1 1 13rem;
+}
 .score-engine-identity strong {
   font-size: 1.16rem;
   line-height: 1.25;
@@ -56,19 +60,37 @@
   overflow-wrap: anywhere;
 }
 .score-pvs {
+  --pv-row-min-height: 0px;
+  --pv-row-padding: 3px;
+  display: grid;
   border-block-end: 1px solid #d6dcd2;
 }
-.score-pvs details {
-  border-block-start: 1px solid #d6dcd2;
+.score-pv-lines,
+.score-pvs > .score-engine-hint {
+  grid-area: 1 / 1;
+  min-width: 0;
 }
-.score-pvs summary {
+.score-pvs > .score-engine-hint {
+  align-self: start;
+  line-height: 1.35;
+}
+.score-pvs summary,
+.score-pv-empty {
   display: grid;
   grid-template-columns: 4.05em minmax(0, 1fr) 1em;
   align-items: baseline;
   gap: 5px;
-  padding: 3px 6px;
+  min-height: var(--pv-row-min-height);
+  padding: var(--pv-row-padding) 6px;
+  border-block-start: 1px solid #d6dcd2;
   line-height: 1.35;
   font-size: 0.88rem;
+}
+.score-pv-empty::before {
+  content: '';
+  height: 1lh;
+}
+.score-pvs summary {
   cursor: pointer;
   list-style: none;
 }
@@ -97,9 +119,11 @@
   color: #596a60;
 }
 @media (pointer: coarse) {
-  .score-engine-actions button,
-  .score-pvs summary {
+  .score-engine-actions button {
     min-height: 36px;
+  }
+  .score-pvs {
+    --pv-row-min-height: 37px;
   }
   .score-engine-identity .ant-switch::after {
     content: '';
@@ -130,8 +154,4 @@
 .score-engine-actions button:disabled {
   opacity: 0.6;
   cursor: default;
-}
-.score-pv-empty {
-  min-height: 1.5rem;
-  border-block-start: 1px solid #d6dcd2;
 }

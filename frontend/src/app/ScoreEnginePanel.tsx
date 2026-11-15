@@ -24,6 +24,68 @@ function formatPrincipalVariation(fen: string, san: string[]) {
     .join(' ');
 }
 
+function PrincipalVariations({ live }: { live: PositionEngine }) {
+  if (live.outcome) return null;
+  if (live.analysisError) {
+    return (
+      <p className="score-engine-hint">
+        {live.analysisError}
+        <button
+          className="score-engine-retry"
+          type="button"
+          onClick={live.retry}
+        >
+          重试
+        </button>
+      </p>
+    );
+  }
+
+  const analysis = live.analysis;
+  const lineCount = analysis?.lines.length ?? 0;
+  const emptyRows = Math.max(0, live.parameters.multipv - lineCount);
+  return (
+    <div key={analysis?.id} className="score-pvs" aria-label="引擎候选变化">
+      <div className="score-pv-lines">
+        {analysis?.lines.map((line) => (
+          <details key={line.rank}>
+            <summary aria-label={`候选变化 ${line.rank}`}>
+              <span className="score-pv-score">{scoreLabel(line)}</span>
+              <span className="score-pv-moves">
+                {formatPrincipalVariation(analysis.fen, line.san)}
+              </span>
+              <span className="score-pv-marker" aria-hidden="true">
+                ▾
+              </span>
+            </summary>
+          </details>
+        ))}
+        {Array.from({ length: emptyRows }, (_, index) => (
+          <div
+            key={index}
+            className="score-pv-empty"
+            aria-hidden={analysis ? undefined : true}
+            aria-label={
+              analysis
+                ? `线路 ${lineCount + index + 1} 没有更多合法候选着`
+                : undefined
+            }
+          />
+        ))}
+      </div>
+      {lineCount === 0 && (
+        <p className="score-engine-hint" role="status">
+          {analysis
+            ? '当前局面没有候选变化'
+            : live.analyzing
+              ? '正在计算当前局面…'
+              : '正在连接引擎…'}
+        </p>
+      )}
+    </div>
+  );
+}
+
 export function ScoreEnginePanel({
   context,
   live,
@@ -32,7 +94,6 @@ export function ScoreEnginePanel({
   actions,
   progress,
   onRetryScores,
-  reserveLines = false,
 }: {
   context: '课程' | '复盘';
   live: PositionEngine;
@@ -41,7 +102,6 @@ export function ScoreEnginePanel({
   actions: ReactNode;
   progress?: ReactNode;
   onRetryScores?: () => void;
-  reserveLines?: boolean;
 }) {
   const [settings, setSettings] = useState(false);
   const [folded, setFolded] = useState(false);
@@ -97,61 +157,7 @@ export function ScoreEnginePanel({
         </div>
       </div>
       {progress}
-      {live.enabled &&
-        !folded &&
-        (evaluated?.lines.length ? (
-          <div
-            key={evaluated.id}
-            className="score-pvs"
-            aria-label="引擎候选变化"
-          >
-            {evaluated.lines.map((line) => (
-              <details key={line.rank}>
-                <summary aria-label={`候选变化 ${line.rank}`}>
-                  <span className="score-pv-score">{scoreLabel(line)}</span>
-                  <span className="score-pv-moves">
-                    {formatPrincipalVariation(evaluated.fen, line.san)}
-                  </span>
-                  <span className="score-pv-marker" aria-hidden="true">
-                    ▾
-                  </span>
-                </summary>
-              </details>
-            ))}
-            {reserveLines &&
-              Array.from(
-                {
-                  length: Math.max(
-                    0,
-                    live.parameters.multipv - evaluated.lines.length,
-                  ),
-                },
-                (_, index) => (
-                  <div
-                    className="score-pv-empty"
-                    key={'empty-' + index}
-                    aria-label={`线路 ${evaluated.lines.length + index + 1} 没有更多合法候选着`}
-                  />
-                ),
-              )}
-          </div>
-        ) : (
-          !live.outcome && (
-            <p className="score-engine-hint">
-              {live.analysisError ??
-                (live.analyzing ? '正在计算当前局面…' : '正在连接引擎…')}
-              {live.analysisError && (
-                <button
-                  className="score-engine-retry"
-                  type="button"
-                  onClick={live.retry}
-                >
-                  重试
-                </button>
-              )}
-            </p>
-          )
-        ))}
+      {live.enabled && !folded && <PrincipalVariations live={live} />}
       {onRetryScores && (
         <p className="score-engine-hint">
           暂时无法读取已存的棋步评分。
