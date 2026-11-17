@@ -1,3 +1,4 @@
+import { RecordMovesButton } from '../../components/RecordMovesButton';
 import { ScoreEnginePanel } from '../ScoreEnginePanel';
 import type { useGameReviewEngine } from './useGameReviewEngine';
 
@@ -32,32 +33,11 @@ export function GameReviewEnginePanel({
       actions={
         <>
           {onRecordingChange && (
-            <button
-              className="game-review-record"
-              type="button"
-              aria-label="记录走棋"
-              aria-pressed={Boolean(recording)}
-              title={recording ? '关闭记录走棋' : '开启记录走棋'}
+            <RecordMovesButton
+              recording={Boolean(recording)}
               disabled={editingBusy}
-              onClick={() => onRecordingChange(!recording)}
-            >
-              <svg
-                aria-hidden="true"
-                width="17"
-                height="17"
-                viewBox="0 0 20 20"
-              >
-                <circle
-                  cx="10"
-                  cy="10"
-                  r="8"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                />
-                <circle cx="10" cy="10" r="4.2" fill="currentColor" />
-              </svg>
-            </button>
+              onChange={onRecordingChange}
+            />
           )}
 
           <button

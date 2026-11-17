@@ -12,6 +12,7 @@ import ReactMarkdown from 'react-markdown';
 import rehypeSanitize from 'rehype-sanitize';
 
 import type { ModuleEditor } from '../logic/api/types';
+import { RecordMovesButton } from '../components/RecordMovesButton';
 import { MoveEvaluation, MoveNotation } from './MoveNotation';
 import { formatMoveNotation, moveEvaluationDescription } from './moveNotation';
 import {
@@ -293,7 +294,11 @@ export function CourseScoreControls({
   onFlipBoard,
   readerOnly = false,
   onRestoreFork,
+  onReturnToScore,
+  recordingDisabled = false,
 }: {
+  onReturnToScore?: () => void;
+  recordingDisabled?: boolean;
   onRestoreFork?: (id: string) => boolean;
   readerOnly?: boolean;
   occurrences: CourseOccurrence[];
@@ -380,18 +385,33 @@ export function CourseScoreControls({
         />
       )}
       {readerOnly && (
-        <ScoreControl
-          label={`翻转棋盘（当前${boardOrientation === 'white' ? '白方' : '黑方'}视角）`}
-          symbol="翻转"
-          onClick={onFlipBoard}
-        />
+        <>
+          <ScoreControl
+            label={`翻转棋盘（当前${boardOrientation === 'white' ? '白方' : '黑方'}视角）`}
+            symbol="翻转"
+            onClick={onFlipBoard}
+          />
+          <RecordMovesButton
+            recording={recordMoves}
+            disabled={recordingDisabled}
+            onChange={onRecordMovesChange}
+          />
+        </>
       )}
-      {branchParent && (
+      {onReturnToScore ? (
         <ScoreControl
-          label="回到分岔处"
-          symbol="回分岔"
-          onClick={() => stepTo(branchParent.id, true)}
+          label="返回原谱局面"
+          symbol="回原谱"
+          onClick={onReturnToScore}
         />
+      ) : (
+        branchParent && (
+          <ScoreControl
+            label="回到分岔处"
+            symbol="回分岔"
+            onClick={() => stepTo(branchParent.id, true)}
+          />
+        )
       )}
       <ScoreControl
         label="上一步"
@@ -419,6 +439,7 @@ export function CourseScoreControls({
           <label className="inline-flex cursor-pointer items-center gap-1.5 rounded px-2 py-1 text-xs text-stone-600 hover:bg-stone-100">
             <input
               type="checkbox"
+              disabled={recordingDisabled}
               checked={recordMoves}
               onChange={(event) => onRecordMovesChange(event.target.checked)}
             />

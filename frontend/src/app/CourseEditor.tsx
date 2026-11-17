@@ -20,6 +20,7 @@ import { Chess } from 'chess.js';
 import {
   type DragEvent as ReactDragEvent,
   type ReactNode,
+  useCallback,
   useEffect,
   useMemo,
   useReducer,
@@ -34,7 +35,7 @@ import {
   useParams,
   useSearchParams,
 } from 'react-router-dom';
-import useSWR from 'swr';
+import useSWR, { useSWRConfig } from 'swr';
 
 import { useCompactReaderViewport } from '../components/useCompactReaderViewport';
 import { ReaderFullscreenButton } from '../components/ReaderFullscreenButton';
@@ -97,7 +98,9 @@ export function CourseEditor() {
 
 function CourseEditorSession({ courseId }: { courseId: string }) {
   const navigate = useNavigate();
+  const { mutate: mutateCache } = useSWRConfig();
   const [searchParams] = useSearchParams();
+  const compactViewport = useCompactReaderViewport();
   const [resume] = useState(() => readReadingPlace(courseId, searchParams));
   const {
     data: course,
@@ -118,18 +121,26 @@ function CourseEditorSession({ courseId }: { courseId: string }) {
   );
   const [occurrenceId, setOccurrenceId] = useState<string>();
   const [pendingFen, setPendingFen] = useState<string>();
-  const [recordBoardMoves, setRecordBoardMoves] = useState(true);
+  const [recordBoardMoves, setRecordBoardMoves] = useState(!compactViewport);
+  const [savingBoardMove, setSavingBoardMove] = useState(false);
+  const moveSavePending = useRef(false);
+  const boardSelectionVersion = useRef(0);
   const [boardOrientation, setBoardOrientation] = useState<'white' | 'black'>(
     'white',
   );
   const [selectedSquare, setSelectedSquare] = useState<string>();
+  const resetBoard = useCallback(() => {
+    boardSelectionVersion.current += 1;
+    setPendingFen(undefined);
+    setSelectedSquare(undefined);
+  }, []);
+  useEffect(resetBoard, [moduleId, resetBoard]);
   const [moduleModal, setModuleModal] = useState(false);
   const [publishModal, setPublishModal] = useState(false);
   const [courseLichessOpen, setCourseLichessOpen] = useState(false);
   const [publishTarget, setPublishTarget] = useState<string>();
   const [historyOpen, setHistoryOpen] = useState(false);
   const [readingMode, setReadingMode] = useState(true);
-  const compactViewport = useCompactReaderViewport();
   const compactReader =
     compactViewport && readingMode && course?.mode === 'traditional';
   const [readerPanel, setReaderPanel] = useState<
@@ -391,9 +402,7 @@ function CourseEditorSession({ courseId }: { courseId: string }) {
   }, [editor, modules]);
   const current = occurrenceId ? byId.get(occurrenceId) : undefined;
   const hasReaderBoard = hasBookBoard(editor, current?.full_fen);
-  const boardFen = compactReader
-    ? current?.full_fen
-    : (pendingFen ?? current?.full_fen);
+  const boardFen = pendingFen ?? current?.full_fen;
   const engine = usePositionEngine(
     compactReader && !hasReaderBoard ? undefined : boardFen,
     compactReader,
@@ -726,12 +735,11 @@ function CourseEditorSession({ courseId }: { courseId: string }) {
       setModuleId(selected.module_id);
     }
     setOccurrenceId(id);
-    setPendingFen(undefined);
-    setSelectedSquare(undefined);
+    resetBoard();
   }
 
   function submitMove(source: string, target: string): boolean {
-    if (!current || !editor) return false;
+    if (!current || !editor || moveSavePending.current) return false;
     const game = new Chess(pendingFen ?? current.full_fen);
     let move;
     try {
@@ -750,6 +758,9 @@ function CourseEditorSession({ courseId }: { courseId: string }) {
     }
     setPendingFen(game.fen());
     if (!recordBoardMoves) return true;
+    const selectionVersion = boardSelectionVersion.current;
+    moveSavePending.current = true;
+    setSavingBoardMove(true);
     void requestJson<Occurrence>('/api/occurrences', {
       method: 'POST',
       body: JSON.stringify({
@@ -760,6 +771,12 @@ function CourseEditorSession({ courseId }: { courseId: string }) {
       }),
     })
       .then(async (created) => {
+        // A response for an earlier board must not select a move in the new
+        // chapter, or overwrite a position chosen while the save was pending.
+        if (boardSelectionVersion.current !== selectionVersion) {
+          await mutateCache(explorerEditorKey ?? editorKey);
+          return;
+        }
         let createdIsVisible = false;
         if (course?.mode === 'opening_explorer') {
           const refreshed = await mutateExplorerEditors();
@@ -779,14 +796,21 @@ function CourseEditorSession({ courseId }: { courseId: string }) {
         if (!createdIsVisible) {
           throw new Error('保存后的棋步没有出现在当前小节中，请刷新页面后重试');
         }
-        setOccurrenceId(created.id);
-        setPendingFen(undefined);
+        if (boardSelectionVersion.current === selectionVersion) {
+          setOccurrenceId(created.id);
+          setPendingFen(undefined);
+        }
       })
       .catch((error: unknown) => {
-        setPendingFen(undefined);
+        if (boardSelectionVersion.current === selectionVersion)
+          setPendingFen(undefined);
         void message.error(
           error instanceof Error ? error.message : '保存棋步失败',
         );
+      })
+      .finally(() => {
+        moveSavePending.current = false;
+        setSavingBoardMove(false);
       });
     return true;
   }
@@ -797,14 +821,14 @@ function CourseEditorSession({ courseId }: { courseId: string }) {
   }
 
   function selectOwnPiece(square: string) {
-    if (!current) return;
+    if (!current || moveSavePending.current) return;
     const game = new Chess(pendingFen ?? current.full_fen);
     const piece = game.get(square as Parameters<typeof game.get>[0]);
     setSelectedSquare(piece?.color === game.turn() ? square : undefined);
   }
 
   function onSquareClick(square: string) {
-    if (!current) return;
+    if (!current || moveSavePending.current) return;
     if (!selectedSquare) {
       selectOwnPiece(square);
       return;
@@ -1205,10 +1229,13 @@ function CourseEditorSession({ courseId }: { courseId: string }) {
       currentId={current?.id}
       onSelectOccurrence={selectOccurrence}
       recordMoves={recordBoardMoves}
+      recordingDisabled={savingBoardMove}
+      onReturnToScore={
+        compactReader && pendingFen && !savingBoardMove ? resetBoard : undefined
+      }
       onRecordMovesChange={(enabled) => {
+        resetBoard();
         setRecordBoardMoves(enabled);
-        setPendingFen(undefined);
-        setSelectedSquare(undefined);
       }}
       boardOrientation={boardOrientation}
       onFlipBoard={() =>
@@ -1498,6 +1525,7 @@ function CourseEditorSession({ courseId }: { courseId: string }) {
               onSelect={(id) => {
                 showReaderPanel('score');
                 if (id === moduleId) return;
+                resetBoard();
                 setModuleId(id);
                 setOccurrenceId(undefined);
               }}
@@ -1534,15 +1562,13 @@ function CourseEditorSession({ courseId }: { courseId: string }) {
                 }
                 boardOrientation={boardOrientation}
                 animationDuration={FAST_MOVE_ANIMATION_MS}
-                arePiecesDraggable={!compactReader}
-                onPieceDrop={compactReader ? undefined : onPieceDrop}
+                arePiecesDraggable={!savingBoardMove}
+                onPieceDrop={onPieceDrop}
                 onPieceDragBegin={(_, source) => selectOwnPiece(source)}
                 onPieceDragEnd={() => setSelectedSquare(undefined)}
-                onSquareClick={compactReader ? undefined : onSquareClick}
+                onSquareClick={onSquareClick}
                 autoPromoteToQueen
-                customSquareStyles={
-                  compactReader ? undefined : boardSquareStyles
-                }
+                customSquareStyles={boardSquareStyles}
                 customArrows={engine.arrows}
                 customBoardStyle={{
                   borderRadius: '8px',
